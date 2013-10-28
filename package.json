@@ -27,6 +27,14 @@
   },
   "dependencies": {
     "modella": "~0.1.7",
-    "modella-mongo": "~0.1.4"
+    "modella-mongo": "~0.1.4",
+    "human-interval": "0.1.1",
+    "date.js": "~0.1.1",
+    "mongoskin": "~0.6.0",
+    "node-extend": "~0.2.0"
+  },
+  "devDependencies": {
+    "mocha": "~1.13.0",
+    "expect.js": "~0.2.0"
   }
 }
