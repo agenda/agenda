@@ -23,6 +23,8 @@ agenda.define('delete old users', function(job, done) {
 });
 
 agenda.every('3 minutes', 'delete old users');
+
+agenda.start();
 ```
 
 ```js
@@ -37,11 +39,13 @@ agenda.define('send email report', {priority: 'high', concurrency: 10}, function
 });
 
 agenda.schedule('in 20 minutes', 'send email report', {to: 'admin@example.com'});
+agenda.start();
 ```
 
 ```js
 var weeklyReport = agenda.schedule('Saturday at noon', 'send email report', {to: 'another-guy@example.com'});
 weeklyReport.repeatEvery('1 week').save();
+agenda.start();
 ```
 
 # Full documentation
@@ -53,6 +57,7 @@ mapped to a database collection and load the jobs from within.
 - [Configuring an agenda](#configuring-an-agenda)
 - [Defining job processors](#defining-job-processors)
 - [Creating jobs](#creating-jobs)
+- [Starting the job processor](#starting-the-job-processor)
 - [Manually working with jobs](#manually-working-with-a-job)
 
 ## Configuring an agenda 
@@ -211,6 +216,22 @@ the database. See below to learn how to manually work with jobs.
 var job = agenda.create('printAnalyticsReport', {userCount: 100});
 job.save();
 ```
+
+## Starting the job processor
+
+To get agenda to start processing jobs from the database you must start it. This
+will schedule an interval (based on `processEvery`) to check for new jobs and
+run them. You can also stop the queue.
+
+### start
+
+Starts the job queue processing, checking `processEvery` time to see if there
+are new jobs.
+
+### stop
+
+Stops the job queue processing.
+
 
 ## Manually working with a job
 
