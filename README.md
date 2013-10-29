@@ -117,7 +117,7 @@ agenda.maxConcurrency(20);
 You can also specify it during instantiation
 
 ```js
-var agenda = new Agenda({processEvery: 20});
+var agenda = new Agenda({maxConcurrency: 20});
 ```
 
 ### defaultConcurrency(number)
