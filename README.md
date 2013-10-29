@@ -16,28 +16,28 @@ Install via NPM
 ## Example Usage
 
 ```js
-  var agenda = new Agenda({db: { address: 'localhost:27017/agenda-example'}});
+var agenda = new Agenda({db: { address: 'localhost:27017/agenda-example'}});
 
-  agenda.define('delete old users', function(job, done) {
-    User.remove({lastLogIn: { $lt: twoDaysAgo }}, done);
-  });
-  
-  agenda.every('3 minutes', 'delete old users');
+agenda.define('delete old users', function(job, done) {
+  User.remove({lastLogIn: { $lt: twoDaysAgo }}, done);
+});
 
-  agenda.define('send email report', {priority: 'high', concurrency: 10}, function(job, done) {
-    var data = job.attrs.data;
-    emailClient.send({ 
-      to: data.to,
-      from: 'example@example.com',
-      subject: 'Email Report',
-      body: '...'
-    }
-  });
+agenda.every('3 minutes', 'delete old users');
 
-  agenda.schedule('in 20 minutes', 'send email report', {to: 'admin@example.com'});
+agenda.define('send email report', {priority: 'high', concurrency: 10}, function(job, done) {
+  var data = job.attrs.data;
+  emailClient.send({ 
+    to: data.to,
+    from: 'example@example.com',
+    subject: 'Email Report',
+    body: '...'
+  }
+});
 
-  var weeklyReport = agenda.schedule('Saturday at noon', 'send email report', {to: 'another-guy@example.com'});
-  weeklyReport.repeatEvery('1 week').save();
+agenda.schedule('in 20 minutes', 'send email report', {to: 'admin@example.com'});
+
+var weeklyReport = agenda.schedule('Saturday at noon', 'send email report', {to: 'another-guy@example.com'});
+weeklyReport.repeatEvery('1 week').save();
 
 ```
 
@@ -190,7 +190,7 @@ Returns the `job`.
 
 
 ```js
-  agenda.schedule('tomorrow at noon', 'printAnalyticsReport', {userCount: 100});
+agenda.schedule('tomorrow at noon', 'printAnalyticsReport', {userCount: 100});
 ```
 
 #### create(jobName, data)
@@ -199,8 +199,8 @@ Returns an instance of a `jobName` with `data`. This does *NOT* save the job in
 the database. See below to learn how to manually work with jobs.
 
 ```js
-  var job = agenda.create('printAnalyticsReport', {userCount: 100});
-  job.save();
+var job = agenda.create('printAnalyticsReport', {userCount: 100});
+job.save();
 ```
 
 ## Manually working with a job
@@ -214,8 +214,8 @@ with a call to `job.save()` in order to persist the changes to the database.
 Specifies an `interval` on which the job should repeat.
 
 ```js
-  job.repeatEvery('10 minutes');
-  job.save();
+job.repeatEvery('10 minutes');
+job.save();
 ```
 
 #### schedule(time)
@@ -223,8 +223,8 @@ Specifies an `interval` on which the job should repeat.
 Specifies the next `time` at which the job should repeat.
 
 ```js
-  job.schedule('tomorrow at 6pm');
-  job.save();
+job.schedule('tomorrow at 6pm');
+job.save();
 ```
 
 #### priority(priority)
@@ -233,8 +233,8 @@ Specifies the `priority` weighting of the job. Can be a number or a string from
 the above priority table.
 
 ```js
-  job.priority('low');
-  job.save();
+job.priority('low');
+job.save();
 ```
 
 #### fail(reason)
@@ -243,8 +243,8 @@ Sets `job.attrs.failedAt` to `now`, and sets `job.attrs.failReason`
 to `reason`.
 
 ```js
-  job.fail('insuficient disk space');
-  job.save();
+job.fail('insuficient disk space');
+job.save();
 ```
 
 #### run(callback)
@@ -253,9 +253,9 @@ Runs the given `job` and calls `callback(err, job)` upon completion. Normally
 you never need to call this manually.
 
 ```js
-  job.run(function(err, job) {
-    console.log("I don't know why you would need to do this...");
-  });
+job.run(function(err, job) {
+  console.log("I don't know why you would need to do this...");
+});
 ```
 
 #### save(callback)
@@ -263,9 +263,7 @@ you never need to call this manually.
 Saves the `job.attrs` into the database.
 
 ```js
-  job.run(function(err, job) {
-    console.log("I don't know why you would need to do this...");
-  });
+job.save()
 ```
 
 
