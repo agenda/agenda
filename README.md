@@ -35,7 +35,7 @@ agenda.define('send email report', {priority: 'high', concurrency: 10}, function
     from: 'example@example.com',
     subject: 'Email Report',
     body: '...'
-  }
+  }, done);
 });
 
 agenda.schedule('in 20 minutes', 'send email report', {to: 'admin@example.com'});
@@ -163,6 +163,16 @@ Priority mapping:
   low: -10,
   lowest: -20
 }
+```
+
+```js
+agenda.define('some long running job', function(job, done) {
+  doSomelengthyTask(function(data) {
+    formatThatData(data);
+    sendThatData(data);
+    done();
+  });
+});
 ```
 
 ## Creating Jobs
