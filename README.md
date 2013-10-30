@@ -1,4 +1,7 @@
 # Agenda
+[![Build
+Status](https://api.travis-ci.org/rschmukler/agenda.png)](http://travis-ci.org/rschmukler/agenda)
+
 Agenda is a light-weight job scheduling library for Node.js. 
 
 It offers:
