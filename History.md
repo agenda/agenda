@@ -1,4 +1,9 @@
 
+0.1.2 / 2013-10-31 
+==================
+
+ * Updated write concern to avoid annoying notices
+
 0.1.1 / 2013-10-28 
 ==================
 
