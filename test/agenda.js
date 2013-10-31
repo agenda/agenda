@@ -1,5 +1,5 @@
 var expect = require('expect.js'),
-    mongo = require('mongoskin').db('localhost:27017/agenda-test');
+    mongo = require('mongoskin').db('localhost:27017/agenda-test', {w: 0});
     jobs = require('../index.js')({
       defaultConcurrency: 5,
       db: {
