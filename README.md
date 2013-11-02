@@ -62,6 +62,7 @@ mapped to a database collection and load the jobs from within.
 - [Creating jobs](#creating-jobs)
 - [Starting the job processor](#starting-the-job-processor)
 - [Manually working with jobs](#manually-working-with-a-job)
+- [Frequently asked questions](#frequently-asked-questions)
 
 ## Configuring an agenda 
 All configuration methods are chainable, meaning you can do something like:
@@ -308,6 +309,23 @@ Saves the `job.attrs` into the database.
 ```js
 job.save()
 ```
+
+## Frequently Asked Questions
+
+### Mongo vs Redis
+
+The decision to use Mongo instead of Redis is intentional. Redis is often used for
+non-essential data (such as sessions) and without configuration doesn't
+guarantee the same level of persistence as Mongo (should the server need to be
+restarted/crash). 
+
+Agenda decides to focus on persistence without requiring special configuration
+of Redis (thereby degrading the performance of the Redis server on non-critical
+data, such as sessions). 
+
+Ultimately if enough people want a Redis driver instead of Mongo, I will write
+one. (Please open an issue requesting it). For now, Agenda decided to focus on
+guaranteed persistence.
 
 
 
