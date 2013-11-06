@@ -1,4 +1,9 @@
 
+0.1.3 / 2013-11-06 
+==================
+
+ * Small Bug fix for global-namespace pollution
+
 0.1.2 / 2013-10-31 
 ==================
 
