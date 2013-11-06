@@ -281,19 +281,16 @@ describe('Job', function() {
     });
   });
 
-  //Only run super slow running tests when we want full coverage report
-  if(process.env.AGENDA_COVERAGE) {
-    describe("start/stop", function() {
-      it("starts/stops the job queue", function(done) {
-        jobs.define('jobQueueTest', function(job, cb) {
-          cb();
-          jobs.stop();
-          done();
-        });
-        jobs.every('1 second', 'jobQueueTest');
-        jobs.processEvery('1 second');
-        jobs.start();
+  describe("start/stop", function() {
+    it("starts/stops the job queue", function(done) {
+      jobs.define('jobQueueTest', function(job, cb) {
+        cb();
+        jobs.stop();
+        done();
       });
+      jobs.every('1 second', 'jobQueueTest');
+      jobs.processEvery('1 second');
+      jobs.start();
     });
-  }
+  });
 });
