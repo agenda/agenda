@@ -1,5 +1,5 @@
 var expect = require('expect.js'),
-    mongo = require('mongoskin').db('localhost:27017/agenda-test', {w: 0});
+    mongo = require('mongoskin').db('localhost:27017/agenda-test', {w: 0}),
     jobs = require('../index.js')({
       defaultConcurrency: 5,
       db: {
@@ -280,4 +280,20 @@ describe('Job', function() {
       expect(job.save()).to.be(job);
     });
   });
+
+  //Only run super slow running tests when we want full coverage report
+  if(process.env.AGENDA_COVERAGE) {
+    describe("start/stop", function() {
+      it("starts/stops the job queue", function(done) {
+        jobs.define('jobQueueTest', function(job, cb) {
+          cb();
+          jobs.stop();
+          done();
+        });
+        jobs.every('1 second', 'jobQueueTest');
+        jobs.processEvery('1 second');
+        jobs.start();
+      });
+    });
+  }
 });

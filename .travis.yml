@@ -4,3 +4,5 @@ node_js:
   - "0.11"
   - "0.10"
   - "0.8"
+after_scripts:
+  - NODE_ENV=test AGENDA_COVERAGE=1 mocha test -t 5000 --require blanket --reporter mocha-lcov-reporter | ./node_modules/coveralls/bin/coveralls.js
