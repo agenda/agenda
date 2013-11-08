@@ -16,13 +16,10 @@
   },
   "keywords": [
     "job",
+    "jobs",
     "delayed",
-    "job",
-    "job",
     "scheduler",
-    "job",
-    "runner",
-    "delayed"
+    "runner"
   ],
   "author": "Ryan Schmukler <ryan@slingingcode.com> (http://slingingcode.com/)",
   "license": "MIT",
