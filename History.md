@@ -1,4 +1,10 @@
 
+0.2.0 / 2013-11-07 
+==================
+
+ * Added error for running undefined job. [Closes #4]
+ * Fixed critical error where new jobs are not correctly saved.
+
 0.1.3 / 2013-11-06 
 ==================
 
