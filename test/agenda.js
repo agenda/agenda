@@ -88,6 +88,8 @@ describe('Agenda', function() {
       var jobProcessor = function(job, done) { };
       before(function() {
         jobs.define('someJob', jobProcessor);
+        jobs.define('send email', jobProcessor);
+        jobs.define('some job', jobProcessor);
       });
 
       it('stores the definition for the job', function() {
@@ -159,7 +161,6 @@ describe('Job', function() {
   describe('repeatEvery', function() {
     var job = new Job();;
     it('sets the repeat interval', function() {
-      debugger;
       job.repeatEvery(5000);
       expect(job.attrs.repeatInterval).to.be(5000);
     });
