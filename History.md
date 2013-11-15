@@ -1,4 +1,9 @@
 
+0.2.1 / 2013-11-14 
+==================
+
+ * Fixed a bug where mongo wasn't giving updated document
+
 0.2.0 / 2013-11-07 
 ==================
 
