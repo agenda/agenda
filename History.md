@@ -1,4 +1,10 @@
 
+n.n.n / 2013-11-19 
+==================
+
+ * Fixed for setImmediate on Node 0.8
+ * updated README
+
 0.3.0 / 2013-11-19 
 ==================
 
