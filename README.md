@@ -341,6 +341,7 @@ agenda.once('success:send email', function(job) {
 agenda.on('fail:send email', function(err, job) {
   console.log("Job failed with error: %s", err.message);
 });
+```
 
 ## Frequently Asked Questions
 
