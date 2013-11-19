@@ -1,6 +1,9 @@
 test:
 	NODE_ENV=test mocha -w --reporter spec
 
+test-debug:
+	NODE_ENV=test mocha -w --reporter spec debug
+
 test-once:
 	NODE_ENV=test mocha --reporter spec
 

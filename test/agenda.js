@@ -285,13 +285,69 @@ describe('Job', function() {
   describe("start/stop", function() {
     it("starts/stops the job queue", function(done) {
       jobs.define('jobQueueTest', function(job, cb) {
-        cb();
         jobs.stop();
+        cb();
+        jobs.define('jobQueueTest', function(job, cb) {
+          cb();
+        });
         done();
       });
       jobs.every('1 second', 'jobQueueTest');
       jobs.processEvery('1 second');
       jobs.start();
+    });
+
+    describe('events', function() {
+      it('emits complete event', function(done) {
+        var job = new Job({agenda: jobs, name: 'jobQueueTest'});
+        jobs.once('complete', function(j) {
+          expect(j).to.be(job);
+          done();
+        });
+        job.run();
+      });
+      it('emits complete:job name event', function(done) {
+        var job = new Job({agenda: jobs, name: 'jobQueueTest'});
+        jobs.once('complete:jobQueueTest', function(j) {
+          expect(j).to.be(job);
+          done();
+        });
+        job.run();
+      });
+      it('emits success event', function(done) {
+        var job = new Job({agenda: jobs, name: 'jobQueueTest'});
+        jobs.once('success', function(j) {
+          expect(j).to.be.ok();
+          done();
+        });
+        job.run();
+      });
+      it('emits success:job name event', function(done) {
+        var job = new Job({agenda: jobs, name: 'jobQueueTest'});
+        jobs.once('success:jobQueueTest', function(j) {
+          expect(j).to.be.ok();
+          done();
+        });
+        job.run();
+      });
+      it('emits fail event', function(done){
+        var job = new Job({agenda: jobs, name: 'failBoat'});
+        jobs.once('fail', function(err, j) {
+          expect(err.message).to.be('Zomg fail');
+          expect(j).to.be(job);
+          done();
+        });
+        job.run();
+      });
+      it('emits error:job name event', function(done) {
+        var job = new Job({agenda: jobs, name: 'failBoat'});
+        jobs.once('fail:failBoat', function(err, j) {
+          expect(err.message).to.be('Zomg fail');
+          expect(j).to.be(job);
+          done();
+        });
+        job.run();
+      });
     });
   });
 });

@@ -63,6 +63,7 @@ mapped to a database collection and load the jobs from within.
 - [Creating jobs](#creating-jobs)
 - [Starting the job processor](#starting-the-job-processor)
 - [Manually working with jobs](#manually-working-with-a-job)
+- [Job Queue Events](#job-queue-events)
 - [Frequently asked questions](#frequently-asked-questions)
 
 ## Configuring an agenda 
@@ -310,6 +311,35 @@ Saves the `job.attrs` into the database.
 ```js
 job.save()
 ```
+
+## Job Queue Events
+
+An instance of an agenda will emit the following events:
+
+- `complete` - called when a job finishes, regardless of if it succeeds or fails
+- `complete:job name` - called when a job finishes, regardless of if it succeeds or fails
+```js
+agenda.on('complete', function(job) {
+  console.log("Job %s finished", job.attrs.name);
+});
+
+```
+- `success` - called when a job finishes successfully
+- `success:job name` - called when a job finishes successfully
+
+```js
+agenda.once('success:send email', function(job) {
+  console.log("Sent Email Successfully to: %s", job.attrs.data.to);
+});
+```
+
+- `fail` - called when a job throws an error
+- `fail:job name` - called when a job throws an error
+
+```js
+agenda.on('fail:send email', function(err, job) {
+  console.log("Job failed with error: %s", err.message);
+});
 
 ## Frequently Asked Questions
 
