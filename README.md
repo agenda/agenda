@@ -10,6 +10,7 @@ It offers:
 - Minimal overhead. Agenda aims to keep its code base small.
 - Mongo backed persistance layer.
 - Scheduling with priority, repeating, and easily readable syntax.
+- Event backed job queue that you can hook into.
 
 # Installation
 
