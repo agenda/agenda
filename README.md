@@ -319,12 +319,13 @@ An instance of an agenda will emit the following events:
 
 - `complete` - called when a job finishes, regardless of if it succeeds or fails
 - `complete:job name` - called when a job finishes, regardless of if it succeeds or fails
+
 ```js
 agenda.on('complete', function(job) {
   console.log("Job %s finished", job.attrs.name);
 });
-
 ```
+
 - `success` - called when a job finishes successfully
 - `success:job name` - called when a job finishes successfully
 
