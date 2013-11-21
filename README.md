@@ -231,7 +231,9 @@ the database. See below to learn how to manually work with jobs.
 
 ```js
 var job = agenda.create('printAnalyticsReport', {userCount: 100});
-job.save();
+job.save(function(err) {
+  console.log("Job successfully saved");
+});
 ```
 
 ## Starting the job processor
