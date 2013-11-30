@@ -312,7 +312,9 @@ job.run(function(err, job) {
 Saves the `job.attrs` into the database.
 
 ```js
-job.save()
+job.save(function(err) {
+    if(!err) console.log("Successfully saved job to collection");
+})
 ```
 
 ## Job Queue Events
