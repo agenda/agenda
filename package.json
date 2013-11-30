@@ -27,8 +27,6 @@
     "url": "https://github.com/rschmukler/agenda/issues"
   },
   "dependencies": {
-    "modella": "~0.1.7",
-    "modella-mongo": "~0.1.4",
     "human-interval": "0.1.1",
     "date.js": "~0.1.1",
     "mongoskin": "~0.6.0"
