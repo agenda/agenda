@@ -9,7 +9,8 @@ It offers:
 
 - Minimal overhead. Agenda aims to keep its code base small.
 - Mongo backed persistance layer.
-- Scheduling with priority, repeating, and easily readable syntax.
+- Scheduling with configurable priority, concurrency, and repeating
+- Scheduling via cron or human readable syntax.
 - Event backed job queue that you can hook into.
 
 # Installation
@@ -28,6 +29,10 @@ agenda.define('delete old users', function(job, done) {
 });
 
 agenda.every('3 minutes', 'delete old users');
+
+// Alternatively, you could also do:
+
+agenda.every('*/3 * * * *', 'delete old users');
 
 agenda.start();
 ```
@@ -192,6 +197,8 @@ job in the database, even if that line is run multiple times. This lets you put
 it in a file that may get run multiple times, such as `webserver.js` which may
 reboot from time to time.
 
+`interval` can be a human-readable format `String`, a cron format `String`, or a `Number`.
+
 `data` is an optional argument that will be passed to the processing function
 under `job.data`.
 
@@ -261,6 +268,8 @@ with a call to `job.save()` in order to persist the changes to the database.
 ### repeatEvery(interval)
 
 Specifies an `interval` on which the job should repeat.
+
+`interval` can be a human-readable format `String`, a cron format `String`, or a `Number`.
 
 ```js
 job.repeatEvery('10 minutes');
