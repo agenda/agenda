@@ -115,7 +115,7 @@ describe('Agenda', function() {
           expect(jobs.every('5 minutes', 'send email')).to.be.a(Job);
         });
         it('sets the repeatEvery', function() {
-          expect(jobs.every('5 seconds', 'send email').attrs.repeatInterval).to.be(5000);
+          expect(jobs.every('5 seconds', 'send email').attrs.repeatInterval).to.be('5 seconds');
         });
         it('sets the agenda', function() {
           expect(jobs.every('5 seconds', 'send email').agenda).to.be(jobs);
@@ -183,6 +183,7 @@ describe('Job', function() {
   });
 
   describe('priority', function() {
+    var job;
     beforeEach(function() {
       job = new Job();
     });
@@ -197,6 +198,33 @@ describe('Job', function() {
       job.priority('high');
       expect(job.attrs.priority).to.be(10);
     });
+  });
+
+  describe('computeNextRunAt', function() {
+    var job;
+
+    beforeEach(function() {
+      job = new Job();
+    });
+
+    it('returns the job', function() {
+      expect(job.computeNextRunAt()).to.be(job);
+    });
+
+    it('sets to undefined if no repeat interval', function() {
+      job.computeNextRunAt();
+      expect(job.attrs.nextRunAt).to.be(undefined);
+    });
+
+    it('it understands human intervals', function() {
+      var now = new Date();
+      job.repeatEvery('2 minutes');
+      job.computeNextRunAt();
+      expect(job.attrs.nextRunAt).to.be.greaterThan(now);
+    });
+
+    it('understands cron intervals');
+
   });
 
   describe('run', function() {
