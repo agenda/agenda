@@ -200,7 +200,7 @@ describe('Job', function() {
     });
   });
 
-  describe.only('computeNextRunAt', function() {
+  describe('computeNextRunAt', function() {
     var job;
 
     beforeEach(function() {
