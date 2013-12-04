@@ -1,9 +1,14 @@
 
-n.n.n / 2013-11-19 
+0.4.0 / 2013-12-04 
 ==================
 
- * Fixed for setImmediate on Node 0.8
- * updated README
+ * Added Cron Support [Closes #2]
+ * removed modella dependency
+
+0.3.1 / 2013-11-19 
+==================
+
+ * Fix for setImmediate on Node 0.8
 
 0.3.0 / 2013-11-19 
 ==================
