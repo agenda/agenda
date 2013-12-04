@@ -200,7 +200,7 @@ describe('Job', function() {
     });
   });
 
-  describe('computeNextRunAt', function() {
+  describe.only('computeNextRunAt', function() {
     var job;
 
     beforeEach(function() {
@@ -218,12 +218,22 @@ describe('Job', function() {
 
     it('it understands human intervals', function() {
       var now = new Date();
+      job.attrs.lastRunAt = now;
       job.repeatEvery('2 minutes');
       job.computeNextRunAt();
-      expect(job.attrs.nextRunAt).to.be.greaterThan(now);
+      expect(job.attrs.nextRunAt).to.be(now.valueOf() + 120000);
     });
 
-    it('understands cron intervals');
+    it('understands cron intervals', function() {
+      var now = new Date();
+      now.setMinutes(1);
+      now.setMilliseconds(0);
+      now.setSeconds(0);
+      job.attrs.lastRunAt = now;
+      job.repeatEvery('*/2 * * * *');
+      job.computeNextRunAt();
+      expect(job.attrs.nextRunAt.valueOf()).to.be(now.valueOf() + 60000);
+    });
 
   });
 

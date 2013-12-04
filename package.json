@@ -29,7 +29,8 @@
   "dependencies": {
     "human-interval": "0.1.1",
     "date.js": "~0.1.1",
-    "mongoskin": "~0.6.0"
+    "mongoskin": "~0.6.0",
+    "cron": "~1.0.1"
   },
   "devDependencies": {
     "mocha": "~1.13.0",
