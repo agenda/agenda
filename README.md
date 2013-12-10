@@ -156,7 +156,8 @@ Before you can use a job, you must define its processing behavior.
 
 Defines a job with the name of `jobName`. When a job of job name gets run, it
 will be passed to `fn(job, done)`. To maintain asynchronous behavior, you must
-call `done()` when you are processing the job.
+call `done()` when you are processing the job. If your function is synchronous,
+you may omit `done` from the signature.
 
 `options` is an optional argument which can overwrite the defaults. It can take
 the following:
@@ -177,6 +178,7 @@ Priority mapping:
 }
 ```
 
+Async Job:
 ```js
 agenda.define('some long running job', function(job, done) {
   doSomelengthyTask(function(data) {
@@ -184,6 +186,14 @@ agenda.define('some long running job', function(job, done) {
     sendThatData(data);
     done();
   });
+});
+```
+
+Sync Job:
+
+```js
+agenda.define('say hello', function(job) {
+  console.log("Hello!");
 });
 ```
 
