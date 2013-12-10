@@ -1,4 +1,9 @@
 
+0.4.1 / 2013-12-10 
+==================
+
+ * Added support for synchronous job definitions
+
 0.4.0 / 2013-12-04 
 ==================
 
