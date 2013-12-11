@@ -1,4 +1,9 @@
 
+0.4.2 / 2013-12-11 
+==================
+
+ * Refactored Job to ensure that everything is stored as an ISODate in the Database. [Closes #14] [@raisch]
+
 0.4.1 / 2013-12-10 
 ==================
 
