@@ -1,4 +1,9 @@
 
+0.4.3 / 2013-12-13 
+==================
+
+ * fix job.schedule's taking Date object as 'when' argument [@bars3s]
+
 0.4.2 / 2013-12-11 
 ==================
 
