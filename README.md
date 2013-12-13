@@ -210,7 +210,7 @@ reboot from time to time.
 `interval` can be a human-readable format `String`, a cron format `String`, or a `Number`.
 
 `data` is an optional argument that will be passed to the processing function
-under `job.data`.
+under `job.attrs.data`.
 
 Returns the `job`.
 
