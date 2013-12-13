@@ -170,12 +170,19 @@ describe('Job', function() {
   });
 
   describe('schedule', function() {
+    var job;
     beforeEach(function() {
       job = new Job();
     });
     it('sets the next run time', function() {
       job.schedule('in 5 minutes');
       expect(job.attrs.nextRunAt).to.be.a(Date);
+    });
+    it('sets the next run time Date object', function() {
+      var when = new Date(Date.now() + 1000*60*3);
+      job.schedule(when);
+      expect(job.attrs.nextRunAt).to.be.a(Date);
+      expect(job.attrs.nextRunAt.getTime()).to.eql(when.getTime());
     });
     it('returns the job', function() {
       expect(job.schedule('tomorrow at noon')).to.be(job);
