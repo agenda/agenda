@@ -1,4 +1,10 @@
 
+0.4.4 / 2013-12-13 
+==================
+
+ * fix job.toJson method: add failReason & failedAt attrs (Broken in 0.4.3 and 0.4.2)
+ * fix job cb for working with 'q' promises
+
 0.4.3 / 2013-12-13 
 ==================
 
