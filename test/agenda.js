@@ -1,13 +1,14 @@
-var expect = require('expect.js'),
-    mongo = require('mongoskin').db('localhost:27017/agenda-test', {w: 0}),
+var mongoCfg = 'localhost:27017/agenda-test',
+    expect = require('expect.js'),
+    mongo = require('mongoskin').db(mongoCfg, {w: 0}),
     jobs = require('../index.js')({
       defaultConcurrency: 5,
       db: {
-        address: 'localhost:27017/agenda-test'
+        address: mongoCfg
       }
     }),
     Job = require('../lib/job.js');
-    
+
 before(function(done) {
   mongo.collection('agendaJobs').remove({}, done);
 });
@@ -20,15 +21,15 @@ describe('Agenda', function() {
   describe('configuration methods', function() {
     describe('database', function() {
       it('sets the database', function() {
-        jobs.database('localhost:27017/agenda-test');
+        jobs.database(mongoCfg);
         expect(jobs._db.skinDb._dbconn.databaseName).to.be('agenda-test');
       });
       it('sets the collection', function() {
-        jobs.database('localhost:27017/agenda-test', 'myJobs');
+        jobs.database(mongoCfg, 'myJobs');
         expect(jobs._db.collectionName).to.be('myJobs');
       });
       it('returns itself', function() {
-        expect(jobs.database('localhost:27017/agenda-test')).to.be(jobs);
+        expect(jobs.database(mongoCfg)).to.be(jobs);
       });
     });
     describe('processEvery', function() {
@@ -290,6 +291,19 @@ describe('Job', function() {
       job.attrs.name = 'failBoat';
       jobs.define('failBoat', function(job, cb) {
         throw(new Error("Zomg fail"));
+      });
+      job.run(function(err) {
+        expect(err).to.be.ok();
+        done();
+      });
+    });
+    it('handles errors with q promises', function(done) {
+      job.attrs.name = 'failBoat2';
+      jobs.define('failBoat2', function(job, cb) {
+        var Q = require('q');
+        Q.delay(100).then(function(){
+          throw(new Error("Zomg fail"));
+        }).fail(cb).done();
       });
       job.run(function(err) {
         expect(err).to.be.ok();
