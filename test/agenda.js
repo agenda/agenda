@@ -405,7 +405,7 @@ describe('Job', function() {
 
     it(": must run after lock lifetime passed", function(done) {
       var startCounter = 0,
-        isFirstRun = true;
+          isFirstRun = true;
 
       jobs.define("lock job", {lockLifetime: 1000}, function(job, cb){
         startCounter++;
@@ -420,11 +420,13 @@ describe('Job', function() {
           }, 1200);
         }else{
           expect(startCounter).to.eql(2);
-          cb();
+          setTimeout(function(){
+            cb();
+          }, 1200);
         }
       });
 
-      jobs.defaultConcurrency(10);
+      jobs.defaultConcurrency(100);
       jobs.processEvery(100);
       jobs.create("lock job").save();
       jobs.stop();
