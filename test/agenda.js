@@ -160,7 +160,7 @@ describe('Agenda', function() {
 
 describe('Job', function() {
   describe('repeatEvery', function() {
-    var job = new Job();;
+    var job = new Job();
     it('sets the repeat interval', function() {
       job.repeatEvery(5000);
       expect(job.attrs.repeatInterval).to.be(5000);
@@ -403,35 +403,29 @@ describe('Job', function() {
 
   describe("job lock", function(){
 
-    it(": must run after lock lifetime passed", function(done) {
-      var startCounter = 0,
-          isFirstRun = true;
+    it("runs job after a lock has expired", function(done) {
+      var startCounter = 0;
 
-      jobs.define("lock job", {lockLifetime: 1000}, function(job, cb){
+      jobs.define("lock job", {lockLifetime: 200}, function(job, cb){
         startCounter++;
 
-        if(isFirstRun){
-          isFirstRun = false;
-          setTimeout(function(){
-            expect(startCounter).to.eql(2);
-            jobs.stop();
+        if(startCounter == 1) {
+          setTimeout(function() {
             cb();
+            expect(startCounter).to.be(2);
             done();
-          }, 1200);
-        }else{
-          expect(startCounter).to.eql(2);
-          setTimeout(function(){
-            cb();
-          }, 1200);
+          }, 300);
+        } else {
+          cb();
         }
       });
 
       jobs.defaultConcurrency(100);
       jobs.processEvery(100);
-      jobs.create("lock job").save();
+      jobs.every('1 second', 'lock job');
       jobs.stop();
       jobs.start();
     });
 
-  })
+  });
 });
