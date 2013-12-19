@@ -1,4 +1,9 @@
 
+0.5.0 / 2013-12-19 (Backwards compatible!)
+==================
+
+ * Added job locking mechanism, enabling support for multiple works / agenda instances
+
 0.4.4 / 2013-12-13 
 ==================
 

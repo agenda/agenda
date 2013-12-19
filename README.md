@@ -68,6 +68,7 @@ mapped to a database collection and load the jobs from within.
 - [Defining job processors](#defining-job-processors)
 - [Creating jobs](#creating-jobs)
 - [Starting the job processor](#starting-the-job-processor)
+- [Multiple job processors](#multiple-job-processors)
 - [Manually working with jobs](#manually-working-with-a-job)
 - [Job Queue Events](#job-queue-events)
 - [Frequently asked questions](#frequently-asked-questions)
@@ -162,7 +163,8 @@ you may omit `done` from the signature.
 `options` is an optional argument which can overwrite the defaults. It can take
 the following:
 
-- `concurrency`: `number` maxinum number of that job that can be running at once
+- `concurrency`: `number` maxinum number of that job that can be running at once (per instance of agenda)
+- `lockLifetime`: `number` interval in ms of how long the job stays locked for (see [multiple job processors](#multiple-job-processors) for more info)
 - `priority`: `(lowest|low|normal|high|highest|number)` specifies the priority
   of the job. Higher priority jobs will run first. See the priority mapping
   below
@@ -268,6 +270,27 @@ are new jobs.
 
 Stops the job queue processing.
 
+## Multiple job processors
+
+Sometimes you may want to have multiple node instances / machines process from
+the same queue. Agenda supports a locking mechanism to ensure that multiple
+queues don't process the same job.
+
+You can configure the locking mechanism by specifying `lockLifetime` as an
+interval when defining the job.
+
+```js
+agenda.define('someJob', {lockLifetime: 10000}, function(job, cb) {
+  //Do something in 10 seconds or less...
+});
+```
+
+This will ensure that no other job processor (this one included) attempts to run the job again 
+for the next 10 seconds. If you have a particularly long running job, you will want to
+specify a longer lockLifetime. 
+
+By default it is 10 minutes. Typically you shouldn't have a job that runs for 10 minutes, 
+so this is really insurance should the job queue crash before the job is unlocked.
 
 ## Manually working with a job
 
