@@ -259,15 +259,6 @@ describe('Job', function() {
       job = new Job({agenda: jobs, name: 'testRun'});
     });
 
-    it('updates the agenda', function(done) {
-      job.run(function() {
-        expect(jobs._runningJobs).to.be(0);
-        expect(definitions.testRun.running).to.be(0);
-        done();
-      });
-      expect(jobs._runningJobs).to.be(1);
-      expect(definitions.testRun.running).to.be(1);
-    });
     it('updates lastRunAt', function(done) {
       var now = new Date();
       setTimeout(function() {
@@ -343,7 +334,7 @@ describe('Job', function() {
 
   describe("start/stop", function() {
     it("starts/stops the job queue", function(done) {
-      jobs.define('jobQueueTest', function(job, cb) {
+      jobs.define('jobQueueTest', function jobQueueTest(job, cb) {
         jobs.stop();
         cb();
         jobs.define('jobQueueTest', function(job, cb) {
@@ -409,4 +400,38 @@ describe('Job', function() {
       });
     });
   });
+
+  describe("job lock", function(){
+
+    it(": must run after lock lifetime passed", function(done) {
+      var startCounter = 0,
+          isFirstRun = true;
+
+      jobs.define("lock job", {lockLifetime: 1000}, function(job, cb){
+        startCounter++;
+
+        if(isFirstRun){
+          isFirstRun = false;
+          setTimeout(function(){
+            expect(startCounter).to.eql(2);
+            jobs.stop();
+            cb();
+            done();
+          }, 1200);
+        }else{
+          expect(startCounter).to.eql(2);
+          setTimeout(function(){
+            cb();
+          }, 1200);
+        }
+      });
+
+      jobs.defaultConcurrency(100);
+      jobs.processEvery(100);
+      jobs.create("lock job").save();
+      jobs.stop();
+      jobs.start();
+    });
+
+  })
 });
