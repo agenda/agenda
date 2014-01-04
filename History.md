@@ -1,4 +1,8 @@
 
+0.5.1 / 2013-01-04 (Backwards compatible!)
+==================
+ * Updated version of humanInterval, adding weeks and months support
+
 0.5.0 / 2013-12-19 (Backwards compatible!)
 ==================
 
