@@ -305,8 +305,12 @@ describe('Job', function() {
 
   describe('fail', function() {
     var job = new Job();
-    it('sets the fail reason', function() {
+    it('takes a string', function() {
       job.fail('test');
+      expect(job.attrs.failReason).to.be('test');
+    });
+    it('takes an error object', function() {
+      job.fail(new Error('test'));
       expect(job.attrs.failReason).to.be('test');
     });
     it('sets the failedAt time', function() {

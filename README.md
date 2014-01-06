@@ -333,8 +333,13 @@ job.save();
 Sets `job.attrs.failedAt` to `now`, and sets `job.attrs.failReason`
 to `reason`.
 
+Optionally, `reason` can be an error, in which case `job.attrs.failReason` will
+be set to `error.message`
+
 ```js
 job.fail('insuficient disk space');
+// or
+job.fail(new Error('insufficient disk space'));
 job.save();
 ```
 
