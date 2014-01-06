@@ -13,6 +13,6 @@ test-coverage:
 	NODE_ENV=test AGENDA_COVERAGE=1 $(MOCHA_PATH) test --require blanket --reporter html-cov > coverage.html
 
 test-coveralls:
-	NODE_ENV=test AGENDA_COVERAGE=1 $(MOCHA_PATH) test --require blanket --reporter $(MOCHA_PATH)-lcov-reporter | ./node_modules/coveralls/bin/coveralls.js
+	NODE_ENV=test AGENDA_COVERAGE=1 $(MOCHA_PATH) test --require blanket --reporter mocha-lcov-reporter | ./node_modules/coveralls/bin/coveralls.js
 
 .PHONY: test test-coverage test-coveralls
