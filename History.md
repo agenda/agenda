@@ -1,4 +1,9 @@
 
+0.5.2 / 2014-01-06 
+==================
+
+ * Added ability for job.fail to take an error
+
 0.5.1 / 2013-01-04 (Backwards compatible!)
 ==================
  * Updated version of humanInterval, adding weeks and months support
