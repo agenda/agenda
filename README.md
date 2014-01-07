@@ -243,6 +243,15 @@ Returns the `job`.
 agenda.schedule('tomorrow at noon', 'printAnalyticsReport', {userCount: 100});
 ```
 
+### now(name, data)
+
+Schedules a job to run `name` once immediately. 
+
+`data` is an optional argument that will be passed to the processing function
+under `job.data`.
+
+Returns the `job`.
+
 ### create(jobName, data)
 
 Returns an instance of a `jobName` with `data`. This does *NOT* save the job in
