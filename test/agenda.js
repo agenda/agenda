@@ -362,6 +362,22 @@ describe('Job', function() {
     });
 
     describe('events', function() {
+      it('emits start event', function(done) {
+        var job = new Job({agenda: jobs, name: 'jobQueueTest'});
+        jobs.once('start', function(j) {
+          expect(j).to.be(job);
+          done();
+        });
+        job.run();
+      });
+      it('emits start:job name event', function(done) {
+        var job = new Job({agenda: jobs, name: 'jobQueueTest'});
+        jobs.once('start:jobQueueTest', function(j) {
+          expect(j).to.be(job);
+          done();
+        });
+        job.run();
+      });
       it('emits complete event', function(done) {
         var job = new Job({agenda: jobs, name: 'jobQueueTest'});
         jobs.once('complete', function(j) {
@@ -403,7 +419,7 @@ describe('Job', function() {
         });
         job.run();
       });
-      it('emits error:job name event', function(done) {
+      it('emits fail:job name event', function(done) {
         var job = new Job({agenda: jobs, name: 'failBoat'});
         jobs.once('fail:failBoat', function(err, j) {
           expect(err.message).to.be('Zomg fail');

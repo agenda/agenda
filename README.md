@@ -1,9 +1,9 @@
 # Agenda
-[![Build Status](https://api.travis-ci.org/rschmukler/agenda.png)](http://travis-ci.org/rschmukler/agenda) 
-[![Code Climate](https://d3s6mut3hikguw.cloudfront.net/github/rschmukler/agenda.png)](https://codeclimate.com/github/rschmukler/agenda/badges) 
+[![Build Status](https://api.travis-ci.org/rschmukler/agenda.png)](http://travis-ci.org/rschmukler/agenda)
+[![Code Climate](https://d3s6mut3hikguw.cloudfront.net/github/rschmukler/agenda.png)](https://codeclimate.com/github/rschmukler/agenda/badges)
 [![Coverage Status](https://coveralls.io/repos/rschmukler/agenda/badge.png)](https://coveralls.io/r/rschmukler/agenda)
 
-Agenda is a light-weight job scheduling library for Node.js. 
+Agenda is a light-weight job scheduling library for Node.js.
 
 It offers:
 
@@ -40,7 +40,7 @@ agenda.start();
 ```js
 agenda.define('send email report', {priority: 'high', concurrency: 10}, function(job, done) {
   var data = job.attrs.data;
-  emailClient.send({ 
+  emailClient.send({
     to: data.to,
     from: 'example@example.com',
     subject: 'Email Report',
@@ -73,7 +73,7 @@ mapped to a database collection and load the jobs from within.
 - [Job Queue Events](#job-queue-events)
 - [Frequently asked questions](#frequently-asked-questions)
 
-## Configuring an agenda 
+## Configuring an agenda
 All configuration methods are chainable, meaning you can do something like:
 
 ```js
@@ -245,7 +245,7 @@ agenda.schedule('tomorrow at noon', 'printAnalyticsReport', {userCount: 100});
 
 ### now(name, data)
 
-Schedules a job to run `name` once immediately. 
+Schedules a job to run `name` once immediately.
 
 `data` is an optional argument that will be passed to the processing function
 under `job.data`.
@@ -298,11 +298,11 @@ agenda.define('someJob', {lockLifetime: 10000}, function(job, cb) {
 });
 ```
 
-This will ensure that no other job processor (this one included) attempts to run the job again 
+This will ensure that no other job processor (this one included) attempts to run the job again
 for the next 10 seconds. If you have a particularly long running job, you will want to
-specify a longer lockLifetime. 
+specify a longer lockLifetime.
 
-By default it is 10 minutes. Typically you shouldn't have a job that runs for 10 minutes, 
+By default it is 10 minutes. Typically you shouldn't have a job that runs for 10 minutes,
 so this is really insurance should the job queue crash before the job is unlocked.
 
 ## Manually working with a job
@@ -381,6 +381,15 @@ job.save(function(err) {
 
 An instance of an agenda will emit the following events:
 
+- `start` - called just before a job starts
+- `start:job name` - called just before the specified job starts
+
+```js
+agenda.on('start', function(job) {
+  console.log("Job %s starting", job.attrs.name);
+});
+```
+
 - `complete` - called when a job finishes, regardless of if it succeeds or fails
 - `complete:job name` - called when a job finishes, regardless of if it succeeds or fails
 
@@ -415,11 +424,11 @@ agenda.on('fail:send email', function(err, job) {
 The decision to use Mongo instead of Redis is intentional. Redis is often used for
 non-essential data (such as sessions) and without configuration doesn't
 guarantee the same level of persistence as Mongo (should the server need to be
-restarted/crash). 
+restarted/crash).
 
 Agenda decides to focus on persistence without requiring special configuration
 of Redis (thereby degrading the performance of the Redis server on non-critical
-data, such as sessions). 
+data, such as sessions).
 
 Ultimately if enough people want a Redis driver instead of Mongo, I will write
 one. (Please open an issue requesting it). For now, Agenda decided to focus on
