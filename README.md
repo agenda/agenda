@@ -252,11 +252,11 @@ under `job.data`.
 
 Returns the `job`.
 
-### create(jobName, data)
-
 ```js
 agenda.now('do the hokey pokey');
 ```
+
+### create(jobName, data)
 
 Returns an instance of a `jobName` with `data`. This does *NOT* save the job in
 the database. See below to learn how to manually work with jobs.
