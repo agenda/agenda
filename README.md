@@ -436,7 +436,7 @@ guaranteed persistence.
 
 ### Spawning / forking processes.
 
-Ultimately Agenda can work from a single job queue across multiple machines, node processes, or forks. If you are interested in having more than one worker, @Bars3s has written up a fantastic example of how one might do it:
+Ultimately Agenda can work from a single job queue across multiple machines, node processes, or forks. If you are interested in having more than one worker, [Bars3s](http://github.com/bars3s) has written up a fantastic example of how one might do it:
 
 ```js
 var cluster = require('cluster'),
