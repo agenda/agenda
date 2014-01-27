@@ -19,6 +19,8 @@ Install via NPM
 
     npm install agenda
 
+You will also need a working [mongo](http://www.mongodb.org/) database to point it to.
+
 # Example Usage
 
 ```js
