@@ -1,4 +1,9 @@
 
+0.5.5 / 2014-01-28 
+==================
+
+ * added support to directly give mongoskin object, to help minimize connections
+
 0.5.4 / 2014-01-09 
 ==================
 
