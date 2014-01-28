@@ -1,7 +1,8 @@
 var mongoCfg = 'localhost:27017/agenda-test',
     expect = require('expect.js'),
     mongo = require('mongoskin').db(mongoCfg, {w: 0}),
-    jobs = require('../index.js')({
+    Agenda = require('../index.js'),
+    jobs = new Agenda({
       defaultConcurrency: 5,
       db: {
         address: mongoCfg
@@ -30,6 +31,14 @@ describe('Agenda', function() {
       });
       it('returns itself', function() {
         expect(jobs.database(mongoCfg)).to.be(jobs);
+      });
+    });
+
+    describe('mongo', function() {
+      it('sets the _db directly', function() {
+        var agenda = new Agenda();
+        agenda.mongo({hello: 'world'});
+        expect(agenda._db).to.have.property('hello', 'world');
       });
     });
     describe('processEvery', function() {

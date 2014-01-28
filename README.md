@@ -86,6 +86,7 @@ agenda
   ...;
 ```
 
+
 ### database(url, [collectionName])
 
 Specifies the database at the `url` specified. If no collection name is give,
@@ -99,6 +100,18 @@ You can also specify it during instantiation.
 
 ```js
 var agenda = new Agenda({db: { address: 'localhost:27017/agenda-test', collection: 'agendaJobs' }});
+```
+
+### mongo(mongoSkinInstance)
+
+Use an existing mongoskin instance. This can help consolidate connections to a
+database. You can instead use `.database` to have agenda handle connecting for
+you.
+
+You can also specify it during instantiation.
+
+```js
+var agenda = new Agenda({mongo: mongoSkinInstance});
 ```
 
 ### processEvery(interval)
