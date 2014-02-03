@@ -283,6 +283,17 @@ job.save(function(err) {
 });
 ```
 
+### jobs(mongoskin query)
+
+Lets you query all of the jobs in the agenda job's database. This is a full [mongoskin](https://github.com/kissjs/node-mongoskin) 
+`find` query. See mongoskin's documentation for details.
+
+```js
+agenda.jobs({name: 'printAnalyticsReport'}, function(err, jobs) {
+  // Work with jobs (see below)
+});
+```
+
 ## Starting the job processor
 
 To get agenda to start processing jobs from the database you must start it. This
