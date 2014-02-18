@@ -165,6 +165,23 @@ describe('Agenda', function() {
       });
     });
 
+    describe('purge', function() {
+      it('removes all jobs without definitions', function(done) {
+        var job = jobs.create('no definition');
+        job.save(function() {
+          jobs.jobs({name: 'no definition'}, function(err, j) {
+            expect(j).to.have.length(1);
+            jobs.purge(function() {
+              jobs.jobs({name: 'no definition'}, function(err, j) {
+                expect(j).to.have.length(0);
+                done();
+              });
+            });
+          });
+        });
+      });
+    });
+
     describe('saveJob', function() {
       it('persists job to the database', function(done) {
         var job = jobs.create('someJob', {});

@@ -69,6 +69,7 @@ mapped to a database collection and load the jobs from within.
 - [Configuring an agenda](#configuring-an-agenda)
 - [Defining job processors](#defining-job-processors)
 - [Creating jobs](#creating-jobs)
+- [Managing jobs](#managing-jobs)
 - [Starting the job processor](#starting-the-job-processor)
 - [Multiple job processors](#multiple-job-processors)
 - [Manually working with jobs](#manually-working-with-a-job)
@@ -283,6 +284,9 @@ job.save(function(err) {
 });
 ```
 
+## Managing Jobs
+
+
 ### jobs(mongoskin query)
 
 Lets you query all of the jobs in the agenda job's database. This is a full [mongoskin](https://github.com/kissjs/node-mongoskin) 
@@ -291,6 +295,17 @@ Lets you query all of the jobs in the agenda job's database. This is a full [mon
 ```js
 agenda.jobs({name: 'printAnalyticsReport'}, function(err, jobs) {
   // Work with jobs (see below)
+});
+```
+
+### purge(cb)
+
+Removes all jobs in the database without defined behaviors. Useful if you change a definition name and want to remove old jobs.
+
+*IMPORTANT:* Do not run this before you finish defining all of your jobs. If you do, you will nuke your database of jobs.
+
+```js
+agenda.purge(function(err, numRemoved) {
 });
 ```
 
