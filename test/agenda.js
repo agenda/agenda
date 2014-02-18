@@ -304,6 +304,15 @@ describe('Job', function() {
         });
       }, 5);
     });
+
+    it('fails if job is undefined', function(done) {
+      job = new Job({agenda: jobs, name: 'not defined'});
+      job.run(function() {
+        expect(job.attrs.failedAt).to.be.ok();
+        expect(job.attrs.failReason).to.be('Undefined job');
+        done();
+      });
+    });
     it('updates nextRunAt', function(done) {
       var now = new Date();
       job.repeatEvery('10 minutes');
