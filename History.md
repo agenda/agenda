@@ -1,4 +1,10 @@
 
+0.5.6 / 2014-02-18 
+==================
+
+ * Added failing for jobs with undefined definitions
+ * Added agenda.purge() to remove old jobs
+
 0.5.5 / 2014-01-28 
 ==================
 
