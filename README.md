@@ -525,7 +525,7 @@ function addWebWorker() {
 }
 
 function addJobWorker() {
-    webWorkers.push(cluster.fork({job: 1}).id);
+    jobWorkers.push(cluster.fork({job: 1}).id);
 }
 
 function removeWebWorker(id) {
