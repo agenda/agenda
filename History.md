@@ -1,4 +1,9 @@
 
+0.5.8 / 2014-03-07 
+==================
+
+ * Fixed single jobs not being saved properly [closes #38]
+
 0.5.7 / 2014-03-06 
 ==================
 
