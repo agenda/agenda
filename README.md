@@ -418,6 +418,16 @@ job.save(function(err) {
 })
 ```
 
+### remove(callback)
+
+Removes the `job` from the database.
+
+```js
+job.save(function(err) {
+    if(!err) console.log("Successfully saved job to collection");
+})
+```
+
 ## Job Queue Events
 
 An instance of an agenda will emit the following events:
