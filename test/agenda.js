@@ -281,11 +281,13 @@ describe('Job', function() {
 
   });
 
-  describe.only('remove', function() {
+  describe('remove', function() {
     it('removes the job', function(done) {
       var job = new Job({agenda: jobs, name: 'removed job'});
-      job.save(function() {
-        job.remove(function() {
+      job.save(function(err) {
+        if(err) return done(err);
+        job.remove(function(err) {
+          if(err) return done(err);
           mongo.collection('agendaJobs').find({_id: job.attrs._id}).toArray(function(err, j) {
             expect(j).to.have.length(0);
             done();
