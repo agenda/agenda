@@ -39,6 +39,6 @@
     "mocha-lcov-reporter": "0.0.1",
     "coveralls": "~2.3.0",
     "blanket": "~1.1.5",
-    "q": "*"
+    "q": "~1.0.0"
   }
 }
