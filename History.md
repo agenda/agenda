@@ -1,4 +1,10 @@
 
+0.5.10/ 2014-03-20 
+==================
+
+ * fix agenda.every not properly saving jobs
+ * improve instantiating jobs, fixes bug where certain attrs weren't loaded in
+
 0.5.9 / 2014-03-10 
 ==================
 
