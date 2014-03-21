@@ -121,8 +121,11 @@ Takes a string `interval` which can be either a traditional javascript number,
 or a string such as `3 minutes`
 
 Specifies the frequency at which agenda will query the database looking for jobs
-that need to be processed. If your jobs are time sensitive, you will want to
-specify a low value.
+that need to be processed. Agenda internally uses `setTimeout` to guarantee that
+jobs run at (close to ~3ms) the right time. 
+
+Decreasing the frequency will result in fewer database queries, but more jobs 
+being stored in memory.
 
 ```js
 agenda.processEvery('1 minute');
