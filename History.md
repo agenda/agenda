@@ -1,4 +1,9 @@
 
+0.6.0 / 2014-03-21 (NO BREAKING CHANGES)
+==================
+
+ * convert to using setTimeout for precise job scheduling [closes #6]
+
 0.5.10/ 2014-03-20 
 ==================
 
