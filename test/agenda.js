@@ -131,6 +131,11 @@ describe('Agenda', function() {
           expect(jobs.every('5 seconds', 'send email').agenda).to.be(jobs);
         });
       });
+      describe('with array of names specified', function () {
+        it('returns array of jobs', function () {
+          expect(jobs.every('5 minutes', ['send email', 'some job'])).to.be.an('array');
+        });
+      });
     });
 
     describe('schedule', function() {
@@ -141,6 +146,11 @@ describe('Agenda', function() {
         it('sets the schedule', function() {
           var fiveish = (new Date()).valueOf() + 250000;
           expect(jobs.schedule('in 5 minutes', 'send email').attrs.nextRunAt.valueOf()).to.be.greaterThan(fiveish);
+        });
+      });
+      describe('with array of names specified', function () {
+        it('returns array of jobs', function () {
+          expect(jobs.schedule('5 minutes', ['send email', 'some job'])).to.be.an('array');
         });
       });
     });
