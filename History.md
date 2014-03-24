@@ -1,4 +1,9 @@
 
+0.6.1 / 2014-03-24 
+==================
+
+ * allow every and schedule to take array of job names
+
 0.6.0 / 2014-03-21 (NO BREAKING CHANGES)
 ==================
 
