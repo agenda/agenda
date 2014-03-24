@@ -122,12 +122,12 @@ or a string such as `3 minutes`
 
 Specifies the frequency at which agenda will query the database looking for jobs
 that need to be processed. Agenda internally uses `setTimeout` to guarantee that
-jobs run at (close to ~3ms) the right time. 
+jobs run at (close to ~3ms) the right time.
 
-Decreasing the frequency will result in fewer database queries, but more jobs 
-being stored in memory. 
+Decreasing the frequency will result in fewer database queries, but more jobs
+being stored in memory.
 
-Also worth noting is that if the job is queue is shutdown, any jobs stored in memory 
+Also worth noting is that if the job is queue is shutdown, any jobs stored in memory
 that haven't run will still be locked, meaning that you may have to wait for the
 lock to expire.
 
@@ -251,6 +251,15 @@ agenda.define('printAnalyticsReport', function(job, done) {
 agenda.every('15 minutes', 'printAnalyticsReport');
 ```
 
+Optionally, `name` could be array of job names, which is convenient for scheduling
+different jobs for same `interval`.
+
+```js
+agenda.every('15 minutes', ['printAnalyticsReport', 'sendNotifications', 'updateUserRecords']);
+```
+
+In this case, `every` returns array of `jobs`.
+
 ### schedule(when, name, data)
 
 Schedules a job to run `name` once at a given time. `when` can be a `Date` or a
@@ -261,10 +270,17 @@ under `job.data`.
 
 Returns the `job`.
 
-
 ```js
 agenda.schedule('tomorrow at noon', 'printAnalyticsReport', {userCount: 100});
 ```
+
+Optionally, `name` could be array of job names, similar to `every` method.
+
+```js
+agenda.schedule('tomorrow at noon', ['printAnalyticsReport', 'sendNotifications', 'updateUserRecords']);
+```
+
+In this case, `schedule` returns array of `jobs`.
 
 ### now(name, data)
 
@@ -296,7 +312,7 @@ job.save(function(err) {
 
 ### jobs(mongoskin query)
 
-Lets you query all of the jobs in the agenda job's database. This is a full [mongoskin](https://github.com/kissjs/node-mongoskin) 
+Lets you query all of the jobs in the agenda job's database. This is a full [mongoskin](https://github.com/kissjs/node-mongoskin)
 `find` query. See mongoskin's documentation for details.
 
 ```js
@@ -533,7 +549,7 @@ if (cluster.isMaster) {
 
     if (process.env.job) {
         console.log('start job server: ' + cluster.worker.id);
-        require('./app/job-worker');//initialize the agenda here 
+        require('./app/job-worker');//initialize the agenda here
     }
 }
 
