@@ -1,6 +1,6 @@
 var mongoCfg = 'localhost:27017/agenda-test',
     expect = require('expect.js'),
-    mongo = require('mongoskin').db(mongoCfg, {w: 0}),
+    mongo = require('mongoskin').db('mongodb://' + mongoCfg, {w: 0}),
     Agenda = require('../index.js'),
     jobs = new Agenda({
       defaultConcurrency: 5,
@@ -22,12 +22,12 @@ describe('Agenda', function() {
   describe('configuration methods', function() {
     describe('database', function() {
       it('sets the database', function() {
-        jobs.database(mongoCfg);
-        expect(jobs._db.skinDb._dbconn.databaseName).to.be('agenda-test');
+        jobs.database('localhost:27017/agenda-test-new');
+        expect(jobs._db._skin_db._connect_args[0]).to.contain('agenda-test-new');
       });
       it('sets the collection', function() {
         jobs.database(mongoCfg, 'myJobs');
-        expect(jobs._db.collectionName).to.be('myJobs');
+        expect(jobs._db._collection_args[0]).to.be('myJobs');
       });
       it('returns itself', function() {
         expect(jobs.database(mongoCfg)).to.be(jobs);
