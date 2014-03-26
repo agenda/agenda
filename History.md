@@ -1,4 +1,10 @@
 
+0.6.2 / 2014-03-25 
+==================
+
+ * fix bug that resulted in jobs scheduled in memory to always re-run
+ * Update mongoskin to 1.3
+
 0.6.1 / 2014-03-24 
 ==================
 
