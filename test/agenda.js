@@ -289,6 +289,21 @@ describe('Job', function() {
       expect(job.attrs.nextRunAt.valueOf()).to.be(now.valueOf() + 60000);
     });
 
+    describe('when repeat interval is invalid', function () {
+      beforeEach(function () {
+        job.repeatEvery('week');
+        job.computeNextRunAt();
+      });
+
+      it('sets nextRunAt to undefined', function () {
+        expect(job.attrs.nextRunAt).to.be(undefined);
+      });
+
+      it('fails the job', function () {
+        expect(job.attrs.failReason).to.equal('failed to calculate nextRunAt due to invalid repeat interval');
+      });
+    });
+
   });
 
   describe('remove', function() {
