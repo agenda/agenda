@@ -1,4 +1,10 @@
 
+0.6.3 / 2014-04-07 
+==================
+
+ * fix cron-jobs executing multiple times
+ * fail the job if repeat interval is wrong
+
 0.6.2 / 2014-03-25 
 ==================
 
