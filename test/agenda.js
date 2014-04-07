@@ -27,7 +27,6 @@ describe('Agenda', function() {
       });
       it('sets the collection', function() {
         jobs.database(mongoCfg, 'myJobs');
-        debugger;
         expect(jobs._db.skinDb._collections).to.have.property('myJobs');
       });
       it('returns itself', function() {
