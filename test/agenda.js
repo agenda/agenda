@@ -23,11 +23,12 @@ describe('Agenda', function() {
     describe('database', function() {
       it('sets the database', function() {
         jobs.database('localhost:27017/agenda-test-new');
-        expect(jobs._db._skin_db._connect_args[0]).to.contain('agenda-test-new');
+        expect(jobs._db.skinDb._dbconn.databaseName).to.contain('agenda-test-new');
       });
       it('sets the collection', function() {
         jobs.database(mongoCfg, 'myJobs');
-        expect(jobs._db._collection_args[0]).to.be('myJobs');
+        debugger;
+        expect(jobs._db.skinDb._collections).to.have.property('myJobs');
       });
       it('returns itself', function() {
         expect(jobs.database(mongoCfg)).to.be(jobs);
