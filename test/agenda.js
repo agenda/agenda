@@ -23,11 +23,11 @@ describe('Agenda', function() {
     describe('database', function() {
       it('sets the database', function() {
         jobs.database('localhost:27017/agenda-test-new');
-        expect(jobs._db.skinDb._dbconn.databaseName).to.contain('agenda-test-new');
+        expect(jobs._db._skin_db._connect_args[0]).to.contain('agenda-test-new');
       });
       it('sets the collection', function() {
         jobs.database(mongoCfg, 'myJobs');
-        expect(jobs._db.skinDb._collections).to.have.property('myJobs');
+        expect(jobs._db._collection_args[0]).to.be('myJobs');
       });
       it('returns itself', function() {
         expect(jobs.database(mongoCfg)).to.be(jobs);
@@ -266,6 +266,7 @@ describe('Job', function() {
     });
 
     it('sets to undefined if no repeat interval', function() {
+      job.attrs.repeatInterval = null;
       job.computeNextRunAt();
       expect(job.attrs.nextRunAt).to.be(undefined);
     });
@@ -291,8 +292,11 @@ describe('Job', function() {
 
     describe('when repeat interval is invalid', function () {
       beforeEach(function () {
-        job.repeatEvery('week');
-        job.computeNextRunAt();
+        try {
+          job.attrs.repeatInterval = 'asd';
+          debugger;
+          job.computeNextRunAt();
+        } catch(e) {}
       });
 
       it('sets nextRunAt to undefined', function () {
