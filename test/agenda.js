@@ -294,7 +294,6 @@ describe('Job', function() {
       beforeEach(function () {
         try {
           job.attrs.repeatInterval = 'asd';
-          debugger;
           job.computeNextRunAt();
         } catch(e) {}
       });
