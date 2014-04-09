@@ -446,8 +446,8 @@ job.save(function(err) {
 Removes the `job` from the database.
 
 ```js
-job.save(function(err) {
-    if(!err) console.log("Successfully saved job to collection");
+job.remove(function(err) {
+    if(!err) console.log("Successfully removed job from collection");
 })
 ```
 
