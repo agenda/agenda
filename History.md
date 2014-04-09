@@ -1,4 +1,9 @@
 
+0.6.4 / 2014-04-09 
+==================
+
+ * fix $setOnInsert with empty obj cause mongodb 2.6 complain [@inetfuture]
+
 0.6.3 / 2014-04-07 
 ==================
 
