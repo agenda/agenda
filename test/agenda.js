@@ -180,9 +180,12 @@ describe('Agenda', function() {
         var job = jobs.create('no definition');
         job.save(function() {
           jobs.jobs({name: 'no definition'}, function(err, j) {
+            if(err) return done(err);
             expect(j).to.have.length(1);
-            jobs.purge(function() {
+            jobs.purge(function(err) {
+              if(err) return done(err);
               jobs.jobs({name: 'no definition'}, function(err, j) {
+                if(err) return done(err);
                 expect(j).to.have.length(0);
                 done();
               });
