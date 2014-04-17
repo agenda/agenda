@@ -1,4 +1,9 @@
 
+0.6.5 / 2014-04-17 
+==================
+
+ * mongoskin version bump (better support for mongodb 2.6) [@loginx]
+
 0.6.4 / 2014-04-09 
 ==================
 
