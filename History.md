@@ -1,4 +1,9 @@
 
+0.6.7 / 2014-04-21 
+==================
+
+ * Implement, document, and test defaultLockLifetime [@shakefu]
+
 0.6.6 / 2014-04-21 
 ==================
 
