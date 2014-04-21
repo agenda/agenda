@@ -68,6 +68,20 @@ describe('Agenda', function() {
         expect(jobs.defaultConcurrency(5)).to.be(jobs);
       });
     });
+    describe('defaultLockLifetime', function(){
+      it('returns itself', function() {
+        expect(jobs.defaultLockLifetime(1000)).to.be(jobs);
+      });
+      it('sets the default lock lifetime', function(){
+        jobs.defaultLockLifetime(9999);
+        expect(jobs._defaultLockLifetime).to.be(9999);
+      });
+      it('is inherited by jobs', function(){
+        jobs.defaultLockLifetime(7777);
+        jobs.define('testDefaultLockLifetime', function(job, done){});
+        expect(jobs._definitions.testDefaultLockLifetime.lockLifetime).to.be(7777);
+      });
+    });
   });
 
   describe('job methods', function() {
@@ -518,7 +532,7 @@ describe('Job', function() {
     it("runs job after a lock has expired", function(done) {
       var startCounter = 0;
 
-      jobs.define("lock job", {lockLifetime: 200}, function(job, cb){
+      jobs.define("lock job", {lockLifetime: 50}, function(job, cb){
         startCounter++;
 
         if(startCounter == 1) {
@@ -526,15 +540,17 @@ describe('Job', function() {
             cb();
             expect(startCounter).to.be(2);
             done();
-          }, 300);
+          }, 60);
         } else {
           cb();
         }
       });
 
+      expect(jobs._definitions["lock job"].lockLifetime).to.be(50)
+
       jobs.defaultConcurrency(100);
-      jobs.processEvery(100);
-      jobs.every('1 second', 'lock job');
+      jobs.processEvery(10);
+      jobs.every('20 milliseconds', 'lock job');
       jobs.stop();
       jobs.start();
     });

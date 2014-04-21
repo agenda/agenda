@@ -171,6 +171,21 @@ You can also specify it during instantiation
 var agenda = new Agenda({defaultConcurrency: 5});
 ```
 
+### defaultLockLifetime(number)
+
+Takes a `number` which specifies the default lock lifetime in milliseconds. By
+default it is 10 minutes. This can be overridden by specifying the
+`lockLifetime` option to a defined job.
+
+``js
+agenda.defaultLockLifetime(10000);
+```
+
+You can also specify it during instantiation
+
+```js
+var agenda = new Agenda({defaultLockLifetime: 10000});
+```
 
 ## Defining Job Processors
 
