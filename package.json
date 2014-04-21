@@ -29,7 +29,7 @@
   },
   "dependencies": {
     "human-interval": "~0.1.3",
-    "date.js": "~0.1.1",
+    "date.js": "~0.2.0",
     "mongoskin": "~1.4.1",
     "cron": "~1.0.1"
   },
