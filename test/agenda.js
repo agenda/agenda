@@ -68,6 +68,20 @@ describe('Agenda', function() {
         expect(jobs.defaultConcurrency(5)).to.be(jobs);
       });
     });
+    describe('defaultLockLifetime', function(){
+      it('returns itself', function() {
+        expect(jobs.defaultLockLifetime(1000)).to.be(jobs);
+      });
+      it('sets the default lock lifetime', function(){
+        jobs.defaultLockLifetime(9999);
+        expect(jobs._defaultLockLifetime).to.be(9999);
+      });
+      it('is inherited by jobs', function(){
+        jobs.defaultLockLifetime(7777);
+        jobs.define('testDefaultLockLifetime', function(job, done){});
+        expect(jobs._definitions.testDefaultLockLifetime.lockLifetime).to.be(7777);
+      });
+    });
   });
 
   describe('job methods', function() {
