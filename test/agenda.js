@@ -532,7 +532,7 @@ describe('Job', function() {
     it("runs job after a lock has expired", function(done) {
       var startCounter = 0;
 
-      jobs.define("lock job", {lockLifetime: 200}, function(job, cb){
+      jobs.define("lock job", {lockLifetime: 50}, function(job, cb){
         startCounter++;
 
         if(startCounter == 1) {
@@ -540,15 +540,17 @@ describe('Job', function() {
             cb();
             expect(startCounter).to.be(2);
             done();
-          }, 300);
+          }, 60);
         } else {
           cb();
         }
       });
 
+      expect(jobs._definitions["lock job"].lockLifetime).to.be(50)
+
       jobs.defaultConcurrency(100);
-      jobs.processEvery(100);
-      jobs.every('1 second', 'lock job');
+      jobs.processEvery(10);
+      jobs.every('20 milliseconds', 'lock job');
       jobs.stop();
       jobs.start();
     });
