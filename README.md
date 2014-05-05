@@ -180,7 +180,7 @@ default it is 10 minutes. This can be overridden by specifying the
 A job will unlock if it is finished (ie. `done` is called) before the `lockLifetime`. 
 The lock is useful if the job crashes or times out.
 
-``js
+```js
 agenda.defaultLockLifetime(10000);
 ```
 
