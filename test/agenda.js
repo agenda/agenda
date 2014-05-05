@@ -540,13 +540,13 @@ describe('Job', function() {
             cb();
             expect(startCounter).to.be(2);
             done();
-          }, 60);
+          }, 300);
         } else {
           cb();
         }
       });
 
-      expect(jobs._definitions["lock job"].lockLifetime).to.be(50)
+      expect(jobs._definitions["lock job"].lockLifetime).to.be(50);
 
       jobs.defaultConcurrency(100);
       jobs.processEvery(10);
