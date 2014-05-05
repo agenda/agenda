@@ -177,6 +177,9 @@ Takes a `number` which specifies the default lock lifetime in milliseconds. By
 default it is 10 minutes. This can be overridden by specifying the
 `lockLifetime` option to a defined job.
 
+A job will unlock if it is finished (ie. `done` is called) before the `lockLifetime`. 
+The lock is useful if the job crashes or times out.
+
 ``js
 agenda.defaultLockLifetime(10000);
 ```
@@ -202,7 +205,8 @@ you may omit `done` from the signature.
 the following:
 
 - `concurrency`: `number` maxinum number of that job that can be running at once (per instance of agenda)
-- `lockLifetime`: `number` interval in ms of how long the job stays locked for (see [multiple job processors](#multiple-job-processors) for more info)
+- `lockLifetime`: `number` interval in ms of how long the job stays locked for (see [multiple job processors](#multiple-job-processors) for more info).
+A job will automatically unlock if `done()` is called.
 - `priority`: `(lowest|low|normal|high|highest|number)` specifies the priority
   of the job. Higher priority jobs will run first. See the priority mapping
   below
@@ -383,6 +387,8 @@ specify a longer lockLifetime.
 
 By default it is 10 minutes. Typically you shouldn't have a job that runs for 10 minutes,
 so this is really insurance should the job queue crash before the job is unlocked.
+
+When a job is finished (ie. `done` is called), it will automatically unlock.
 
 ## Manually working with a job
 
