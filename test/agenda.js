@@ -12,7 +12,10 @@ var mongoCfg = 'localhost:27017/agenda-test',
 
 function clearJobs(done) {
   mongo.collection('agendaJobs').remove({}, done);
-};
+}
+
+// Slow timeouts for travis
+var jobTimeout = process.env.TRAVIS ? 1000 : 100;
 
 before(clearJobs);
 
@@ -482,7 +485,7 @@ describe('Job', function() {
             done();
           });
         });
-      }, 150);
+      }, jobTimeout);
     });
 
     describe('events', function() {
@@ -568,7 +571,7 @@ describe('Job', function() {
             cb();
             expect(startCounter).to.be(2);
             done();
-          }, 300);
+          }, jobTimeout);
         } else {
           cb();
         }
