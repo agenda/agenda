@@ -482,7 +482,7 @@ describe('Job', function() {
             done();
           });
         });
-      }, 20);
+      }, 150);
     });
 
     describe('events', function() {
