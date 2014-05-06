@@ -364,7 +364,23 @@ are new jobs.
 
 ### stop
 
-Stops the job queue processing.
+Stops the job queue processing. Unlocks currently running jobs.
+
+This can be very useful for graceful shutdowns so that currently running/grabbed jobs are abandoned so that other
+job queues can grab them / they are unlocked should the job queue start again. Here is an example of how to do a graceful
+shutdown.
+
+```js
+function graceful() {
+  agenda.stop(function() {
+    process.exit(0);
+  });
+}
+
+process.on('SIGTERM', graceful);
+process.on('SIGINT' , graceful);
+```
+
 
 ## Multiple job processors
 
