@@ -10,9 +10,11 @@ var mongoCfg = 'localhost:27017/agenda-test',
     }),
     Job = require('../lib/job.js');
 
-before(function(done) {
+function clearJobs(done) {
   mongo.collection('agendaJobs').remove({}, done);
-});
+};
+
+before(clearJobs);
 
 describe('Agenda', function() {
   it('sets a default processEvery', function() {
@@ -150,6 +152,7 @@ describe('Agenda', function() {
           expect(jobs.every('5 minutes', ['send email', 'some job'])).to.be.an('array');
         });
       });
+      after(clearJobs);
     });
 
     describe('schedule', function() {
@@ -167,6 +170,7 @@ describe('Agenda', function() {
           expect(jobs.schedule('5 minutes', ['send email', 'some job'])).to.be.an('array');
         });
       });
+      after(clearJobs);
     });
 
     describe('now', function() {
@@ -177,14 +181,18 @@ describe('Agenda', function() {
         var now = new Date();
         expect(jobs.now('send email').attrs.nextRunAt.valueOf()).to.be.greaterThan(now.valueOf() - 1);
       });
+      after(clearJobs);
     });
 
     describe('jobs', function() {
       it('returns jobs', function(done) {
-        jobs.jobs({}, function(err, c) {
-          expect(c.length).to.not.be(0);
-          expect(c[0]).to.be.a(Job);
-          done();
+        var job = jobs.create('test');
+        job.save(function() {
+          jobs.jobs({}, function(err, c) {
+            expect(c.length).to.not.be(0);
+            expect(c[0]).to.be.a(Job);
+            clearJobs(done);
+          });
         });
       });
     });
@@ -214,7 +222,7 @@ describe('Agenda', function() {
         var job = jobs.create('someJob', {});
         job.save(function(err, job) {
           expect(job.attrs._id).to.be.ok();
-          done();
+          clearJobs(done);
         });
       });
     });
@@ -445,16 +453,36 @@ describe('Job', function() {
   describe("start/stop", function() {
     it("starts/stops the job queue", function(done) {
       jobs.define('jobQueueTest', function jobQueueTest(job, cb) {
-        jobs.stop();
-        cb();
-        jobs.define('jobQueueTest', function(job, cb) {
-          cb();
+        jobs.stop(function() {
+          clearJobs(function() {
+            cb();
+            jobs.define('jobQueueTest', function(job, cb) {
+              cb();
+            });
+            done();
+          });
         });
-        done();
       });
       jobs.every('1 second', 'jobQueueTest');
       jobs.processEvery('1 second');
       jobs.start();
+    });
+
+    it('clears locks on stop', function(done) {
+      jobs.define('longRunningJob', function(job, cb) {
+        //Job never finishes
+      });
+      jobs.every('10 seconds', 'longRunningJob');
+      jobs.processEvery('1 second');
+      jobs.start();
+      setTimeout(function() {
+        jobs.stop(function(err, res) {
+          jobs._db.findOne({name: 'longRunningJob'}, function(err, job) {
+            expect(job.lockedAt).to.be(null);
+            done();
+          });
+        });
+      }, 20);
     });
 
     describe('events', function() {
