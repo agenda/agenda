@@ -1,4 +1,10 @@
 
+0.6.9 / 2014-05-13 
+==================
+
+ * add agenda.name config method
+ * fix agenda.mongo not being chainable
+
 0.6.8 / 2014-05-06 
 ==================
 
