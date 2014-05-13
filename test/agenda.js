@@ -52,7 +52,7 @@ describe('Agenda', function() {
       });
     });
 
-    describe.only('name', function() {
+    describe('name', function() {
       it('sets the agenda name', function() {
         jobs.name('test queue');
         expect(jobs._name).to.be('test queue');

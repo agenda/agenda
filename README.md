@@ -115,6 +115,22 @@ You can also specify it during instantiation.
 var agenda = new Agenda({mongo: mongoSkinInstance});
 ```
 
+### name(name)
+
+Takes a string `name` and sets `lastModifiedBy` to it in the job database.
+Useful for if you have multiple job processors (agendas) and want to see which
+job queue last ran the job.
+
+```js
+agenda.name(os.hostname + '-' + process.pid);
+```
+
+You can also specify it during instantiation
+
+```js
+var agenda = new Agenda({name: 'test queue'});
+```
+
 ### processEvery(interval)
 
 Takes a string `interval` which can be either a traditional javascript number,
