@@ -52,6 +52,16 @@ describe('Agenda', function() {
       });
     });
 
+    describe.only('name', function() {
+      it('sets the agenda name', function() {
+        jobs.name('test queue');
+        expect(jobs._name).to.be('test queue');
+      });
+      it('returns itself', function() {
+        expect(jobs.name('test queue')).to.be(jobs);
+      });
+    });
+
     describe('processEvery', function() {
       it('sets the processEvery time', function() {
         jobs.processEvery('3 minutes');
