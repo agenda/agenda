@@ -45,7 +45,13 @@ describe('Agenda', function() {
         agenda.mongo({hello: 'world'});
         expect(agenda._db).to.have.property('hello', 'world');
       });
+
+      it('returns itself', function() {
+        var agenda = new Agenda();
+        expect(agenda.mongo({hello: 'world'})).to.be(agenda);
+      });
     });
+
     describe('processEvery', function() {
       it('sets the processEvery time', function() {
         jobs.processEvery('3 minutes');
