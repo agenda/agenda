@@ -436,6 +436,20 @@ describe('Job', function() {
     });
   });
 
+  describe('touch', function(done) {
+    it('extends the lock lifetime', function(done) {
+      var lockedAt = new Date();
+      var job = new Job({agenda: jobs, name: 'some job', lockedAt: lockedAt});
+      job.save = function(cb) { cb(); };
+      setTimeout(function() {
+        job.touch(function() {
+          expect(job.attrs.lockedAt).to.be.greaterThan(lockedAt);
+          done();
+        });
+      }, 2);
+    });
+  });
+
   describe('fail', function() {
     var job = new Job();
     it('takes a string', function() {
