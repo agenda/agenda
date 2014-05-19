@@ -504,6 +504,25 @@ job.remove(function(err) {
 })
 ```
 
+### touch(callback)
+
+Resets the lock on the job. Useful to indicate that the job hasn't timed out
+when you have very long running jobs.
+
+```js
+agenda.define('super long job', function(job, done) {
+  doSomeLongTask(function() {
+    job.touch(function() {
+      doAnotherLongTask(function() {
+        job.touch(function() {
+          finishOurLongTasks(done);
+        });
+      });
+    });
+  });
+});
+```
+
 ## Job Queue Events
 
 An instance of an agenda will emit the following events:
