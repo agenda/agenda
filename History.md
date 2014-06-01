@@ -1,4 +1,10 @@
 
+0.6.13 / 2014-06-01 
+==================
+
+ * fix jobs resaving after remove [closes #66]
+ * fix jobs skipping in line from database querying
+
 0.6.12/ 2014-05-22 
 ==================
 
