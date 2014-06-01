@@ -606,14 +606,9 @@ describe('Job', function() {
       jobs.define("lock job", {lockLifetime: 50}, function(job, cb){
         startCounter++;
 
-        if(startCounter == 1) {
-          setTimeout(function() {
-            cb();
-            expect(startCounter).to.be(2);
-            done();
-          }, jobTimeout);
-        } else {
-          cb();
+        if(startCounter != 1) {
+          expect(startCounter).to.be(2);
+          jobs.stop(done);
         }
       });
 
