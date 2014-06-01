@@ -15,7 +15,7 @@ function clearJobs(done) {
 }
 
 // Slow timeouts for travis
-var jobTimeout = process.env.TRAVIS ? 1000 : 100;
+var jobTimeout = process.env.TRAVIS ? 1000 : 300;
 
 before(clearJobs);
 
@@ -360,6 +360,7 @@ describe('Job', function() {
         if(err) return done(err);
         job.remove(function(err) {
           if(err) return done(err);
+          expect(job._removed).to.be(true);
           mongo.collection('agendaJobs').find({_id: job.attrs._id}).toArray(function(err, j) {
             expect(j).to.have.length(0);
             done();
@@ -475,6 +476,15 @@ describe('Job', function() {
       };
       var job = jobs.create('some job', { wee: 1});
       job.save();
+    });
+
+    it('doesnt save the job if its been removed', function(done) {
+      var job = jobs.create('another job');
+      job._removed = true;
+      job.save(function() {
+        expect(job.attrs._id).to.be(undefined);
+        done();
+      });
     });
 
     it('returns the job', function() {
