@@ -360,7 +360,6 @@ describe('Job', function() {
         if(err) return done(err);
         job.remove(function(err) {
           if(err) return done(err);
-          expect(job._removed).to.be(true);
           mongo.collection('agendaJobs').find({_id: job.attrs._id}).toArray(function(err, j) {
             expect(j).to.have.length(0);
             done();
@@ -458,10 +457,7 @@ describe('Job', function() {
           jobs.jobs({name: 'failBoat3'}, function(err, j) {
             if(err) return done(err);
             expect(j).to.have.length(0);
-            j[0].remove(function(err) {
-              if(err) return done(err);
-              done();
-            });
+            done();
           });
         });
       });
@@ -512,10 +508,17 @@ describe('Job', function() {
 
     it('doesnt save the job if its been removed', function(done) {
       var job = jobs.create('another job');
-      job._removed = true;
-      job.save(function() {
-        expect(job.attrs._id).to.be(undefined);
-        done();
+      // Save, then remove, then try and save again.
+      // The second save should fail.
+      job.save(function(err, j) {
+        j.remove(function() {
+          j.save(function(err, res) {
+            jobs.jobs({name: 'another job'}, function(err, res) {
+              expect(res).to.have.length(0);
+              done();
+            });
+          });
+        });
       });
     });
 
