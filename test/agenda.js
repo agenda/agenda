@@ -165,6 +165,15 @@ describe('Agenda', function() {
         it('sets the agenda', function() {
           expect(jobs.every('5 seconds', 'send email').agenda).to.be(jobs);
         });
+        it('should update a job that was previously scheduled with `every`', function(done) {
+          jobs.every(10, 'shouldBeSingleJob');
+          jobs.every(20, 'shouldBeSingleJob');
+
+          jobs.jobs({name: 'shouldBeSingleJob'}, function(err, res) {
+            expect(res).to.have.length(1);
+            done();
+          });
+        });
       });
       describe('with array of names specified', function () {
         it('returns array of jobs', function () {
@@ -461,8 +470,8 @@ describe('Job', function() {
           });
         });
       });
-
     });
+
   });
 
   describe('touch', function(done) {
@@ -651,10 +660,56 @@ describe('Job', function() {
 
       jobs.defaultConcurrency(100);
       jobs.processEvery(10);
-      jobs.every('20 milliseconds', 'lock job');
+      jobs.every('0.02 seconds', 'lock job');
       jobs.stop();
       jobs.start();
     });
 
+  });
+
+  describe("every running", function() {
+    before(function(done) {
+      jobs.defaultConcurrency(1);
+      jobs.processEvery(5);
+
+      jobs.stop(done);
+
+    });
+    it('should run the same job multiple times', function(done) {
+      var counter = 0;
+
+      jobs.define('everyRunTest1', function(job, cb) {
+        counter++;
+        cb();
+      });
+
+      jobs.every(10, 'everyRunTest1');
+
+      jobs.start();
+
+      setTimeout(function() {
+        jobs.jobs({name: 'everyRunTest1'}, function(err, res) {
+          expect(counter).to.be(2);
+          jobs.stop(done);
+        });
+      }, 25);
+    });
+
+    it('should reuse the same job on multiple runs', function(done) {
+      jobs.define('everyRunTest2', function(job, cb) {
+        counter++;
+        cb();
+      });
+      jobs.every(10, 'everyRunTest2');
+
+      jobs.start();
+
+      setTimeout(function() {
+        jobs.jobs({name: 'everyRunTest2'}, function(err, res) {
+          expect(res).to.have.length(1);
+          jobs.stop(done);
+        });
+      }, 25);
+    });
   });
 });
