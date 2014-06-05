@@ -436,7 +436,7 @@ describe('Job', function() {
       });
     });
 
-    it('doesn\'t allow a stale job to be saved', function() {
+    it('doesn\'t allow a stale job to be saved', function(done) {
       var flag = false;
       job.attrs.name = 'failBoat3';
       job.save(function(err) {
@@ -458,7 +458,10 @@ describe('Job', function() {
           jobs.jobs({name: 'failBoat3'}, function(err, j) {
             if(err) return done(err);
             expect(j).to.have.length(0);
-            done();
+            j[0].remove(function(err) {
+              if(err) return done(err);
+              done();
+            });
           });
         });
       });
