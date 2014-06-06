@@ -169,10 +169,14 @@ describe('Agenda', function() {
           jobs.every(10, 'shouldBeSingleJob');
           jobs.every(20, 'shouldBeSingleJob');
 
-          jobs.jobs({name: 'shouldBeSingleJob'}, function(err, res) {
-            expect(res).to.have.length(1);
-            done();
-          });
+          // Give the saves a little time to propagate
+          setTimeout(function() {
+            jobs.jobs({name: 'shouldBeSingleJob'}, function(err, res) {
+              expect(res).to.have.length(1);
+              done();
+            });
+          }, 500);
+
         });
       });
       describe('with array of names specified', function () {
@@ -679,7 +683,9 @@ describe('Job', function() {
       var counter = 0;
 
       jobs.define('everyRunTest1', function(job, cb) {
-        counter++;
+        if(counter < 2) {
+          counter++;
+        }
         cb();
       });
 
@@ -697,7 +703,9 @@ describe('Job', function() {
 
     it('should reuse the same job on multiple runs', function(done) {
       jobs.define('everyRunTest2', function(job, cb) {
-        counter++;
+        if(counter < 2) {
+          counter++;
+        }
         cb();
       });
       jobs.every(10, 'everyRunTest2');
