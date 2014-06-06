@@ -1,4 +1,10 @@
 
+0.6.14 / 2014-06-06 
+==================
+
+ * Added agenda.cancel function
+ * Fix more circumstances where jobs re-create after remove
+
 0.6.13 / 2014-06-01 
 ==================
 
