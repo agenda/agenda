@@ -165,6 +165,19 @@ describe('Agenda', function() {
         it('sets the agenda', function() {
           expect(jobs.every('5 seconds', 'send email').agenda).to.be(jobs);
         });
+        it('should update a job that was previously scheduled with `every`', function(done) {
+          jobs.every(10, 'shouldBeSingleJob');
+          jobs.every(20, 'shouldBeSingleJob');
+
+          // Give the saves a little time to propagate
+          setTimeout(function() {
+            jobs.jobs({name: 'shouldBeSingleJob'}, function(err, res) {
+              expect(res).to.have.length(1);
+              done();
+            });
+          }, 500);
+
+        });
       });
       describe('with array of names specified', function () {
         it('returns array of jobs', function () {
@@ -432,7 +445,6 @@ describe('Job', function() {
         if(err) return done(err);
         job.remove(function(err) {
           if(err) return done(err);
-          expect(job._removed).to.be(true);
           mongo.collection('agendaJobs').find({_id: job.attrs._id}).toArray(function(err, j) {
             expect(j).to.have.length(0);
             done();
@@ -507,6 +519,35 @@ describe('Job', function() {
         done();
       });
     });
+
+    it('doesn\'t allow a stale job to be saved', function(done) {
+      var flag = false;
+      job.attrs.name = 'failBoat3';
+      job.save(function(err) {
+        if(err) return done(err);
+        jobs.define('failBoat3', function(job, cb) {
+          // Explicitly find the job again,
+          // so we have a new job object
+          jobs.jobs({name: 'failBoat3'}, function(err, j) {
+            if(err) return done(err);
+            j[0].remove(function(err) {
+              if(err) return done(err);
+              cb();
+            });
+          });
+        });
+
+        job.run(function(err) {
+          // Expect the deleted job to not exist in the database
+          jobs.jobs({name: 'failBoat3'}, function(err, j) {
+            if(err) return done(err);
+            expect(j).to.have.length(0);
+            done();
+          });
+        });
+      });
+    });
+
   });
 
   describe('touch', function(done) {
@@ -552,10 +593,17 @@ describe('Job', function() {
 
     it('doesnt save the job if its been removed', function(done) {
       var job = jobs.create('another job');
-      job._removed = true;
-      job.save(function() {
-        expect(job.attrs._id).to.be(undefined);
-        done();
+      // Save, then remove, then try and save again.
+      // The second save should fail.
+      job.save(function(err, j) {
+        j.remove(function() {
+          j.save(function(err, res) {
+            jobs.jobs({name: 'another job'}, function(err, res) {
+              expect(res).to.have.length(0);
+              done();
+            });
+          });
+        });
       });
     });
 
@@ -688,10 +736,60 @@ describe('Job', function() {
 
       jobs.defaultConcurrency(100);
       jobs.processEvery(10);
-      jobs.every('20 milliseconds', 'lock job');
+      jobs.every('0.02 seconds', 'lock job');
       jobs.stop();
       jobs.start();
     });
 
+  });
+
+  describe("every running", function() {
+    before(function(done) {
+      jobs.defaultConcurrency(1);
+      jobs.processEvery(5);
+
+      jobs.stop(done);
+
+    });
+    it('should run the same job multiple times', function(done) {
+      var counter = 0;
+
+      jobs.define('everyRunTest1', function(job, cb) {
+        if(counter < 2) {
+          counter++;
+        }
+        cb();
+      });
+
+      jobs.every(10, 'everyRunTest1');
+
+      jobs.start();
+
+      setTimeout(function() {
+        jobs.jobs({name: 'everyRunTest1'}, function(err, res) {
+          expect(counter).to.be(2);
+          jobs.stop(done);
+        });
+      }, 100);
+    });
+
+    it('should reuse the same job on multiple runs', function(done) {
+      jobs.define('everyRunTest2', function(job, cb) {
+        if(counter < 2) {
+          counter++;
+        }
+        cb();
+      });
+      jobs.every(10, 'everyRunTest2');
+
+      jobs.start();
+
+      setTimeout(function() {
+        jobs.jobs({name: 'everyRunTest2'}, function(err, res) {
+          expect(res).to.have.length(1);
+          jobs.stop(done);
+        });
+      }, 100);
+    });
   });
 });
