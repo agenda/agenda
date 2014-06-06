@@ -698,7 +698,7 @@ describe('Job', function() {
           expect(counter).to.be(2);
           jobs.stop(done);
         });
-      }, 25);
+      }, 100);
     });
 
     it('should reuse the same job on multiple runs', function(done) {
@@ -717,7 +717,7 @@ describe('Job', function() {
           expect(res).to.have.length(1);
           jobs.stop(done);
         });
-      }, 25);
+      }, 100);
     });
   });
 });
