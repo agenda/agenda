@@ -193,7 +193,7 @@ Takes a `number` which specifies the default lock lifetime in milliseconds. By
 default it is 10 minutes. This can be overridden by specifying the
 `lockLifetime` option to a defined job.
 
-A job will unlock if it is finished (ie. `done` is called) before the `lockLifetime`. 
+A job will unlock if it is finished (ie. `done` is called) before the `lockLifetime`.
 The lock is useful if the job crashes or times out.
 
 ```js
@@ -355,6 +355,17 @@ agenda.jobs({name: 'printAnalyticsReport'}, function(err, jobs) {
   // Work with jobs (see below)
 });
 ```
+
+### cancel(mongoskin query, cb)
+
+Cancels any jobs matching the passed mongoskin query, and removes them from the database.
+
+```js
+agenda.cancel({name: 'printAnalyticsReport'}, function(err, numRemoved) {
+});
+```
+
+This functionality can also be achieved by first retrieving all the jobs from the database using `agenda.jobs()`, looping through the resulting array and calling `job.remove()` on each. It is however preferable to use `agenda.cancel()` for this use case, as this ensures the operation is atomic.
 
 ### purge(cb)
 

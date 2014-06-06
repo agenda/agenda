@@ -246,6 +246,78 @@ describe('Agenda', function() {
       });
     });
   });
+
+  describe('cancel', function() {
+    beforeEach(function(done) {
+      var remaining = 3;
+      var checkDone = function(err) {
+        if(err) return done(err);
+        remaining--;
+        if(!remaining) {
+          done();
+        }
+      };
+      jobs.create('jobA').save(checkDone);
+      jobs.create('jobA', 'someData').save(checkDone);
+      jobs.create('jobB').save(checkDone);
+    });
+
+    afterEach(function(done) {
+      jobs._db.remove({name: {$in: ['jobA', 'jobB']}}, function(err) {
+        if(err) return done(err);
+        done();
+      });
+    });
+
+    it('should cancel a job', function(done) {
+      jobs.jobs({name: 'jobA'}, function(err, j) {
+        if(err) return done(err);
+        expect(j).to.have.length(2);
+        jobs.cancel({name: 'jobA'}, function(err) {
+          if(err) return done(err);
+          jobs.jobs({name: 'jobA'}, function(err, j) {
+            if(err) return done(err);
+            expect(j).to.have.length(0);
+            done();
+          });
+        });
+      });
+    });
+
+    it('should cancel multiple jobs', function(done) {
+      jobs.jobs({name: {$in: ['jobA', 'jobB']}}, function(err, j) {
+        if(err) return done(err);
+        expect(j).to.have.length(3);
+        jobs.cancel({name: {$in: ['jobA', 'jobB']}}, function(err) {
+          if(err) return done(err);
+          jobs.jobs({name: {$in: ['jobA', 'jobB']}}, function(err, j) {
+            if(err) return done(err);
+            expect(j).to.have.length(0);
+            done();
+          });
+        });
+      });
+    });
+
+    it('should cancel jobs only if the data matches', function(done){
+      jobs.jobs({name: 'jobA', data: 'someData'}, function(err, j) {
+        if(err) return done(err);
+        expect(j).to.have.length(1);
+        jobs.cancel({name: 'jobA', data: 'someData'}, function(err) {
+          if(err) return done(err);
+          jobs.jobs({name: 'jobA', data: 'someData'}, function(err, j) {
+            if(err) return done(err);
+            expect(j).to.have.length(0);
+            jobs.jobs({name: 'jobA'}, function(err, j) {
+              if(err) return done(err);
+              expect(j).to.have.length(1);
+              done();
+            });
+          });
+        });
+      });
+    });
+  });
 });
 
 describe('Job', function() {
