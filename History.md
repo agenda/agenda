@@ -1,4 +1,10 @@
 
+0.6.16 / 2014-06-16 
+==================
+
+ * fix job queue being processed even when agenda was stopped
+ * fix agenda.every method
+
 0.6.15 / 2014-06-11 
 ==================
 
