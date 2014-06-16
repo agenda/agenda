@@ -19,6 +19,13 @@ var jobTimeout = process.env.TRAVIS ? 1000 : 300;
 
 before(clearJobs);
 
+var jobProcessor = function(job) { };
+before(function() {
+  jobs.define('someJob', jobProcessor);
+  jobs.define('send email', jobProcessor);
+  jobs.define('some job', jobProcessor);
+});
+
 describe('Agenda', function() {
   it('sets a default processEvery', function() {
     expect(jobs._processEvery).to.be(5000);
@@ -130,12 +137,6 @@ describe('Agenda', function() {
     });
 
     describe('define', function() {
-      var jobProcessor = function(job, done) { };
-      before(function() {
-        jobs.define('someJob', jobProcessor);
-        jobs.define('send email', jobProcessor);
-        jobs.define('some job', jobProcessor);
-      });
 
       it('stores the definition for the job', function() {
         expect(jobs._definitions.someJob).to.have.property('fn', jobProcessor);
@@ -167,7 +168,9 @@ describe('Agenda', function() {
         });
         it('should update a job that was previously scheduled with `every`', function(done) {
           jobs.every(10, 'shouldBeSingleJob');
-          jobs.every(20, 'shouldBeSingleJob');
+          setTimeout(function() {
+            jobs.every(20, 'shouldBeSingleJob');
+          }, 10);
 
           // Give the saves a little time to propagate
           setTimeout(function() {
@@ -175,7 +178,7 @@ describe('Agenda', function() {
               expect(res).to.have.length(1);
               done();
             });
-          }, 500);
+          }, jobTimeout);
 
         });
       });
@@ -213,6 +216,14 @@ describe('Agenda', function() {
         var now = new Date();
         expect(jobs.now('send email').attrs.nextRunAt.valueOf()).to.be.greaterThan(now.valueOf() - 1);
       });
+
+      it('runs the job immediately', function(done) {
+        jobs.define('immediateJob', function(job) {
+          jobs.stop(done)
+        })
+        jobs.now('immediateJob')
+        jobs.start()
+      });
       after(clearJobs);
     });
 
@@ -232,16 +243,18 @@ describe('Agenda', function() {
     describe('purge', function() {
       it('removes all jobs without definitions', function(done) {
         var job = jobs.create('no definition');
-        job.save(function() {
-          jobs.jobs({name: 'no definition'}, function(err, j) {
-            if(err) return done(err);
-            expect(j).to.have.length(1);
-            jobs.purge(function(err) {
+        jobs.stop(function() {
+          job.save(function() {
+            jobs.jobs({name: 'no definition'}, function(err, j) {
               if(err) return done(err);
-              jobs.jobs({name: 'no definition'}, function(err, j) {
+              expect(j).to.have.length(1);
+              jobs.purge(function(err) {
                 if(err) return done(err);
-                expect(j).to.have.length(0);
-                done();
+                jobs.jobs({name: 'no definition'}, function(err, j) {
+                  if(err) return done(err);
+                  expect(j).to.have.length(0);
+                  done();
+                });
               });
             });
           });
