@@ -1,5 +1,6 @@
 var mongoCfg = 'localhost:27017/agenda-test',
     expect = require('expect.js'),
+    cp = require('child_process'),
     mongo = require('mongoskin').db('mongodb://' + mongoCfg, {w: 0}),
     Agenda = require('../index.js'),
     jobs = new Agenda({
@@ -804,5 +805,41 @@ describe('Job', function() {
         });
       }, 100);
     });
+  });
+
+  describe('Integration Tests', function() {
+
+    describe('.every() test', function() {
+
+      it('should run once on daily scripts', function(done) {
+        this.timeout(3000);
+        var i = 0;
+
+        var serviceError = function(e) { done(e); };
+        var receiveMessage = function(msg) {
+
+          if( msg == "ran" ) {
+            expect(i).to.be(0);
+            i += 1;
+            startService();
+          } else if( msg == 'notRan' ) {
+            expect(i).to.be(1);
+            done();
+          } else done( new Error('Unexpected response returned!') );
+
+        };
+
+        var startService = function() {
+          var n = cp.fork(__dirname + '/fixtures/every-server.js', [ 'mongodb://' + mongoCfg ] );
+
+          n.on('message', receiveMessage);
+          n.on('error', serviceError);
+        };
+
+        startService();
+      });
+
+    });
+
   });
 });
