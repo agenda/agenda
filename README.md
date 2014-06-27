@@ -451,9 +451,18 @@ job.repeatEvery('10 minutes');
 job.save();
 ```
 
+### repeatAt(time)
+
+Specifies a `time` when the job should repeat. [Possible values](https://github.com/matthewmueller/date#examples)
+
+```js
+job.repeatAt('3:30pm');
+job.save();
+```
+
 ### schedule(time)
 
-Specifies the next `time` at which the job should repeat.
+Specifies the next `time` at which the job should run.
 
 ```js
 job.schedule('tomorrow at 6pm');
