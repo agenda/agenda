@@ -347,6 +347,17 @@ describe('Agenda', function() {
 });
 
 describe('Job', function() {
+  describe('repeatAt', function() {
+    var job = new Job();
+    it('sets the repeat at', function() {
+      job.repeatAt('3:30pm');
+      expect(job.attrs.repeatAt).to.be('3:30pm');
+    });
+    it('returns the job', function() {
+      expect(job.repeatAt('3:30pm')).to.be(job);
+    });
+  });
+  
   describe('repeatEvery', function() {
     var job = new Job();
     it('sets the repeat interval', function() {
@@ -407,6 +418,23 @@ describe('Job', function() {
       expect(job.computeNextRunAt()).to.be(job);
     });
 
+    it('sets to undefined if no repeat at', function() {
+      job.attrs.repeatAt = null;
+      job.computeNextRunAt();
+      expect(job.attrs.nextRunAt).to.be(undefined);
+    });
+
+    it('it understands repeatAt times', function() {
+      var d = new Date();
+      d.setHours(23);
+      d.setMinutes(59);
+      d.setSeconds(0);      
+      job.attrs.repeatAt = '11:59pm';
+      job.computeNextRunAt();
+      expect(job.attrs.nextRunAt.getHours()).to.be(d.getHours());
+      expect(job.attrs.nextRunAt.getMinutes()).to.be(d.getMinutes());
+    });
+    
     it('sets to undefined if no repeat interval', function() {
       job.attrs.repeatInterval = null;
       job.computeNextRunAt();
@@ -432,6 +460,23 @@ describe('Job', function() {
       expect(job.attrs.nextRunAt.valueOf()).to.be(now.valueOf() + 60000);
     });
 
+    describe('when repeat at time is invalid', function () {
+      beforeEach(function () {
+        try {
+          job.attrs.repeatAt = 'foo';
+          job.computeNextRunAt();
+        } catch(e) {}
+      });
+
+      it('sets nextRunAt to undefined', function () {
+        expect(job.attrs.nextRunAt).to.be(undefined);
+      });
+
+      it('fails the job', function () {
+        expect(job.attrs.failReason).to.equal('failed to calculate repeatAt time due to invalid format');
+      });
+    });
+        
     describe('when repeat interval is invalid', function () {
       beforeEach(function () {
         try {
