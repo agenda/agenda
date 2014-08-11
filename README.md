@@ -76,6 +76,7 @@ mapped to a database collection and load the jobs from within.
 - [Manually working with jobs](#manually-working-with-a-job)
 - [Job Queue Events](#job-queue-events)
 - [Frequently asked questions](#frequently-asked-questions)
+- [Example Project structure](#example-project-structure)
 
 ## Configuring an agenda
 All configuration methods are chainable, meaning you can do something like:
@@ -586,6 +587,16 @@ agenda.on('fail:send email', function(err, job) {
 
 ## Frequently Asked Questions
 
+### Sample Project Structure?
+
+Agenda doesn't have a preferred project structure and leaves it to the user to
+choose how they would like to use it. That being said, you can check out the
+[example project structure](#example-project-structure) below.
+
+
+### Can I Donate?
+
+Thanks! I'm flattered, but it's really not necessary. If you really want to, you can find my [gittip here](https://www.gittip.com/rschmukler/).
 
 ### Web Interface?
 
@@ -672,6 +683,121 @@ function removeJobWorker(id) {
 }
 ```
 
+# Example Project Structure
+
+Agenda will only process jobs that it has definitions for. This allows you to
+selectively choose which jobs a given agenda will process.
+
+Consider the following project structure, which allows us to share models with
+the rest of our code base, and specify which jobs a worker processes, if any at
+all.
+
+```
+- server.js
+- worker.js
+lib/
+  - agenda.js
+  controllers/
+    - user-controller.js
+  jobs/
+    - email.js
+    - video-processing.js
+    - image-processing.js
+   models/
+     - user-model.js
+     - blog-post.model.js
+```
+
+Sample job processor (eg. `jobs/email.js`)
+
+```js
+var email = require('some-email-lib'),
+    User = require('../models/user-model.js');
+
+module.exports = function(agenda) {
+  agenda.define('registration email', function(job, done) {
+    User.get(job.data.userId, function(err, user) {
+       if(err) return done(err);
+       email(user.email(), 'Thanks for registering', 'Thanks for registering ' + user.name(), done);
+     });
+  });
+
+  agenda.define('reset password', function(job, done) {
+    // etc etc
+  })
+
+  // More email related jobs
+}
+```
+
+lib/agenda.js
+```js
+var Agenda = require('agenda');
+
+
+var agenda = new Agenda(connectionOpts);
+
+
+var jobTypes = process.env.JOB_TYPES ? process.env.JOB_TYPES.split(',') : [];
+
+jobTypes.forEach(function(type) {
+  require('./lib/jobs/' + type)(agenda);
+})
+
+if(jobTypes.length) {
+  agenda.start();
+}
+
+module.exports = agenda;
+```
+
+lib/controllers/user-controller.js
+```js
+var app = express(),
+    User = require('../models/user-model'),
+    agenda = require('../worker.js');
+
+app.post('/users', function(req, res, next) {
+  var user = new User(req.body);
+  user.save(function(err) {
+    if(err) return next(err);
+    agenda.now('registration email', { userId: user.primary() });
+    res.send(201, user.toJson());
+  });
+});
+```
+
+worker.js
+```js
+require('./lib/agenda.js');
+```
+
+Now you can do the following in your project:
+
+```
+node server.js 
+```
+Fire up an instance with no `JOB_TYPES`, giving you the ability to process jobs,
+but not wasting resources processing jobs.
+
+```
+JOB_TYPES=email server.js
+```
+Allow your http server to process email jobs.
+
+
+```
+JOB_TYPES=email node worker.js
+```
+
+Fire up an instance that processes email jobs.
+
+```
+JOB_TYPES=video-processing,image-processing node worker.js
+```
+
+Fire up an instance that processes video-processing/image-processing jobs. Good
+for a heavy hitting server.
 
 
 # License
