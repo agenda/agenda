@@ -1,4 +1,11 @@
 
+0.6.18 / 2014-08-16 
+==================
+
+ * Implemented job.isRunning()
+ * Fixed issue where jobs would continue being processed after agenda is explicitly stopped
+ * Fixed complete event being emitted before asynchronous jobs are finished
+
 0.6.17 / 2014-08-11 
 ==================
 
