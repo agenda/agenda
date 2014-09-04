@@ -1,4 +1,9 @@
 
+0.6.19 / 2014-09-03 
+==================
+
+ * Create database indexes when initializing Agenda instance (@andyneville)
+
 0.6.18 / 2014-08-16 
 ==================
 
