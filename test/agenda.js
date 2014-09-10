@@ -1,3 +1,5 @@
+/* globals before, describe, it, beforeEach, after, afterEach */
+
 var mongoCfg = 'localhost:27017/agenda-test',
     expect = require('expect.js'),
     mongo = require('mongoskin').db('mongodb://' + mongoCfg, {w: 0}),
@@ -219,10 +221,10 @@ describe('Agenda', function() {
 
       it('runs the job immediately', function(done) {
         jobs.define('immediateJob', function(job) {
-          jobs.stop(done)
-        })
-        jobs.now('immediateJob')
-        jobs.start()
+          jobs.stop(done);
+        });
+        jobs.now('immediateJob');
+        jobs.start();
       });
       after(clearJobs);
     });
@@ -357,7 +359,7 @@ describe('Job', function() {
       expect(job.repeatAt('3:30pm')).to.be(job);
     });
   });
-  
+
   describe('repeatEvery', function() {
     var job = new Job();
     it('sets the repeat interval', function() {
@@ -428,13 +430,13 @@ describe('Job', function() {
       var d = new Date();
       d.setHours(23);
       d.setMinutes(59);
-      d.setSeconds(0);      
+      d.setSeconds(0);
       job.attrs.repeatAt = '11:59pm';
       job.computeNextRunAt();
       expect(job.attrs.nextRunAt.getHours()).to.be(d.getHours());
       expect(job.attrs.nextRunAt.getMinutes()).to.be(d.getMinutes());
     });
-    
+
     it('sets to undefined if no repeat interval', function() {
       job.attrs.repeatInterval = null;
       job.computeNextRunAt();
@@ -476,7 +478,7 @@ describe('Job', function() {
         expect(job.attrs.failReason).to.equal('failed to calculate repeatAt time due to invalid format');
       });
     });
-        
+
     describe('when repeat interval is invalid', function () {
       beforeEach(function () {
         try {
@@ -832,6 +834,8 @@ describe('Job', function() {
     });
 
     it('should reuse the same job on multiple runs', function(done) {
+      var counter = 0;
+
       jobs.define('everyRunTest2', function(job, cb) {
         if(counter < 2) {
           counter++;
