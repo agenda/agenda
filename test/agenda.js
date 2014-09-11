@@ -711,6 +711,7 @@ describe('Job', function() {
     });
 
     describe('events', function() {
+      beforeEach(clearJobs);
       it('emits start event', function(done) {
         var job = new Job({agenda: jobs, name: 'jobQueueTest'});
         jobs.once('start', function(j) {
