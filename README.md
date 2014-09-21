@@ -781,7 +781,7 @@ Fire up an instance with no `JOB_TYPES`, giving you the ability to process jobs,
 but not wasting resources processing jobs.
 
 ```
-JOB_TYPES=email server.js
+JOB_TYPES=email node server.js
 ```
 Allow your http server to process email jobs.
 
