@@ -480,6 +480,15 @@ job.priority('low');
 job.save();
 ```
 
+### unique(properties)
+
+Ensure that only one instance of this job exists with the specified properties
+
+```js
+job.unique({'data.type': 'active', 'data.userId': '123', nextRunAt(date)});
+job.save();
+```
+
 ### fail(reason)
 
 Sets `job.attrs.failedAt` to `now`, and sets `job.attrs.failReason`
