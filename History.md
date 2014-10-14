@@ -1,4 +1,10 @@
 
+0.6.20 / 2014-10-14 
+==================
+
+ * add job.disable() and job.enable()
+ * Added .npmignore for test/ build scripts.
+
 0.6.19 / 2014-09-03 
 ==================
 
