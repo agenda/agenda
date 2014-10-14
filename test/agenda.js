@@ -642,6 +642,31 @@ describe('Job', function() {
     });
   });
 
+  describe('enable', function() {
+    it('sets disabled to false on the job', function() {
+      var job = new Job({disabled: true});
+      job.enable();
+      expect(job.attrs.disabled).to.be(false);
+    });
+
+    it('returns the job', function() {
+      var job = new Job({disabled: true});
+      expect(job.enable()).to.be(job);
+    });
+  });
+
+  describe('disable', function() {
+    it('sets disabled to true on the job', function() {
+      var job = new Job();
+      job.disable();
+      expect(job.attrs.disabled).to.be(true);
+    });
+    it('returns the job', function() {
+      var job = new Job();
+      expect(job.disable()).to.be(job);
+    });
+  });
+
   describe('save', function() {
     it('calls saveJob on the agenda', function(done) {
       var oldSaveJob = jobs.saveJob;
@@ -691,6 +716,22 @@ describe('Job', function() {
       jobs.every('1 second', 'jobQueueTest');
       jobs.processEvery('1 second');
       jobs.start();
+    });
+
+    it('does not run disabled jobs', function(done) {
+      var ran = false;
+      jobs.define('disabledJob', function() {
+        ran = true;
+      });
+      var job = jobs.create('disabledJob').disable().schedule('now');
+      job.save(function(err) {
+        if (err) return done(err);
+        jobs.start();
+        setTimeout(function() {
+          expect(ran).to.be(false);
+          jobs.stop(done);
+        }, jobTimeout);
+      });
     });
 
     it('clears locks on stop', function(done) {
