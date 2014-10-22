@@ -9,7 +9,13 @@ Start and end date support for job executions added.
 ```js
 
 // Would execute ´´delete old users every 3 minutes on 30th October 2014 between 12:00 and 18:00.
-agenda.every('3 minutes', 'delete old users', data, '2014-10-30 12:00','2014-10-30 18:00');
+agenda.every(
+  '3 minutes', 
+  'delete old users', 
+  data, 
+  '2014-10-30 12:00',
+  '2014-10-30 18:00'
+);
 
 agenda.start();
 ```
