@@ -1,4 +1,4 @@
-# Control-n
+# agenda-n
 
 Fork from rschmukler's agenda.
 
