@@ -1,5 +1,5 @@
 {
-  "name": "agenda",
+  "name": "agenda-n",
   "version": "0.6.21",
   "description": "Light weight job scheduler for Node.js",
   "main": "index.js",
@@ -12,7 +12,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/rschmukler/agenda"
+    "url": "git://github.com/elmurci/agenda-n"
   },
   "keywords": [
     "job",
@@ -22,7 +22,7 @@
     "scheduler",
     "runner"
   ],
-  "author": "Ryan Schmukler <ryan@slingingcode.com> (http://slingingcode.com/)",
+  "author": "Javier Romero <elmurci@gmail.com>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/rschmukler/agenda/issues"
