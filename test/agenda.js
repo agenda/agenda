@@ -191,6 +191,64 @@ describe('Agenda', function() {
           expect(jobs.every('5 minutes', ['send email', 'some job'])).to.be.an('array');
         });
       });
+      // Tests for startDate and endDate >
+      describe('with a future job start and end dates', function() {
+        it('sets the correct attributes', function() {
+          var startDate = (new Date()).valueOf() + 5000;
+          var endDate = (new Date()).valueOf() + 10000;
+          expect(jobs.every('minute','send email',null, startDate,endDate)).attrs.nextRunAt.valueOf()).to.equal(startDate);
+          expect(jobs.every('minute','send email',null, startDate,endDate)).attrs.startRunsAt.valueOf()).to.equal(startDate);
+          expect(jobs.every('minute','send email',null, startDate,endDate)).attrs.noMoreAt.valueOf()).to.equal(endDate);
+        });
+      });
+      describe('with a past job start and end dates', function() {
+        it('sets the correct attributes', function() {
+          var startDate = (new Date()).valueOf() - 250000;
+          var endDate = (new Date()).valueOf() - 200000;
+          expect(jobs.every('minute','send email',null, startDate,endDate)).attrs.nextRunAt.valueOf()).to.equal(null);
+          expect(jobs.every('minute','send email',null, startDate,endDate)).attrs.startRunsAt.valueOf()).to.equal(startDate);
+          expect(jobs.every('minute','send email',null, startDate,endDate)).attrs.noMoreAt.valueOf()).to.equal(endDate);
+        });
+      });
+      describe('with a past job start date and and a future end date', function() {
+        it('sets the correct attributes', function() {
+          var oneish = (new Date()).valueOf() + 1000;
+          var startDate = (new Date()).valueOf() - 250000;
+          var endDate = (new Date()).valueOf() + 10000;
+          expect(jobs.every('minute','send email',null, startDate,endDate)).attrs.nextRunAt.valueOf()).to.be.greaterThan(oneish);
+          expect(jobs.every('minute','send email',null, startDate,endDate)).attrs.startRunsAt.valueOf()).to.equal(startDate);
+          expect(jobs.every('minute','send email',null, startDate,endDate)).attrs.noMoreAt.valueOf()).to.equal(endDate);
+        });
+      });
+      describe('with a just a future start date specified', function() {
+        it('sets the correct attributes, it should start in the future and have noMoreAt null', function() {
+          var startDate = (new Date()).valueOf() + 250000;
+          var endDate = null;
+          expect(jobs.every('minute','send email',null, startDate,endDate)).attrs.nextRunAt.valueOf()).to.equal(startDate);
+          expect(jobs.every('minute','send email',null, startDate,endDate)).attrs.startRunsAt.valueOf()).to.equal(startDate);
+          expect(jobs.every('minute','send email',null, startDate,endDate)).attrs.noMoreAt.valueOf()).to.equal(null);
+        });
+      });
+      describe('with a just a future end date specified', function() {
+        it('sets the correct attributes, it should start now(ish) and end when specified', function() {
+          var nowish = (new Date()).valueOf();
+          var startDate = null;
+          var endDate = (new Date()).valueOf() + 250000;
+          expect(jobs.every('minute','send email',null, startDate,endDate)).attrs.nextRunAt.valueOf()).to.be.greaterThan(nowish);
+          expect(jobs.every('minute','send email',null, startDate,endDate)).attrs.startRunsAt.valueOf()).to.equal(null);
+          expect(jobs.every('minute','send email',null, startDate,endDate)).attrs.noMoreAt.valueOf()).to.equal(endDate);
+        });
+      });
+      describe('with a just a past end date specified', function() {
+        it('sets the correct attributes, it should not have a nextRunAt', function() {
+          var startDate = null;
+          var endDate = (new Date()).valueOf() - 250000;
+          expect(jobs.every('minute','send email',null, startDate,endDate)).attrs.nextRunAt.valueOf()).to.equal(null);
+          expect(jobs.every('minute','send email',null, startDate,endDate)).attrs.startRunsAt.valueOf()).to.equal(null);
+          expect(jobs.every('minute','send email',null, startDate,endDate)).attrs.noMoreAt.valueOf()).to.equal(endDate);
+        });
+      });
+      // < Tests for startDate and endDate
       after(clearJobs);
     });
 
