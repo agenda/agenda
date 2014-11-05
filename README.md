@@ -14,10 +14,10 @@ Changes:
 
 ```js
 
-// Would execute ´´delete old users every 3 minutes on 30th October 2014 between 12:00 and 18:00.
+// Would execute ´´get results every 3 minutes on 30th October 2014 between 12:00 and 18:00.
 agenda.every(
   '3 minutes', 
-  'retrieve results', 
+  'get results', 
   data, 
   '2014-10-30 12:00',
   '2014-10-30 18:00'
