@@ -14,7 +14,7 @@ Changes:
 
 ```js
 
-// Would execute ´´get results every 3 minutes on 30th October 2014 between 12:00 and 18:00.
+// Would execute "get results" every 3 minutes on 30th October 2014 between 12:00 and 18:00.
 agenda.every(
   '3 minutes', 
   'get results', 
