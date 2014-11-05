@@ -4,6 +4,8 @@ Fork from rschmukler's agenda.
 
 Start and end date support for job executions added.
 
+[![Build Status](https://api.travis-ci.org/elmurci/agenda-n.png)](http://travis-ci.org/elmurci/agenda-n)
+
 # Example Usage
 
 ```js
