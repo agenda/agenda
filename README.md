@@ -2,7 +2,11 @@
 
 Fork from rschmukler's agenda.
 
-Start and end date support for job executions added.
+Changes:
+
+- `every`: start and end date support for job executions added, jobs created with every will only run in the date-time interval given.
+- Configuration file `conf.js` created
+- `single` job types: two jobs with same name but different data will generate two separate records.
 
 [![Build Status](https://api.travis-ci.org/elmurci/agenda-n.png)](http://travis-ci.org/elmurci/agenda-n)
 
@@ -13,7 +17,7 @@ Start and end date support for job executions added.
 // Would execute ´´delete old users every 3 minutes on 30th October 2014 between 12:00 and 18:00.
 agenda.every(
   '3 minutes', 
-  'delete old users', 
+  'retrieve results', 
   data, 
   '2014-10-30 12:00',
   '2014-10-30 18:00'
@@ -23,6 +27,8 @@ agenda.start();
 ```
 
 ```js
+
+
 
 ```
 # License
