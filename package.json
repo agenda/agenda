@@ -1,14 +1,10 @@
 {
   "name": "agenda-n",
-  "version": "0.6.21",
+  "version": "0.0.2",
   "description": "Light weight job scheduler for Node.js",
   "main": "index.js",
   "scripts": {
-    "test": "mocha",
-    "blanket": {
-      "pattern": "lib",
-      "data-cover-never": "node_modules"
-    }
+    "test": "mocha"
   },
   "repository": {
     "type": "git",
@@ -40,5 +36,9 @@
     "coveralls": "~2.3.0",
     "blanket": "~1.1.5",
     "q": "~1.0.0"
+  },
+  "homepage": "https://github.com/elmurci/agenda-n",
+  "directories": {
+    "test": "test"
   }
 }
