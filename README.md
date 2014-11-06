@@ -315,6 +315,8 @@ agenda.every(
 agenda.start();
 ```
 
+Start date and end date are optional. Both, any or none can be passed to the method.
+
 ### schedule(when, name, data)
 
 Schedules a job to run `name` once at a given time. `when` can be a `Date` or a
