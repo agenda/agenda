@@ -1,14 +1,18 @@
 {
-  "name": "agenda-n",
-  "version": "0.0.2",
+  "name": "agenda",
+  "version": "0.6.25",
   "description": "Light weight job scheduler for Node.js",
   "main": "index.js",
   "scripts": {
-    "test": "mocha"
+    "test": "mocha",
+    "blanket": {
+      "pattern": "lib",
+      "data-cover-never": "node_modules"
+    }
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/elmurci/agenda-n"
+    "url": "git://github.com/rschmukler/agenda"
   },
   "keywords": [
     "job",
@@ -18,7 +22,7 @@
     "scheduler",
     "runner"
   ],
-  "author": "Javier Romero <elmurci@gmail.com>",
+  "author": "Ryan Schmukler <ryan@slingingcode.com> (http://slingingcode.com/)",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/rschmukler/agenda/issues"
@@ -36,9 +40,5 @@
     "coveralls": "~2.3.0",
     "blanket": "~1.1.5",
     "q": "~1.0.0"
-  },
-  "homepage": "https://github.com/elmurci/agenda-n",
-  "directories": {
-    "test": "test"
   }
 }

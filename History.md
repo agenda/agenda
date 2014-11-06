@@ -1,7 +1,9 @@
-0.6.22 / 2014-10-20 
+0.6.25 / 2014-11-07 
 ==================
 
  * Add start and end date for jobs to be executed.
+ * Jobs with same name and different data create separate jobs.
+ * conf.js holds general configuration.
   
 0.6.21 / 2014-10-20 
 ==================
