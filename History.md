@@ -5,6 +5,22 @@
  * Jobs with same name and different data create separate jobs.
  * conf.js holds general configuration.
   
+=======
+0.6.24 / 2014-10-31 
+==================
+
+ * Fix .every() running when using cron strings.
+
+0.6.23 / 2014-10-25 
+==================
+
+ * Remove debugger
+
+0.6.22 / 2014-10-22 
+==================
+
+ * add job.unique (@nwkeeley)
+
 0.6.21 / 2014-10-20 
 ==================
 
