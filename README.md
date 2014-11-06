@@ -315,8 +315,6 @@ agenda.every(
 agenda.start();
 ```
 
-```js
-
 ### schedule(when, name, data)
 
 Schedules a job to run `name` once at a given time. `when` can be a `Date` or a
