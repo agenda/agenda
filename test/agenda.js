@@ -51,6 +51,10 @@ describe('Agenda', function() {
       it('sets a mongoskin database', function(){
         jobs.database(mongo);
         expect(jobs._db._skin_db._connect_args[0]).to.contain('agenda-test');
+      });
+      it('is constructed with a mongoskin database', function(){
+        var agenda = new Agenda({mongo: mongo});
+        expect(jobs._db._skin_db._connect_args[0]).to.contain('agenda-test');
       })
     });
 
