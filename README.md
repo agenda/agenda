@@ -111,6 +111,18 @@ Use an existing mongoskin instance. This can help consolidate connections to a
 database. You can instead use `.database` to have agenda handle connecting for
 you.
 
+
+
+Please note that this must be a *collection*. Also, you will want to run the following 
+afterwards to ensure the database has the proper indexes:
+
+```js
+agenda._db.ensureIndex("nextRunAt", ignoreErrors)
+.ensureIndex("lockedAt", ignoreErrors)
+.ensureIndex("name", ignoreErrors)
+.ensureIndex("priority", ignoreErrors);
+```
+
 You can also specify it during instantiation.
 
 ```js
