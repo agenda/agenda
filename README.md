@@ -277,9 +277,9 @@ agenda.define('say hello', function(job) {
 
 ## Creating Jobs
 
-### every(interval, name, [data])
+### every(interval, name, [data], startDate, endDate)
 
-Runs job `name` at the given `interval`. Optionally, data can be passed in.
+Runs job `name` at the given `interval`. Optionally, data and start and/or end date for the job can be passed in.
 Every creates a job of type `single`, which means that it will only create one
 job in the database, even if that line is run multiple times. This lets you put
 it in a file that may get run multiple times, such as `webserver.js` which may
@@ -289,6 +289,8 @@ reboot from time to time.
 
 `data` is an optional argument that will be passed to the processing function
 under `job.attrs.data`.
+
+Jobs with same name and data will be considered the same. Jobs with same name and different data will be considered as separate jobs.
 
 Returns the `job`.
 
@@ -312,6 +314,24 @@ agenda.every('15 minutes', ['printAnalyticsReport', 'sendNotifications', 'update
 ```
 
 In this case, `every` returns array of `jobs`.
+
+Example with start and end date:
+
+```js
+
+// Execute "get results" every 3 minutes on 30th October 2014 between 12:00 and 18:00.
+agenda.every(
+  '3 minutes', 
+  'get results', 
+  data, 
+  '2014-10-30 12:00',
+  '2014-10-30 18:00'
+);
+
+agenda.start();
+```
+
+Start date and end date are optional. Both, any or none can be passed to the method.
 
 ### schedule(when, name, data)
 
