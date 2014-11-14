@@ -117,10 +117,14 @@ Please note that this must be a *collection*. Also, you will want to run the fol
 afterwards to ensure the database has the proper indexes:
 
 ```js
+function ignoreErrors() {}
+
 agenda._db.ensureIndex("nextRunAt", ignoreErrors)
 .ensureIndex("lockedAt", ignoreErrors)
 .ensureIndex("name", ignoreErrors)
 .ensureIndex("priority", ignoreErrors);
+
+function ignoreErrors
 ```
 
 You can also specify it during instantiation.
