@@ -319,7 +319,7 @@ Schedules a job to run `name` once at a given time. `when` can be a `Date` or a
 `String` such as `tomorrow at 5pm`.
 
 `data` is an optional argument that will be passed to the processing function
-under `job.data`.
+under `job.attrs.data`.
 
 Returns the `job`.
 
@@ -340,7 +340,7 @@ In this case, `schedule` returns array of `jobs`.
 Schedules a job to run `name` once immediately.
 
 `data` is an optional argument that will be passed to the processing function
-under `job.data`.
+under `job.attrs.data`.
 
 Returns the `job`.
 
@@ -741,7 +741,7 @@ var email = require('some-email-lib'),
 
 module.exports = function(agenda) {
   agenda.define('registration email', function(job, done) {
-    User.get(job.data.userId, function(err, user) {
+    User.get(job.attrs.data.userId, function(err, user) {
        if(err) return done(err);
        email(user.email(), 'Thanks for registering', 'Thanks for registering ' + user.name(), done);
      });
