@@ -92,7 +92,7 @@ agenda
 
 ### database(url, [collectionName])
 
-Specifies the database at the `url` specified. If no collection name is give,
+Specifies the database at the `url` specified. If no collection name is given,
 `agendaJobs` is used.
 
 ```js
