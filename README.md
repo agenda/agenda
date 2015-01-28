@@ -1,5 +1,5 @@
 # Agenda
-[![Build Status](https://api.travis-ci.org/rschmukler/agenda.png)](http://travis-ci.org/rschmukler/agenda)
+[![Build Status](https://api.travis-ci.org/rschmukler/agenda.svg)](http://travis-ci.org/rschmukler/agenda)
 [![Code Climate](https://d3s6mut3hikguw.cloudfront.net/github/rschmukler/agenda.png)](https://codeclimate.com/github/rschmukler/agenda/badges)
 [![Coverage Status](https://coveralls.io/repos/rschmukler/agenda/badge.png)](https://coveralls.io/r/rschmukler/agenda)
 
