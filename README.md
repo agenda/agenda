@@ -77,6 +77,7 @@ mapped to a database collection and load the jobs from within.
 - [Job Queue Events](#job-queue-events)
 - [Frequently asked questions](#frequently-asked-questions)
 - [Example Project structure](#example-project-structure)
+- [Acknowledgements](#acknowledgements)
 
 ## Configuring an agenda
 All configuration methods are chainable, meaning you can do something like:
@@ -823,6 +824,13 @@ JOB_TYPES=video-processing,image-processing node worker.js
 
 Fire up an instance that processes video-processing/image-processing jobs. Good
 for a heavy hitting server.
+
+# Acknowledgements
+
+Agenda has some great community members that help a great deal.
+
+- [@droppedoncaprica](http://github.com/droppedoncaprica)
+- [@nwkeeley](http://github.com/nwkeeley)
 
 
 # License
