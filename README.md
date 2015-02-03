@@ -90,6 +90,19 @@ agenda
   ...;
 ```
 
+Agenda uses [Human Interval](http://github.com/rschmukler/human-interval) for specifying the intervals. It supports the following units:
+
+`seconds`, `minutes`, `hours`, `days`,`weeks`, `months` -- assumes 30 days, `years` -- assumes 365 days
+
+More sophisticated examples
+
+
+```js
+agenda.processEvery('one minute');
+agenda.processEvery('1.5 minutes');
+agenda.processEvery('3 days and 4 hours');
+agenda.processEvery('3 days, 4 hours and 36 seconds');
+```
 
 ### database(url, [collectionName])
 
