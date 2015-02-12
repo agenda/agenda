@@ -610,7 +610,7 @@ agenda.on('complete', function(job) {
 - `success:job name` - called when a job finishes successfully
 
 ```js
-agenda.once('success:send email', function(job) {
+agenda.on('success:send email', function(job) {
   console.log("Sent Email Successfully to: %s", job.attrs.data.to);
 });
 ```
