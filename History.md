@@ -1,4 +1,9 @@
 
+0.6.28 / 2015-02-13
+==================
+
+  * Fix for when _findAndLockNextJob returns multiple jobs.
+
 0.6.27 / 2015-02-04 
 ==================
 
