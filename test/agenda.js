@@ -1029,7 +1029,7 @@ describe('Job', function() {
         job.save();
 
         setTimeout(function() {
-          jobs.jobs({name: 'everyRunTest1'}, function(err, res) {
+          jobs.jobs({name: 'everyDisabledTest'}, function(err, res) {
             expect(counter).to.be(0);
             jobs.stop(done);
           });
