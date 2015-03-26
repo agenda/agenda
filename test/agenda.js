@@ -1012,6 +1012,30 @@ describe('Job', function() {
         n.on('error', serviceError);
       });
 
+      it('should not run if job is disabled', function(done) {
+        var counter = 0;
+
+        jobs.define('everyDisabledTest', function(job, cb) {
+          counter++;
+          cb();
+        });
+
+        var job = jobs.every(10, 'everyDisabledTest');
+
+        jobs.start();
+
+        job.disable();
+
+        job.save();
+
+        setTimeout(function() {
+          jobs.jobs({name: 'everyDisabledTest'}, function(err, res) {
+            expect(counter).to.be(0);
+            jobs.stop(done);
+          });
+        }, jobTimeout);
+      });
+
     });
 
     describe('schedule()', function() {
