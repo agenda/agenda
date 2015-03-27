@@ -388,6 +388,17 @@ agenda.jobs({name: 'printAnalyticsReport'}, function(err, jobs) {
 });
 ```
 
+### getJob(mongoskin query)
+
+Lets you query a single job in the agenda job's database, returning a single object instead of an array. This is a full [mongoskin](https://github.com/kissjs/node-mongoskin)
+`findOne` query. See mongoskin's documentation for details.
+
+```js
+agenda.getJob({name: 'printAnalyticsReport'}, function(err, job) {
+  // query by any job attribute: _id, name, lastFinishedAt, etc.
+});
+```
+
 ### cancel(mongoskin query, cb)
 
 Cancels any jobs matching the passed mongoskin query, and removes them from the database.
