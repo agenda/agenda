@@ -1,0 +1,40 @@
+env:
+    node: true
+
+rules:
+    brace-style: [2, "1tbs"]
+    comma-style: [2, "last"]
+    default-case: 2
+    guard-for-in: 2
+    no-floating-decimal: 2
+    no-nested-ternary: 2
+    no-multi-spaces: 0
+    no-underscore-dangle: 0
+    no-shadow: 0
+    no-use-before-define: [1, "nofunc"]
+    new-cap: 0,
+    radix: 2
+    quotes: 0
+    space-after-function-name: [2, "never"]
+    space-after-keywords: [2, "always"]
+    spaced-line-comment: [2, "always", { exceptions: ["-"]}]
+    strict: [2, "never"]
+    valid-jsdoc: [2, { prefer: { "return": "returns"}}]
+    wrap-iife: 2
+    comma-dangle: 0
+    no-mixed-requires: [0, false]
+
+globals:
+    "describe": true
+    "it": true
+    "before": true
+    "after": true
+    "beforeEach": true
+    "afterEach": true
+    "requireModel": true
+    "expect": true
+    "failOnError": true
+    "assertObjectEquals": true
+    "testHelpers": true
+    "sinon": true
+
