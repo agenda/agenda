@@ -20,12 +20,16 @@ jobs.define(jobType, function(job, done) {
   done();
 });
 
+function failOnError(err) {
+  if (err) {
+    throw err;
+  }
+}
+
 describe("mongo persistence", function() {
   beforeEach(function(done) {
     mongo.collection('agendaJobs').remove({}, function(err) {
-      if (err) {
-        throw err;
-      }
+      failOnError(err);
       jobs.start();
       done();
     });
@@ -40,14 +44,10 @@ describe("mongo persistence", function() {
       .create(jobType, {})
       .schedule('in 10 minutes')
       .save(function(err) {
-        if (err) {
-          return done(err);
-        }
+        failOnError(err);
 
         mongo.collection('agendaJobs').find().toArray(function(err, arr) {
-          if (err) {
-            throw err;
-          }
+          failOnError(err);
           expect(arr).to.have.length(1);
           done();
         });
@@ -59,26 +59,20 @@ describe("mongo persistence", function() {
       .create(jobType, {})
       .schedule('now')
       .save(function(err) {
-        if (err) {
-          return done(err);
-        }
+        failOnError(err);
 
         mongo.collection('agendaJobs').find().toArray(function(err, arr) {
-          if (err) {
-            throw err;
-          }
+          failOnError(err);
           expect(arr).to.have.length(1);
         });
 
-        setTimeout(function() {
+        jobs.on('complete', function() {
           mongo.collection('agendaJobs').find().toArray(function(err, arr) {
-            if (err) {
-              throw err;
-            }
+            failOnError(err);
             expect(arr).to.have.length(0);
             done();
           });
-        }, 1000);
+        });
       });
   });
 });
