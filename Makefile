@@ -15,4 +15,9 @@ test-coverage:
 test-coveralls:
 	NODE_ENV=test AGENDA_COVERAGE=1 $(MOCHA_PATH) test --require blanket --reporter mocha-lcov-reporter | ./node_modules/coveralls/bin/coveralls.js
 
+install:
+	@npm i
+
+build: install test-once
+
 .PHONY: test test-coverage test-coveralls
