@@ -57,7 +57,7 @@ agenda.start();
 
 ```js
 var weeklyReport = agenda.schedule('Saturday at noon', 'send email report', {to: 'another-guy@example.com'});
-weeklyReport.repeatEvery('1 week').save();
+weeklyReport.repeatEvery('1 week');
 agenda.start();
 ```
 
@@ -127,7 +127,7 @@ you.
 
 
 
-Please note that this must be a *collection*. Also, you will want to run the following 
+Please note that this must be a *collection*. Also, you will want to run the following
 afterwards to ensure the database has the proper indexes:
 
 ```js
@@ -814,7 +814,7 @@ require('./lib/agenda.js');
 Now you can do the following in your project:
 
 ```
-node server.js 
+node server.js
 ```
 Fire up an instance with no `JOB_TYPES`, giving you the ability to process jobs,
 but not wasting resources processing jobs.
