@@ -1,6 +1,10 @@
 /* globals before, describe, it, beforeEach, after, afterEach */
 
-var mongoCfg = 'localhost:27017/agenda-test',
+// when running tests using Docker, the host IP is set in the env,
+// and "mongodb" is in /etc/hosts -- set by docker compose
+var mongoHost = process.env.MONGODB_HOST || 'localhost',
+    mongoPort = process.env.MONGODB_PORT || '27017',
+    mongoCfg = mongoHost+':'+mongoPort+'/agenda-test',
     expect = require('expect.js'),
     path = require('path'),
     cp = require('child_process'),
@@ -38,7 +42,7 @@ describe('Agenda', function() {
   describe('configuration methods', function() {
     describe('database', function() {
       it('sets the database', function() {
-        jobs.database('localhost:27017/agenda-test-new');
+        jobs.database(mongoHost+':'+mongoPort+'/agenda-test-new');
         expect(jobs._db._skin_db._connect_args[0]).to.contain('agenda-test-new');
       });
       it('sets the collection', function() {
@@ -216,7 +220,7 @@ describe('Agenda', function() {
     describe('unique', function() {
 
       describe('should demonstrate unique contraint', function(done) {
-        
+
         it('should create one job when unique matches', function(done) {
           var time = new Date();
           jobs.create('unique job', {type: 'active', userId: '123', 'other': true}).unique({'data.type': 'active', 'data.userId': '123', nextRunAt: time}).schedule(time).save(function(err, job) {
@@ -229,15 +233,15 @@ describe('Agenda', function() {
           });
         });
         after(clearJobs);
-        
+
       });
 
       describe('should demonstrate non-unique contraint', function(done) {
-        
+
         it('should create two jobs when unique doesn\t match', function(done) {
           var time = new Date(Date.now() + 1000*60*3);
           var time2 = new Date(Date.now() + 1000*60*4);
-        
+
           jobs.create('unique job', {type: 'active', userId: '123', 'other': true}).unique({'data.type': 'active', 'data.userId': '123', nextRunAt: time}).schedule(time).save(function(err, job) {
            jobs.create('unique job', {type: 'active', userId: '123', 'other': false}).unique({'data.type': 'active', 'data.userId': '123', nextRunAt: time2}).schedule(time).save(function(err, job) {
               mongo.collection('agendaJobs').find({name: 'unique job'}).toArray(function(err, j) {
@@ -248,12 +252,12 @@ describe('Agenda', function() {
           });
 
         });
-        after(clearJobs);        
+        after(clearJobs);
 
-      });      
-      
+      });
+
     });
-    
+
     describe('now', function() {
       it('returns a job', function() {
         expect(jobs.now('send email')).to.be.a(Job);
@@ -403,7 +407,7 @@ describe('Job', function() {
       expect(job.repeatAt('3:30pm')).to.be(job);
     });
   });
-  
+
   describe('unique', function() {
     var job = new Job();
     it('sets the unique property', function() {
@@ -413,7 +417,7 @@ describe('Job', function() {
     it('returns the job', function() {
       expect(job.unique({'data.type': 'active', 'data.userId': '123'})).to.be(job);
     });
-  });  
+  });
 
   describe('repeatEvery', function() {
     var job = new Job();
