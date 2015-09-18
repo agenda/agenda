@@ -59,7 +59,7 @@ agenda.start();
 
 ```js
 var weeklyReport = agenda.schedule('Saturday at noon', 'send email report', {to: 'another-guy@example.com'});
-weeklyReport.repeatEvery('1 week').save();
+weeklyReport.repeatEvery('1 week');
 agenda.start();
 ```
 
