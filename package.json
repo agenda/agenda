@@ -1,6 +1,6 @@
 {
   "name": "@classdojo/agenda",
-  "version": "0.6.29",
+  "version": "0.6.36",
   "description": "Light weight job scheduler for Node.js, ClassDojo fork",
   "main": "index.js",
   "scripts": {
@@ -30,7 +30,7 @@
   "dependencies": {
     "human-interval": "~0.1.3",
     "date.js": "~0.2.0",
-    "mongoskin": "~1.4.1",
+    "mongodb": "2.0.34",
     "cron": "~1.0.1"
   },
   "devDependencies": {

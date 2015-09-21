@@ -14,6 +14,26 @@ It offers:
 - Event backed job queue that you can hook into.
 - Optional standalone web-interface (see [agenda-ui](https://github.com/moudy/agenda-ui))
 
+# Fork information
+
+This fork by [@nevf](http://github.com/nevf) allows agenda to be passed a mongodb-native v2.0 instance, instead of the mongoskin driver used originally. You can also initialize with a mongo string like this:
+
+```js
+agenda = new Agenda({db: {address: mongoConnectionString}})
+```
+
+or override the default collection name:
+
+```js
+agenda = new Agenda({db: {address: mongoConnectionString, collection: "jobCollectionName"}})
+```
+
+or pass additional connection options:
+
+```js
+agenda = new Agenda({db: {address: mongoConnectionString, collection: "jobCollectionName", options: {server:{auto_reconnect:true}}})
+```
+
 # Installation
 
 Install via NPM

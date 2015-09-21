@@ -1,11 +1,13 @@
 /* globals before, describe, it, beforeEach, after, afterEach */
 
-var mongoCfg = 'localhost:27017/agenda-test';
+var mongoCfg = 'mongodb://localhost:27017/agenda-test';
 
 var expect = require('expect.js'),
     path = require('path'),
-    mongo = require('mongoskin').db('mongodb://' + mongoCfg, {w: 0}),
     Agenda = require( path.join('..', 'index.js') );
+
+var MongoClient = require('mongodb').MongoClient;
+var mongo = null;
 
 // create agenda instance
 var jobs = new Agenda({
@@ -27,6 +29,17 @@ function failOnError(err) {
 }
 
 describe("mongo persistence", function() {
+  before(function(done) {
+    MongoClient.connect(mongoCfg, function( error, db ){
+      mongo = db;
+      done(error);
+    });
+  });
+
+  after(function(done) {
+    mongo.close(done);
+  });
+
   beforeEach(function(done) {
     mongo.collection('agendaJobs').remove({}, function(err) {
       failOnError(err);
