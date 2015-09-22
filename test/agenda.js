@@ -290,6 +290,21 @@ describe('Agenda', function() {
       });
     });
 
+    describe('getJob', function() {
+      it('returns one job', function(done) {
+        var job = jobs.create('test');
+        job.save(function(err, job) {
+          jobs.getJob({_id: job.attrs._id}, function(err, c) {
+            expect(c).to.be.a(Job);
+          });
+          jobs.getJob({name: job.attrs.name}, function(err, c) {
+            expect(c).to.be.a(Job);
+          });
+          clearJobs(done);
+        });
+      });
+    });
+
     describe('purge', function() {
       it('removes all jobs without definitions', function(done) {
         var job = jobs.create('no definition');
