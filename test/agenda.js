@@ -8,7 +8,8 @@ var mongoHost = process.env.MONGODB_HOST || 'localhost',
     expect = require('expect.js'),
     path = require('path'),
     cp = require('child_process'),
-    mongo = require('mongoskin').db('mongodb://' + mongoCfg, {w: 0}),
+    mongo = require('mongojs'),
+    db=null,
     Agenda = require( path.join('..', 'index.js') ),
     jobs = new Agenda({
       defaultConcurrency: 5,
@@ -19,7 +20,9 @@ var mongoHost = process.env.MONGODB_HOST || 'localhost',
     Job = require( path.join('..', 'lib', 'job.js') );
 
 function clearJobs(done) {
-  mongo.collection('agendaJobs').remove({}, done);
+  var db=mongo('mongodb://' + mongoCfg);
+  db.collection('agendaJobs').remove({}, done);
+  
 }
 
 // Slow timeouts for travis
@@ -43,11 +46,12 @@ describe('Agenda', function() {
     describe('database', function() {
       it('sets the database', function() {
         jobs.database(mongoHost+':'+mongoPort+'/agenda-test-new');
-        expect(jobs._db._skin_db._connect_args[0]).to.contain('agenda-test-new');
+        
+        expect(jobs._db._dbname).to.be('agenda-test-new');
       });
       it('sets the collection', function() {
         jobs.database(mongoCfg, 'myJobs');
-        expect(jobs._db._collection_args[0]).to.be('myJobs');
+        expect(jobs._db._collection._name).to.be('myJobs');
       });
       it('returns itself', function() {
         expect(jobs.database(mongoCfg)).to.be(jobs);
@@ -176,11 +180,11 @@ describe('Agenda', function() {
           expect(jobs.every('5 seconds', 'send email').agenda).to.be(jobs);
         });
         it('should update a job that was previously scheduled with `every`', function(done) {
+
           jobs.every(10, 'shouldBeSingleJob');
           setTimeout(function() {
             jobs.every(20, 'shouldBeSingleJob');
           }, 10);
-
           // Give the saves a little time to propagate
           setTimeout(function() {
             jobs.jobs({name: 'shouldBeSingleJob'}, function(err, res) {
@@ -225,7 +229,8 @@ describe('Agenda', function() {
           var time = new Date();
           jobs.create('unique job', {type: 'active', userId: '123', 'other': true}).unique({'data.type': 'active', 'data.userId': '123', nextRunAt: time}).schedule(time).save(function(err, job) {
            jobs.create('unique job', {type: 'active', userId: '123', 'other': false}).unique({'data.type': 'active', 'data.userId': '123', nextRunAt: time}).schedule(time).save(function(err, job) {
-              mongo.collection('agendaJobs').find({name: 'unique job'}).toArray(function(err, j) {
+              
+              jobs._db._collection.find({name: 'unique job'}).toArray(function(err, j) {
                 expect(j).to.have.length(1);
                 done();
               });
@@ -244,7 +249,7 @@ describe('Agenda', function() {
 
           jobs.create('unique job', {type: 'active', userId: '123', 'other': true}).unique({'data.type': 'active', 'data.userId': '123', nextRunAt: time}).schedule(time).save(function(err, job) {
            jobs.create('unique job', {type: 'active', userId: '123', 'other': false}).unique({'data.type': 'active', 'data.userId': '123', nextRunAt: time2}).schedule(time).save(function(err, job) {
-              mongo.collection('agendaJobs').find({name: 'unique job'}).toArray(function(err, j) {
+              jobs._db._collection.find({name: 'unique job'}).toArray(function(err, j) {
                 expect(j).to.have.length(2);
                 done();
               });
@@ -269,6 +274,7 @@ describe('Agenda', function() {
 
       it('runs the job immediately', function(done) {
         jobs.define('immediateJob', function(job) {
+
           jobs.stop(done);
         });
         jobs.now('immediateJob');
@@ -280,10 +286,12 @@ describe('Agenda', function() {
     describe('jobs', function() {
       it('returns jobs', function(done) {
         var job = jobs.create('test');
+
         job.save(function() {
           jobs.jobs({}, function(err, c) {
+
             expect(c.length).to.not.be(0);
-            expect(c[0]).to.be.a(Job);
+            expect(c[0]).to.be.a(Job); //Works but keeps on failing //TODO
             clearJobs(done);
           });
         });
@@ -339,7 +347,7 @@ describe('Agenda', function() {
     });
 
     afterEach(function(done) {
-      jobs._db.remove({name: {$in: ['jobA', 'jobB']}}, function(err) {
+      jobs._db._collection.remove({name: {$in: ['jobA', 'jobB']}}, function(err) {
         if(err) return done(err);
         done();
       });
@@ -564,7 +572,7 @@ describe('Job', function() {
         if(err) return done(err);
         job.remove(function(err) {
           if(err) return done(err);
-          mongo.collection('agendaJobs').find({_id: job.attrs._id}).toArray(function(err, j) {
+          jobs._db._collection.find({_id: job.attrs._id}).toArray(function(err, j) {
             expect(j).to.have.length(0);
             done();
           });
@@ -800,7 +808,7 @@ describe('Job', function() {
       jobs.start();
       setTimeout(function() {
         jobs.stop(function(err, res) {
-          jobs._db.findOne({name: 'longRunningJob'}, function(err, job) {
+          jobs._db._collection.findOne({name: 'longRunningJob'}, function(err, job) {
             expect(job.lockedAt).to.be(null);
             done();
           });
@@ -1141,4 +1149,6 @@ describe('Job', function() {
 
     });
   });
+
+
 });
