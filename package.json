@@ -1,7 +1,7 @@
 {
-  "name": "@classdojo/agenda",
-  "version": "0.6.38",
-  "description": "Light weight job scheduler for Node.js, ClassDojo fork",
+  "name": "agenda",
+  "version": "0.7.0",
+  "description": "Light weight job scheduler for Node.js",
   "main": "index.js",
   "scripts": {
     "test": "mocha",

@@ -14,25 +14,6 @@ It offers:
 - Event backed job queue that you can hook into.
 - Optional standalone web-interface (see [agenda-ui](https://github.com/moudy/agenda-ui))
 
-# Fork information
-
-This fork by [@nevf](http://github.com/nevf) allows agenda to be passed a mongodb-native v2.0 instance, instead of the mongoskin driver used originally. You can also initialize with a mongo string like this:
-
-```js
-agenda = new Agenda({db: {address: mongoConnectionString}})
-```
-
-or override the default collection name:
-
-```js
-agenda = new Agenda({db: {address: mongoConnectionString, collection: "jobCollectionName"}})
-```
-
-or pass additional connection options:
-
-```js
-agenda = new Agenda({db: {address: mongoConnectionString, collection: "jobCollectionName", options: {server:{auto_reconnect:true}}})
-```
 
 # Installation
 
@@ -45,7 +26,19 @@ You will also need a working [mongo](http://www.mongodb.org/) database (2.4+) to
 # Example Usage
 
 ```js
-var agenda = new Agenda({db: { address: 'localhost:27017/agenda-example'}});
+
+var mongoConnectionString = "mongodb://127.0.0.1/agenda";
+
+var agenda = new Agenda({db: {address: mongoConnectionString}});
+
+// or override the default collection name:
+// var agenda = new Agenda({db: {address: mongoConnectionString, collection: "jobCollectionName"}});
+
+// or pass additional connection options:
+// var agenda = new Agenda({db: {address: mongoConnectionString, collection: "jobCollectionName", options: {server:{auto_reconnect:true}}});
+
+// or pass in an existing mongodb-native MongoClient instance
+// var agenda = new Agenda({mongo: myMongoClient});
 
 agenda.define('delete old users', function(job, done) {
   User.remove({lastLogIn: { $lt: twoDaysAgo }}, done);
@@ -54,10 +47,10 @@ agenda.define('delete old users', function(job, done) {
 agenda.every('3 minutes', 'delete old users');
 
 // Alternatively, you could also do:
-
 agenda.every('*/3 * * * *', 'delete old users');
 
 agenda.start();
+
 ```
 
 ```js
