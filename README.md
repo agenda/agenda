@@ -1,5 +1,7 @@
 # Agenda
 [![Build Status](https://api.travis-ci.org/rschmukler/agenda.svg)](http://travis-ci.org/rschmukler/agenda)
+[![Dependency Status](https://david-dm.org/rschmukler/agenda.svg)](https://david-dm.org/rschmukler/agenda)
+[![devDependency Status](https://david-dm.org/rschmukler/agenda/dev-status.svg)](https://david-dm.org/rschmukler/agenda#info=devDependencies)
 [![Code Climate](https://d3s6mut3hikguw.cloudfront.net/github/rschmukler/agenda.svg)](https://codeclimate.com/github/rschmukler/agenda/badges)
 [![Coverage Status](https://coveralls.io/repos/rschmukler/agenda/badge.svg)](https://coveralls.io/r/rschmukler/agenda)
 
@@ -69,7 +71,7 @@ agenda.start();
 ```
 
 ```js
-var weeklyReport = agenda.schedule('Saturday at noon', 'send email report', {to: 'another-guy@example.com'});
+var weeklyReport = agenda.create('send email report', {to: 'another-guy@example.com'})
 weeklyReport.repeatEvery('1 week').save();
 agenda.start();
 ```
@@ -140,7 +142,7 @@ you.
 
 
 
-Please note that this must be a *collection*. Also, you will want to run the following 
+Please note that this must be a *collection*. Also, you will want to run the following
 afterwards to ensure the database has the proper indexes:
 
 ```js
@@ -827,7 +829,7 @@ require('./lib/agenda.js');
 Now you can do the following in your project:
 
 ```
-node server.js 
+node server.js
 ```
 Fire up an instance with no `JOB_TYPES`, giving you the ability to process jobs,
 but not wasting resources processing jobs.

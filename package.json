@@ -34,11 +34,11 @@
     "cron": "~1.0.1"
   },
   "devDependencies": {
-    "mocha": "~1.13.0",
-    "expect.js": "~0.2.0",
-    "mocha-lcov-reporter": "0.0.1",
-    "coveralls": "~2.3.0",
-    "blanket": "~1.1.5",
-    "q": "~1.0.0"
+    "blanket": "1.1.5",
+    "coveralls": "~2.11.4",
+    "expect.js": "~0.3.1",
+    "mocha": "~2.3.2",
+    "mocha-lcov-reporter": "0.0.2",
+    "q": "~1.4.1"
   }
 }
