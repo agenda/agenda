@@ -132,9 +132,9 @@ You can also specify it during instantiation.
 var agenda = new Agenda({db: { address: 'localhost:27017/agenda-test', collection: 'agendaJobs' }});
 ```
 
-### mongo(mongoSkinInstance)
+### mongo(mongoClientInstance)
 
-Use an existing mongoskin instance. This can help consolidate connections to a
+Use an existing mongodb-native MongoClient instance. This can help consolidate connections to a
 database. You can instead use `.database` to have agenda handle connecting for
 you.
 
@@ -157,7 +157,7 @@ function ignoreErrors
 You can also specify it during instantiation.
 
 ```js
-var agenda = new Agenda({mongo: mongoSkinInstance});
+var agenda = new Agenda({mongo: mongoClientInstance});
 ```
 
 ### name(name)
@@ -390,10 +390,10 @@ job.save(function(err) {
 ## Managing Jobs
 
 
-### jobs(mongoskin query)
+### jobs(mongodb-native query)
 
-Lets you query all of the jobs in the agenda job's database. This is a full [mongoskin](https://github.com/kissjs/node-mongoskin)
-`find` query. See mongoskin's documentation for details.
+Lets you query all of the jobs in the agenda job's database. This is a full [mongodb-native](https://github.com/mongodb/node-mongodb-native)
+`find` query. See mongodb-native's documentation for details.
 
 ```js
 agenda.jobs({name: 'printAnalyticsReport'}, function(err, jobs) {
@@ -401,9 +401,9 @@ agenda.jobs({name: 'printAnalyticsReport'}, function(err, jobs) {
 });
 ```
 
-### cancel(mongoskin query, cb)
+### cancel(mongodb-native query, cb)
 
-Cancels any jobs matching the passed mongoskin query, and removes them from the database.
+Cancels any jobs matching the passed mongodb-native query, and removes them from the database.
 
 ```js
 agenda.cancel({name: 'printAnalyticsReport'}, function(err, numRemoved) {
