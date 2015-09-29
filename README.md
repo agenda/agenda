@@ -23,7 +23,7 @@ Install via NPM
 
     npm install agenda
 
-You will also need a working [mongo](http://www.mongodb.org/) database (2.4+) to point it to.
+You will also need a working [mongo](http://www.mongodb.org/) database (2.6+) to point it to.
 
 # Example Usage
 
