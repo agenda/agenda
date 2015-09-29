@@ -16,18 +16,31 @@ It offers:
 - Event backed job queue that you can hook into.
 - Optional standalone web-interface (see [agenda-ui](https://github.com/moudy/agenda-ui))
 
+
 # Installation
 
 Install via NPM
 
     npm install agenda
 
-You will also need a working [mongo](http://www.mongodb.org/) database (2.4+) to point it to.
+You will also need a working [mongo](http://www.mongodb.org/) database (2.6+) to point it to.
 
 # Example Usage
 
 ```js
-var agenda = new Agenda({db: { address: 'localhost:27017/agenda-example'}});
+
+var mongoConnectionString = "mongodb://127.0.0.1/agenda";
+
+var agenda = new Agenda({db: {address: mongoConnectionString}});
+
+// or override the default collection name:
+// var agenda = new Agenda({db: {address: mongoConnectionString, collection: "jobCollectionName"}});
+
+// or pass additional connection options:
+// var agenda = new Agenda({db: {address: mongoConnectionString, collection: "jobCollectionName", options: {server:{auto_reconnect:true}}});
+
+// or pass in an existing mongodb-native MongoClient instance
+// var agenda = new Agenda({mongo: myMongoClient});
 
 agenda.define('delete old users', function(job, done) {
   User.remove({lastLogIn: { $lt: twoDaysAgo }}, done);
@@ -36,10 +49,10 @@ agenda.define('delete old users', function(job, done) {
 agenda.every('3 minutes', 'delete old users');
 
 // Alternatively, you could also do:
-
 agenda.every('*/3 * * * *', 'delete old users');
 
 agenda.start();
+
 ```
 
 ```js
@@ -121,9 +134,9 @@ You can also specify it during instantiation.
 var agenda = new Agenda({db: { address: 'localhost:27017/agenda-test', collection: 'agendaJobs' }});
 ```
 
-### mongo(mongoSkinInstance)
+### mongo(mongoClientInstance)
 
-Use an existing mongoskin instance. This can help consolidate connections to a
+Use an existing mongodb-native MongoClient instance. This can help consolidate connections to a
 database. You can instead use `.database` to have agenda handle connecting for
 you.
 
@@ -146,7 +159,7 @@ function ignoreErrors
 You can also specify it during instantiation.
 
 ```js
-var agenda = new Agenda({mongo: mongoSkinInstance});
+var agenda = new Agenda({mongo: mongoClientInstance});
 ```
 
 ### name(name)
@@ -379,10 +392,10 @@ job.save(function(err) {
 ## Managing Jobs
 
 
-### jobs(mongoskin query)
+### jobs(mongodb-native query)
 
-Lets you query all of the jobs in the agenda job's database. This is a full [mongoskin](https://github.com/kissjs/node-mongoskin)
-`find` query. See mongoskin's documentation for details.
+Lets you query all of the jobs in the agenda job's database. This is a full [mongodb-native](https://github.com/mongodb/node-mongodb-native)
+`find` query. See mongodb-native's documentation for details.
 
 ```js
 agenda.jobs({name: 'printAnalyticsReport'}, function(err, jobs) {
@@ -390,9 +403,9 @@ agenda.jobs({name: 'printAnalyticsReport'}, function(err, jobs) {
 });
 ```
 
-### cancel(mongoskin query, cb)
+### cancel(mongodb-native query, cb)
 
-Cancels any jobs matching the passed mongoskin query, and removes them from the database.
+Cancels any jobs matching the passed mongodb-native query, and removes them from the database.
 
 ```js
 agenda.cancel({name: 'printAnalyticsReport'}, function(err, numRemoved) {

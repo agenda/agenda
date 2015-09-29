@@ -1,4 +1,9 @@
 
+0.7.0 / 2015-09-29
+==================
+
+  * classdojo/agenda fork: agenda now uses mongodb-native and requires MongoDB 2.6+
+
 0.6.28 / 2015-02-13
 ==================
 
