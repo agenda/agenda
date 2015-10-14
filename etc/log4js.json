@@ -1,0 +1,23 @@
+{
+  "appenders": [{
+    "type": "file",
+    "filename": "agenda.log",
+    "maxLogSize": 20480000,
+    "backups": 3,
+    "category": "agenda",
+    "layout": {
+      "type": "coloured"
+    }
+  }, {
+    "type": "console",
+    "maxLogSize": 20480000,
+    "backups": 3,
+    "category": "agenda",
+    "layout": {
+      "type": "coloured"
+    }
+  }],
+  "levels": {
+    "agenda": "error"
+  }
+}
