@@ -31,7 +31,9 @@
     "human-interval": "~0.1.3",
     "date.js": "~0.2.0",
     "mongoskin": "~1.4.1",
-    "cron": "~1.0.1"
+    "log4js": "~0.6.9",    
+    "cron": "~1.0.1",
+    "pg": "*"
   },
   "devDependencies": {
     "blanket": "1.1.5",
