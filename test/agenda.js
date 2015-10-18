@@ -316,7 +316,7 @@ describe('Agenda', function() {
       it('persists job to the database', function(done) {
         var job = jobs.create('someJob', {});
         job.save(function(err, job) {
-          expect(job.attrs._id).to.be.ok();
+          expect(job.attrs.id).to.be.ok();
           clearJobs(done);
         });
       });
@@ -564,7 +564,7 @@ describe('Job', function() {
         if(err) return done(err);
         job.remove(function(err) {
           if(err) return done(err);
-          mongo.collection('agendaJobs').find({_id: job.attrs._id}).toArray(function(err, j) {
+          mongo.collection('agendaJobs').find({id: job.attrs.id}).toArray(function(err, j) {
             expect(j).to.have.length(0);
             done();
           });
