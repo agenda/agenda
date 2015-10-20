@@ -46,12 +46,14 @@ agenda.define('delete old users', function(job, done) {
   User.remove({lastLogIn: { $lt: twoDaysAgo }}, done);
 });
 
-agenda.every('3 minutes', 'delete old users');
+agenda.on('ready', function() {
+  agenda.every('3 minutes', 'delete old users');
+  
+  // Alternatively, you could also do:
+  agenda.every('*/3 * * * *', 'delete old users');
 
-// Alternatively, you could also do:
-agenda.every('*/3 * * * *', 'delete old users');
-
-agenda.start();
+  agenda.start();
+});
 
 ```
 
@@ -66,14 +68,18 @@ agenda.define('send email report', {priority: 'high', concurrency: 10}, function
   }, done);
 });
 
-agenda.schedule('in 20 minutes', 'send email report', {to: 'admin@example.com'});
-agenda.start();
+agenda.on('ready', function() {
+  agenda.schedule('in 20 minutes', 'send email report', {to: 'admin@example.com'});
+  agenda.start();
+});
 ```
 
 ```js
-var weeklyReport = agenda.create('send email report', {to: 'another-guy@example.com'})
-weeklyReport.repeatEvery('1 week').save();
-agenda.start();
+agenda.on('ready', function() {
+  var weeklyReport = agenda.create('send email report', {to: 'another-guy@example.com'})
+  weeklyReport.repeatEvery('1 week').save();
+  agenda.start();
+});
 ```
 
 # Full documentation
@@ -83,6 +89,7 @@ mapped to a database collection and load the jobs from within.
 
 ## Table of Contents
 - [Configuring an agenda](#configuring-an-agenda)
+- [Agenda Events](#agenda-events)
 - [Defining job processors](#defining-job-processors)
 - [Creating jobs](#creating-jobs)
 - [Managing jobs](#managing-jobs)
@@ -133,6 +140,8 @@ You can also specify it during instantiation.
 ```js
 var agenda = new Agenda({db: { address: 'localhost:27017/agenda-test', collection: 'agendaJobs' }});
 ```
+
+Agenda will emit a `ready` event (see [Agenda Events](#agenda-events)) when properly connected to the database and it is safe to start using Agenda.
 
 ### mongo(mongoClientInstance)
 
@@ -251,6 +260,19 @@ You can also specify it during instantiation
 
 ```js
 var agenda = new Agenda({defaultLockLifetime: 10000});
+```
+
+## Agenda Events
+
+An instance of an agenda will emit the following events:
+
+- `ready` - called when Agenda mongo connection is successfully opened
+- `error` - called when Agenda mongo connection process has thrown an error
+
+```js
+agenda.on('ready', function() {
+  agenda.start();
+});
 ```
 
 ## Defining Job Processors
