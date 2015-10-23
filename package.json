@@ -1,6 +1,6 @@
 {
   "name": "agenda",
-  "version": "0.7.0",
+  "version": "0.7.2",
   "description": "Light weight job scheduler for Node.js",
   "main": "index.js",
   "scripts": {

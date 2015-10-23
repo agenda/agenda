@@ -1,8 +1,7 @@
-
-0.7.1 / 2015-10-22
+0.7.2 / 2015-10-22
 ==================
 
-  * Update README.md to add Agenda ready/error events
+  * Rollback job completion callback to pre-0.7.0
   * Emit events when Agenda init is ready or has failed
 
 0.7.0 / 2015-09-29
