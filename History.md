@@ -1,4 +1,10 @@
 
+0.7.1 / 2015-10-22
+==================
+
+  * Update README.md to add Agenda ready/error events
+  * Emit events when Agenda init is ready or has failed
+
 0.7.0 / 2015-09-29
 ==================
 
