@@ -1,18 +1,14 @@
 {
-  "name": "agenda",
-  "version": "0.7.2",
+  "name": "upgraded-agenda",
+  "version": "0.7.4",
   "description": "Light weight job scheduler for Node.js",
   "main": "index.js",
   "scripts": {
-    "test": "mocha",
-    "blanket": {
-      "pattern": "lib",
-      "data-cover-never": "node_modules"
-    }
+    "test": "mocha"
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/classdojo/agenda"
+    "url": "git://github.com/CamHenlin/agenda"
   },
   "keywords": [
     "job",
@@ -40,5 +36,9 @@
     "mocha": "~2.3.2",
     "mocha-lcov-reporter": "0.0.2",
     "q": "~1.4.1"
+  },
+  "homepage": "https://github.com/classdojo/agenda",
+  "directories": {
+    "test": "test"
   }
 }
