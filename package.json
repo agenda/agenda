@@ -1,6 +1,6 @@
 {
   "name": "upgraded-agenda",
-  "version": "0.7.4",
+  "version": "0.7.5",
   "description": "Light weight job scheduler for Node.js",
   "main": "index.js",
   "scripts": {
