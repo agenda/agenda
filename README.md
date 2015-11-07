@@ -1,7 +1,9 @@
 # Agenda
 [![Build Status](https://api.travis-ci.org/rschmukler/agenda.svg)](http://travis-ci.org/rschmukler/agenda)
-[![Code Climate](https://d3s6mut3hikguw.cloudfront.net/github/rschmukler/agenda.png)](https://codeclimate.com/github/rschmukler/agenda/badges)
-[![Coverage Status](https://coveralls.io/repos/rschmukler/agenda/badge.png)](https://coveralls.io/r/rschmukler/agenda)
+[![Dependency Status](https://david-dm.org/rschmukler/agenda.svg)](https://david-dm.org/rschmukler/agenda)
+[![devDependency Status](https://david-dm.org/rschmukler/agenda/dev-status.svg)](https://david-dm.org/rschmukler/agenda#info=devDependencies)
+[![Code Climate](https://d3s6mut3hikguw.cloudfront.net/github/rschmukler/agenda.svg)](https://codeclimate.com/github/rschmukler/agenda/badges)
+[![Coverage Status](https://coveralls.io/repos/rschmukler/agenda/badge.svg)](https://coveralls.io/r/rschmukler/agenda)
 
 Agenda is a light-weight job scheduling library for Node.js.
 
@@ -14,30 +16,45 @@ It offers:
 - Event backed job queue that you can hook into.
 - Optional standalone web-interface (see [agenda-ui](https://github.com/moudy/agenda-ui))
 
+
 # Installation
 
 Install via NPM
 
     npm install agenda
 
-You will also need a working [mongo](http://www.mongodb.org/) database (2.4+) to point it to.
+You will also need a working [mongo](http://www.mongodb.org/) database (2.6+) to point it to.
 
 # Example Usage
 
 ```js
-var agenda = new Agenda({db: { address: 'localhost:27017/agenda-example'}});
+
+var mongoConnectionString = "mongodb://127.0.0.1/agenda";
+
+var agenda = new Agenda({db: {address: mongoConnectionString}});
+
+// or override the default collection name:
+// var agenda = new Agenda({db: {address: mongoConnectionString, collection: "jobCollectionName"}});
+
+// or pass additional connection options:
+// var agenda = new Agenda({db: {address: mongoConnectionString, collection: "jobCollectionName", options: {server:{auto_reconnect:true}}});
+
+// or pass in an existing mongodb-native MongoClient instance
+// var agenda = new Agenda({mongo: myMongoClient});
 
 agenda.define('delete old users', function(job, done) {
   User.remove({lastLogIn: { $lt: twoDaysAgo }}, done);
 });
 
-agenda.every('3 minutes', 'delete old users');
+agenda.on('ready', function() {
+  agenda.every('3 minutes', 'delete old users');
+  
+  // Alternatively, you could also do:
+  agenda.every('*/3 * * * *', 'delete old users');
 
-// Alternatively, you could also do:
+  agenda.start();
+});
 
-agenda.every('*/3 * * * *', 'delete old users');
-
-agenda.start();
 ```
 
 ```js
@@ -51,14 +68,18 @@ agenda.define('send email report', {priority: 'high', concurrency: 10}, function
   }, done);
 });
 
-agenda.schedule('in 20 minutes', 'send email report', {to: 'admin@example.com'});
-agenda.start();
+agenda.on('ready', function() {
+  agenda.schedule('in 20 minutes', 'send email report', {to: 'admin@example.com'});
+  agenda.start();
+});
 ```
 
 ```js
-var weeklyReport = agenda.schedule('Saturday at noon', 'send email report', {to: 'another-guy@example.com'});
-weeklyReport.repeatEvery('1 week').save();
-agenda.start();
+agenda.on('ready', function() {
+  var weeklyReport = agenda.create('send email report', {to: 'another-guy@example.com'})
+  weeklyReport.repeatEvery('1 week').save();
+  agenda.start();
+});
 ```
 
 # Full documentation
@@ -68,6 +89,7 @@ mapped to a database collection and load the jobs from within.
 
 ## Table of Contents
 - [Configuring an agenda](#configuring-an-agenda)
+- [Agenda Events](#agenda-events)
 - [Defining job processors](#defining-job-processors)
 - [Creating jobs](#creating-jobs)
 - [Managing jobs](#managing-jobs)
@@ -119,15 +141,17 @@ You can also specify it during instantiation.
 var agenda = new Agenda({db: { address: 'localhost:27017/agenda-test', collection: 'agendaJobs' }});
 ```
 
-### mongo(mongoSkinInstance)
+Agenda will emit a `ready` event (see [Agenda Events](#agenda-events)) when properly connected to the database and it is safe to start using Agenda.
 
-Use an existing mongoskin instance. This can help consolidate connections to a
+### mongo(mongoClientInstance)
+
+Use an existing mongodb-native MongoClient instance. This can help consolidate connections to a
 database. You can instead use `.database` to have agenda handle connecting for
 you.
 
 
 
-Please note that this must be a *collection*. Also, you will want to run the following 
+Please note that this must be a *collection*. Also, you will want to run the following
 afterwards to ensure the database has the proper indexes:
 
 ```js
@@ -144,7 +168,7 @@ function ignoreErrors
 You can also specify it during instantiation.
 
 ```js
-var agenda = new Agenda({mongo: mongoSkinInstance});
+var agenda = new Agenda({mongo: mongoClientInstance});
 ```
 
 ### name(name)
@@ -236,6 +260,19 @@ You can also specify it during instantiation
 
 ```js
 var agenda = new Agenda({defaultLockLifetime: 10000});
+```
+
+## Agenda Events
+
+An instance of an agenda will emit the following events:
+
+- `ready` - called when Agenda mongo connection is successfully opened
+- `error` - called when Agenda mongo connection process has thrown an error
+
+```js
+agenda.on('ready', function() {
+  agenda.start();
+});
 ```
 
 ## Defining Job Processors
@@ -377,10 +414,10 @@ job.save(function(err) {
 ## Managing Jobs
 
 
-### jobs(mongoskin query)
+### jobs(mongodb-native query)
 
-Lets you query all of the jobs in the agenda job's database. This is a full [mongoskin](https://github.com/kissjs/node-mongoskin)
-`find` query. See mongoskin's documentation for details.
+Lets you query all of the jobs in the agenda job's database. This is a full [mongodb-native](https://github.com/mongodb/node-mongodb-native)
+`find` query. See mongodb-native's documentation for details.
 
 ```js
 agenda.jobs({name: 'printAnalyticsReport'}, function(err, jobs) {
@@ -388,9 +425,9 @@ agenda.jobs({name: 'printAnalyticsReport'}, function(err, jobs) {
 });
 ```
 
-### cancel(mongoskin query, cb)
+### cancel(mongodb-native query, cb)
 
-Cancels any jobs matching the passed mongoskin query, and removes them from the database.
+Cancels any jobs matching the passed mongodb-native query, and removes them from the database.
 
 ```js
 agenda.cancel({name: 'printAnalyticsReport'}, function(err, numRemoved) {
@@ -814,7 +851,7 @@ require('./lib/agenda.js');
 Now you can do the following in your project:
 
 ```
-node server.js 
+node server.js
 ```
 Fire up an instance with no `JOB_TYPES`, giving you the ability to process jobs,
 but not wasting resources processing jobs.
@@ -844,6 +881,7 @@ Agenda has some great community members that help a great deal.
 
 - [@droppedoncaprica](http://github.com/droppedoncaprica)
 - [@nwkeeley](http://github.com/nwkeeley)
+- [@liamdon](http://github.com/liamdon)
 
 
 # License

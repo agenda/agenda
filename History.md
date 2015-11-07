@@ -1,3 +1,15 @@
+0.7.2 / 2015-10-22
+==================
+
+  * Rollback job completion callback to pre-0.7.0
+  * Emit events when Agenda init is ready or has failed
+
+0.7.0 / 2015-09-29
+==================
+
+  * Switch from mongoskin to mongodb native. Big thanks to the
+  [classdojo](http://classdojo.com) team for this. Shoutouts to @liamdon,
+  @jetzhou and @byronmwong for the help!
 
 0.6.29 / 2015-10-22
 ==================
