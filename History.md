@@ -1,3 +1,10 @@
+0.7.3 / 2015-11-06
+==================
+
+  * Added a callback option to schedule creation.
+  * Added callback option to now and every agenda entry creation.
+  * User-provided callbacks now called on error.
+
 0.7.2 / 2015-10-22
 ==================
 
@@ -11,11 +18,6 @@
   [classdojo](http://classdojo.com) team for this. Shoutouts to @liamdon,
   @jetzhou and @byronmwong for the help!
 
-0.6.29 / 2015-10-22
-==================
-
-  * Added a callback option to schedule creation. 
-  
 0.6.28 / 2015-02-13
 ==================
 
