@@ -547,9 +547,14 @@ job.priority('low');
 job.save();
 ```
 
-### unique(properties)
+### unique(properties, [options])
 
 Ensure that only one instance of this job exists with the specified properties
+
+`options` is an optional argument which can overwrite the defaults. It can take
+the following:
+
+- `insertOnly`: `boolean` will prevent any properties from persisting if job already exists. Defaults to false.
 
 ```js
 job.unique({'data.type': 'active', 'data.userId': '123', nextRunAt(date)});
