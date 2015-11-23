@@ -858,7 +858,7 @@ describe("agenda", function() {
         it('emits complete event', function(done) {
           var job = new Job({agenda: jobs, name: 'jobQueueTest'});
           jobs.once('complete', function(j) {
-            expect(j).to.be(job);
+            expect(job.attrs._id.toString()).to.be(j.attrs._id.toString());
             done();
           });
           job.run();
@@ -866,7 +866,7 @@ describe("agenda", function() {
         it('emits complete:job name event', function(done) {
           var job = new Job({agenda: jobs, name: 'jobQueueTest'});
           jobs.once('complete:jobQueueTest', function(j) {
-            expect(j).to.be(job);
+            expect(job.attrs._id.toString()).to.be(j.attrs._id.toString());
             done();
           });
           job.run();
