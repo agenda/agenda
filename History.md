@@ -1,3 +1,11 @@
+
+0.7.3 / 2015-11-22
+==================
+
+  * add support for success callbacks on schedule, every and now (@mgregson)
+  * using self for reference to collection (@3choBoomer)
+  * emit ready from db_init (@jdiamond)
+
 0.7.2 / 2015-10-22
 ==================
 
