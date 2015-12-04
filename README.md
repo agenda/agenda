@@ -897,6 +897,7 @@ Agenda has some great community members that help a great deal.
 - [@droppedoncaprica](http://github.com/droppedoncaprica)
 - [@nwkeeley](http://github.com/nwkeeley)
 - [@liamdon](http://github.com/liamdon)
+- [@loris](http://github.com/loris)
 
 
 # License
