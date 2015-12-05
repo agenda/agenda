@@ -1,4 +1,9 @@
 
+0.7.5 / 2015-12-05
+==================
+
+  * Adds options.insertOnly to job.unique that prevents the job from being updated multiple times on multiple runs
+
 0.7.4 / 2015-11-26
 ==================
 
