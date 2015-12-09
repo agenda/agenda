@@ -1,3 +1,21 @@
+
+0.7.5 / 2015-12-05
+==================
+
+  * Adds options.insertOnly to job.unique that prevents the job from being updated multiple times on multiple runs
+
+0.7.4 / 2015-11-26
+==================
+
+  * fix job priority scheduling
+
+0.7.3 / 2015-11-22
+==================
+
+  * add support for success callbacks on schedule, every and now (@mgregson)
+  * using self for reference to collection (@3choBoomer)
+  * emit ready from db_init (@jdiamond)
+
 0.7.2 / 2015-10-22
 ==================
 

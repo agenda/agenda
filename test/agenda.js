@@ -247,10 +247,10 @@ describe("agenda", function() {
 
         describe('should demonstrate unique contraint', function(done) {
 
-          it('should create one job when unique matches', function(done) {
-            var time = new Date();
-            jobs.create('unique job', {type: 'active', userId: '123', 'other': true}).unique({'data.type': 'active', 'data.userId': '123', nextRunAt: time}).schedule(time).save(function(err, job) {
-             jobs.create('unique job', {type: 'active', userId: '123', 'other': false}).unique({'data.type': 'active', 'data.userId': '123', nextRunAt: time}).schedule(time).save(function(err, job) {
+          it('should modify one job when unique matches', function(done) {
+            jobs.create('unique job', {type: 'active', userId: '123', 'other': true}).unique({'data.type': 'active', 'data.userId': '123'}).schedule("now").save(function(err, job1) {
+             jobs.create('unique job', {type: 'active', userId: '123', 'other': false}).unique({'data.type': 'active', 'data.userId': '123'}).schedule("now").save(function(err, job2) {
+               expect(job1.attrs.nextRunAt.toISOString()).not.to.equal(job2.attrs.nextRunAt.toISOString())
                 mongo.collection('agendaJobs').find({name: 'unique job'}).toArray(function(err, j) {
                   expect(j).to.have.length(1);
                   done();
@@ -258,6 +258,19 @@ describe("agenda", function() {
              });
             });
           });
+
+          it('should not modify job when unique matches and insertOnly is set to true', function(done) {
+            jobs.create('unique job', {type: 'active', userId: '123', 'other': true}).unique({'data.type': 'active', 'data.userId': '123'}, { insertOnly: true }).schedule("now").save(function(err, job1) {
+              jobs.create('unique job', {type: 'active', userId: '123', 'other': false}).unique({'data.type': 'active', 'data.userId': '123'}, {insertOnly: true}).schedule("now").save(function(err, job2) {
+                expect(job1.attrs.nextRunAt.toISOString()).to.equal(job2.attrs.nextRunAt.toISOString())
+                mongo.collection('agendaJobs').find({name: 'unique job'}).toArray(function(err, j) {
+                  expect(j).to.have.length(1);
+                  done();
+                });
+              });
+            });
+          });
+
           after(clearJobs);
 
         });
@@ -858,7 +871,7 @@ describe("agenda", function() {
         it('emits complete event', function(done) {
           var job = new Job({agenda: jobs, name: 'jobQueueTest'});
           jobs.once('complete', function(j) {
-            expect(j).to.be(job);
+            expect(job.attrs._id.toString()).to.be(j.attrs._id.toString());
             done();
           });
           job.run();
@@ -866,7 +879,7 @@ describe("agenda", function() {
         it('emits complete:job name event', function(done) {
           var job = new Job({agenda: jobs, name: 'jobQueueTest'});
           jobs.once('complete:jobQueueTest', function(j) {
-            expect(j).to.be(job);
+            expect(job.attrs._id.toString()).to.be(j.attrs._id.toString());
             done();
           });
           job.run();
