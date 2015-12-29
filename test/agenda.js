@@ -965,7 +965,15 @@ describe("agenda", function() {
           jobs.once('fail', function(err, j) {
             expect(err.message).to.be('Zomg fail');
             expect(j).to.be(job);
-            done();
+            expect(j.attrs.failCount).to.be(1);
+            expect(j.attrs.failedAt.valueOf()).not.to.be.below(j.attrs.lastFinishedAt.valueOf());
+
+            jobs.once('fail', function(err, j) {
+              expect(j).to.be(job);
+              expect(j.attrs.failCount).to.be(2);
+              done();
+            });
+            job.run();
           });
           job.run();
         });
