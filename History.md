@@ -1,4 +1,14 @@
 
+0.7.6 / 2016-01-04
+==================
+
+  * feat: Add failCount attribute to jobs
+  * fix: job priority for on the fly job lock and queueing is now respected
+  * fix: make agenda.cancel no longer require a callback
+  * fix: stale jobs running after a more up-to-date job has completed
+  * fix: fail/success event emit after jobs have been saved in the database
+  * fix: ready event when using config.mongo
+
 0.7.5 / 2015-12-05
 ==================
 
