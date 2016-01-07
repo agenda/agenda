@@ -893,6 +893,19 @@ describe("agenda", function() {
         });
       });
 
+      it('does not throw an error trying to process undefined jobs', function(done) {
+        jobs.start();
+        var job = jobs.create('jobDefinedOnAnotherServer').schedule('now');
+
+        job.save(function(err) {
+          expect(err).to.be(null);
+        });
+
+        setTimeout(function() {
+          jobs.stop(done);
+        }, jobTimeout);
+      });
+
       it('clears locks on stop', function(done) {
         jobs.define('longRunningJob', function(job, cb) {
           //Job never finishes
