@@ -35,8 +35,7 @@ function failOnError(err) {
 
 describe("agenda", function() {
 
-  before(function(done) {
-
+  beforeEach(function(done) {
     jobs = new Agenda({
       db: {
         address: mongoCfg
@@ -59,12 +58,13 @@ describe("agenda", function() {
     });
   });
 
-  after(function(done) {
+  afterEach(function(done) {
       setTimeout(function() {
-        mongo.close(done);
+        clearJobs(function() {
+          mongo.close(done);
+        });
       }, 50);
   });
-
 
   describe('Agenda', function() {
     it('sets a default processEvery', function() {
@@ -222,7 +222,6 @@ describe("agenda", function() {
             expect(jobs.every('5 minutes', ['send email', 'some job'])).to.be.an('array');
           });
         });
-        after(clearJobs);
       });
 
       describe('schedule', function() {
@@ -240,7 +239,6 @@ describe("agenda", function() {
             expect(jobs.schedule('5 minutes', ['send email', 'some job'])).to.be.an('array');
           });
         });
-        after(clearJobs);
       });
 
       describe('unique', function() {
@@ -270,9 +268,6 @@ describe("agenda", function() {
               });
             });
           });
-
-          after(clearJobs);
-
         });
 
         describe('should demonstrate non-unique contraint', function(done) {
@@ -291,8 +286,6 @@ describe("agenda", function() {
             });
 
           });
-          after(clearJobs);
-
         });
 
       });
@@ -314,8 +307,6 @@ describe("agenda", function() {
           jobs.now('immediateJob');
           jobs.start();
         });
-
-        after(clearJobs);
       });
 
       describe('jobs', function() {
@@ -438,12 +429,6 @@ describe("agenda", function() {
   });
 
   describe('Scheduling Concurrent Jobs', function() {
-
-    beforeEach(function(done) {
-      clearJobs(done);
-    });
-    after(clearJobs);
-
     it('do not run more than once in a scheduled time interval', function(done) {
       var jobs = new Agenda({
         defaultConcurrency: 1,
@@ -677,15 +662,13 @@ describe("agenda", function() {
     describe('run', function() {
       var job;
 
-      before(function() {
+      beforeEach(function() {
         jobs.define('testRun', function(job, done) {
           setTimeout(function() {
             done();
           }, 100);
         });
-      });
 
-      beforeEach(function() {
         job = new Job({agenda: jobs, name: 'testRun'});
       });
 
@@ -924,7 +907,15 @@ describe("agenda", function() {
       });
 
       describe('events', function() {
-        beforeEach(clearJobs);
+        beforeEach(function() {
+          jobs.define('jobQueueTest', function jobQueueTest(job, cb) {
+            cb();
+          });
+          jobs.define('failBoat', function(job, cb) {
+            throw(new Error("Zomg fail"));
+          });
+        });
+
         it('emits start event', function(done) {
           var job = new Job({agenda: jobs, name: 'jobQueueTest'});
           jobs.once('start', function(j) {
@@ -1028,13 +1019,13 @@ describe("agenda", function() {
     });
 
     describe("every running", function() {
-      before(function(done) {
+      beforeEach(function(done) {
         jobs.defaultConcurrency(1);
         jobs.processEvery(5);
 
         jobs.stop(done);
-
       });
+
       it('should run the same job multiple times', function(done) {
         var counter = 0;
 
@@ -1149,18 +1140,18 @@ describe("agenda", function() {
 
           var job = jobs.every(10, 'everyDisabledTest');
 
-          jobs.start();
-
           job.disable();
 
-          job.save();
+          job.save(function() {
+            jobs.start();
 
-          setTimeout(function() {
-            jobs.jobs({name: 'everyDisabledTest'}, function(err, res) {
-              expect(counter).to.be(0);
-              jobs.stop(done);
-            });
-          }, jobTimeout);
+            setTimeout(function() {
+              jobs.jobs({name: 'everyDisabledTest'}, function(err, res) {
+                expect(counter).to.be(0);
+                jobs.stop(done);
+              });
+            }, jobTimeout);
+          });
         });
 
       });
@@ -1267,4 +1258,3 @@ describe("agenda", function() {
   });
 
 });
-
