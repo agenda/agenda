@@ -428,60 +428,6 @@ describe("agenda", function() {
     });
   });
 
-  describe('Scheduling Concurrent Jobs', function() {
-    it('do not run more than once in a scheduled time interval', function(done) {
-      var jobs = new Agenda({
-        defaultConcurrency: 1,
-        db: {
-          address: mongoCfg
-        }
-      });
-      var jobRunInterval = 400;
-      var jobRunTime = 200;
-      var processEvery = 300;
-      var successTime = 5000;
-      var lastRunAt;
-
-      function jobProcessor(job, done){
-        if(lastRunAt){
-          var timeSinceLastRun = new Date() - lastRunAt;
-
-          if(timeSinceLastRun < jobRunInterval - 50 || timeSinceLastRun > jobRunInterval + 50){
-            throw "INVALID Job Execution Time " + timeSinceLastRun;
-          }
-        }
-
-        lastRunAt = new Date();
-
-        setTimeout(function(){
-          done();
-        }, jobRunTime);
-      }
-
-
-      jobs.define('concjob', {concurrency: 1}, jobProcessor);
-      var interval = setInterval(function(){
-        clearInterval(interval);
-        jobs.stop(done);
-      }, successTime);
-
-      jobs.on('fail', function(err){
-        clearInterval(interval);
-        jobs.stop(function(){
-          done(err);
-        });
-      });
-
-      this.timeout(11000);
-
-      jobs.on('ready', function(){
-        jobs.every( jobRunInterval, 'concjob' );
-        jobs.processEvery(processEvery);
-        jobs.start();
-      });
-    });
-  });
-
   describe('Job', function() {
     describe('repeatAt', function() {
       var job = new Job();
@@ -1254,6 +1200,45 @@ describe("agenda", function() {
         });
 
       });
+    });
+
+
+  });
+
+  describe('Locking', function() {
+    it('does not process jobs with expired locks', function(done) {
+      this.timeout(5000);
+
+      var jobs = new Agenda({
+        db: { address: mongoCfg },
+        processEvery: 100
+      });
+
+      var history = [];
+
+      jobs.define('job', {
+        concurrency: 1,
+        lockLifetime: 200
+      }, function(job, done) {
+        history.push(job.attrs);
+
+        setTimeout(function() {
+          done();
+        }, 150);
+      });
+
+      jobs.on('ready', function() {
+        jobs.now('job', { job: 1 });
+        jobs.now('job', { job: 2 });
+        jobs.now('job', { job: 3 });
+
+        jobs.start();
+      });
+
+      setTimeout(function() {
+        expect(history.length).to.equal(3);
+        done();
+      }, 2000);
     });
   });
 
