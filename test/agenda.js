@@ -35,8 +35,7 @@ function failOnError(err) {
 
 describe("agenda", function() {
 
-  before(function(done) {
-
+  beforeEach(function(done) {
     jobs = new Agenda({
       db: {
         address: mongoCfg
@@ -59,12 +58,13 @@ describe("agenda", function() {
     });
   });
 
-  after(function(done) {
+  afterEach(function(done) {
       setTimeout(function() {
-        mongo.close(done);
+        clearJobs(function() {
+          mongo.close(done);
+        });
       }, 50);
   });
-
 
   describe('Agenda', function() {
     it('sets a default processEvery', function() {
@@ -222,7 +222,6 @@ describe("agenda", function() {
             expect(jobs.every('5 minutes', ['send email', 'some job'])).to.be.an('array');
           });
         });
-        after(clearJobs);
       });
 
       describe('schedule', function() {
@@ -240,7 +239,6 @@ describe("agenda", function() {
             expect(jobs.schedule('5 minutes', ['send email', 'some job'])).to.be.an('array');
           });
         });
-        after(clearJobs);
       });
 
       describe('unique', function() {
@@ -270,9 +268,6 @@ describe("agenda", function() {
               });
             });
           });
-
-          after(clearJobs);
-
         });
 
         describe('should demonstrate non-unique contraint', function(done) {
@@ -291,8 +286,6 @@ describe("agenda", function() {
             });
 
           });
-          after(clearJobs);
-
         });
 
       });
@@ -314,8 +307,6 @@ describe("agenda", function() {
           jobs.now('immediateJob');
           jobs.start();
         });
-
-        after(clearJobs);
       });
 
       describe('jobs', function() {
@@ -433,66 +424,6 @@ describe("agenda", function() {
             });
           });
         });
-      });
-    });
-  });
-
-  describe('Scheduling Concurrent Jobs', function() {
-
-    beforeEach(function(done) {
-      clearJobs(done);
-    });
-    after(clearJobs);
-
-    it('do not run more than once in a scheduled time interval', function(done) {
-      var jobs = new Agenda({
-        defaultConcurrency: 1,
-        db: {
-          address: mongoCfg
-        }
-      });
-      var jobRunInterval = 400;
-      var jobRunTime = 200;
-      var processEvery = 300;
-      var successTime = 5000;
-      var lastRunAt;
-
-      function jobProcessor(job, done){
-        if(lastRunAt){
-          var timeSinceLastRun = new Date() - lastRunAt;
-
-          if(timeSinceLastRun < jobRunInterval - 50 || timeSinceLastRun > jobRunInterval + 50){
-            throw "INVALID Job Execution Time " + timeSinceLastRun;
-          }
-        }
-
-        lastRunAt = new Date();
-
-        setTimeout(function(){
-          done();
-        }, jobRunTime);
-      }
-
-
-      jobs.define('concjob', {concurrency: 1}, jobProcessor);
-      var interval = setInterval(function(){
-        clearInterval(interval);
-        jobs.stop(done);
-      }, successTime);
-
-      jobs.on('fail', function(err){
-        clearInterval(interval);
-        jobs.stop(function(){
-          done(err);
-        });
-      });
-
-      this.timeout(11000);
-
-      jobs.on('ready', function(){
-        jobs.every( jobRunInterval, 'concjob' );
-        jobs.processEvery(processEvery);
-        jobs.start();
       });
     });
   });
@@ -677,15 +608,13 @@ describe("agenda", function() {
     describe('run', function() {
       var job;
 
-      before(function() {
+      beforeEach(function() {
         jobs.define('testRun', function(job, done) {
           setTimeout(function() {
             done();
           }, 100);
         });
-      });
 
-      beforeEach(function() {
         job = new Job({agenda: jobs, name: 'testRun'});
       });
 
@@ -924,7 +853,15 @@ describe("agenda", function() {
       });
 
       describe('events', function() {
-        beforeEach(clearJobs);
+        beforeEach(function() {
+          jobs.define('jobQueueTest', function jobQueueTest(job, cb) {
+            cb();
+          });
+          jobs.define('failBoat', function(job, cb) {
+            throw(new Error("Zomg fail"));
+          });
+        });
+
         it('emits start event', function(done) {
           var job = new Job({agenda: jobs, name: 'jobQueueTest'});
           jobs.once('start', function(j) {
@@ -1028,13 +965,13 @@ describe("agenda", function() {
     });
 
     describe("every running", function() {
-      before(function(done) {
+      beforeEach(function(done) {
         jobs.defaultConcurrency(1);
         jobs.processEvery(5);
 
         jobs.stop(done);
-
       });
+
       it('should run the same job multiple times', function(done) {
         var counter = 0;
 
@@ -1149,18 +1086,18 @@ describe("agenda", function() {
 
           var job = jobs.every(10, 'everyDisabledTest');
 
-          jobs.start();
-
           job.disable();
 
-          job.save();
+          job.save(function() {
+            jobs.start();
 
-          setTimeout(function() {
-            jobs.jobs({name: 'everyDisabledTest'}, function(err, res) {
-              expect(counter).to.be(0);
-              jobs.stop(done);
-            });
-          }, jobTimeout);
+            setTimeout(function() {
+              jobs.jobs({name: 'everyDisabledTest'}, function(err, res) {
+                expect(counter).to.be(0);
+                jobs.stop(done);
+              });
+            }, jobTimeout);
+          });
         });
 
       });
@@ -1264,7 +1201,45 @@ describe("agenda", function() {
 
       });
     });
+
+
+  });
+
+  describe('Locking', function() {
+    it('does not process jobs with expired locks', function(done) {
+      this.timeout(5000);
+
+      var jobs = new Agenda({
+        db: { address: mongoCfg },
+        processEvery: 100
+      });
+
+      var history = [];
+
+      jobs.define('job', {
+        concurrency: 1,
+        lockLifetime: 200
+      }, function(job, done) {
+        history.push(job.attrs);
+
+        setTimeout(function() {
+          done();
+        }, 150);
+      });
+
+      jobs.on('ready', function() {
+        jobs.now('job', { job: 1 });
+        jobs.now('job', { job: 2 });
+        jobs.now('job', { job: 3 });
+
+        jobs.start();
+      });
+
+      setTimeout(function() {
+        expect(history.length).to.equal(3);
+        done();
+      }, 2000);
+    });
   });
 
 });
-
