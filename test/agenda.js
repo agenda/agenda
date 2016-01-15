@@ -61,7 +61,10 @@ describe("agenda", function() {
   afterEach(function(done) {
       setTimeout(function() {
         clearJobs(function() {
-          mongo.close(done);
+          mongo.close(function () {
+            jobs.stop();
+            jobs._mdb.close(done);
+          });
         });
       }, 50);
   });
@@ -1239,6 +1242,33 @@ describe("agenda", function() {
         expect(history.length).to.equal(3);
         done();
       }, 2000);
+    });
+  });
+
+  describe('Retry', function () {
+    it('should retry a job', function(done) {
+      var shouldFail = true;
+      jobs.define('a job', function (job, done) {
+        if(shouldFail) {
+          shouldFail = false;
+          return done(new Error('test failure'));
+        }
+        done();
+      });
+
+      jobs.on('fail:a job', function (err, job) {
+        job
+          .schedule('now')
+          .save();
+      });
+
+      jobs.on('success:a job', function () {
+        done();
+      });
+
+      jobs.now('a job');
+
+      jobs.start();
     });
   });
 
