@@ -48,7 +48,7 @@ agenda.define('delete old users', function(job, done) {
 
 agenda.on('ready', function() {
   agenda.every('3 minutes', 'delete old users');
-  
+
   // Alternatively, you could also do:
   agenda.every('*/3 * * * *', 'delete old users');
 
@@ -328,9 +328,9 @@ agenda.define('say hello', function(job) {
 
 ## Creating Jobs
 
-### every(interval, name, [data], [cb])
+### every(interval, name, [data, [options]], [cb])
 
-Runs job `name` at the given `interval`. Optionally, data can be passed in.
+Runs job `name` at the given `interval`. Optionally, data and options can be passed in.
 Every creates a job of type `single`, which means that it will only create one
 job in the database, even if that line is run multiple times. This lets you put
 it in a file that may get run multiple times, such as `webserver.js` which may
@@ -340,6 +340,9 @@ reboot from time to time.
 
 `data` is an optional argument that will be passed to the processing function
 under `job.attrs.data`.
+
+`options` is an optional argument that will be passed to `job.repeatEvery`. In order to use
+this argument, `data` must also be specified.
 
 `cb` is an optional callback function which will be called when the job has been
 persisted in the database.
@@ -518,14 +521,25 @@ A job instance has many instance methods. All mutating methods must be followed
 with a call to `job.save()` in order to persist the changes to the database.
 
 
-### repeatEvery(interval)
+### repeatEvery(interval, [options])
 
 Specifies an `interval` on which the job should repeat.
 
 `interval` can be a human-readable format `String`, a cron format `String`, or a `Number`.
 
+`options` is an optional argument that can include a `timezone` field. The timezone should
+be a string as accepted by [moment-timezone](http://momentjs.com/timezone/) and is considered
+when using an interval in the cron string format.
+
 ```js
 job.repeatEvery('10 minutes');
+job.save();
+```
+
+```js
+job.repeatEvery('0 6 * * *', {
+  timezone: 'America/New_York'
+});
 job.save();
 ```
 
