@@ -5,6 +5,7 @@ var mongoHost = process.env.MONGODB_HOST || 'localhost',
 
 var expect = require('expect.js'),
     path = require('path'),
+    moment = require('moment-timezone'),
     cp = require('child_process'),
     Agenda = require( path.join('..', 'index.js') ),
     Job = require( path.join('..', 'lib', 'job.js') );
@@ -554,6 +555,21 @@ describe("agenda", function() {
         job.repeatEvery('*/2 * * * *');
         job.computeNextRunAt();
         expect(job.attrs.nextRunAt.valueOf()).to.be(now.valueOf() + 60000);
+      });
+
+      it('understands cron intervals with a timezone', function () {
+        var date = moment()
+          .tz('GMT')
+          .hours(6)
+          .minutes(1)
+          .toDate();
+        job.attrs.lastRunAt = date;
+        job.repeatEvery('0 6 * * *', {
+          timezone: 'GMT'
+        });
+        job.computeNextRunAt();
+        expect(moment(job.attrs.nextRunAt).tz('GMT').hour()).to.be(6);
+        expect(moment(job.attrs.nextRunAt).toDate().getDate()).to.be(moment(job.attrs.lastRunAt).add(1, 'days').toDate().getDate());
       });
 
       describe('when repeat at time is invalid', function () {
