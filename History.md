@@ -1,4 +1,14 @@
 
+0.7.7 / 2016-01-25
+==================
+
+  * feat: add timezone option for repeatAt.
+  * fix: job locking logic
+  * fix: bug with jobs expiring and being enqueued anyway
+  * fix: bug where jobs wouldn't run concurrently
+  * fix: agenda throwing an exception when starting a job defined on another instance
+  * fix: possible bug when using extended Array.prototype
+
 0.7.6 / 2016-01-04
 ==================
 
