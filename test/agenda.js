@@ -558,11 +558,18 @@ describe("agenda", function() {
       });
 
       it('understands cron intervals with a timezone', function () {
-        var date = moment()
-          .tz('GMT')
-          .hours(6)
-          .minutes(1)
-          .toDate();
+        var date = new Date('2015-01-01T06:01:00-00:00');
+        job.attrs.lastRunAt = date;
+        job.repeatEvery('0 6 * * *', {
+          timezone: 'GMT'
+        });
+        job.computeNextRunAt();
+        expect(moment(job.attrs.nextRunAt).tz('GMT').hour()).to.be(6);
+        expect(moment(job.attrs.nextRunAt).toDate().getDate()).to.be(moment(job.attrs.lastRunAt).add(1, 'days').toDate().getDate());
+      });
+
+      it('understands cron intervals with a timezone when last run is the same as the interval', function () {
+        var date = new Date('2015-01-01T06:00:00-00:00');
         job.attrs.lastRunAt = date;
         job.repeatEvery('0 6 * * *', {
           timezone: 'GMT'
