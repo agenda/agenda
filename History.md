@@ -1,4 +1,9 @@
 
+0.7.9 / 2016-02-05
+==================
+
+  * fix: ReferenceError: MongoError is not defined
+
 0.7.8 / 2016-02-03
 ==================
 
