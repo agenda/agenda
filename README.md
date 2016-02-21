@@ -230,7 +230,7 @@ var agenda = new Agenda({maxConcurrency: 20});
 
 ### defaultConcurrency(number)
 
-Takes a `number` which specifies the default number of a specific that can be running at
+Takes a `number` which specifies the default number of a specific job that can be running at
 any given moment. By default it is `5`.
 
 ```js
@@ -241,6 +241,34 @@ You can also specify it during instantiation
 
 ```js
 var agenda = new Agenda({defaultConcurrency: 5});
+```
+
+### lockLimit(number)
+
+Takes a `number` shich specifies the max number jobs that can be locked at any given moment. By default it is `0` for no max.
+
+```js
+agenda.lockLimit(0);
+```
+
+You can also specify it during instantiation
+
+```js
+var agenda = new Agenda({lockLimit: 0});
+```
+
+### defaultLockLimit(number)
+
+Takes a `number` which specifies the default number of a specific job that can be locked at any given moment. By default it is `0` for no max.
+
+```js
+agenda.defaultLockLimit(0);
+```
+
+You can also specify it during instantiation
+
+```js
+var agenda = new Agenda({defaultLockLimit: 0});
 ```
 
 ### defaultLockLifetime(number)
@@ -289,7 +317,8 @@ you may omit `done` from the signature.
 `options` is an optional argument which can overwrite the defaults. It can take
 the following:
 
-- `concurrency`: `number` maxinum number of that job that can be running at once (per instance of agenda)
+- `concurrency`: `number` maximum number of that job that can be running at once (per instance of agenda)
+- `lockLimit`: `number` maximum number of that job that can be locked at once (per instance of agenda)
 - `lockLifetime`: `number` interval in ms of how long the job stays locked for (see [multiple job processors](#multiple-job-processors) for more info).
 A job will automatically unlock if `done()` is called.
 - `priority`: `(lowest|low|normal|high|highest|number)` specifies the priority

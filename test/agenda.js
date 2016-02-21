@@ -134,6 +134,24 @@ describe("agenda", function() {
           expect(jobs.defaultConcurrency(5)).to.be(jobs);
         });
       });
+      describe('lockLimit', function() {
+        it('sets the lockLimit', function() {
+          jobs.lockLimit(10);
+          expect(jobs._lockLimit).to.be(10);
+        });
+        it('returns itself', function() {
+          expect(jobs.lockLimit(10)).to.be(jobs);
+        });
+      });
+      describe('defaultLockLimit', function() {
+        it('sets the defaultLockLimit', function() {
+          jobs.defaultLockLimit(1);
+          expect(jobs._defaultLockLimit).to.be(1);
+        });
+        it('returns itself', function() {
+          expect(jobs.defaultLockLimit(5)).to.be(jobs);
+        });
+      });
       describe('defaultLockLifetime', function(){
         it('returns itself', function() {
           expect(jobs.defaultLockLifetime(1000)).to.be(jobs);
@@ -183,6 +201,10 @@ describe("agenda", function() {
 
         it('sets the default concurrency for the job', function() {
           expect(jobs._definitions.someJob).to.have.property('concurrency', 5);
+        });
+
+        it('sets the default lockLimit for the job', function() {
+          expect(jobs._definitions.someJob).to.have.property('lockLimit', 0);
         });
 
         it('sets the default priority for the job', function() {
@@ -988,6 +1010,116 @@ describe("agenda", function() {
         jobs.start();
       });
 
+      it('does not process jobs with expired locks', function(done) {
+        this.timeout(5000);
+
+        var jobs = new Agenda({
+          db: { address: mongoCfg },
+          processEvery: 100
+        });
+
+        var history = [];
+
+        jobs.define('job', {
+          concurrency: 1,
+          lockLifetime: 200
+        }, function(job, done) {
+          history.push(job.attrs);
+
+          setTimeout(function() {
+            done();
+          }, 150);
+        });
+
+        jobs.on('ready', function() {
+          jobs.now('job', { job: 1 });
+          jobs.now('job', { job: 2 });
+          jobs.now('job', { job: 3 });
+
+          jobs.start();
+        });
+
+        setTimeout(function() {
+          expect(history.length).to.equal(3);
+          done();
+        }, 2000);
+      });
+
+      it('does not on-the-fly lock more than agenda._lockLimit jobs', function (done) {
+        jobs.lockLimit(1);
+
+        jobs.define('lock job', function (job, cb) {});
+
+        jobs.start();
+
+        setTimeout(function () {
+          jobs.now('lock job', { i: 1 });
+          jobs.now('lock job', { i: 2 });
+
+          setTimeout(function () {
+            expect(jobs._lockedJobs).to.have.length(1);
+            jobs.stop(done);
+          }, 500);
+        }, 500);
+      });
+
+      it('does not on-the-fly lock more than definition.lockLimit jobs', function (done) {
+        jobs.define('lock job', {
+          lockLimit: 1
+        }, function (job, cb) {});
+
+        jobs.start();
+
+        setTimeout(function () {
+          jobs.now('lock job', { i: 1 });
+          jobs.now('lock job', { i: 2 });
+
+          setTimeout(function () {
+            expect(jobs._lockedJobs).to.have.length(1);
+            jobs.stop(done);
+          }, 500);
+        }, 500);
+      });
+
+      it('does not lock more than agenda._lockLimit jobs during processing interval', function (done) {
+        jobs.lockLimit(1);
+        jobs.processEvery(200);
+
+        jobs.define('lock job', function (job, cb) {});
+
+        jobs.start();
+
+        var when = moment().add(300, 'ms').toDate();
+
+        jobs.schedule(when, 'lock job', { i: 1 });
+        jobs.schedule(when, 'lock job', { i: 2 });
+
+        setTimeout(function () {
+          expect(jobs._lockedJobs).to.have.length(1);
+          jobs.stop(done);
+        }, 500);
+      });
+
+      it('does not lock more than definition.lockLimit jobs during processing interval', function (done) {
+        jobs.processEvery(200);
+
+        jobs.define('lock job', {
+          lockLimit: 1
+        }, function (job, cb) {});
+
+        jobs.start();
+
+        var when = moment().add(300, 'ms').toDate();
+
+        jobs.schedule(when, 'lock job', { i: 1 });
+        jobs.schedule(when, 'lock job', { i: 2 });
+
+        setTimeout(function () {
+          expect(jobs._lockedJobs).to.have.length(1);
+          jobs.stop(done);
+        }, 500);
+      });
+
     });
 
     describe("every running", function() {
@@ -1229,43 +1361,6 @@ describe("agenda", function() {
     });
 
 
-  });
-
-  describe('Locking', function() {
-    it('does not process jobs with expired locks', function(done) {
-      this.timeout(5000);
-
-      var jobs = new Agenda({
-        db: { address: mongoCfg },
-        processEvery: 100
-      });
-
-      var history = [];
-
-      jobs.define('job', {
-        concurrency: 1,
-        lockLifetime: 200
-      }, function(job, done) {
-        history.push(job.attrs);
-
-        setTimeout(function() {
-          done();
-        }, 150);
-      });
-
-      jobs.on('ready', function() {
-        jobs.now('job', { job: 1 });
-        jobs.now('job', { job: 2 });
-        jobs.now('job', { job: 3 });
-
-        jobs.start();
-      });
-
-      setTimeout(function() {
-        expect(history.length).to.equal(3);
-        done();
-      }, 2000);
-    });
   });
 
   describe('Retry', function () {
