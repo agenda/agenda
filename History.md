@@ -1,3 +1,8 @@
+0.8.0 / 2016-02-21
+==================
+
+  * Implementing lock limit
+  * Use callback to handle errors if we can.
 
 0.7.9 / 2016-02-05
 ==================
