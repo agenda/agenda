@@ -357,7 +357,7 @@ agenda.define('say hello', function(job) {
 
 ## Creating Jobs
 
-### every(interval, name, [data, [options]], [cb])
+### every(interval, name, [data], [options], [cb])
 
 Runs job `name` at the given `interval`. Optionally, data and options can be passed in.
 Every creates a job of type `single`, which means that it will only create one
