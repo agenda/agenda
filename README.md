@@ -14,7 +14,7 @@ It offers:
 - Scheduling with configurable priority, concurrency, and repeating
 - Scheduling via cron or human readable syntax.
 - Event backed job queue that you can hook into.
-- Optional standalone web-interface (see [agenda-ui](https://github.com/moudy/agenda-ui))
+- Optional standalone web-interfaces (see [agendash](https://github.com/joeframbach/agendash) and [agenda-ui](https://github.com/moudy/agenda-ui))
 
 
 # Installation
@@ -734,11 +734,12 @@ Thanks! I'm flattered, but it's really not necessary. If you really want to, you
 
 ### Web Interface?
 
-Agenda itself does not have a web interface built in. That being said, there is a stand-alone web interface in the form of [agenda-ui](https://github.com/moudy/agenda-ui).
+Agenda itself does not have a web interface built in. That being said, there are two stand-alone web interfaces:
 
-Screenshot:
-
-![agenda-ui interface](https://raw.githubusercontent.com/moudy/agenda-ui/screenshot/agenda-ui-screenshot.png)
+- [agendash](https://github.com/joeframbach/agendash)
+  ![agendash interface](https://raw.githubusercontent.com/joeframbach/agendash/master/job-details.png)
+- [agenda-ui](https://github.com/moudy/agenda-ui)
+  ![agenda-ui interface](https://raw.githubusercontent.com/moudy/agenda-ui/screenshot/agenda-ui-screenshot.png)
 
 ### Mongo vs Redis
 
