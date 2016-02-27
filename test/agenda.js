@@ -273,13 +273,15 @@ describe("agenda", function() {
 
           it('should modify one job when unique matches', function(done) {
             jobs.create('unique job', {type: 'active', userId: '123', 'other': true}).unique({'data.type': 'active', 'data.userId': '123'}).schedule("now").save(function(err, job1) {
-             jobs.create('unique job', {type: 'active', userId: '123', 'other': false}).unique({'data.type': 'active', 'data.userId': '123'}).schedule("now").save(function(err, job2) {
-               expect(job1.attrs.nextRunAt.toISOString()).not.to.equal(job2.attrs.nextRunAt.toISOString())
-                mongo.collection('agendaJobs').find({name: 'unique job'}).toArray(function(err, j) {
-                  expect(j).to.have.length(1);
-                  done();
+              setTimeout(function() { // Avoid timing condition where nextRunAt coincidentally is the same
+                jobs.create('unique job', {type: 'active', userId: '123', 'other': false}).unique({'data.type': 'active', 'data.userId': '123'}).schedule("now").save(function(err, job2) {
+                  expect(job1.attrs.nextRunAt.toISOString()).not.to.equal(job2.attrs.nextRunAt.toISOString())
+                  mongo.collection('agendaJobs').find({name: 'unique job'}).toArray(function(err, j) {
+                    expect(j).to.have.length(1);
+                    done();
+                  });
                 });
-             });
+              }, 1);
             });
           });
 
