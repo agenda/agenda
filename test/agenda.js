@@ -895,7 +895,7 @@ describe("agenda", function() {
         setTimeout(function() {
           jobs.stop(function(err, res) {
             jobs._collection.findOne({name: 'longRunningJob'}, function(err, job) {
-              expect(job.lockedAt).to.be(null);
+              expect(job.lockedAt).to.eql(jobs._notLocked);
               done();
             });
           });
