@@ -245,7 +245,7 @@ var agenda = new Agenda({defaultConcurrency: 5});
 
 ### lockLimit(number)
 
-Takes a `number` shich specifies the max number jobs that can be locked at any given moment. By default it is `0` for no max.
+Takes a `number` which specifies the max number jobs that can be locked at any given moment. By default it is `0` for no max.
 
 ```js
 agenda.lockLimit(0);
@@ -309,7 +309,7 @@ Before you can use a job, you must define its processing behavior.
 
 ### define(jobName, [options], fn)
 
-Defines a job with the name of `jobName`. When a job of job name gets run, it
+Defines a job with the name of `jobName`. When a job of `jobName` gets run, it
 will be passed to `fn(job, done)`. To maintain asynchronous behavior, you must
 call `done()` when you are processing the job. If your function is synchronous,
 you may omit `done` from the signature.
