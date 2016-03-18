@@ -1124,6 +1124,48 @@ describe("agenda", function() {
 
     });
 
+    describe('job concurrency', function () {
+
+      it('should not block a job for concurrency of another job', function (done) {
+        var processed = [];
+
+        jobs.define('blocking', {
+          concurrency: 1
+        }, function (job, cb) {
+          processed.push(job.attrs.data.i);
+          if(job.attrs.data.i === 2) expect(processed).to.contain(3)
+          setTimeout(cb, 100);
+        });
+
+        jobs.define('non-blocking', function (job) {
+          processed.push(job.attrs.data.i);
+          expect(processed).not.to.contain(2);
+        });
+
+        var finished = false;
+        jobs.on('complete', function (job) {
+          if(!finished && processed.length === 3) {
+            finished = true;
+            done();
+          }
+        });
+
+        jobs.on('fail', function (err, job) {
+          expect(err).to.be(undefined);
+        })
+
+        jobs.now('blocking', { i: 1 });
+        jobs.now('blocking', { i: 2 });
+
+        setTimeout(function () {
+          jobs.now('non-blocking', { i: 3 });
+        }, 100);
+
+        jobs.start();
+      });
+
+    });
+
     describe("every running", function() {
       beforeEach(function(done) {
         jobs.defaultConcurrency(1);
