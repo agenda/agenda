@@ -1127,17 +1127,22 @@ describe("agenda", function() {
     describe('job concurrency', function () {
 
       it('should not block a job for concurrency of another job', function (done) {
+        jobs.processEvery(50);
+
         var processed = [];
+        var now = Date.now();
 
         jobs.define('blocking', {
           concurrency: 1
         }, function (job, cb) {
           processed.push(job.attrs.data.i);
-          if(job.attrs.data.i === 2) expect(processed).to.contain(3)
-          setTimeout(cb, 100);
+          setTimeout(cb, 400);
         });
 
-        jobs.define('non-blocking', function (job) {
+        jobs.define('non-blocking', {
+          // Lower priority to keep it at the back in the queue
+          priority: 'lowest'
+        }, function (job) {
           processed.push(job.attrs.data.i);
           expect(processed).not.to.contain(2);
         });
@@ -1154,14 +1159,14 @@ describe("agenda", function() {
           expect(err).to.be(undefined);
         })
 
-        jobs.now('blocking', { i: 1 });
-        jobs.now('blocking', { i: 2 });
+        jobs.start();
+
+        jobs.schedule(new Date(now + 100), 'blocking', { i: 1 });
 
         setTimeout(function () {
-          jobs.now('non-blocking', { i: 3 });
+          jobs.schedule(new Date(now + 100), 'blocking', { i: 2 });
+          jobs.schedule(new Date(now + 100), 'non-blocking', { i: 3 });
         }, 100);
-
-        jobs.start();
       });
 
     });
