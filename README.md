@@ -942,6 +942,7 @@ Agenda has some great community members that help a great deal.
 - [@nwkeeley](http://github.com/nwkeeley)
 - [@liamdon](http://github.com/liamdon)
 - [@loris](http://github.com/loris)
+- [@jakeorr](http://github.com/jakeorr)
 
 
 # License
