@@ -1407,8 +1407,35 @@ describe("agenda", function() {
         });
 
       });
-    });
 
+      describe('General Integration', function () {
+
+        it('Should not run a job that has already been run', function (done) {
+          var runCount = {};
+
+          jobs.define('test-job', function (job, cb) {
+            var id = job.attrs._id.toString();
+            runCount[id] = runCount[id] ? runCount[id] + 1 : 1;
+            cb();
+          });
+
+          jobs.start();
+
+          for(var i = 0; i < 10; i ++) {
+            jobs.now('test-job');
+          }
+
+          setTimeout(function () {
+            var ids = Object.keys(runCount);
+            expect(ids).to.have.length(10);
+            Object.keys(runCount).forEach(function (id) {
+              expect(runCount[id]).to.be(1);
+            })
+            done();
+          }, jobTimeout);
+        });
+      });
+    });
 
   });
 
