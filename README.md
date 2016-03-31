@@ -400,7 +400,7 @@ agenda.every('15 minutes', ['printAnalyticsReport', 'sendNotifications', 'update
 
 In this case, `every` returns array of `jobs`.
 
-### schedule(when, name, [data], cb)
+### schedule(when, name, [data], [cb])
 
 Schedules a job to run `name` once at a given time. `when` can be a `Date` or a
 `String` such as `tomorrow at 5pm`.
