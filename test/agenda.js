@@ -991,7 +991,7 @@ describe("agenda", function() {
 
     describe("job lock", function(){
 
-      it("runs job after a lock has expired", function(done) {
+      it("runs a recurring job after a lock has expired", function(done) {
         var startCounter = 0;
 
         jobs.define("lock job", {lockLifetime: 50}, function(job, cb){
@@ -1012,39 +1012,51 @@ describe("agenda", function() {
         jobs.start();
       });
 
-      it('does not process jobs with expired locks', function(done) {
-        this.timeout(5000);
+      it('runs a one-time job after its lock expires', function (done) {
+        var runCount = 0;
 
-        var jobs = new Agenda({
-          db: { address: mongoCfg },
-          processEvery: 100
+        jobs.define('lock job', {
+          lockLifetime: 50
+        }, function (job, cb) {
+          runCount++;
+
+          if(runCount !== 1) {
+            expect(runCount).to.be(2);
+            jobs.stop(done);
+          }
         });
 
+        jobs.processEvery(50);
+        jobs.start();
+        jobs.now('lock job', { i: 1 });
+      });
+
+      it('does not process locked jobs', function(done) {
         var history = [];
 
-        jobs.define('job', {
-          concurrency: 1,
-          lockLifetime: 200
-        }, function(job, done) {
-          history.push(job.attrs);
+        jobs.define('lock job', {
+          lockLifetime: 300
+        }, function(job, cb) {
+          history.push(job.attrs.data.i);
 
           setTimeout(function() {
-            done();
+            cb();
           }, 150);
         });
 
-        jobs.on('ready', function() {
-          jobs.now('job', { job: 1 });
-          jobs.now('job', { job: 2 });
-          jobs.now('job', { job: 3 });
+        jobs.start();
 
-          jobs.start();
-        });
+        jobs.now('lock job', { i: 1 });
+        jobs.now('lock job', { i: 2 });
+        jobs.now('lock job', { i: 3 });
 
         setTimeout(function() {
-          expect(history.length).to.equal(3);
+          expect(history).to.have.length(3);
+          expect(history).to.contain(1);
+          expect(history).to.contain(2);
+          expect(history).to.contain(3);
           done();
-        }, 2000);
+        }, 500);
       });
 
       it('does not on-the-fly lock more than agenda._lockLimit jobs', function (done) {
