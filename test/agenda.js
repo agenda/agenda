@@ -665,7 +665,7 @@ describe("agenda", function() {
           }, 100);
         });
 
-        job = new Job({agenda: jobs, name: 'testRun'});
+        job = new Job({agenda: jobs, definition: jobs._definitions["testRun"], name: 'testRun'});
       });
 
       it('updates lastRunAt', function(done) {
@@ -679,7 +679,7 @@ describe("agenda", function() {
       });
 
       it('fails if job is undefined', function(done) {
-        job = new Job({agenda: jobs, name: 'not defined'});
+        job = new Job({agenda: jobs, definition: jobs._definitions["not defined"], name: 'not defined'});
         job.run(function() {
           expect(job.attrs.failedAt).to.be.ok();
           expect(job.attrs.failReason).to.be('Undefined job');
@@ -753,7 +753,7 @@ describe("agenda", function() {
     describe('touch', function(done) {
       it('extends the lock lifetime', function(done) {
         var lockedAt = new Date();
-        var job = new Job({agenda: jobs, name: 'some job', lockedAt: lockedAt});
+        var job = new Job({agenda: jobs, definition: jobs._definitions["some job"], name: 'some job', lockedAt: lockedAt});
         job.save = function(cb) { cb(); };
         setTimeout(function() {
           job.touch(function() {
@@ -913,7 +913,7 @@ describe("agenda", function() {
         });
 
         it('emits start event', function(done) {
-          var job = new Job({agenda: jobs, name: 'jobQueueTest'});
+          var job = new Job({agenda: jobs, definition: jobs._definitions["jobQueueTest"], name: 'jobQueueTest'});
           jobs.once('start', function(j) {
             expect(j).to.be(job);
             done();
@@ -921,7 +921,7 @@ describe("agenda", function() {
           job.run();
         });
         it('emits start:job name event', function(done) {
-          var job = new Job({agenda: jobs, name: 'jobQueueTest'});
+          var job = new Job({agenda: jobs, definition: jobs._definitions["jobQueueTest"], name: 'jobQueueTest'});
           jobs.once('start:jobQueueTest', function(j) {
             expect(j).to.be(job);
             done();
@@ -929,7 +929,7 @@ describe("agenda", function() {
           job.run();
         });
         it('emits complete event', function(done) {
-          var job = new Job({agenda: jobs, name: 'jobQueueTest'});
+          var job = new Job({agenda: jobs, definition: jobs._definitions["jobQueueTest"], name: 'jobQueueTest'});
           jobs.once('complete', function(j) {
             expect(job.attrs._id.toString()).to.be(j.attrs._id.toString());
             done();
@@ -937,7 +937,7 @@ describe("agenda", function() {
           job.run();
         });
         it('emits complete:job name event', function(done) {
-          var job = new Job({agenda: jobs, name: 'jobQueueTest'});
+          var job = new Job({agenda: jobs, definition: jobs._definitions["jobQueueTest"], name: 'jobQueueTest'});
           jobs.once('complete:jobQueueTest', function(j) {
             expect(job.attrs._id.toString()).to.be(j.attrs._id.toString());
             done();
@@ -945,7 +945,7 @@ describe("agenda", function() {
           job.run();
         });
         it('emits success event', function(done) {
-          var job = new Job({agenda: jobs, name: 'jobQueueTest'});
+          var job = new Job({agenda: jobs, definition: jobs._definitions["jobQueueTest"], name: 'jobQueueTest'});
           jobs.once('success', function(j) {
             expect(j).to.be.ok();
             done();
@@ -953,7 +953,7 @@ describe("agenda", function() {
           job.run();
         });
         it('emits success:job name event', function(done) {
-          var job = new Job({agenda: jobs, name: 'jobQueueTest'});
+          var job = new Job({agenda: jobs, definition: jobs._definitions["jobQueueTest"], name: 'jobQueueTest'});
           jobs.once('success:jobQueueTest', function(j) {
             expect(j).to.be.ok();
             done();
@@ -961,7 +961,7 @@ describe("agenda", function() {
           job.run();
         });
         it('emits fail event', function(done){
-          var job = new Job({agenda: jobs, name: 'failBoat'});
+          var job = new Job({agenda: jobs, definition: jobs._definitions["failBoat"], name: 'failBoat'});
           jobs.once('fail', function(err, j) {
             expect(err.message).to.be('Zomg fail');
             expect(j).to.be(job);
@@ -978,7 +978,7 @@ describe("agenda", function() {
           job.run();
         });
         it('emits fail:job name event', function(done) {
-          var job = new Job({agenda: jobs, name: 'failBoat'});
+          var job = new Job({agenda: jobs, definition: jobs._definitions["failBoat"], name: 'failBoat'});
           jobs.once('fail:failBoat', function(err, j) {
             expect(err.message).to.be('Zomg fail');
             expect(j).to.be(job);
