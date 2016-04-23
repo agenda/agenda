@@ -741,6 +741,24 @@ Agenda itself does not have a web interface built in. That being said, there are
 - [agenda-ui](https://github.com/moudy/agenda-ui)
   ![agenda-ui interface](https://raw.githubusercontent.com/moudy/agenda-ui/screenshot/agenda-ui-screenshot.png)
 
+### Can I define one job processor that matches different jobs?
+
+Yes, when defining a job processor the "name" is used as a regular expression.
+
+```javascript
+agenda.define('someJob:', function(job, done) {
+  done();
+});
+```
+
+should match both:
+
+```javascript
+agenda.every('1 minutes', 'someJob:test', { jobId: "test"});
+agenda.every('1 minutes', 'someJob:test2', { jobId: "test2"});
+```
+
+
 ### Mongo vs Redis
 
 The decision to use Mongo instead of Redis is intentional. Redis is often used for
