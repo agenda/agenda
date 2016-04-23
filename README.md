@@ -355,6 +355,17 @@ agenda.define('say hello', function(job) {
 });
 ```
 
+Regular expression Job:
+```js
+agenda.define('someJob:?.*', function(job, done) {
+  doSomelengthyTask(function(data) {
+    formatThatData(data);
+    sendThatData(data);
+    done();
+  });
+});
+```
+
 ## Creating Jobs
 
 ### every(interval, name, [data], [options], [cb])
