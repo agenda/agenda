@@ -1012,7 +1012,7 @@ describe("agenda", function() {
         jobs.start();
       });
 
-      /*it('runs a one-time job after its lock expires', function (done) {
+      it('runs a one-time job after its lock expires', function (done) {
         var runCount = 0;
 
         jobs.define('lock job', {
@@ -1029,7 +1029,7 @@ describe("agenda", function() {
         jobs.processEvery(50);
         jobs.start();
         jobs.now('lock job', { i: 1 });
-      });*/
+      });
 
       it('does not process locked jobs', function(done) {
         var history = [];
