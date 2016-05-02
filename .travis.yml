@@ -6,6 +6,7 @@ node_js:
   - "0.10"
   - "4"
   - "5"
+  - "6"
 script: make test-once
 before_script:
   - sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 7F0CEB10
