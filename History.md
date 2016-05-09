@@ -1,3 +1,21 @@
+
+0.8.1 / 2016-05-08
+==================
+
+  * Add Node v6 to CI
+  * 1. Update dev dependencies for out of date. 2. Small fix to job.js for invalid repeatAt
+  * Update .npmignore
+  * Fix doc: cb not marked as optional (closes #279)
+  * Including nextRunAt check in query for on the fly lock.
+  * Picking up any job with an expired lock (not just recurring or queued).
+  * Fixed failing test
+  * throw on processJobResult error
+  * Requeuing concurrency blocked jobs wrt priority.
+  * Processing the next job that is not blocked by concurrency.
+  * Fix test which fails only sometimes
+  * Add agendash as alternative ui
+  * Merge pull request #288 from diesal11/master
+
 0.8.0 / 2016-02-21
 ==================
 
