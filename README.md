@@ -37,7 +37,7 @@ var agenda = new Agenda({db: {address: mongoConnectionString}});
 // var agenda = new Agenda({db: {address: mongoConnectionString, collection: "jobCollectionName"}});
 
 // or pass additional connection options:
-// var agenda = new Agenda({db: {address: mongoConnectionString, collection: "jobCollectionName", options: {server:{auto_reconnect:true}}});
+// var agenda = new Agenda({db: {address: mongoConnectionString, collection: "jobCollectionName", options: {server:{auto_reconnect:true}}}});
 
 // or pass in an existing mongodb-native MongoClient instance
 // var agenda = new Agenda({mongo: myMongoClient});
