@@ -1,3 +1,7 @@
+0.9.0 / 2016-08-13
+==================
+  * Upgrade mongo driver to 2.1.11
+  * Increase Mongo compatability to 2.4
 
 0.8.1 / 2016-05-08
 ==================
