@@ -76,7 +76,7 @@ describe("agenda", function() {
 
     describe('configuration methods', function() {
       it('sets the _db directly when passed as an option', function() {
-        var agenda = new Agenda({mongo: mongo});
+        var agenda = new Agenda({connection: mongo});
         expect(agenda._dbAdapter._mdb.databaseName).to.equal('agenda-test');
       });
     });
@@ -86,13 +86,13 @@ describe("agenda", function() {
       describe('mongo', function() {
         it('sets the _db directly', function() {
           var agenda = new Agenda();
-          agenda.mongo(mongo);
+          agenda.connection(mongo);
           expect(agenda._dbAdapter._mdb.databaseName).to.equal('agenda-test');
         });
 
         it('returns itself', function() {
           var agenda = new Agenda();
-          expect(agenda.mongo(mongo)).to.be(agenda);
+          expect(agenda.connection(mongo)).to.be(agenda);
         });
       });
 
