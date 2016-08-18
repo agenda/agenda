@@ -62,10 +62,8 @@ describe("agenda", function() {
   afterEach(function(done) {
       setTimeout(function() {
         clearJobs(function() {
-          mongo.close(function () {
-            jobs.stop();
-            jobs._mdb.close(done);
-          });
+          jobs.stop();
+          jobs._dbAdapter._mdb.close(done);
         });
       }, 50);
   });
@@ -78,7 +76,7 @@ describe("agenda", function() {
     describe('configuration methods', function() {
       it('sets the _db directly when passed as an option', function() {
         var agenda = new Agenda({mongo: mongo});
-        expect(agenda._mdb.databaseName).to.equal('agenda-test');
+        expect(agenda._dbAdapter._mdb.databaseName).to.equal('agenda-test');
       });
     });
 
@@ -88,7 +86,7 @@ describe("agenda", function() {
         it('sets the _db directly', function() {
           var agenda = new Agenda();
           agenda.mongo(mongo);
-          expect(agenda._mdb.databaseName).to.equal('agenda-test');
+          expect(agenda._dbAdapter._mdb.databaseName).to.equal('agenda-test');
         });
 
         it('returns itself', function() {
@@ -399,7 +397,7 @@ describe("agenda", function() {
       });
 
       afterEach(function(done) {
-        jobs._collection.remove({name: {$in: ['jobA', 'jobB']}}, function(err) {
+        jobs._dbAdapter._collection.remove({name: {$in: ['jobA', 'jobB']}}, function(err) {
           if(err) return done(err);
           done();
         });
@@ -894,7 +892,7 @@ describe("agenda", function() {
         jobs.start();
         setTimeout(function() {
           jobs.stop(function(err, res) {
-            jobs._collection.findOne({name: 'longRunningJob'}, function(err, job) {
+            jobs._dbAdapter._collection.findOne({name: 'longRunningJob'}, function(err, job) {
               expect(job.lockedAt).to.be(null);
               done();
             });
@@ -1297,6 +1295,8 @@ describe("agenda", function() {
 
         it('should not run if job is disabled', function(done) {
           var counter = 0;
+
+          jobs.stop();
 
           jobs.define('everyDisabledTest', function(job, cb) {
             counter++;
