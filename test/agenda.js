@@ -60,14 +60,15 @@ describe("agenda", function() {
   });
 
   afterEach(function(done) {
-      setTimeout(function() {
+    setTimeout(function() {
+      jobs.stop(function() {
         clearJobs(function() {
-          mongo.close(function () {
-            jobs.stop();
+          mongo.close(function() {
             jobs._mdb.close(done);
           });
         });
-      }, 50);
+      });
+    }, 50);
   });
 
   describe('Agenda', function() {
