@@ -713,9 +713,10 @@ describe("agenda", function() {
             });
 
             it('understands delayed start when start date (10 days from now) with cron interval and timezone', function() {
+                var startDate = new Date(new Date().valueOf() + (10*24*60*60*1000));
                 job.repeatEvery('0 6 * * *', {
                     timezone: 'GMT',
-                    startDate: new Date(new Date().valueOf() + (10*24*60*60*1000))
+                    startDate: startDate
                 });
                 job.computeNextRunAt();
                 expect(moment(job.attrs.nextRunAt).tz('GMT').hour()).to.be(6);
@@ -723,10 +724,11 @@ describe("agenda", function() {
             });
 
             it('understands how to run the job "every x day" startig from a future date by adding x as skip date and start date with cron interval and timezone', function() {
+                var startDate = new Date(new Date().valueOf() + (10*24*60*60*1000));
                 job.repeatEvery('0 6 * * *', {
                     timezone: 'GMT',
                     skipDate: "6",
-                    startDate: new Date(new Date().valueOf() + (10*24*60*60*1000))
+                    startDate: startDate
                 });
                 job.computeNextRunAt();
                 expect(moment(job.attrs.nextRunAt).tz('GMT').hour()).to.be(6);
