@@ -1282,7 +1282,7 @@ describe("agenda", function() {
 
             it('does not on-the-fly lock more than definition.lockLimit jobs', function(done) {
                 jobs.define('lock job', {
-                    lockLimit: 1
+                    lockLimit: 1 
                 }, function(job, cb) {});
 
                 jobs.start();
