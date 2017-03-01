@@ -173,10 +173,10 @@ describe("agenda", function() {
       describe('isJob', function() {
         it('job', function() {
           var job = jobs.create('sendEmail', {to: 'some guy'});
-          expect(Agenda.isJob(job)).to.be(true);
+          expect(jobs.isJob(job)).to.be(true);
         });
         it('not job', function() {
-          expect(Agenda.isJob({})).to.be(false);
+          expect(jobs.isJob({})).to.be(false);
         });
       });
     });
