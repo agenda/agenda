@@ -169,6 +169,18 @@ describe("agenda", function() {
       });
     });
 
+    describe('utils', function() {
+      describe('isJob', function() {
+        it('job', function() {
+          var job = jobs.create('sendEmail', {to: 'some guy'});
+          expect(Agenda.isJob(job)).to.be(true);
+        });
+        it('not job', function() {
+          expect(Agenda.isJob({})).to.be(false);
+        });
+      });
+    });
+
     describe('job methods', function() {
 
       describe('create', function() {
