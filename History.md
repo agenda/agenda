@@ -1,4 +1,14 @@
 
+0.9.1 / 2017-03-22
+==================
+
+Republish release for NPM. Includes fixes from 0.9.0 release:
+
+  * add support for `mongoose.connection` for `agenda.mongo()`, fixes #156
+  * Fix for race condition in the afterEach clean up code (#355)
+  * Fixes + protects against concurrency not being honored  (#379)
+
+
 0.9.0 / 2016-12-28
 ==================
   * add support for `mongoose.connection` for `agenda.mongo()`, fixes #156
