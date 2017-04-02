@@ -614,6 +614,8 @@ job.unique({'data.type': 'active', 'data.userId': '123', nextRunAt(date)});
 job.save();
 ```
 
+*IMPORTANT:* To avoid high CPU usage by MongoDB, Make sure to create an index on the used fields, like: `data.type` and `data.userId` for the example above.
+
 ### fail(reason)
 
 Sets `job.attrs.failedAt` to `now`, and sets `job.attrs.failReason`
