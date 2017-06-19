@@ -566,7 +566,7 @@ describe("agenda", function() {
         job.attrs.lastRunAt = now;
         job.repeatEvery('2 minutes');
         job.computeNextRunAt();
-        expect(job.attrs.nextRunAt).to.be(now.valueOf() + 120000);
+        expect(job.attrs.nextRunAt.valueOf()).to.be(now.valueOf() + 120000);
       });
 
       it('understands cron intervals', function() {
@@ -598,8 +598,9 @@ describe("agenda", function() {
           timezone: 'GMT'
         });
         job.computeNextRunAt();
+
         expect(moment(job.attrs.nextRunAt).tz('GMT').hour()).to.be(6);
-        expect(moment(job.attrs.nextRunAt).toDate().getDate()).to.be(moment(job.attrs.lastRunAt).add(1, 'days').toDate().getDate());
+        expect(moment(job.attrs.nextRunAt).toDate().getDate()).to.be(moment(date).add(1, 'days').toDate().getDate());
       });
 
       describe('when repeat at time is invalid', function () {
