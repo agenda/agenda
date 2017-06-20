@@ -779,6 +779,10 @@ describe("agenda", function() {
         job.fail('test');
         expect(job.attrs.failedAt).to.be.a(Date);
       });
+      it('sets the failedAt time equal to lastFinishedAt time', function() {
+        job.fail('test');
+        expect(job.attrs.failedAt).to.be.equal(job.attrs.lastFinishedAt);
+      });
     });
 
     describe('enable', function() {
