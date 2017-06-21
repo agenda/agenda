@@ -1,5 +1,5 @@
 # Agenda
-[![Build Status](https://api.travis-ci.org/rschmukler/agenda.svg)](http://travis-ci.org/rschmukler/agenda)
+[![Build Status](https://api.travis-ci.org/agenda/agenda.svg)](http://travis-ci.org/agenda/agenda)
 [![Dependency Status](https://david-dm.org/rschmukler/agenda.svg)](https://david-dm.org/rschmukler/agenda)
 [![devDependency Status](https://david-dm.org/rschmukler/agenda/dev-status.svg)](https://david-dm.org/rschmukler/agenda#info=devDependencies)
 [![Code Climate](https://d3s6mut3hikguw.cloudfront.net/github/rschmukler/agenda.svg)](https://codeclimate.com/github/rschmukler/agenda/badges)
