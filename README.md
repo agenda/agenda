@@ -14,7 +14,7 @@ It offers:
 - Scheduling with configurable priority, concurrency, and repeating
 - Scheduling via cron or human readable syntax.
 - Event backed job queue that you can hook into.
-- Optional standalone web-interfaces (see [agendash](https://github.com/joeframbach/agendash) and [agenda-ui](https://github.com/moudy/agenda-ui))
+- Optional standalone web-interfaces (see [agendash](https://github.com/agenda/agendash) and [agenda-ui](https://github.com/moudy/agenda-ui))
 
 
 # Installation
@@ -744,8 +744,8 @@ Thanks! I'm flattered, but it's really not necessary. If you really want to, you
 
 Agenda itself does not have a web interface built in. That being said, there are two stand-alone web interfaces:
 
-- [agendash](https://github.com/joeframbach/agendash)
-  ![agendash interface](https://raw.githubusercontent.com/joeframbach/agendash/master/job-details.png)
+- [agendash](https://github.com/agenda/agendash)
+  ![agendash interface](https://raw.githubusercontent.com/agenda/agendash/master/job-details.png)
 - [agenda-ui](https://github.com/moudy/agenda-ui)
   ![agenda-ui interface](https://raw.githubusercontent.com/moudy/agenda-ui/screenshot/agenda-ui-screenshot.png)
 
