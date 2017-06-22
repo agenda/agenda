@@ -12,7 +12,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/rschmukler/agenda"
+    "url": "git://github.com/agenda/agenda"
   },
   "keywords": [
     "job",
@@ -25,7 +25,7 @@
   "author": "Ryan Schmukler <ryan@slingingcode.com> (http://slingingcode.com/)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/rschmukler/agenda/issues"
+    "url": "https://github.com/agenda/agenda/issues"
   },
   "dependencies": {
     "cron": "~1.1.0",
