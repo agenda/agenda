@@ -1,3 +1,8 @@
+Next
+=======
+
+  * Replace the deprecated `findAndModify` method from native MongoDB driver to `findOneAndUpdate` (#448)
+  * Going forward, we won't ensure Node.js v0.10 and v0.11 compatibility anymore (#449)
 
 0.9.1 / 2017-03-22
 ==================
