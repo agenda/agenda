@@ -60,15 +60,13 @@ describe("agenda", function() {
   });
 
   afterEach(function(done) {
-    setTimeout(function() {
-      jobs.stop(function() {
-        clearJobs(function() {
-          mongo.close(function() {
-            jobs._mdb.close(done);
-          });
+    jobs.stop(function() {
+      clearJobs(function() {
+        mongo.close(function() {
+          jobs._dbAdapter._mdb.close(done);
         });
       });
-    }, 50);
+    });
   });
 
   describe('Agenda', function() {
@@ -78,8 +76,8 @@ describe("agenda", function() {
 
     describe('configuration methods', function() {
       it('sets the _db directly when passed as an option', function() {
-        var agenda = new Agenda({mongo: mongo});
-        expect(agenda._mdb.databaseName).to.equal('agenda-test');
+        var agenda = new Agenda({connection: mongo});
+        expect(agenda._dbAdapter._mdb.databaseName).to.equal('agenda-test');
       });
     });
 
@@ -88,13 +86,13 @@ describe("agenda", function() {
       describe('mongo', function() {
         it('sets the _db directly', function() {
           var agenda = new Agenda();
-          agenda.mongo(mongo);
-          expect(agenda._mdb.databaseName).to.equal('agenda-test');
+          agenda.connection(mongo);
+          expect(agenda._dbAdapter._mdb.databaseName).to.equal('agenda-test');
         });
 
         it('returns itself', function() {
           var agenda = new Agenda();
-          expect(agenda.mongo(mongo)).to.be(agenda);
+          expect(agenda.connection(mongo)).to.be(agenda);
         });
       });
 
@@ -400,7 +398,7 @@ describe("agenda", function() {
       });
 
       afterEach(function(done) {
-        jobs._collection.remove({name: {$in: ['jobA', 'jobB']}}, function(err) {
+        jobs._dbAdapter._collection.remove({name: {$in: ['jobA', 'jobB']}}, function(err) {
           if(err) return done(err);
           done();
         });
@@ -568,7 +566,7 @@ describe("agenda", function() {
         job.attrs.lastRunAt = now;
         job.repeatEvery('2 minutes');
         job.computeNextRunAt();
-        expect(job.attrs.nextRunAt).to.be(now.valueOf() + 120000);
+        expect(job.attrs.nextRunAt.valueOf()).to.be(now.valueOf() + 120000);
       });
 
       it('understands cron intervals', function() {
@@ -600,8 +598,9 @@ describe("agenda", function() {
           timezone: 'GMT'
         });
         job.computeNextRunAt();
+
         expect(moment(job.attrs.nextRunAt).tz('GMT').hour()).to.be(6);
-        expect(moment(job.attrs.nextRunAt).toDate().getDate()).to.be(moment(job.attrs.lastRunAt).add(1, 'days').toDate().getDate());
+        expect(moment(job.attrs.nextRunAt).toDate().getDate()).to.be(moment(date).add(1, 'days').toDate().getDate());
       });
 
       describe('when repeat at time is invalid', function () {
@@ -895,7 +894,7 @@ describe("agenda", function() {
         jobs.start();
         setTimeout(function() {
           jobs.stop(function(err, res) {
-            jobs._collection.findOne({name: 'longRunningJob'}, function(err, job) {
+            jobs._dbAdapter._collection.findOne({name: 'longRunningJob'}, function(err, job) {
               expect(job.lockedAt).to.be(null);
               done();
             });
@@ -1298,6 +1297,8 @@ describe("agenda", function() {
 
         it('should not run if job is disabled', function(done) {
           var counter = 0;
+
+          jobs.stop();
 
           jobs.define('everyDisabledTest', function(job, cb) {
             counter++;
