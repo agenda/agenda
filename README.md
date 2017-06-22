@@ -29,15 +29,15 @@ You will also need a working [Mongo](https://www.mongodb.com/) database (2.6+) t
 
 ```js
 
-var mongoConnectionString = "mongodb://127.0.0.1/agenda";
+var mongoConnectionString = 'mongodb://127.0.0.1/agenda';
 
 var agenda = new Agenda({db: {address: mongoConnectionString}});
 
 // or override the default collection name:
-// var agenda = new Agenda({db: {address: mongoConnectionString, collection: "jobCollectionName"}});
+// var agenda = new Agenda({db: {address: mongoConnectionString, collection: 'jobCollectionName'}});
 
 // or pass additional connection options:
-// var agenda = new Agenda({db: {address: mongoConnectionString, collection: "jobCollectionName", options: {server:{auto_reconnect:true}}}});
+// var agenda = new Agenda({db: {address: mongoConnectionString, collection: 'jobCollectionName', options: {server:{auto_reconnect:true}}}});
 
 // or pass in an existing mongodb-native MongoClient instance
 // var agenda = new Agenda({mongo: myMongoClient});
@@ -157,10 +157,10 @@ afterwards to ensure the database has the proper indexes:
 ```js
 function ignoreErrors() {}
 
-agenda._db.ensureIndex("nextRunAt", ignoreErrors)
-.ensureIndex("lockedAt", ignoreErrors)
-.ensureIndex("name", ignoreErrors)
-.ensureIndex("priority", ignoreErrors);
+agenda._db.ensureIndex('nextRunAt', ignoreErrors)
+.ensureIndex('lockedAt', ignoreErrors)
+.ensureIndex('name', ignoreErrors)
+.ensureIndex('priority', ignoreErrors);
 
 function ignoreErrors
 ```
@@ -351,7 +351,7 @@ Sync Job:
 
 ```js
 agenda.define('say hello', function(job) {
-  console.log("Hello!");
+  console.log('Hello!');
 });
 ```
 
@@ -383,7 +383,7 @@ Returns the `job`.
 agenda.define('printAnalyticsReport', function(job, done) {
   User.doSomethingReallyIntensive(function(err, users) {
     processUserData();
-    console.log("I print a report!");
+    console.log('I print a report!');
     done();
   });
 });
@@ -449,7 +449,7 @@ the database. See below to learn how to manually work with jobs.
 ```js
 var job = agenda.create('printAnalyticsReport', {userCount: 100});
 job.save(function(err) {
-  console.log("Job successfully saved");
+  console.log('Job successfully saved');
 });
 ```
 
@@ -636,7 +636,7 @@ you never need to call this manually.
 
 ```js
 job.run(function(err, job) {
-  console.log("I don't know why you would need to do this...");
+  console.log('I don\'t know why you would need to do this...');
 });
 ```
 
@@ -646,7 +646,7 @@ Saves the `job.attrs` into the database.
 
 ```js
 job.save(function(err) {
-    if(!err) console.log("Successfully saved job to collection");
+    if(!err) console.log('Successfully saved job to collection');
 })
 ```
 
@@ -656,7 +656,7 @@ Removes the `job` from the database.
 
 ```js
 job.remove(function(err) {
-    if(!err) console.log("Successfully removed job from collection");
+    if(!err) console.log('Successfully removed job from collection');
 })
 ```
 
@@ -696,7 +696,7 @@ An instance of an agenda will emit the following events:
 
 ```js
 agenda.on('start', function(job) {
-  console.log("Job %s starting", job.attrs.name);
+  console.log('Job %s starting', job.attrs.name);
 });
 ```
 
@@ -705,7 +705,7 @@ agenda.on('start', function(job) {
 
 ```js
 agenda.on('complete', function(job) {
-  console.log("Job %s finished", job.attrs.name);
+  console.log('Job %s finished', job.attrs.name);
 });
 ```
 
@@ -714,7 +714,7 @@ agenda.on('complete', function(job) {
 
 ```js
 agenda.on('success:send email', function(job) {
-  console.log("Sent Email Successfully to: %s", job.attrs.data.to);
+  console.log('Sent Email Successfully to: %s', job.attrs.data.to);
 });
 ```
 
@@ -723,7 +723,7 @@ agenda.on('success:send email', function(job) {
 
 ```js
 agenda.on('fail:send email', function(err, job) {
-  console.log("Job failed with error: %s", err.message);
+  console.log('Job failed with error: %s', err.message);
 });
 ```
 
@@ -943,6 +943,8 @@ for a heavy hitting server.
 
 Agenda has some great community members that help a great deal.
 
+- [@rschmukler](https://github.com/rschmukler)
+- [@joeframbach](https://github.com/joeframbach)
 - [@droppedoncaprica](http://github.com/droppedoncaprica)
 - [@nwkeeley](http://github.com/nwkeeley)
 - [@liamdon](http://github.com/liamdon)
