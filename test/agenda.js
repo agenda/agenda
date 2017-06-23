@@ -76,6 +76,35 @@ describe("agenda", function() {
       expect(jobs._processEvery).to.be(5000);
     });
 
+    describe('close', function() {
+      it('closes database connection', function() {
+        var agenda = new Agenda();
+        agenda.mongo(mongo);
+
+        // Inserting should still work
+        mongo.collection('agendaJobs').insertOne({name: 'job'}, function(err, result) {
+          expect(err).to.equal(null);
+          expect(result.insertedCount).to.equal(1);
+
+          // Close connection
+          agenda.close(true, function(err, result) {
+            expect(err).to.equal(null);
+            expect(result).to.equal(undefined);
+            // Attemp to insert should fail now with correct message
+            mongo.collection('agendaJobs').insertOne({name: 'job'}, function(err, result) {
+              expect(result).to.equal(undefined);
+              expect(err.message).to.equal('server instance pool was destroyed');
+            });
+          });
+        });
+      });
+      it('returns itself', function() {
+        var agenda = new Agenda();
+        agenda.mongo(mongo);
+        expect(agenda.close()).to.be(agenda);
+      });
+    });
+
     describe('configuration methods', function() {
       it('sets the _db directly when passed as an option', function() {
         var agenda = new Agenda({mongo: mongo});
