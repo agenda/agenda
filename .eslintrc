@@ -12,7 +12,7 @@ rules:
     no-underscore-dangle: 0
     no-shadow: 0
     no-use-before-define: [1, "nofunc"]
-    new-cap: 0,
+    new-cap: 0
     radix: 2
     quotes: 0
     space-after-function-name: [2, "never"]
