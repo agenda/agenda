@@ -1,9 +1,9 @@
 # Agenda
 [![Build Status](https://api.travis-ci.org/agenda/agenda.svg)](http://travis-ci.org/agenda/agenda)
-[![Dependency Status](https://david-dm.org/rschmukler/agenda.svg)](https://david-dm.org/rschmukler/agenda)
-[![devDependency Status](https://david-dm.org/rschmukler/agenda/dev-status.svg)](https://david-dm.org/rschmukler/agenda#info=devDependencies)
-[![Code Climate](https://d3s6mut3hikguw.cloudfront.net/github/rschmukler/agenda.svg)](https://codeclimate.com/github/rschmukler/agenda/badges)
-[![Coverage Status](https://coveralls.io/repos/rschmukler/agenda/badge.svg)](https://coveralls.io/r/rschmukler/agenda)
+[![dependencies Status](https://david-dm.org/agenda/agenda/status.svg)](https://david-dm.org/agenda/agenda)
+[![devDependencies Status](https://david-dm.org/agenda/agenda/dev-status.svg)](https://david-dm.org/agenda/agenda?type=dev)
+[![Code Climate](https://d3s6mut3hikguw.cloudfront.net/github/agenda/agenda.svg)](https://codeclimate.com/github/agenda/agenda/badges)
+[![Coverage Status](https://coveralls.io/repos/agena/agenda/badge.svg)](https://coveralls.io/r/agenda/agenda)
 
 Agenda is a light-weight job scheduling library for Node.js.
 
