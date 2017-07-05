@@ -1182,6 +1182,33 @@ describe("agenda", function() {
         }, 100);
       });
 
+      it('should run the higher priority jobs first', function (done) {
+        var results = [];
+        var now = new Date();
+
+        jobs.define('priority', { concurrency: 1 }, function (job, cb) {
+          results.push(job.attrs.priority);
+          setTimeout(cb, 50);
+        });
+
+        var normal = jobs.create('priority').schedule(now);
+        var low = jobs.create('priority').schedule(now).priority('low');
+        var high = jobs.create('priority').schedule(now).priority('high');
+
+        normal.save(function () {
+          low.save(function () {
+            high.save(function () {
+              jobs.start();
+
+              setTimeout(function () {
+                expect(results).to.eql([10, 0, -10]);
+                done();
+              }, 150);
+            });
+          });
+        });
+      });
+
     });
 
     describe("every running", function() {
