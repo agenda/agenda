@@ -9,7 +9,7 @@ Agenda is a light-weight job scheduling library for Node.js.
 It offers:
 
 - Minimal overhead. Agenda aims to keep its code base small.
-- Mongo backed persistance layer.
+- Mongo backed persistence layer.
 - Scheduling with configurable priority, concurrency, and repeating
 - Scheduling via cron or human readable syntax.
 - Event backed job queue that you can hook into.
