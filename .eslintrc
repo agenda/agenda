@@ -15,11 +15,11 @@ rules:
     new-cap: 0
     radix: 2
     quotes: 0
-    space-after-function-name: [2, "never"]
-    space-after-keywords: [2, "always"]
-    spaced-line-comment: [2, "always", { exceptions: ["-"]}]
+    space-before-function-paren: [2, "never"]
+    keyword-spacing: [2, { "after": true }]
+    spaced-comment: [2, "always", { exceptions: ["-"]}]
     strict: [2, "never"]
-    valid-jsdoc: [2, { prefer: { "return": "returns"}}]
+    valid-jsdoc: [1, { prefer: { "return": "returns"}}]
     wrap-iife: 2
     comma-dangle: 0
     no-mixed-requires: [0, false]
