@@ -5,9 +5,11 @@
   "main": "index.js",
   "xo": {
     "space": true,
-    "esnext": false
+    "esnext": false,
+    "quiet": true
   },
   "scripts": {
+    "autoformat": "xo --fix lib/* index.js",
     "lint": "xo lib/* index.js",
     "test": "npm run lint && mocha --reporter spec --timeout 3500",
     "blanket": {
