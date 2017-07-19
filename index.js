@@ -1,1 +1,1 @@
-var agenda = module.exports = require('./lib/agenda.js');
+module.exports = require('./lib/agenda.js');
