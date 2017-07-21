@@ -7,6 +7,19 @@ node_js:
   - "6"
   - "7"
   - "8"
+addons:
+  apt:
+    sources:
+      # gcc 4.8+ requires ubuntu-toolchain-r-test
+      - ubuntu-toolchain-r-test
+    packages:
+      # NodeJS v4+ requires gcc 4.8+
+      - g++-4.9
+      - gcc-4.9
+env:
+  global:
+    # NodeJS v4+ requires gcc 4.8+
+    - CXX=g++-4.9 CC=gcc-4.9
 script: make test-once
 before_script:
   - sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 7F0CEB10
@@ -16,6 +29,3 @@ before_script:
   - sleep 15 #mongo may not be responded directly. See http://docs.travis-ci.com/user/database-setup/#MongoDB
   - mongo --version
 after_script: make test-coveralls
-before_install:
-  # Travis uses an ancient GCC
-  - export CC="gcc-4.9" CXX="g++-4.9"
