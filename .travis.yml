@@ -19,5 +19,3 @@ after_script: make test-coveralls
 before_install:
   # Travis uses an ancient GCC
   - export CC="gcc-4.9" CXX="g++-4.9"
-  # node 0.8 comes with a non-functional version of npm
-  - "if [[ $(node --version) == v0.8.* ]]; then npm install -g npm@2.1.18; fi"
