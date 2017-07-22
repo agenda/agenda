@@ -99,6 +99,7 @@ mapped to a database collection and load the jobs from within.
 - [Frequently asked questions](#frequently-asked-questions)
 - [Example Project structure](#example-project-structure)
 - [Known Issues](#known-issues)
+- [Debugging Issues](#debugging-issues)
 - [Acknowledgements](#acknowledgements)
 
 ## Configuring an agenda
@@ -975,6 +976,29 @@ Starting in version `1.0.0`, cron will be parsed in the standard UNIX style:
 | +---------- Hour              (range: 0-23)
 +------------ Minute            (range: 0-59)
 ```
+
+# Debugging Issues
+
+If you think you have encountered a bug, please feel free to report it here:
+
+[Submit Issue](https://github.com/agenda/agenda/issues/new)
+
+Please provide us with as much details as possible such as:
+- Agenda version
+- Environment (OSX, Linux, Windows, etc)
+- Small description of what happened
+- Any relevant stack track
+- Agenda logs (see below)
+
+#### To turn on logging, please set your DEBUG env variable like so:
+
+- OSX: `env DEBUG="agenda:*" node index.js`
+- Linux: `DEBUG="agenda:*" node index.js`
+- Windows CMD: `set DEBUG=agenda:*`
+- Windows PowerShell: `$env:DEBUG = "agenda:*"`
+
+While not necessary, attaching a text file with this debug information would
+be extremely useful in debugging certain issues and is encouraged.
 
 # Acknowledgements
 
