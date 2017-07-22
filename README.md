@@ -950,6 +950,7 @@ for a heavy hitting server.
 
 The current versions of Agenda parse cron dates as follows using this library:
 [node-cron](https://github.com/kelektiv/node-cron)
+
 _This library treats months as 0-11 where as normally, cron months are parsed as 1-12._
 
 ```
