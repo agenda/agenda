@@ -98,6 +98,7 @@ mapped to a database collection and load the jobs from within.
 - [Job Queue Events](#job-queue-events)
 - [Frequently asked questions](#frequently-asked-questions)
 - [Example Project structure](#example-project-structure)
+- [Known Issues](#known-issues)
 - [Acknowledgements](#acknowledgements)
 
 ## Configuring an agenda
@@ -939,6 +940,41 @@ JOB_TYPES=video-processing,image-processing node worker.js
 
 Fire up an instance that processes video-processing/image-processing jobs. Good
 for a heavy hitting server.
+
+# Known Issues
+
+## Versions <= 0.9.1
+
+#### Cron string parsing ([PR](https://github.com/agenda/agenda/pull/475))
+
+
+The current versions of Agenda parse cron dates as follows using this library:
+[node-cron](https://github.com/kelektiv/node-cron)
+
+_This library treats months as 0-11 where as normally, cron months are parsed as 1-12._
+
+```
+* * * * * *
+| | | | | | 
+| | | | | +-- Year              (range: 1900-3000)
+| | | | +---- Day of the Week   (range: 1-7, 1 standing for Monday)
+| | | +------ Month of the Year (range: 0-11) NOTE: Difference here
+| | +-------- Day of the Month  (range: 1-31)
+| +---------- Hour              (range: 0-23)
++------------ Minute            (range: 0-59)
+```
+
+Starting in version `1.0.0`, cron will be parsed in the standard UNIX style:
+```
+* * * * * *
+| | | | | | 
+| | | | | +-- Year              (range: 1900-3000)
+| | | | +---- Day of the Week   (range: 1-7, 1 standing for Monday)
+| | | +------ Month of the Year (range: 1-12) NOTE: Difference here
+| | +-------- Day of the Month  (range: 1-31)
+| +---------- Hour              (range: 0-23)
++------------ Minute            (range: 0-59)
+```
 
 # Acknowledgements
 
