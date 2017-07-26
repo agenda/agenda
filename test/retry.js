@@ -17,7 +17,7 @@ const clearJobs = done => {
 const jobType = 'do work';
 const jobProcessor = () => {};
 
-describe('agenda', () => {
+describe('Retry', () => {
   beforeEach(done => {
     jobs = new Agenda({
       db: {
@@ -54,31 +54,29 @@ describe('agenda', () => {
     }, 50);
   });
 
-  describe('Retry', () => {
-    it('should retry a job', done => {
-      let shouldFail = true;
-      jobs.define('a job', (job, done) => {
-        if (shouldFail) {
-          shouldFail = false;
-          return done(new Error('test failure'));
-        }
-        done();
-      });
-
-      jobs.on('fail:a job', (err, job) => {
-        if (err) {
-          // Do nothing as this is expected to fail.
-        }
-        job.schedule('now').save();
-      });
-
-      jobs.on('success:a job', () => {
-        done();
-      });
-
-      jobs.now('a job');
-
-      jobs.start();
+  it('should retry a job', done => {
+    let shouldFail = true;
+    jobs.define('a job', (job, done) => {
+      if (shouldFail) {
+        shouldFail = false;
+        return done(new Error('test failure'));
+      }
+      done();
     });
+
+    jobs.on('fail:a job', (err, job) => {
+      if (err) {
+        // Do nothing as this is expected to fail.
+      }
+      job.schedule('now').save();
+    });
+
+    jobs.on('success:a job', () => {
+      done();
+    });
+
+    jobs.now('a job');
+
+    jobs.start();
   });
 });
