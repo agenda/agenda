@@ -1,4 +1,5 @@
 /* globals describe, it, beforeEach, afterEach */
+'use strict';
 const expect = require('expect.js');
 const MongoClient = require('mongodb').MongoClient;
 const Agenda = require('../index');

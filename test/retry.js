@@ -1,4 +1,5 @@
 /* globals describe, it, beforeEach, afterEach */
+'use strict';
 const MongoClient = require('mongodb').MongoClient;
 const Agenda = require('../index');
 
