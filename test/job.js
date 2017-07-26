@@ -507,7 +507,7 @@ describe('agenda', function() {
         setTimeout(function() {
           jobs.stop(function(err, res) {
             jobs._collection.findOne({name: 'longRunningJob'}, function(err, job) {
-              expect(job.lockedAt).to.be(jobs._notLocked);
+              expect(job.lockedAt.getTime()).to.be(jobs._notLocked.getTime());
               done();
             });
           });
