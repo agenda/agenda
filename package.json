@@ -3,6 +3,9 @@
   "version": "0.9.1",
   "description": "Light weight job scheduler for Node.js",
   "main": "index.js",
+  "files": [
+    "lib"
+  ],
   "scripts": {
     "test": "eslint lib/* index.js && mocha --reporter spec --timeout 3500",
     "blanket": {
