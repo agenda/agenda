@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "test": "npm run lint && npm run mocha",
-    "lint": "xo lib",
+    "lint": "xo lib index.js",
     "mocha": "mocha --reporter spec --timeout 5000",
     "blanket": {
       "pattern": "lib",
