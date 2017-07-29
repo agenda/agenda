@@ -1,46 +1,37 @@
-/* globals before, describe, it, beforeEach, after, afterEach */
-const expect = require('expect.js');
-const path = require('path');
-const moment = require('moment-timezone');
-const cp = require('child_process');
-const Agenda = require('../index');
-const Job = require('../lib/job');
+/* globals describe, it, beforeEach, afterEach */
+'use strict';
 const MongoClient = require('mongodb').MongoClient;
+const Agenda = require('../index');
 
 const mongoHost = process.env.MONGODB_HOST || 'localhost';
 const mongoPort = process.env.MONGODB_PORT || '27017';
 const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/agenda-test';
 
-// create agenda instances
-var jobs = null;
-var mongo = null;
+// Create agenda instances
+let jobs = null;
+let mongo = null;
 
-function clearJobs(done) {
+const clearJobs = done => {
   mongo.collection('agendaJobs').remove({}, done);
-}
+};
 
-// Slow timeouts for Travis
-const jobTimeout = process.env.TRAVIS ? 3500 : 500;
 const jobType = 'do work';
-const jobProcessor  = function(job) {};
+const jobProcessor = () => {};
 
-function failOnError(err) {
-  if (err) {
-    throw err;
-  }
-}
-
-describe('agenda', function() {
-  beforeEach(function(done) {
+describe('Retry', () => {
+  beforeEach(done => {
     jobs = new Agenda({
       db: {
         address: mongoCfg
       }
-    }, function(err) {
-      MongoClient.connect(mongoCfg, function( error, db ){
+    }, err => {
+      if (err) {
+        done(err);
+      }
+      MongoClient.connect(mongoCfg, (error, db) => {
         mongo = db;
-        setTimeout(function() {
-          clearJobs(function() {
+        setTimeout(() => {
+          clearJobs(() => {
             jobs.define('someJob', jobProcessor);
             jobs.define('send email', jobProcessor);
             jobs.define('some job', jobProcessor);
@@ -52,11 +43,11 @@ describe('agenda', function() {
     });
   });
 
-  afterEach(function(done) {
-    setTimeout(function() {
-      jobs.stop(function() {
-        clearJobs(function() {
-          mongo.close(function() {
+  afterEach(done => {
+    setTimeout(() => {
+      jobs.stop(() => {
+        clearJobs(() => {
+          mongo.close(() => {
             jobs._mdb.close(done);
           });
         });
@@ -64,31 +55,29 @@ describe('agenda', function() {
     }, 50);
   });
 
-  describe('Retry', function () {
-    it('should retry a job', function(done) {
-      var shouldFail = true;
-      jobs.define('a job', function (job, done) {
-        if(shouldFail) {
-          shouldFail = false;
-          return done(new Error('test failure'));
-        }
-        done();
-      });
-
-      jobs.on('fail:a job', function (err, job) {
-        job
-          .schedule('now')
-          .save();
-      });
-
-      jobs.on('success:a job', function () {
-        done();
-      });
-
-      jobs.now('a job');
-
-      jobs.start();
+  it('should retry a job', done => {
+    let shouldFail = true;
+    jobs.define('a job', (job, done) => {
+      if (shouldFail) {
+        shouldFail = false;
+        return done(new Error('test failure'));
+      }
+      done();
     });
-  });
 
+    jobs.on('fail:a job', (err, job) => {
+      if (err) {
+        // Do nothing as this is expected to fail.
+      }
+      job.schedule('now').save();
+    });
+
+    jobs.on('success:a job', () => {
+      done();
+    });
+
+    jobs.now('a job');
+
+    jobs.start();
+  });
 });
