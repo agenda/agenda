@@ -5,16 +5,3 @@ trim_trailing_whitespace=true
 insert_final_newline=false
 indent_style=space
 indent_size=2
-
-[{*.sht,*.html,*.shtm,*.shtml,*.htm}]
-indent_style=space
-indent_size=2
-
-[{.eslintrc,.babelrc,.stylelintrc,jest.config,*.json,*.jsb3,*.jsb2,*.bowerrc}]
-indent_style=space
-indent_size=2
-
-[{*.yml,*.yaml}]
-indent_style=space
-indent_size=2
-
