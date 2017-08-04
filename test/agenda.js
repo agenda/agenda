@@ -150,6 +150,15 @@ describe('Agenda', () => {
         expect(jobs._definitions.testDefaultLockLifetime.lockLifetime).to.be(7777);
       });
     });
+    describe('sort', () => {
+      it('returns itself', () => {
+        expect(jobs.sort({ nextRunAt: 1, priority: -1 })).to.be(jobs);
+      });
+      it('sets the default sort option', () => {
+        jobs.sort({ nextRunAt: -1 });
+        expect(jobs._sort).to.eql({ nextRunAt: -1 });
+      });
+    });
   });
 
   describe('job methods', () => {
