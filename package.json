@@ -9,7 +9,7 @@
   "scripts": {
     "test": "npm run lint && npm run mocha",
     "lint": "xo lib index.js",
-    "mocha": "mocha --reporter spec --timeout 5000",
+    "mocha": "mocha --reporter spec --timeout 8000",
     "blanket": {
       "pattern": "lib",
       "data-cover-never": "node_modules"

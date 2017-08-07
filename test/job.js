@@ -22,7 +22,7 @@ const clearJobs = done => {
 };
 
 // Slow timeouts for Travis
-const jobTimeout = process.env.TRAVIS ? 5000 : 500;
+const jobTimeout = process.env.TRAVIS ? 8000 : 500;
 const jobType = 'do work';
 const jobProcessor = () => {};
 
