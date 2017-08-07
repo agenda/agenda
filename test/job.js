@@ -22,7 +22,7 @@ const clearJobs = done => {
 };
 
 // Slow timeouts for Travis
-const jobTimeout = process.env.TRAVIS ? 3500 : 500;
+const jobTimeout = process.env.TRAVIS ? 5000 : 500;
 const jobType = 'do work';
 const jobProcessor = () => {};
 
@@ -33,7 +33,13 @@ describe('Job', () => {
         address: mongoCfg
       }
     }, err => {
+      if (err) {
+        done(err);
+      }
       MongoClient.connect(mongoCfg, (err, db) => {
+        if (err) {
+          done(err);
+        }
         mongo = db;
         setTimeout(() => {
           clearJobs(() => {
@@ -254,6 +260,9 @@ describe('Job', () => {
           mongo.collection('agendaJobs').find({
             _id: job.attrs._id
           }).toArray((err, j) => {
+            if (err) {
+              done(err);
+            }
             expect(j).to.have.length(0);
             done();
           });
@@ -305,7 +314,7 @@ describe('Job', () => {
     });
     it('handles errors', done => {
       job.attrs.name = 'failBoat';
-      jobs.define('failBoat', (job, cb) => {
+      jobs.define('failBoat', () => {
         throw new Error('Zomg fail');
       });
       job.run(err => {
@@ -339,7 +348,7 @@ describe('Job', () => {
             if (err) {
               return done(err);
             }
-            j[0].remove(err => {
+            j[0].remove(err => { // eslint-disable-line max-nested-callbacks
               if (err) {
                 return done(err);
               }
@@ -348,7 +357,10 @@ describe('Job', () => {
           });
         });
 
-        job.run(err => {
+        job.run(err => { // eslint-disable-line max-nested-callbacks
+          if (err) {
+            done(err);
+          }
           // Expect the deleted job to not exist in the database
           jobs.jobs({name: 'failBoat3'}, (err, j) => {
             if (err) {
@@ -442,8 +454,8 @@ describe('Job', () => {
       // The second save should fail.
       job.save((err, j) => {
         j.remove(() => {
-          j.save((err, res) => {
-            jobs.jobs({name: 'another job'}, function(err, res) {
+          j.save(err => {
+            jobs.jobs({name: 'another job'}, (err, res) => {
               expect(res).to.have.length(0);
               done();
             });
@@ -466,7 +478,7 @@ describe('Job', () => {
         jobs.stop(() => {
           clearJobs(() => {
             cb();
-            jobs.define('jobQueueTest', (job, cb) => {
+            jobs.define('jobQueueTest', (job, cb) => { // eslint-disable-line max-nested-callbacks
               cb();
             });
             done();
@@ -510,7 +522,7 @@ describe('Job', () => {
     });
 
     it('clears locks on stop', done => {
-      jobs.define('longRunningJob', (job, cb) => {
+      jobs.define('longRunningJob', () => {
         // Job never finishes
       });
       jobs.every('10 seconds', 'longRunningJob');
@@ -518,7 +530,13 @@ describe('Job', () => {
       jobs.start();
       setTimeout(() => {
         jobs.stop(err => {
+          if (err) {
+            done(err);
+          }
           jobs._collection.findOne({name: 'longRunningJob'}, (err, job) => {
+            if (err) {
+              done(err);
+            }
             expect(job.lockedAt).to.be(null);
             done();
           });
@@ -531,7 +549,7 @@ describe('Job', () => {
         jobs.define('jobQueueTest', (job, cb) => {
           cb();
         });
-        jobs.define('failBoat', (job, cb) => {
+        jobs.define('failBoat', () => {
           throw new Error('Zomg fail');
         });
       });
@@ -705,9 +723,7 @@ describe('Job', () => {
     });
 
     it('does not on-the-fly lock more than definition.lockLimit jobs', done => {
-      jobs.define('lock job', {
-        lockLimit: 1
-      }, (job, cb) => {});
+      jobs.define('lock job', {lockLimit: 1}, (job, cb) => {});
 
       jobs.start();
 
@@ -744,9 +760,7 @@ describe('Job', () => {
     it('does not lock more than definition.lockLimit jobs during processing interval', done => {
       jobs.processEvery(200);
 
-      jobs.define('lock job', {
-        lockLimit: 1
-      }, (job, cb) => {});
+      jobs.define('lock job', {lockLimit: 1}, (job, cb) => {});
 
       jobs.start();
 
@@ -785,14 +799,14 @@ describe('Job', () => {
       });
 
       let finished = false;
-      jobs.on('complete', job => {
+      jobs.on('complete', () => {
         if (!finished && processed.length === 3) {
           finished = true;
           done();
         }
       });
 
-      jobs.on('fail', (err, job) => {
+      jobs.on('fail', err => {
         expect(err).to.be(undefined);
       });
 
@@ -830,7 +844,7 @@ describe('Job', () => {
       jobs.start();
 
       setTimeout(() => {
-        jobs.jobs({name: 'everyRunTest1'}, (err, res) => {
+        jobs.jobs({name: 'everyRunTest1'}, () => {
           expect(counter).to.be(2);
           jobs.stop(done);
         });
@@ -852,6 +866,9 @@ describe('Job', () => {
 
       setTimeout(() => {
         jobs.jobs({name: 'everyRunTest2'}, (err, res) => {
+          if (err) {
+            done(err);
+          }
           expect(res).to.have.length(1);
           jobs.stop(done);
         });
@@ -892,6 +909,9 @@ describe('Job', () => {
       });
 
       it('Should properly run jobs when defined via an array', done => {
+        const serverPath = path.join(__dirname, 'fixtures', 'agenda-instance.js');
+        const n = cp.fork(serverPath, [mongoCfg, 'daily-array']);
+
         let ran1 = false;
         let ran2 = true;
         let doneCalled = false;
@@ -902,14 +922,14 @@ describe('Job', () => {
         const receiveMessage = function(msg) {
           if (msg === 'test1-ran') {
             ran1 = true;
-            if (!!ran1 && !!ran2 && !doneCalled) {
+            if (ran1 && ran2 && !doneCalled) {
               doneCalled = true;
               done();
               return n.send('exit');
             }
           } else if (msg === 'test2-ran') {
             ran2 = true;
-            if (!!ran1 && !!ran2 && !doneCalled) {
+            if (ran1 && ran2 && !doneCalled) {
               doneCalled = true;
               done();
               return n.send('exit');
@@ -918,9 +938,6 @@ describe('Job', () => {
             return done(new Error('Jobs did not run!'));
           }
         };
-
-        const serverPath = path.join(__dirname, 'fixtures', 'agenda-instance.js');
-        const n = cp.fork(serverPath, [mongoCfg, 'daily-array']);
 
         n.on('message', receiveMessage);
         n.on('error', serviceError);
@@ -942,7 +959,7 @@ describe('Job', () => {
           jobs.start();
 
           setTimeout(() => {
-            jobs.jobs({name: 'everyDisabledTest'}, (err, res) => {
+            jobs.jobs({name: 'everyDisabledTest'}, err => {
               expect(counter).to.be(0);
               jobs.stop(done);
             });
@@ -1006,6 +1023,9 @@ describe('Job', () => {
       });
 
       it('Should schedule using array of names', done => {
+        const serverPath = path.join(__dirname, 'fixtures', 'agenda-instance.js');
+        const n = cp.fork(serverPath, [mongoCfg, 'schedule-array']);
+
         let ran1 = false;
         let ran2 = false;
         let doneCalled = false;
@@ -1016,14 +1036,14 @@ describe('Job', () => {
         const receiveMessage = msg => {
           if (msg === 'test1-ran') {
             ran1 = true;
-            if (!!ran1 && !!ran2 && !doneCalled) {
+            if (ran1 && ran2 && !doneCalled) {
               doneCalled = true;
               done();
               return n.send('exit');
             }
           } else if (msg === 'test2-ran') {
             ran2 = true;
-            if (!!ran1 && !!ran2 && !doneCalled) {
+            if (ran1 && ran2 && !doneCalled) {
               doneCalled = true;
               done();
               return n.send('exit');
@@ -1032,9 +1052,6 @@ describe('Job', () => {
             return done(new Error('Jobs did not run!'));
           }
         };
-
-        const serverPath = path.join(__dirname, 'fixtures', 'agenda-instance.js');
-        const n = cp.fork(serverPath, [mongoCfg, 'schedule-array']);
 
         n.on('message', receiveMessage);
         n.on('error', serviceError);
