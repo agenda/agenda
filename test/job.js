@@ -453,9 +453,18 @@ describe('Job', () => {
       // Save, then remove, then try and save again.
       // The second save should fail.
       job.save((err, j) => {
+        if (err) {
+          return done(err);
+        }
         j.remove(() => {
           j.save(err => {
+            if (err) {
+              return done(err);
+            }
             jobs.jobs({name: 'another job'}, (err, res) => {
+              if (err) {
+                return done(err);
+              }
               expect(res).to.have.length(0);
               done();
             });
@@ -611,6 +620,9 @@ describe('Job', () => {
           expect(j.attrs.failedAt.valueOf()).not.to.be.below(j.attrs.lastFinishedAt.valueOf());
 
           jobs.once('fail', (err, j) => {
+            if (err) {
+              return done(err);
+            }
             expect(j).to.be(job);
             expect(j.attrs.failCount).to.be(2);
             done();
@@ -637,7 +649,7 @@ describe('Job', () => {
 
       jobs.define('lock job', {
         lockLifetime: 50
-      }, (job, cb) => {
+      }, () => {
         startCounter++;
 
         if (startCounter !== 1) {
@@ -660,7 +672,7 @@ describe('Job', () => {
 
       jobs.define('lock job', {
         lockLifetime: 50
-      }, (job, cb) => {
+      }, () => {
         runCount++;
 
         if (runCount !== 1) {
@@ -707,7 +719,7 @@ describe('Job', () => {
     it('does not on-the-fly lock more than agenda._lockLimit jobs', done => {
       jobs.lockLimit(1);
 
-      jobs.define('lock job', (job, cb) => {});
+      jobs.define('lock job', () => {});
 
       jobs.start();
 
@@ -723,7 +735,7 @@ describe('Job', () => {
     });
 
     it('does not on-the-fly lock more than definition.lockLimit jobs', done => {
-      jobs.define('lock job', {lockLimit: 1}, (job, cb) => {});
+      jobs.define('lock job', {lockLimit: 1}, () => {});
 
       jobs.start();
 
@@ -742,7 +754,7 @@ describe('Job', () => {
       jobs.lockLimit(1);
       jobs.processEvery(200);
 
-      jobs.define('lock job', (job, cb) => {});
+      jobs.define('lock job', () => {});
 
       jobs.start();
 
@@ -760,7 +772,7 @@ describe('Job', () => {
     it('does not lock more than definition.lockLimit jobs during processing interval', done => {
       jobs.processEvery(200);
 
-      jobs.define('lock job', {lockLimit: 1}, (job, cb) => {});
+      jobs.define('lock job', {lockLimit: 1}, () => {});
 
       jobs.start();
 
@@ -820,113 +832,124 @@ describe('Job', () => {
       }, 100);
     });
 
-    it('should run jobs as first in first out (FIFO)', function(done) {
+    it('should run jobs as first in first out (FIFO)', done => {
+      const results = [];
 
-      var results = [];
-
-      jobs.define('fifo', { concurrency: 1 }, function() {
-        // do something
-      });
+      jobs.define('fifo', {concurrency: 1}, () => {});
 
       function checkResults(job) {
         results.push(new Date(job.attrs.nextRunAt).getTime());
-        if (results.length !== 3) return;
+        if (results.length !== 3) {
+          return;
+        }
         expect(results.join('')).to.eql(results.sort().join(''));
         done();
       }
 
       jobs.on('start:fifo', checkResults);
 
-      jobs.now('fifo', function(err) {
-        if (err) return done(err);
-        setTimeout(function() {
-          jobs.now('fifo', function(err) {
-            if (err) return done(err);
-            setTimeout(function() {
-              jobs.now('fifo', function(err) {
-                if (err) return done(err);
+      jobs.now('fifo', err => {
+        if (err) {
+          return done(err);
+        }
+        setTimeout(() => {
+          jobs.now('fifo', err => {
+            if (err) {
+              return done(err);
+            }
+            setTimeout(() => { // eslint-disable-line max-nested-callbacks
+              jobs.now('fifo', err => { // eslint-disable-line max-nested-callbacks
+                if (err) {
+                  return done(err);
+                }
                 jobs.start();
               });
             }, 100);
           });
         }, 100);
       });
-
     });
 
-    it('should run jobs as first in first out (FIFO) with respect to priority', function(done) {
+    it('should run jobs as first in first out (FIFO) with respect to priority', done => {
+      const times = [];
+      const priorities = [];
+      const now = Date.now();
 
-      var times = [];
-      var priorities = [];
-      var now = Date.now();
+      jobs.define('fifo-priority', {concurrency: 1}, () => {});
 
-      jobs.define('fifo-priority', { concurrency: 1 }, function() {
-        // do something
-      });
-
-      function checkResults(job) {
+      const checkResults = job => {
         priorities.push(job.attrs.priority);
         times.push(new Date(job.attrs.nextRunAt).getTime());
-        if (priorities.length !== 3 || times.length !== 3) return;
+        if (priorities.length !== 3 || times.length !== 3) {
+          return;
+        }
         expect(times.join('')).to.eql(times.sort().join(''));
         expect(priorities).to.eql([10, 10, -10]);
         done();
-      }
+      };
 
       jobs.on('start:fifo-priority', checkResults);
 
       jobs.create('fifo-priority').schedule(new Date(now)).priority('high').save(err => {
-        if (err) return done(err);
+        if (err) {
+          return done(err);
+        }
         jobs.create('fifo-priority').schedule(new Date(now + 100)).priority('low').save(err => {
-          if (err) return done(err);
+          if (err) {
+            return done(err);
+          }
           jobs.create('fifo-priority').schedule(new Date(now + 100)).priority('high').save(err => {
-            if (err) return done(err);
+            if (err) {
+              return done(err);
+            }
             jobs.start();
           });
         });
       });
-
     });
 
-    it('should run higher priority jobs first', function(done) {
-
-      // inspired by tests added by @lushc here:
+    it('should run higher priority jobs first', done => {
+      // Inspired by tests added by @lushc here:
       // <https://github.com/agenda/agenda/pull/451/commits/336ff6445803606a6dc468a6f26c637145790adc>
-      var now = new Date();
-      var results = [];
+      const now = new Date();
+      const results = [];
 
-      jobs.define('priority', { concurrency: 1 }, function() {
-        // do something
-      });
+      jobs.define('priority', {concurrency: 1}, () => {});
 
-      function checkResults(job) {
+      const checkResults = job => {
         results.push(job.attrs.priority);
-        if (results.length !== 3) return;
+        if (results.length !== 3) {
+          return;
+        }
         expect(results).to.eql([10, 0, -10]);
         done();
-      }
+      };
 
       jobs.on('start:priority', checkResults);
 
-      jobs.create('priority').schedule(now).save(function(err) {
-        if (err) return done(err);
-        jobs.create('priority').schedule(now).priority('low').save(function(err) {
-          if (err) return done(err);
-          jobs.create('priority').schedule(now).priority('high').save(function(err) {
-            if (err) return done(err);
+      jobs.create('priority').schedule(now).save(err => {
+        if (err) {
+          return done(err);
+        }
+        jobs.create('priority').schedule(now).priority('low').save(err => {
+          if (err) {
+            return done(err);
+          }
+          jobs.create('priority').schedule(now).priority('high').save(err => {
+            if (err) {
+              return done(err);
+            }
             jobs.start();
           });
         });
       });
-
     });
 
-    it('should support custom sort option', function() {
-      var sort = { foo: 1 };
-      var agenda = new Agenda({ sort: sort });
+    it('should support custom sort option', () => {
+      const sort = {foo: 1};
+      const agenda = new Agenda({sort});
       expect(agenda._sort).to.eql(sort);
     });
-
   });
 
   describe('every running', () => {
@@ -996,7 +1019,7 @@ describe('Job', () => {
           if (msg === 'ran') {
             expect(i).to.be(0);
             i += 1;
-            startService();
+            startService(); // eslint-disable-line no-use-before-define
           } else if (msg === 'notRan') {
             expect(i).to.be(1);
             done();
@@ -1068,6 +1091,9 @@ describe('Job', () => {
 
           setTimeout(() => {
             jobs.jobs({name: 'everyDisabledTest'}, err => {
+              if (err) {
+                return done(err);
+              }
               expect(counter).to.be(0);
               jobs.stop(done);
             });
@@ -1090,7 +1116,7 @@ describe('Job', () => {
             }
 
             i += 1;
-            startService();
+            startService(); // eslint-disable-line no-use-before-define
           } else {
             return done(new Error('Job scheduled in future was ran!'));
           }
