@@ -1,10 +1,15 @@
+Next 2.0.0
+==========
+
+  * Drop support for MongoDB 2.4 ([#497](https://github.com/agenda/agenda/pull/497))
+
+
 Next 1.0.0 / 2017-08-?
 ======================
   
 BREAKING
 --------
-  * Drop support for MongoDB 2.4
-  * Fix jobs not running in order of them being queued
+  * Fix jobs not running in order of them being queued ([#464](https://github.com/agenda/agenda/pull/464))
   
   * Changes in Cron string parsing, changed parsing library from [ncb000gt/node-cron](https://www.npmjs.com/package/cron) to [harrisiirak/cron-parser](https://www.npmjs.com/package/cron-parser) ([#475](https://github.com/agenda/agenda/pull/475))
 
