@@ -621,7 +621,7 @@ describe('Job', () => {
 
           jobs.once('fail', (err, j) => {
             if (err) {
-              return done(err);
+              // Expect fail
             }
             expect(j).to.be(job);
             expect(j.attrs.failCount).to.be(2);
