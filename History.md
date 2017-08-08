@@ -5,6 +5,34 @@ BREAKING
 --------
   * Drop support for MongoDB 2.4
   * Fix jobs not running in order of them being queued
+  
+  * Changes in Cron string parsing, changed parsing library from [ncb000gt/node-cron](https://www.npmjs.com/package/cron) to [harrisiirak/cron-parser](https://www.npmjs.com/package/cron-parser) ([#475](https://github.com/agenda/agenda/pull/475))
+
+Previously Agenda would treat months as 0-11 where as normally, cron months are parsed as 1-12.
+
+```
+* * * * * *
+| | | | | |
+| | | | | +-- Year              (range: 1900-3000)
+| | | | +---- Day of the Week   (range: 1-7, 1 standing for Monday)
+| | | +------ Month of the Year (range: 0-11) NOTE: Difference here
+| | +-------- Day of the Month  (range: 1-31)
+| +---------- Hour              (range: 0-23)
++------------ Minute            (range: 0-59)
+```
+
+Starting in version `1.0.0`, cron will be parsed in the standard UNIX style:
+```
+* * * * * *
+| | | | | |
+| | | | | +-- Year              (range: 1900-3000)
+| | | | +---- Day of the Week   (range: 1-7, 1 standing for Monday)
+| | | +------ Month of the Year (range: 1-12) NOTE: Difference here
+| | +-------- Day of the Month  (range: 1-31)
+| +---------- Hour              (range: 0-23)
++------------ Minute            (range: 0-59)
+```
+
 
 0.10.0 / 2017-08-08
 ==================
