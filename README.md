@@ -1,12 +1,28 @@
-# Agenda
-[![Build Status](https://api.travis-ci.org/agenda/agenda.svg)](http://travis-ci.org/agenda/agenda)
-[![dependencies Status](https://david-dm.org/agenda/agenda/status.svg)](https://david-dm.org/agenda/agenda)
-[![devDependencies Status](https://david-dm.org/agenda/agenda/dev-status.svg)](https://david-dm.org/agenda/agenda?type=dev)
-[![Coverage Status](https://coveralls.io/repos/github/agenda/agenda/badge.svg?branch=master)](https://coveralls.io/github/agenda/agenda?branch=master)
+<p align="center">
+  <img src="https://cdn.rawgit.com/agenda/agenda/agenda.svg" alt="Agenda" width="100" height="100">
+</p>
+<p align="center">
+  A light-weight job scheduling library for Node.js
+</p>
+<p align="center">
+  <a href="http://travis-ci.org/agenda/agenda">
+    <img src="https://api.travis-ci.org/agenda/agenda.svg" alt="Build Status">
+  </a>
+  <a href="https://david-dm.org/agenda/agenda">
+    <img src="https://david-dm.org/agenda/agenda/status.svg" alt="dependencies Status">
+  </a>
+  <a href="https://david-dm.org/agenda/agenda?type=dev">
+    <img src="https://david-dm.org/agenda/agenda/dev-status.svg" alt="devDependencies Status">
+  </a>
+  <a href="https://coveralls.io/github/agenda/agenda?branch=master">
+    <img src="https://coveralls.io/repos/github/agenda/agenda/badge.svg?branch=master" alt="Coverage Status">
+  </a>
+	<br>
+	<br>
+	<br>
+</p>
 
-Agenda is a light-weight job scheduling library for Node.js.
-
-It offers:
+# Agenda offers
 
 - Minimal overhead. Agenda aims to keep its code base small.
 - Mongo backed persistence layer.
@@ -23,6 +39,7 @@ Install via NPM
     npm install agenda
 
 You will also need a working [Mongo](https://www.mongodb.com/) database (2.6+) to point it to.
+
 
 # Example Usage
 
