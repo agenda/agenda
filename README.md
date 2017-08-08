@@ -291,6 +291,12 @@ You can also specify it during instantiation
 var agenda = new Agenda({defaultLockLifetime: 10000});
 ```
 
+### sort(query)
+
+Takes a `query` which specifies the sort query to be used for finding and locking the next job.
+
+By default it is `{ nextRunAt: 1, priority: -1 }`, which obeys a first in first out approach, with respect to priority.
+
 ## Agenda Events
 
 An instance of an agenda will emit the following events:
@@ -732,6 +738,15 @@ agenda.on('fail:send email', function(err, job) {
 
 ## Frequently Asked Questions
 
+### What is the order in which jobs run?
+
+Jobs are run with priority in a first in first out order (so they will be run in the order they were scheduled AND with respect to highest priority).
+
+For example, if we have two jobs named "send-email" queued (both with the same priority), and the first job is queued at 3:00 PM and second job is queued at 3:05 PM with the same `priority` value, then the first job will run first if we start to send "send-email" jobs at 3:10 PM. However if the first job has a priority of `5` and the second job has a priority of `10`, then the second will run first (priority takes precedence) at 3:10 PM.
+
+The default [MongoDB sort object](https://docs.mongodb.com/manual/reference/method/cursor.sort/) is `{ nextRunAt: 1, priority: -1 }` and can be changed through the option `sort` when configuring Agenda.
+
+
 ### Sample Project Structure?
 
 Agenda doesn't have a preferred project structure and leaves it to the user to
@@ -956,7 +971,7 @@ _This library treats months as 0-11 where as normally, cron months are parsed as
 
 ```
 * * * * * *
-| | | | | | 
+| | | | | |
 | | | | | +-- Year              (range: 1900-3000)
 | | | | +---- Day of the Week   (range: 1-7, 1 standing for Monday)
 | | | +------ Month of the Year (range: 0-11) NOTE: Difference here
@@ -968,7 +983,7 @@ _This library treats months as 0-11 where as normally, cron months are parsed as
 Starting in version `1.0.0`, cron will be parsed in the standard UNIX style:
 ```
 * * * * * *
-| | | | | | 
+| | | | | |
 | | | | | +-- Year              (range: 1900-3000)
 | | | | +---- Day of the Week   (range: 1-7, 1 standing for Monday)
 | | | +------ Month of the Year (range: 1-12) NOTE: Difference here
@@ -1011,6 +1026,7 @@ Agenda has some great community members that help a great deal.
 - [@liamdon](http://github.com/liamdon)
 - [@loris](http://github.com/loris)
 - [@jakeorr](http://github.com/jakeorr)
+- [@niftylettuce](http://github.com/niftylettuce)
 
 
 # License
