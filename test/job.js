@@ -805,6 +805,114 @@ describe('Job', () => {
         jobs.schedule(new Date(now + 100), 'non-blocking', {i: 3});
       }, 100);
     });
+
+    it('should run jobs as first in first out (FIFO)', function(done) {
+
+      var results = [];
+
+      jobs.define('fifo', { concurrency: 1 }, function() {
+        // do something
+      });
+
+      function checkResults(job) {
+        results.push(new Date(job.attrs.nextRunAt).getTime());
+        if (results.length !== 3) return;
+        expect(results.join('')).to.eql(results.sort().join(''));
+        done();
+      }
+
+      jobs.on('start:fifo', checkResults);
+
+      jobs.now('fifo', function(err) {
+        if (err) return done(err);
+        setTimeout(function() {
+          jobs.now('fifo', function(err) {
+            if (err) return done(err);
+            setTimeout(function() {
+              jobs.now('fifo', function(err) {
+                if (err) return done(err);
+                jobs.start();
+              });
+            }, 100);
+          });
+        }, 100);
+      });
+
+    });
+
+    it('should run jobs as first in first out (FIFO) with respect to priority', function(done) {
+
+      var times = [];
+      var priorities = [];
+      var now = Date.now();
+
+      jobs.define('fifo-priority', { concurrency: 1 }, function() {
+        // do something
+      });
+
+      function checkResults(job) {
+        priorities.push(job.attrs.priority);
+        times.push(new Date(job.attrs.nextRunAt).getTime());
+        if (priorities.length !== 3 || times.length !== 3) return;
+        expect(times.join('')).to.eql(times.sort().join(''));
+        expect(priorities).to.eql([10, 10, -10]);
+        done();
+      }
+
+      jobs.on('start:fifo-priority', checkResults);
+
+      jobs.create('fifo-priority').schedule(new Date(now)).priority('high').save(err => {
+        if (err) return done(err);
+        jobs.create('fifo-priority').schedule(new Date(now + 100)).priority('low').save(err => {
+          if (err) return done(err);
+          jobs.create('fifo-priority').schedule(new Date(now + 100)).priority('high').save(err => {
+            if (err) return done(err);
+            jobs.start();
+          });
+        });
+      });
+
+    });
+
+    it('should run higher priority jobs first', function(done) {
+
+      // inspired by tests added by @lushc here:
+      // <https://github.com/agenda/agenda/pull/451/commits/336ff6445803606a6dc468a6f26c637145790adc>
+      var now = new Date();
+      var results = [];
+
+      jobs.define('priority', { concurrency: 1 }, function() {
+        // do something
+      });
+
+      function checkResults(job) {
+        results.push(job.attrs.priority);
+        if (results.length !== 3) return;
+        expect(results).to.eql([10, 0, -10]);
+        done();
+      }
+
+      jobs.on('start:priority', checkResults);
+
+      jobs.create('priority').schedule(now).save(function(err) {
+        if (err) return done(err);
+        jobs.create('priority').schedule(now).priority('low').save(function(err) {
+          if (err) return done(err);
+          jobs.create('priority').schedule(now).priority('high').save(function(err) {
+            if (err) return done(err);
+            jobs.start();
+          });
+        });
+      });
+
+    });
+
+    it('should support custom sort option', function() {
+      var sort = { foo: 1 };
+      var agenda = new Agenda({ sort: sort });
+      expect(agenda._sort).to.eql(sort);
+    });
+
   });
 
   describe('every running', () => {
