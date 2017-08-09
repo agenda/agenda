@@ -53,7 +53,7 @@ var agenda = new Agenda({db: {address: mongoConnectionString}});
 // var agenda = new Agenda({db: {address: mongoConnectionString, collection: 'jobCollectionName'}});
 
 // or pass additional connection options:
-// var agenda = new Agenda({db: {address: mongoConnectionString, collection: 'jobCollectionName', options: {server:{auto_reconnect:true}}}});
+// var agenda = new Agenda({db: {address: mongoConnectionString, collection: 'jobCollectionName', options: {ssl: true}}});
 
 // or pass in an existing mongodb-native MongoClient instance
 // var agenda = new Agenda({mongo: myMongoClient});
@@ -857,6 +857,17 @@ function removeJobWorker(id) {
     jobWorkers.splice(jobWorkers.indexOf(id), 1);
 }
 ```
+
+### Recovering lost Mongo connections ("auto_reconnect")
+
+Agenda is configured by default to automatically reconnect indefinitely, emitting an [error event](#agenda-events)
+when no connection is available on each [process tick](#processeveryinterval), allowing you to restore the Mongo
+instance without having to restart the application.
+
+However, if you are using an [existing Mongo client](#mongomongoclientinstance)
+you'll need to configure the `reconnectTries` and `reconnectInterval` [connection settings](http://mongodb.github.io/node-mongodb-native/2.2/reference/connecting/connection-settings/)
+manually, otherwise you'll find that Agenda will throw an error with the message "MongoDB connection is not recoverable,
+application restart required" if the connection cannot be recovered within 30 seconds.
 
 # Example Project Structure
 

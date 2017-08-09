@@ -6,11 +6,13 @@ Next 2.0.0
 
 Next 1.0.0 / 2017-08-?
 ======================
-  
+
+* Gracefully recover from losing connection to MongoDB ([#472](https://github.com/agenda/agenda/pull/472))
+
 BREAKING
 --------
   * Fix jobs not running in order of them being queued ([#464](https://github.com/agenda/agenda/pull/464))
-  
+
   * Changes in Cron string parsing, changed parsing library from [ncb000gt/node-cron](https://www.npmjs.com/package/cron) to [harrisiirak/cron-parser](https://www.npmjs.com/package/cron-parser) ([#475](https://github.com/agenda/agenda/pull/475))
 
 Previously Agenda would treat months as 0-11 where as normally, cron months are parsed as 1-12.
