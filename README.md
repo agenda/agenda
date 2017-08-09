@@ -1,12 +1,28 @@
-# Agenda
-[![Build Status](https://api.travis-ci.org/agenda/agenda.svg)](http://travis-ci.org/agenda/agenda)
-[![dependencies Status](https://david-dm.org/agenda/agenda/status.svg)](https://david-dm.org/agenda/agenda)
-[![devDependencies Status](https://david-dm.org/agenda/agenda/dev-status.svg)](https://david-dm.org/agenda/agenda?type=dev)
-[![Coverage Status](https://coveralls.io/repos/github/agenda/agenda/badge.svg?branch=master)](https://coveralls.io/github/agenda/agenda?branch=master)
+<p align="center">
+  <img src="https://cdn.rawgit.com/agenda/agenda/master/agenda.svg" alt="Agenda" width="100" height="100">
+</p>
+<p align="center">
+  A light-weight job scheduling library for Node.js
+</p>
+<p align="center">
+  <a href="http://travis-ci.org/agenda/agenda">
+    <img src="https://api.travis-ci.org/agenda/agenda.svg" alt="Build Status">
+  </a>
+  <a href="https://david-dm.org/agenda/agenda">
+    <img src="https://david-dm.org/agenda/agenda/status.svg" alt="dependencies Status">
+  </a>
+  <a href="https://david-dm.org/agenda/agenda?type=dev">
+    <img src="https://david-dm.org/agenda/agenda/dev-status.svg" alt="devDependencies Status">
+  </a>
+  <a href="https://coveralls.io/github/agenda/agenda?branch=master">
+    <img src="https://coveralls.io/repos/github/agenda/agenda/badge.svg?branch=master" alt="Coverage Status">
+  </a>
+	<br>
+	<br>
+	<br>
+</p>
 
-Agenda is a light-weight job scheduling library for Node.js.
-
-It offers:
+# Agenda offers
 
 - Minimal overhead. Agenda aims to keep its code base small.
 - Mongo backed persistence layer.
@@ -24,6 +40,7 @@ Install via NPM
 
 You will also need a working [Mongo](https://www.mongodb.com/) database (2.6+) to point it to.
 
+
 # Example Usage
 
 ```js
@@ -36,7 +53,7 @@ var agenda = new Agenda({db: {address: mongoConnectionString}});
 // var agenda = new Agenda({db: {address: mongoConnectionString, collection: 'jobCollectionName'}});
 
 // or pass additional connection options:
-// var agenda = new Agenda({db: {address: mongoConnectionString, collection: 'jobCollectionName', options: {server:{auto_reconnect:true}}}});
+// var agenda = new Agenda({db: {address: mongoConnectionString, collection: 'jobCollectionName', options: {ssl: true}}});
 
 // or pass in an existing mongodb-native MongoClient instance
 // var agenda = new Agenda({mongo: myMongoClient});
@@ -840,6 +857,17 @@ function removeJobWorker(id) {
     jobWorkers.splice(jobWorkers.indexOf(id), 1);
 }
 ```
+
+### Recovering lost Mongo connections ("auto_reconnect")
+
+Agenda is configured by default to automatically reconnect indefinitely, emitting an [error event](#agenda-events)
+when no connection is available on each [process tick](#processeveryinterval), allowing you to restore the Mongo
+instance without having to restart the application.
+
+However, if you are using an [existing Mongo client](#mongomongoclientinstance)
+you'll need to configure the `reconnectTries` and `reconnectInterval` [connection settings](http://mongodb.github.io/node-mongodb-native/2.2/reference/connecting/connection-settings/)
+manually, otherwise you'll find that Agenda will throw an error with the message "MongoDB connection is not recoverable,
+application restart required" if the connection cannot be recovered within 30 seconds.
 
 # Example Project Structure
 

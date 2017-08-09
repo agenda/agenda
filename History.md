@@ -1,8 +1,51 @@
-Next
-=======
+Next 2.0.0
+==========
 
-  * Replace the deprecated `findAndModify` method from native MongoDB driver to `findOneAndUpdate` (#448)
-  * Going forward, we won't ensure Node.js v0.10 and v0.11 compatibility anymore (#449)
+  * Drop support for MongoDB 2.4 ([#497](https://github.com/agenda/agenda/pull/497))
+
+
+Next 1.0.0 / 2017-08-?
+======================
+
+* Gracefully recover from losing connection to MongoDB ([#472](https://github.com/agenda/agenda/pull/472))
+
+BREAKING
+--------
+  * Fix jobs not running in order of them being queued ([#464](https://github.com/agenda/agenda/pull/464))
+
+  * Changes in Cron string parsing, changed parsing library from [ncb000gt/node-cron](https://www.npmjs.com/package/cron) to [harrisiirak/cron-parser](https://www.npmjs.com/package/cron-parser) ([#475](https://github.com/agenda/agenda/pull/475))
+
+Previously Agenda would treat months as 0-11 where as normally, cron months are parsed as 1-12.
+
+```
+* * * * * *
+| | | | | |
+| | | | | +-- Year              (range: 1900-3000)
+| | | | +---- Day of the Week   (range: 1-7, 1 standing for Monday)
+| | | +------ Month of the Year (range: 0-11) NOTE: Difference here
+| | +-------- Day of the Month  (range: 1-31)
+| +---------- Hour              (range: 0-23)
++------------ Minute            (range: 0-59)
+```
+
+Starting in version `1.0.0`, cron will be parsed in the standard UNIX style:
+```
+* * * * * *
+| | | | | |
+| | | | | +-- Year              (range: 1900-3000)
+| | | | +---- Day of the Week   (range: 1-7, 1 standing for Monday)
+| | | +------ Month of the Year (range: 1-12) NOTE: Difference here
+| | +-------- Day of the Month  (range: 1-31)
+| +---------- Hour              (range: 0-23)
++------------ Minute            (range: 0-59)
+```
+
+
+0.10.0 / 2017-08-08
+==================
+  * Replace the deprecated `findAndModify` method from native MongoDB driver to `findOneAndUpdate` ([#448](https://github.com/agenda/agenda/pull/448))
+  * Going forward, we won't ensure Node.js v0.10 and v0.11 compatibility anymore ([#449](https://github.com/agenda/agenda/pull/449))
+  * Code cleanup ([#491](https://github.com/agenda/agenda/pull/491), [#489](https://github.com/agenda/agenda/pull/489), [#488](https://github.com/agenda/agenda/pull/488), [#487](https://github.com/agenda/agenda/pull/487))
 
 0.9.1 / 2017-03-22
 ==================
