@@ -719,7 +719,7 @@ describe('Job', () => {
     it('does not on-the-fly lock more than agenda._lockLimit jobs', done => {
       jobs.lockLimit(1);
 
-      jobs.define('lock job', () => {});
+      jobs.define('lock job', (job, cb) => {});
 
       jobs.start();
 
@@ -735,7 +735,7 @@ describe('Job', () => {
     });
 
     it('does not on-the-fly lock more than definition.lockLimit jobs', done => {
-      jobs.define('lock job', {lockLimit: 1}, () => {});
+      jobs.define('lock job', {lockLimit: 1}, (job, cb) => {});
 
       jobs.start();
 
@@ -754,7 +754,7 @@ describe('Job', () => {
       jobs.lockLimit(1);
       jobs.processEvery(200);
 
-      jobs.define('lock job', () => {});
+      jobs.define('lock job', (job, cb) => {});
 
       jobs.start();
 
@@ -772,7 +772,7 @@ describe('Job', () => {
     it('does not lock more than definition.lockLimit jobs during processing interval', done => {
       jobs.processEvery(200);
 
-      jobs.define('lock job', {lockLimit: 1}, () => {});
+      jobs.define('lock job', {lockLimit: 1}, (job, cb) => {});
 
       jobs.start();
 
@@ -835,16 +835,16 @@ describe('Job', () => {
     it('should run jobs as first in first out (FIFO)', done => {
       const results = [];
 
-      jobs.define('fifo', {concurrency: 1}, () => {});
+      jobs.define('fifo', {concurrency: 1}, (job, cb) => cb());
 
-      function checkResults(job) {
+      const checkResults = job => {
         results.push(new Date(job.attrs.nextRunAt).getTime());
         if (results.length !== 3) {
           return;
         }
         expect(results.join('')).to.eql(results.sort().join(''));
         done();
-      }
+      };
 
       jobs.on('start:fifo', checkResults);
 
@@ -864,9 +864,9 @@ describe('Job', () => {
                 }
                 jobs.start();
               });
-            }, 100);
+            }, 50);
           });
-        }, 100);
+        }, 50);
       });
     });
 
@@ -875,7 +875,7 @@ describe('Job', () => {
       const priorities = [];
       const now = Date.now();
 
-      jobs.define('fifo-priority', {concurrency: 1}, () => {});
+      jobs.define('fifo-priority', {concurrency: 1}, (job, cb) => cb());
 
       const checkResults = job => {
         priorities.push(job.attrs.priority);
@@ -914,7 +914,7 @@ describe('Job', () => {
       const now = new Date();
       const results = [];
 
-      jobs.define('priority', {concurrency: 1}, () => {});
+      jobs.define('priority', {concurrency: 1}, (job, cb) => cb());
 
       const checkResults = job => {
         results.push(job.attrs.priority);
