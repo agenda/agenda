@@ -8,6 +8,7 @@ Next 1.0.0 / 2017-08-?
 ======================
 
 * Gracefully recover from losing connection to MongoDB ([#472](https://github.com/agenda/agenda/pull/472))
+* Code cleanup ([#492](https://github.com/agenda/agenda/pull/492))
 
 BREAKING
 --------
