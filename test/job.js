@@ -719,7 +719,7 @@ describe('Job', () => {
     it('does not on-the-fly lock more than agenda._lockLimit jobs', done => {
       jobs.lockLimit(1);
 
-      jobs.define('lock job', (job, cb) => {});
+      jobs.define('lock job', (job, cb) => {}); // eslint-disable-line no-unused-vars
 
       jobs.start();
 
@@ -735,7 +735,7 @@ describe('Job', () => {
     });
 
     it('does not on-the-fly lock more than definition.lockLimit jobs', done => {
-      jobs.define('lock job', {lockLimit: 1}, (job, cb) => {});
+      jobs.define('lock job', {lockLimit: 1}, (job, cb) => {}); // eslint-disable-line no-unused-vars
 
       jobs.start();
 
@@ -754,7 +754,7 @@ describe('Job', () => {
       jobs.lockLimit(1);
       jobs.processEvery(200);
 
-      jobs.define('lock job', (job, cb) => {});
+      jobs.define('lock job', (job, cb) => {}); // eslint-disable-line no-unused-vars
 
       jobs.start();
 
@@ -772,7 +772,7 @@ describe('Job', () => {
     it('does not lock more than definition.lockLimit jobs during processing interval', done => {
       jobs.processEvery(200);
 
-      jobs.define('lock job', {lockLimit: 1}, (job, cb) => {});
+      jobs.define('lock job', {lockLimit: 1}, (job, cb) => {}); // eslint-disable-line no-unused-vars
 
       jobs.start();
 
