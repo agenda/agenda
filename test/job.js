@@ -672,7 +672,7 @@ describe('Job', () => {
 
       jobs.define('lock job', {
         lockLifetime: 50
-      }, () => {
+      }, (job, cb) => { // eslint-disable-line no-unused-vars
         runCount++;
 
         if (runCount !== 1) {
