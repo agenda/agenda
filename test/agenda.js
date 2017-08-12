@@ -18,7 +18,7 @@ const clearJobs = done => {
 };
 
 // Slow timeouts for Travis
-const jobTimeout = process.env.TRAVIS ? 3500 : 500;
+const jobTimeout = process.env.TRAVIS ? 2500 : 500;
 const jobType = 'do work';
 const jobProcessor = () => {};
 
@@ -28,8 +28,11 @@ describe('Agenda', () => {
       db: {
         address: mongoCfg
       }
-    }, err => {
+    }, () => {
       MongoClient.connect(mongoCfg, (err, db) => {
+        if (err) {
+          done(err);
+        }
         mongo = db;
         setTimeout(() => {
           clearJobs(() => {
@@ -146,17 +149,17 @@ describe('Agenda', () => {
       });
       it('is inherited by jobs', () => {
         jobs.defaultLockLifetime(7777);
-        jobs.define('testDefaultLockLifetime', (job, done) => {});
+        jobs.define('testDefaultLockLifetime', () => {});
         expect(jobs._definitions.testDefaultLockLifetime.lockLifetime).to.be(7777);
       });
     });
     describe('sort', () => {
       it('returns itself', () => {
-        expect(jobs.sort({ nextRunAt: 1, priority: -1 })).to.be(jobs);
+        expect(jobs.sort({nextRunAt: 1, priority: -1})).to.be(jobs);
       });
       it('sets the default sort option', () => {
-        jobs.sort({ nextRunAt: -1 });
-        expect(jobs._sort).to.eql({ nextRunAt: -1 });
+        jobs.sort({nextRunAt: -1});
+        expect(jobs._sort).to.eql({nextRunAt: -1});
       });
     });
   });
@@ -226,7 +229,10 @@ describe('Agenda', () => {
 
           // Give the saves a little time to propagate
           setTimeout(() => {
-            jobs.jobs({name: 'shouldBeSingleJob'}, (err, res) => {
+            jobs.jobs({name: 'shouldBeSingleJob'}, (err, res) => { // eslint-disable-line max-nested-callbacks
+              if (err) {
+                throw err;
+              }
               expect(res).to.have.length(1);
               done();
             });
@@ -258,13 +264,43 @@ describe('Agenda', () => {
     });
 
     describe('unique', () => {
-      describe('should demonstrate unique contraint', done => {
+      describe('should demonstrate unique contraint', () => {
         it('should modify one job when unique matches', done => {
-          jobs.create('unique job', {type: 'active', userId: '123', other: true}).unique({'data.type': 'active', 'data.userId': '123'}).schedule('now').save((err, job1) => {
-            setTimeout(() => { // Avoid timing condition where nextRunAt coincidentally is the same
-              jobs.create('unique job', {type: 'active', userId: '123', other: false}).unique({'data.type': 'active', 'data.userId': '123'}).schedule('now').save((err, job2) => {
-                expect(job1.attrs.nextRunAt.toISOString()).not.to.equal(job2.attrs.nextRunAt.toISOString())
-                mongo.collection('agendaJobs').find({name: 'unique job'}).toArray((err, j) => {
+          jobs.create('unique job', {
+            type: 'active',
+            userId: '123',
+            other: true
+          }).unique({
+            'data.type': 'active',
+            'data.userId': '123'
+          }).schedule('now').save((err, job1) => {
+            if (err) {
+              done(err);
+            }
+
+            // Avoid timing condition where nextRunAt coincidentally is the same
+            setTimeout(() => { // eslint-disable-line max-nested-callbacks
+              jobs.create('unique job', {
+                type: 'active',
+                userId: '123',
+                other: false
+              }).unique({
+                'data.type': 'active',
+                'data.userId': '123'
+              }).schedule('now').save((err, job2) => { // eslint-disable-line max-nested-callbacks
+                if (err) {
+                  done(err);
+                }
+
+                expect(job1.attrs.nextRunAt.toISOString()).not.to.equal(job2.attrs.nextRunAt.toISOString());
+
+                mongo.collection('agendaJobs').find({
+                  name: 'unique job'
+                }).toArray((err, j) => { // eslint-disable-line max-nested-callbacks
+                  if (err) {
+                    done(err);
+                  }
+
                   expect(j).to.have.length(1);
                   done();
                 });
@@ -274,11 +310,43 @@ describe('Agenda', () => {
         });
 
         it('should not modify job when unique matches and insertOnly is set to true', done => {
-          jobs.create('unique job', {type: 'active', userId: '123', other: true}).unique({'data.type': 'active', 'data.userId': '123'}, {insertOnly: true}).schedule('now').save((err, job1) => {
-            jobs.create('unique job', {type: 'active', userId: '123', other: false}).unique({'data.type': 'active', 'data.userId': '123'}, {insertOnly: true}).schedule('now').save((err, job2) => {
-              expect(job1.attrs.nextRunAt.toISOString()).to.equal(job2.attrs.nextRunAt.toISOString())
-              mongo.collection('agendaJobs').find({name: 'unique job'}).toArray((err, j) => {
-                expect(j).to.have.length(1);
+          jobs.create('unique job', {
+            type: 'active',
+            userId: '123',
+            other: true
+          }).unique({
+            'data.type': 'active',
+            'data.userId': '123'
+          }, {
+            insertOnly: true
+          }).schedule('now').save((err, job1) => {
+            if (err) {
+              done(err);
+            }
+
+            jobs.create('unique job', {
+              type: 'active',
+              userId: '123',
+              other: false
+            }).unique({
+              'data.type': 'active',
+              'data.userId': '123'
+            }, {
+              insertOnly: true
+            }).schedule('now').save((err, job2) => { // eslint-disable-line max-nested-callbacks
+              if (err) {
+                done(err);
+              }
+
+              expect(job1.attrs.nextRunAt.toISOString()).to.equal(job2.attrs.nextRunAt.toISOString());
+
+              mongo.collection('agendaJobs').find({
+                name: 'unique job'
+              }).toArray((err, job) => { // eslint-disable-line max-nested-callbacks
+                if (err) {
+                  done(err);
+                }
+                expect(job).to.have.length(1);
                 done();
               });
             });
@@ -291,10 +359,37 @@ describe('Agenda', () => {
           const time = new Date(Date.now() + (1000 * 60 * 3));
           const time2 = new Date(Date.now() + (1000 * 60 * 4));
 
-          jobs.create('unique job', {type: 'active', userId: '123', other: true}).unique({'data.type': 'active', 'data.userId': '123', nextRunAt: time}).schedule(time).save((err, job) => {
-            jobs.create('unique job', {type: 'active', userId: '123', other: false}).unique({'data.type': 'active', 'data.userId': '123', nextRunAt: time2}).schedule(time).save((err, job) => {
-              mongo.collection('agendaJobs').find({name: 'unique job'}).toArray((err, j) => {
-                expect(j).to.have.length(2);
+          jobs.create('unique job', {
+            type: 'active',
+            userId: '123',
+            other: true
+          }).unique({
+            'data.type': 'active',
+            'data.userId': '123',
+            nextRunAt: time
+          }).schedule(time).save(err => {
+            if (err) {
+              done(err);
+            }
+            jobs.create('unique job', {
+              type: 'active',
+              userId: '123',
+              other: false
+            }).unique({
+              'data.type': 'active',
+              'data.userId': '123',
+              nextRunAt: time2
+            }).schedule(time).save(err => { // eslint-disable-line max-nested-callbacks
+              if (err) {
+                done(err);
+              }
+              mongo.collection('agendaJobs').find({
+                name: 'unique job'
+              }).toArray((err, job) => { // eslint-disable-line max-nested-callbacks
+                if (err) {
+                  done(err);
+                }
+                expect(job).to.have.length(2);
                 done();
               });
             });
@@ -327,6 +422,9 @@ describe('Agenda', () => {
         const job = jobs.create('test');
         job.save(() => {
           jobs.jobs({}, (err, c) => {
+            if (err) {
+              throw err;
+            }
             expect(c.length).to.not.be(0);
             expect(c[0]).to.be.a(Job);
             clearJobs(done);
@@ -340,16 +438,20 @@ describe('Agenda', () => {
         const job = jobs.create('no definition');
         jobs.stop(() => {
           job.save(() => {
-            jobs.jobs({name: 'no definition'}, (err, j) => {
+            jobs.jobs({
+              name: 'no definition'
+            }, (err, j) => { // eslint-disable-line max-nested-callbacks
               if (err) {
                 return done(err);
               }
               expect(j).to.have.length(1);
-              jobs.purge(function(err) {
+              jobs.purge(err => { // eslint-disable-line max-nested-callbacks
                 if (err) {
                   return done(err);
                 }
-                jobs.jobs({name: 'no definition'}, (err, j) => {
+                jobs.jobs({
+                  name: 'no definition'
+                }, (err, j) => { // eslint-disable-line max-nested-callbacks
                   if (err) {
                     return done(err);
                   }
@@ -367,6 +469,9 @@ describe('Agenda', () => {
       it('persists job to the database', done => {
         const job = jobs.create('someJob', {});
         job.save((err, job) => {
+          if (err) {
+            done(err);
+          }
           expect(job.attrs._id).to.be.ok();
           clearJobs(done);
         });
