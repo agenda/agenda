@@ -1,6 +1,6 @@
 {
   "name": "agenda",
-  "version": "0.10.0",
+  "version": "1.0.0",
   "description": "Light weight job scheduler for Node.js",
   "main": "index.js",
   "files": [
@@ -54,8 +54,8 @@
     "space": 2,
     "rules": {
       "space-before-function-paren": [
-          "error",
-          "never"
+        "error",
+        "never"
       ],
       "max-params": [
         "error",
