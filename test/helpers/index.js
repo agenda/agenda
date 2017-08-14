@@ -1,6 +1,6 @@
 import uuidv4 from 'uuid/v4';
 import {MongoClient} from 'mongodb';
-import Agenda from '../../';
+import {Agenda} from '../../lib';
 
 const mongoHost = process.env.MONGODB_HOST || 'localhost';
 const mongoPort = process.env.MONGODB_PORT || '27017';

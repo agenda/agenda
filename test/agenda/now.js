@@ -1,5 +1,5 @@
 import test from 'ava';
-import Job from '../../lib/job';
+import {Job} from '../../lib';
 import {beforeEach, afterEach} from '../helpers';
 
 test.beforeEach(beforeEach);
