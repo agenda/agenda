@@ -2,7 +2,7 @@ import test from 'ava';
 import uuidv4 from 'uuid/v4';
 import {MongoClient} from 'mongodb';
 import {Agenda} from '../../lib';
-import {beforeEach, afterEach} from '../helpers';
+import {beforeEach, afterEach} from '../helpers/agenda';
 
 test.beforeEach(beforeEach);
 test.afterEach.always(afterEach);

@@ -1,6 +1,6 @@
 import test from 'ava';
 import {Agenda} from '../../lib';
-import {beforeEach, afterEach} from '../helpers';
+import {beforeEach, afterEach} from '../helpers/agenda';
 
 test.beforeEach(beforeEach);
 test.afterEach.always(afterEach);
