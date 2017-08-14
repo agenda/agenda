@@ -1,5 +1,4 @@
 import test from 'ava';
-import delay from 'delay';
 import {Agenda, Job} from '../../lib';
 import {beforeEach, afterEach} from '../helpers';
 
@@ -39,17 +38,19 @@ test('sets the agenda', t => {
 test('should update a job that was previously scheduled with `every`', async t => {
   const {agenda} = t.context;
 
-  agenda.every(10, 'shouldBeSingleJob');
-  await delay(10);
+  await new Promise(resolve => {
+    agenda.every(10, 'shouldBeSingleJob', () => resolve());
+  });
 
-  agenda.every(20, 'shouldBeSingleJob');
-  await delay(500);
+  await new Promise(resolve => {
+    agenda.every(20, 'shouldBeSingleJob', () => resolve());
+  });
 
   return new Promise(resolve => {
-    agenda.jobs({name: 'shouldBeSingleJob'}, (err, res) => {
+    agenda.jobs({name: 'shouldBeSingleJob'}, (err, jobs) => {
       t.ifError(err);
 
-      t.is(res.length, 1);
+      t.is(jobs.length, 1);
       resolve();
     });
   });
