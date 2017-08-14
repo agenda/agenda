@@ -11,7 +11,7 @@ test('returns the job', t => {
   t.true(job.disable() instanceof Job);
 });
 
-test('sets disabled to false on the job', t => {
+test('sets disabled to true on the job', t => {
   const job = new Job();
 
   job.disable();
