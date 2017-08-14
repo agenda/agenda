@@ -355,7 +355,7 @@ describe('Agenda', () => {
       });
 
       describe('should demonstrate non-unique contraint', () => {
-        it('should create two jobs when unique doesn\t match', done => {
+        it('should create two jobs when unique doesn\'t match', done => {
           const time = new Date(Date.now() + (1000 * 60 * 3));
           const time2 = new Date(Date.now() + (1000 * 60 * 4));
 
