@@ -6,7 +6,7 @@ import {beforeEach, afterEach} from '../helpers';
 test.beforeEach(beforeEach);
 test.afterEach(afterEach);
 
-test('returns the job', t => {
+test('returns nothing', t => {
   const {job} = t.context;
 
   t.is(job.touch(), undefined);
