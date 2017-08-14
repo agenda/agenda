@@ -23,7 +23,6 @@ env:
   matrix:
     - MONGODB_VER=2.6.6
     - MONGODB_VER=3.4.6
-script: yarn test
 before_script:
   - sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 0C49F3730359A14518585931BC711F9BA15703C6
   - if [[ $MONGODB_VER == 2.* ]]; then echo 'deb http://downloads-distro.mongodb.org/repo/ubuntu-upstart dist 10gen' | sudo tee /etc/apt/sources.list.d/mongodb.list; fi
@@ -32,3 +31,6 @@ before_script:
   - sudo apt-get install -y mongodb-org=$MONGODB_VER
   - sleep 15 #mongo may not be responded directly. See http://docs.travis-ci.com/user/database-setup/#MongoDB
   - mongo --version
+script: yarn test
+after_script:
+  - './node_modules/.bin/nyc report --reporter=text-lcov | ./node_modules/.bin/coveralls'
