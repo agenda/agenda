@@ -15,10 +15,12 @@ test('returns a job', t => {
 test('returns an array of jobs', t => {
   const {agenda} = t.context;
 
-  t.true(Array.isArray(agenda.every('5 minutes', ['send email', 'some job'])));
-  t.is(agenda.every('5 minutes', ['send email', 'some job']).length, 2);
-  t.true(agenda.every('5 minutes', ['send email', 'some job'])[1] instanceof Job);
-  t.true(agenda.every('5 minutes', ['send email', 'some job'])[1] instanceof Job);
+  const jobs = agenda.every('5 minutes', ['send email', 'some job']);
+
+  t.true(Array.isArray(jobs));
+  t.is(jobs.length, 2);
+  t.true(jobs[0] instanceof Job);
+  t.true(jobs[1] instanceof Job);
 });
 
 test('sets the repeatEvery', t => {
