@@ -8,8 +8,8 @@
   ],
   "scripts": {
     "test": "npm run lint && npm run ava",
-    "lint": "xo --verbose",
-    "ava": "nyc ava --verbose --fail-fast"
+    "lint": "xo",
+    "ava": "nyc ava --fail-fast"
   },
   "repository": {
     "type": "git",
