@@ -1,12 +1,13 @@
 import uuidv4 from 'uuid/v4';
 import {MongoClient} from 'mongodb';
-import {Agenda} from '../../lib';
+import {Agenda, Job} from '../../lib';
 
 const mongoHost = process.env.MONGODB_HOST || 'localhost';
 const mongoPort = process.env.MONGODB_PORT || '27017';
 const jobProcessor = () => {};
 
 const beforeEach = async t => {
+  const job = new Job();
   const databaseName = uuidv4();
   const mongoCfg = `mongodb://${mongoHost}:${mongoPort}/${databaseName}`;
   const agenda = new Agenda({db: {address: mongoCfg}});
@@ -22,6 +23,7 @@ const beforeEach = async t => {
       // @NOTE: Anyting that needs to be access via t.context
       //        should be added here and only here.
       Object.assign(t.context, {
+        job,
         agenda,
         mongo,
         mongoHost,

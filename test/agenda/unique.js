@@ -1,7 +1,7 @@
 import test from 'ava';
 import delay from 'delay';
 import {Job} from '../../lib';
-import {beforeEach, afterEach} from '../helpers/agenda';
+import {beforeEach, afterEach} from '../helpers';
 
 test.beforeEach(beforeEach);
 test.afterEach.always(afterEach);

@@ -1,5 +1,5 @@
 import test from 'ava';
-import {beforeEach, afterEach} from '../helpers/agenda';
+import {beforeEach, afterEach} from '../helpers';
 
 test.beforeEach(beforeEach);
 test.afterEach.always(afterEach);

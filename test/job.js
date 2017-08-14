@@ -1,6 +1,6 @@
 import test from 'ava';
 import {Job} from '../lib';
-import {beforeEach, afterEach} from './helpers/job';
+import {beforeEach, afterEach} from './helpers';
 
 test.beforeEach(beforeEach);
 test.afterEach(afterEach);
