@@ -21,7 +21,7 @@ const beforeEach = async t => {
 
       // @NOTE: Anyting that needs to be access via t.context
       //        should be added here and only here.
-      t.context = Object.assign({
+      Object.assign(t.context, {
         agenda,
         mongo,
         mongoHost,
@@ -29,7 +29,7 @@ const beforeEach = async t => {
         mongoCfg,
         databaseName,
         jobProcessor
-      }, t.context);
+      });
 
       resolve();
     });
