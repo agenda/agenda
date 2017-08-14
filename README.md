@@ -1044,18 +1044,9 @@ While not necessary, attaching a text file with this debug information would
 be extremely useful in debugging certain issues and is encouraged.
 
 # Acknowledgements
-
-Agenda has some great community members that help a great deal.
-
-- [@rschmukler](https://github.com/rschmukler)
-- [@joeframbach](https://github.com/joeframbach)
-- [@droppedoncaprica](http://github.com/droppedoncaprica)
-- [@nwkeeley](http://github.com/nwkeeley)
-- [@liamdon](http://github.com/liamdon)
-- [@loris](http://github.com/loris)
-- [@jakeorr](http://github.com/jakeorr)
-- [@niftylettuce](http://github.com/niftylettuce)
-
+- Agenda was originally created by [@rschmukler](https://github.com/rschmukler).
+- [Agendash](https://github.com/agenda/agendash) was originally created by [@joeframbach](https://github.com/joeframbach).
+- These days Agenda has a great community of [contributors](https://github.com/agenda/agenda/graphs/contributors) around it. [Join us!](https://github.com/agenda/agenda/wiki)
 
 # License
 [The MIT License](LICENSE.md)
