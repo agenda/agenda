@@ -17,6 +17,8 @@ test('updates lastRunAt', async t => {
   const {job} = t.context;
   const now = new Date();
 
+  await delay(5);
+
   await new Promise(resolve => {
     job.run(() => resolve());
   });
