@@ -7,10 +7,10 @@ const mongoPort = process.env.MONGODB_PORT || '27017';
 const jobProcessor = () => {};
 
 const beforeEach = async t => {
-  const job = new Job();
   const databaseName = uuidv4();
   const mongoCfg = `mongodb://${mongoHost}:${mongoPort}/${databaseName}`;
   const agenda = new Agenda({db: {address: mongoCfg}});
+  const job = new Job({agenda});
   const mongo = await MongoClient.connect(mongoCfg);
 
   return new Promise(resolve => {
