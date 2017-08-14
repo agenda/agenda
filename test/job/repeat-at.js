@@ -1,13 +1,18 @@
 import test from 'ava';
 import {Job} from '../../lib';
+import {beforeEach, afterEach} from '../helpers/job';
 
-test('returns itself', t => {
-  const job = new Job();
+test.beforeEach(beforeEach);
+test.afterEach(afterEach);
+
+test('returns the job', t => {
+  const {job} = t.context;
+
   t.true(job.repeatAt('3:30pm') instanceof Job);
 });
 
 test('sets the repeat at', t => {
-  const job = new Job();
+  const {job} = t.context;
 
   job.repeatAt('3:30pm');
 
