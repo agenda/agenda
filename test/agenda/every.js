@@ -43,6 +43,7 @@ test('should update a job that was previously scheduled with `every`', async t =
   await delay(10);
 
   agenda.every(20, 'shouldBeSingleJob');
+  await delay(500);
 
   return new Promise(resolve => {
     agenda.jobs({name: 'shouldBeSingleJob'}, (err, res) => {
