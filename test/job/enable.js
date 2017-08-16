@@ -3,7 +3,7 @@ import {Job} from '../../lib';
 import {beforeEach, afterEach} from '../helpers';
 
 test.beforeEach(beforeEach);
-test.afterEach(afterEach);
+test.afterEach.always(afterEach);
 
 test('returns the job', t => {
   const job = new Job({disabled: true});
