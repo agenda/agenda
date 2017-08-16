@@ -3,6 +3,7 @@ Next 2.0.0
 
   * Drop support for MongoDB 2.4 ([#497](https://github.com/agenda/agenda/pull/497))
   * Update dependencies `cron` and `debug` ([#505](https://github.com/agenda/agenda/pull/505))
+  * Code cleanup ([#503](https://github.com/agenda/agenda/pull/503))
 
 1.0.0 / 2017-08-12
 ==================
