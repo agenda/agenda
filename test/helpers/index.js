@@ -6,6 +6,24 @@ const mongoHost = process.env.MONGODB_HOST || 'localhost';
 const mongoPort = process.env.MONGODB_PORT || '27017';
 const jobProcessor = () => {};
 
+const startAgenda = async agenda => {
+  agenda.start();
+
+  return new Promise(resolve => {
+    agenda.on('start', () => {
+      resolve();
+    });
+  });
+};
+
+const stopAgenda = async agenda => {
+  return new Promise(resolve => {
+    agenda.stop(() => {
+      resolve();
+    });
+  });
+};
+
 const beforeEach = async t => {
   const databaseName = uuidv4();
   const mongoCfg = `mongodb://${mongoHost}:${mongoPort}/${databaseName}`;
@@ -20,7 +38,7 @@ const beforeEach = async t => {
       agenda.define('some job', jobProcessor);
       agenda.define('do work', jobProcessor);
 
-      // @NOTE: Anyting that needs to be access via t.context
+      // @NOTE: Anything that needs to be access via t.context
       //        should be added here and only here.
       Object.assign(t.context, {
         job,
@@ -45,7 +63,9 @@ const afterEach = t => {
     agenda.stop(() => {
       mongo.collection('agendaJobs').remove({}, () => {
         mongo.close(() => {
-          agenda._mdb.close(resolve);
+          agenda._mdb.close(() => {
+            mongo.dropDatabase(resolve);
+          });
         });
       });
     });
@@ -53,6 +73,8 @@ const afterEach = t => {
 };
 
 export {
+  startAgenda,
+  stopAgenda,
   beforeEach,
   afterEach
 };
