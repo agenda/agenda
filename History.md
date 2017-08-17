@@ -44,6 +44,14 @@ Starting in version `1.0.0`, cron will be parsed in the standard UNIX style:
 ```
 
 
+0.10.2 / 2017-08-10
+===================
+  * ...
+
+0.10.1 / 2017-08-10
+===================
+  * ...
+
 0.10.0 / 2017-08-08
 ==================
   * Replace the deprecated `findAndModify` method from native MongoDB driver to `findOneAndUpdate` ([#448](https://github.com/agenda/agenda/pull/448))
