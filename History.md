@@ -1,7 +1,10 @@
 Next 2.0.0
 ==========
-
   * Drop support for MongoDB 2.4 ([#497](https://github.com/agenda/agenda/pull/497))
+
+Next 1.1.0
+==========
+  * Rewrite tests: replace mocha and blanket with ava and nyc ([#506](https://github.com/agenda/agenda/pull/506))
   * Update dependencies `cron` and `debug` ([#505](https://github.com/agenda/agenda/pull/505))
   * Optimization: don't try and unlock jobs when `_lockedJobs` is empty ([#509](https://github.com/agenda/agenda/pull/509))
   * Code cleanup ([#503](https://github.com/agenda/agenda/pull/503))
