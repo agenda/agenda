@@ -49,11 +49,11 @@ Starting in version `1.0.0`, cron will be parsed in the standard UNIX style:
 
 0.10.2 / 2017-08-10
 ===================
-  * ...
+  * Adds debugging, [see instructions from README.md](https://github.com/agenda/agenda#to-turn-on-logging-please-set-your-debug-env-variable-like-so).
 
 0.10.1 / 2017-08-10
 ===================
-  * ...
+  * Unpublished and re-published as v0.10.2
 
 0.10.0 / 2017-08-08
 ==================
