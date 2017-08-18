@@ -1035,7 +1035,7 @@ Please provide us with as much details as possible such as:
 
 #### To turn on logging, please set your DEBUG env variable like so:
 
-- OSX: `env DEBUG="agenda:*" node index.js`
+- OSX: `DEBUG="agenda:*" node index.js`
 - Linux: `DEBUG="agenda:*" node index.js`
 - Windows CMD: `set DEBUG=agenda:*`
 - Windows PowerShell: `$env:DEBUG = "agenda:*"`
