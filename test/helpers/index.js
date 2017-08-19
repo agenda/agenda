@@ -7,10 +7,9 @@ const mongoPort = process.env.MONGODB_PORT || '27017';
 const jobProcessor = () => {};
 
 const startAgenda = async agenda => {
-  agenda.start();
-
   return new Promise(resolve => {
-    agenda.on('start', () => {
+    agenda.start();
+    agenda.on('ready', () => {
       resolve();
     });
   });
@@ -26,46 +25,58 @@ const stopAgenda = async agenda => {
 
 const beforeEach = async t => {
   const databaseName = uuidv4();
+  const jobTimeout = 500;
   const mongoCfg = `mongodb://${mongoHost}:${mongoPort}/${databaseName}`;
   const agenda = new Agenda({db: {address: mongoCfg}});
   const job = new Job({agenda});
   const mongo = await MongoClient.connect(mongoCfg);
 
+  await startAgenda(agenda);
+
   return new Promise(resolve => {
-    agenda.on('ready', () => {
-      agenda.define('someJob', jobProcessor);
-      agenda.define('send email', jobProcessor);
-      agenda.define('some job', jobProcessor);
-      agenda.define('do work', jobProcessor);
-
-      // @NOTE: Anything that needs to be access via t.context
-      //        should be added here and only here.
-      Object.assign(t.context, {
-        job,
-        agenda,
-        mongo,
-        mongoHost,
-        mongoPort,
-        mongoCfg,
-        databaseName,
-        jobProcessor
-      });
-
-      resolve();
+    agenda.define('someJob', jobProcessor);
+    agenda.define('send email', jobProcessor);
+    agenda.define('some job', jobProcessor);
+    agenda.define('do work', jobProcessor);
+    agenda.define('eventsTest', (job, done) => {
+      done();
     });
+    agenda.define('jobQueueTest', async (job, done) => {
+      done();
+    });
+
+    agenda.define('failBoat', () => {
+      throw new Error('Zomg fail');
+    });
+
+    // @NOTE: Anything that needs to be access via t.context
+    //        should be added here and only here.
+    Object.assign(t.context, {
+      job,
+      agenda,
+      mongo,
+      mongoHost,
+      mongoPort,
+      mongoCfg,
+      databaseName,
+      jobProcessor,
+      jobTimeout
+    });
+
+    resolve();
   });
 };
 
-const afterEach = t => {
+const afterEach = async t => {
   const {agenda, mongo} = t.context;
 
+  await stopAgenda(agenda);
+
   return new Promise(resolve => {
-    agenda.stop(() => {
-      mongo.collection('agendaJobs').remove({}, () => {
-        mongo.close(() => {
-          agenda._mdb.close(() => {
-            mongo.dropDatabase(resolve);
-          });
+    mongo.collection('agendaJobs').remove({}, () => {
+      mongo.close(() => {
+        agenda._mdb.close(() => {
+          mongo.dropDatabase(resolve);
         });
       });
     });
