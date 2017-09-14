@@ -210,7 +210,7 @@ jobs run at (close to ~3ms) the right time.
 Decreasing the frequency will result in fewer database queries, but more jobs
 being stored in memory.
 
-Also worth noting is that if the job is queue is shutdown, any jobs stored in memory
+Also worth noting is that if the job queue is shutdown, any jobs stored in memory
 that haven't run will still be locked, meaning that you may have to wait for the
 lock to expire.
 
