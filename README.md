@@ -669,6 +669,27 @@ job.save(function(err) {
 })
 ```
 
+In some cases you might want to return the job object saved in the database. This object would include the ObjectID that can later be used to query and then update the job. We can achieve this by wrapping the `job.save` method in a Promise. In fact the Promise wrapper can be used within any method with a callback like `job.disable`, `job.enable`, etc.
+
+```js
+const saveJob = data =>
+  new Promise((resolve, reject) => {
+    job.save((err, data) => {
+      if (err) {
+        reject(err)
+      }
+      resolve(data.attrs)
+    })
+  })
+
+const job = await saveJob(...)
+/**
+{
+  _id: .....
+}
+**/
+```
+
 ### remove(callback)
 
 Removes the `job` from the database.
