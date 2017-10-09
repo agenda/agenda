@@ -1,6 +1,7 @@
 Next 2.0.0
 ==========
   * Drop support for MongoDB 2.4 ([#497](https://github.com/agenda/agenda/pull/497))
+  * Update dependencies
 
 Next 1.1.0
 ==========
