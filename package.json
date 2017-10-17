@@ -7,9 +7,9 @@
     "lib"
   ],
   "scripts": {
-    "test": "npm run lint && npm run ava",
     "lint": "xo",
-    "ava": "nyc ava --fail-fast"
+    "test": "npm run lint && npm run ava",
+    "test-coverage": "nyc ava"
   },
   "repository": {
     "type": "git",
@@ -64,5 +64,9 @@
     "envs": [
       "node"
     ]
+  },
+  "ava": {
+    "serial": true,
+    "verbose": true
   }
 }

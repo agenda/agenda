@@ -1,15 +1,19 @@
 import uuidv4 from 'uuid/v4';
+import Debug from 'debug';
 import {MongoClient} from 'mongodb';
 import {Agenda, Job} from '../../lib';
 
 const mongoHost = process.env.MONGODB_HOST || 'localhost';
 const mongoPort = process.env.MONGODB_PORT || '27017';
+const debug = new Debug('agenda:test:helpers');
 const jobProcessor = () => {};
 
 const startAgenda = async agenda => {
   return new Promise(resolve => {
-    agenda.start();
     agenda.on('ready', () => {
+      agenda.processEvery(500);
+      agenda.start();
+      debug('agenda started');
       resolve();
     });
   });
@@ -73,12 +77,8 @@ const afterEach = async t => {
   await stopAgenda(agenda);
 
   return new Promise(resolve => {
-    mongo.collection('agendaJobs').remove({}, () => {
-      mongo.close(() => {
-        agenda._mdb.close(() => {
-          mongo.dropDatabase(resolve);
-        });
-      });
+    mongo.dropDatabase(() => {
+      resolve(Promise.all([mongo.close(), agenda._mdb.close()]).then());
     });
   });
 };

@@ -15,7 +15,7 @@ test.skip('returns the job', t => {
   t.true(job.save() instanceof Job);
 });
 
-test.skip('starts/stops the job queue', async t => {
+test('starts/stops the job queue', async t => {
   const {agenda} = t.context;
 
   agenda.every('1 second', 'jobQueueTest');
@@ -27,7 +27,7 @@ test.skip('starts/stops the job queue', async t => {
   stopAgenda(agenda).then(() => t.pass());
 });
 
-test.skip('does not run disabled jobs', t => {
+test('does not run disabled jobs', t => {
   const {agenda} = t.context;
 
   agenda.define('disabledJob', () => {
@@ -50,7 +50,7 @@ test.skip('does not run disabled jobs', t => {
   });
 });
 
-test.skip('does not throw an error trying to process undefined jobs', async t => {
+test('does not throw an error trying to process undefined jobs', async t => {
   const {agenda} = t.context;
 
   const job = agenda.create('jobDefinedOnAnotherServer').schedule('now');
@@ -66,7 +66,7 @@ test.skip('does not throw an error trying to process undefined jobs', async t =>
   await stopAgenda(agenda);
 });
 
-test.skip('clears locks on stop', async t => {
+test('clears locks on stop', async t => {
   const {agenda} = t.context;
 
   agenda.define('longRunningJob', (job, done) => { // eslint-disable-line no-unused-vars

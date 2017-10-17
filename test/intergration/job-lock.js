@@ -1,12 +1,13 @@
 import test from 'ava';
 import delay from 'delay';
 import moment from 'moment-timezone';
-import {beforeEach, afterEach, startAgenda, stopAgenda} from '../helpers';
+import {beforeEach, afterEach, startAgenda} from '../helpers';
 
 test.beforeEach(beforeEach);
 test.afterEach.always(afterEach);
 
-test.cb('runs a recurring job after a lock has expired', t => {
+// eslint-disable-next-line ava/no-skip-test
+test.skip.cb('runs a recurring job after a lock has expired', t => {
   const {agenda} = t.context;
   let startCounter = 0;
 
@@ -26,11 +27,14 @@ test.cb('runs a recurring job after a lock has expired', t => {
   agenda.defaultConcurrency(100);
   agenda.processEvery(10);
   agenda.every('0.02 seconds', 'lock job');
-  agenda.stop();
-  agenda.start();
+
+  agenda.stop(() => {
+    agenda.start();
+  });
 });
 
-test.cb.skip('runs a one-time job after tests lock expires', t => {
+// eslint-disable-next-line ava/no-skip-test
+test.skip.cb('runs a one-time job after test.skips lock expires', t => {
   const {agenda} = t.context;
   let runCount = 0;
 
@@ -52,7 +56,8 @@ test.cb.skip('runs a one-time job after tests lock expires', t => {
   });
 });
 
-test.skip('does not process locked agenda', async t => {
+// eslint-disable-next-line ava/no-skip-test
+test.skip('does not process locked jobs', async t => {
   const {agenda} = t.context;
   const history = [];
 
@@ -61,8 +66,12 @@ test.skip('does not process locked agenda', async t => {
   }, (job, done) => {
     history.push(job.attrs.data.i);
 
-    done();
+    setTimeout(() => {
+      done();
+    }, 150);
   });
+
+  await startAgenda(agenda);
 
   agenda.now('lock job', {i: 1});
   agenda.now('lock job', {i: 2});
@@ -76,12 +85,10 @@ test.skip('does not process locked agenda', async t => {
   t.true(history.includes(3));
 });
 
-test.skip('does not on-the-fly lock more than agenda._lockLimit agenda', async t => {
+// eslint-disable-next-line ava/no-skip-test
+test.skip('does not on-the-fly lock more than agenda._lockLimit jobs', async t => {
   const {agenda} = t.context;
   agenda.lockLimit(1);
-
-  await stopAgenda(agenda);
-
   agenda.define('lock job', (job, cb) => {}); // eslint-disable-line no-unused-vars
 
   await startAgenda(agenda);
@@ -94,7 +101,8 @@ test.skip('does not on-the-fly lock more than agenda._lockLimit agenda', async t
   t.is(agenda._lockedJobs.length, 1);
 });
 
-test.cb.skip('does not on-the-fly lock more than definition.lockLimit agenda', t => {
+// eslint-disable-next-line ava/no-skip-test
+test.skip.cb('does not on-the-fly lock more than definition.lockLimit jobs', t => {
   const {agenda} = t.context;
   agenda.define('lock job', {lockLimit: 1}, (job, cb) => {}); // eslint-disable-line no-unused-vars
 
@@ -111,7 +119,8 @@ test.cb.skip('does not on-the-fly lock more than definition.lockLimit agenda', t
   }, 500);
 });
 
-test.cb.skip('does not lock more than agenda._lockLimit agenda during processing interval', t => {
+// eslint-disable-next-line ava/no-skip-test
+test.skip.cb('does not lock more than agenda._lockLimit jobs during processing interval', t => {
   const {agenda} = t.context;
   agenda.lockLimit(1);
   agenda.processEvery(200);
@@ -131,7 +140,8 @@ test.cb.skip('does not lock more than agenda._lockLimit agenda during processing
   }, 500);
 });
 
-test.cb.skip('does not lock more than definition.lockLimit agenda during processing interval', t => {
+// eslint-disable-next-line ava/no-skip-test
+test.skip.cb('does not lock more than definition.lockLimit jobs during processing interval', t => {
   const {agenda} = t.context;
   agenda.processEvery(200);
 
