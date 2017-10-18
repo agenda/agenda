@@ -12,24 +12,20 @@ addons:
     sources:
       # gcc 4.8+ requires ubuntu-toolchain-r-test
       - ubuntu-toolchain-r-test
+      - mongodb-upstart
+      - mongodb-3.4-precise
     packages:
       # NodeJS v4+ requires gcc 4.8+
       - g++-4.9
       - gcc-4.9
+      - mongodb-org-server
+      - mongodb-org-shell
 env:
   global:
     # NodeJS v4+ requires gcc 4.8+
     - CXX=g++-4.9 CC=gcc-4.9
-  matrix:
-    - MONGODB_VER=2.6.6
-    - MONGODB_VER=3.4.6
 script: make test-once
 before_script:
-  - sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 0C49F3730359A14518585931BC711F9BA15703C6
-  - if [[ $MONGODB_VER == 2.* ]]; then echo 'deb http://downloads-distro.mongodb.org/repo/ubuntu-upstart dist 10gen' | sudo tee /etc/apt/sources.list.d/mongodb.list; fi
-  - if [[ $MONGODB_VER == 3.4.* ]]; then echo "deb [ arch=amd64 ] http://repo.mongodb.org/apt/ubuntu precise/mongodb-org/3.4 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.4.list; fi
-  - sudo apt-get update
-  - sudo apt-get install -y mongodb-org=$MONGODB_VER
-  - sleep 15 #mongo may not be responded directly. See http://docs.travis-ci.com/user/database-setup/#MongoDB
   - mongo --version
+  - mongod --version
 after_script: make test-coveralls
