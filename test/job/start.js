@@ -6,7 +6,7 @@ import {startAgenda, stopAgenda, clearJobs, beforeEach, afterEach} from '../help
 test.beforeEach(beforeEach);
 test.afterEach.always(afterEach);
 
-test.skip('returns the job', t => {
+test('returns the job', t => {
   const {agenda} = t.context;
   const job = agenda.create('some job', {
     wee: 1
@@ -15,7 +15,7 @@ test.skip('returns the job', t => {
   t.true(job.save() instanceof Job);
 });
 
-test.skip('starts/stops the job queue', t => {
+test('starts/stops the job queue', t => {
   const {agenda} = t.context;
 
   return new Promise(async resolve => {
