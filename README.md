@@ -31,7 +31,7 @@ Install via NPM
 
     npm install agenda
 
-You will also need a working [Mongo](https://www.mongodb.com/) database (2.6+) to point it to.
+You will also need a working [Mongo](https://www.mongodb.com/) database (v3) to point it to.
 
 
 # Example Usage
@@ -160,20 +160,28 @@ Use an existing mongodb-native MongoClient instance. This can help consolidate c
 database. You can instead use `.database` to have agenda handle connecting for
 you.
 
-
-
 Please note that this must be a *collection*. Also, you will want to run the following
 afterwards to ensure the database has the proper indexes:
 
 ```js
-function ignoreErrors() {}
-
-agenda._db.ensureIndex('nextRunAt', ignoreErrors)
-.ensureIndex('lockedAt', ignoreErrors)
-.ensureIndex('name', ignoreErrors)
-.ensureIndex('priority', ignoreErrors);
-
-function ignoreErrors
+agenda.on('ready', () => {
+  agenda._collection.createIndex({
+    disabled: 1,
+    lockedAt: 1,
+    name: 1,
+    nextRunAt: 1,
+    priority: -1
+  }, {
+    name: 'findAndLockNextJobIndex'
+  }, (err) => {
+    if (err) {
+      console.log('Failed to create Agenda index!');
+      console.error(err);
+    } else {
+      console.log('Agenda index created.');
+    }
+  });
+});
 ```
 
 You can also specify it during instantiation.
