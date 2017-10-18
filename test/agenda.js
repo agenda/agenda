@@ -12,7 +12,7 @@ test('returns itself', t => {
 });
 
 test('sets a default processEvery', t => {
-  const {agenda} = t.context;
+  const agenda = new Agenda();
 
   t.is(agenda._processEvery, 5000);
 });

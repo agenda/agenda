@@ -7,6 +7,7 @@
     "lib"
   ],
   "scripts": {
+    "ava": "ava --serial --verbose",
     "lint": "xo",
     "test": "npm run lint && npm run ava",
     "test-coverage": "nyc ava"
@@ -64,9 +65,5 @@
     "envs": [
       "node"
     ]
-  },
-  "ava": {
-    "serial": true,
-    "verbose": true
   }
 }

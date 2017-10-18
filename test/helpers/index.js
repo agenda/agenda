@@ -22,8 +22,16 @@ const startAgenda = async agenda => {
 const stopAgenda = async agenda => {
   return new Promise(resolve => {
     agenda.stop(() => {
+      debug('agenda stopped');
       resolve();
     });
+  });
+};
+
+const clearJobs = agenda => {
+  return new Promise(resolve => {
+    debug('jobs cleared');
+    agenda._mdb.collection('agendaJobs').remove({}, resolve);
   });
 };
 
@@ -42,13 +50,8 @@ const beforeEach = async t => {
     agenda.define('send email', jobProcessor);
     agenda.define('some job', jobProcessor);
     agenda.define('do work', jobProcessor);
-    agenda.define('eventsTest', (job, done) => {
-      done();
-    });
-    agenda.define('jobQueueTest', async (job, done) => {
-      done();
-    });
-
+    agenda.define('eventsTest', (job, done) => done());
+    agenda.define('jobQueueTest', (job, done) => done());
     agenda.define('failBoat', () => {
       throw new Error('Zomg fail');
     });
@@ -71,14 +74,17 @@ const beforeEach = async t => {
   });
 };
 
-const afterEach = async t => {
+const afterEach = async (t, closeMongo = true) => {
   const {agenda, mongo} = t.context;
 
   await stopAgenda(agenda);
 
   return new Promise(resolve => {
     mongo.dropDatabase(() => {
-      resolve(Promise.all([mongo.close(), agenda._mdb.close()]).then());
+      if (closeMongo) {
+        return resolve(Promise.all([mongo.close(), agenda._mdb.close()]));
+      }
+      return resolve();
     });
   });
 };
@@ -86,6 +92,7 @@ const afterEach = async t => {
 export {
   startAgenda,
   stopAgenda,
+  clearJobs,
   beforeEach,
   afterEach
 };

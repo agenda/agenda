@@ -1,6 +1,6 @@
 import test from 'ava';
 import {Job} from '../../lib';
-import {beforeEach, afterEach} from '../helpers';
+import {beforeEach, afterEach, clearJobs} from '../helpers';
 
 test.beforeEach(beforeEach);
 test.afterEach.always(afterEach);
@@ -76,8 +76,11 @@ test('emits success event', t => {
   });
 });
 
-test('emits success:job name event', t => {
+test('emits success:job name event', async t => {
   const {agenda} = t.context;
+
+  await clearJobs(agenda);
+
   const job = new Job({agenda, name: 'jobQueueTest'});
 
   return new Promise(resolve => {

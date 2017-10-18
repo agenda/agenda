@@ -1,7 +1,7 @@
+import {promisify} from 'util';
 import test from 'ava';
-import delay from 'delay';
 import {Job} from '../../lib';
-import {startAgenda, stopAgenda, beforeEach, afterEach} from '../helpers';
+import {startAgenda, stopAgenda, clearJobs, beforeEach, afterEach} from '../helpers';
 
 test.beforeEach(beforeEach);
 test.afterEach.always(afterEach);
@@ -15,42 +15,48 @@ test.skip('returns the job', t => {
   t.true(job.save() instanceof Job);
 });
 
-test('starts/stops the job queue', async t => {
+test.skip('starts/stops the job queue', t => {
   const {agenda} = t.context;
 
-  agenda.every('1 second', 'jobQueueTest');
-  agenda.processEvery('1 second');
+  return new Promise(async resolve => {
+    agenda.define('jobQueueTest', async (job, done) => {
+      done();
 
-  await startAgenda(agenda);
-  await delay(1500);
+      await stopAgenda(agenda);
+      t.true(agenda._processInterval === undefined);
+      await clearJobs(agenda);
 
-  stopAgenda(agenda).then(() => t.pass());
+      resolve();
+    });
+    agenda.every('1 second', 'jobQueueTest');
+    agenda.processEvery('1 second');
+
+    await startAgenda(agenda);
+    t.true(agenda._processInterval);
+  });
 });
 
-test('does not run disabled jobs', t => {
+test.skip('does not run disabled jobs', async t => {
   const {agenda} = t.context;
 
-  agenda.define('disabledJob', () => {
+  await stopAgenda(agenda);
+  await clearJobs(agenda);
+
+  agenda.define('disabledJob', (job, done) => {
     t.fail();
+    done();
   });
 
   const job = agenda.create('disabledJob').disable().schedule('now');
 
-  return new Promise(resolve => {
-    job.save(async err => {
-      t.ifError(err);
+  const {lastRunAt} = promisify(job.save)().then(job => job.attrs);
 
-      agenda.start();
+  await startAgenda(agenda);
 
-      await delay(50);
-
-      t.pass();
-      resolve();
-    });
-  });
+  t.true(lastRunAt === undefined);
 });
 
-test('does not throw an error trying to process undefined jobs', async t => {
+test.skip('does not throw an error trying to process undefined jobs', async t => {
   const {agenda} = t.context;
 
   const job = agenda.create('jobDefinedOnAnotherServer').schedule('now');
@@ -66,7 +72,7 @@ test('does not throw an error trying to process undefined jobs', async t => {
   await stopAgenda(agenda);
 });
 
-test('clears locks on stop', async t => {
+test.skip('clears locks on stop', async t => {
   const {agenda} = t.context;
 
   agenda.define('longRunningJob', (job, done) => { // eslint-disable-line no-unused-vars

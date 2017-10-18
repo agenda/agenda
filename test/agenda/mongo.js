@@ -5,7 +5,7 @@ import {Agenda} from '../../lib';
 import {beforeEach, afterEach} from '../helpers';
 
 test.beforeEach(beforeEach);
-test.afterEach.always(afterEach);
+test.afterEach.always(t => afterEach(t, false));
 
 test('returns itself', t => {
   const {agenda, mongo} = t.context;
@@ -33,9 +33,7 @@ test('sets the _db directly when passed as an option', async t => {
   const agenda = new Agenda({mongo});
 
   return new Promise(resolve => {
-    agenda.on('ready', () => {
-      t.is(agenda._mdb.databaseName, databaseName);
-      resolve();
-    });
+    t.is(agenda._mdb.databaseName, databaseName);
+    resolve();
   });
 });
