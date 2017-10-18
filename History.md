@@ -1,8 +1,17 @@
-Next 2.0.0
-==========
-
+Next
+====
   * Drop support for MongoDB 2.4 ([#497](https://github.com/agenda/agenda/pull/497))
+  * Rewrite tests: replace mocha and blanket with ava and nyc ([#506](https://github.com/agenda/agenda/pull/506))
+  * Optimization: don't try and unlock jobs when `_lockedJobs` is empty ([#509](https://github.com/agenda/agenda/pull/509))
+  * Code cleanup ([#503](https://github.com/agenda/agenda/pull/503))
 
+1.0.2 / 2017-10-17
+==================
+  * Update dependencies ([2854c7e](https://github.com/agenda/agenda/commit/2854c7e3847cc8aecea702df8532789c51b1ed30))
+
+1.0.1 / 2017-10-10
+==================
+  * Update dependencies `cron` and `debug` ([#505](https://github.com/agenda/agenda/pull/505))
 
 1.0.0 / 2017-08-12
 ==================
@@ -41,6 +50,14 @@ Starting in version `1.0.0`, cron will be parsed in the standard UNIX style:
 +------------ Minute            (range: 0-59)
 ```
 
+
+0.10.2 / 2017-08-10
+===================
+  * Adds debugging, [see instructions from README.md](https://github.com/agenda/agenda#to-turn-on-logging-please-set-your-debug-env-variable-like-so).
+
+0.10.1 / 2017-08-10
+===================
+  * Unpublished and re-published as v0.10.2
 
 0.10.0 / 2017-08-08
 ==================

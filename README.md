@@ -5,18 +5,11 @@
   A light-weight job scheduling library for Node.js
 </p>
 <p align="center">
-  <a href="http://travis-ci.org/agenda/agenda">
-    <img src="https://api.travis-ci.org/agenda/agenda.svg" alt="Build Status">
-  </a>
-  <a href="https://david-dm.org/agenda/agenda">
-    <img src="https://david-dm.org/agenda/agenda/status.svg" alt="dependencies Status">
-  </a>
-  <a href="https://david-dm.org/agenda/agenda?type=dev">
-    <img src="https://david-dm.org/agenda/agenda/dev-status.svg" alt="devDependencies Status">
-  </a>
-  <a href="https://coveralls.io/github/agenda/agenda?branch=master">
-    <img src="https://coveralls.io/repos/github/agenda/agenda/badge.svg?branch=master" alt="Coverage Status">
-  </a>
+  <a href="https://slackin-ekwifvcwbr.now.sh/"><img src="https://slackin-ekwifvcwbr.now.sh/badge.svg" alt="Slack Status"></a>
+  <a href="http://travis-ci.org/agenda/agenda"><img src="https://api.travis-ci.org/agenda/agenda.svg" alt="Build Status"></a>
+  <a href="https://david-dm.org/agenda/agenda"><img src="https://david-dm.org/agenda/agenda/status.svg" alt="dependencies Status"></a>
+  <a href="https://david-dm.org/agenda/agenda?type=dev"><img src="https://david-dm.org/agenda/agenda/dev-status.svg" alt="devDependencies Status"></a>
+  <a href="https://coveralls.io/github/agenda/agenda?branch=master"><img src="https://coveralls.io/repos/github/agenda/agenda/badge.svg?branch=master" alt="Coverage Status"></a>
 	<br>
 	<br>
 	<br>
@@ -217,7 +210,7 @@ jobs run at (close to ~3ms) the right time.
 Decreasing the frequency will result in fewer database queries, but more jobs
 being stored in memory.
 
-Also worth noting is that if the job is queue is shutdown, any jobs stored in memory
+Also worth noting is that if the job queue is shutdown, any jobs stored in memory
 that haven't run will still be locked, meaning that you may have to wait for the
 lock to expire.
 
@@ -1035,7 +1028,7 @@ Please provide us with as much details as possible such as:
 
 #### To turn on logging, please set your DEBUG env variable like so:
 
-- OSX: `env DEBUG="agenda:*" node index.js`
+- OSX: `DEBUG="agenda:*" node index.js`
 - Linux: `DEBUG="agenda:*" node index.js`
 - Windows CMD: `set DEBUG=agenda:*`
 - Windows PowerShell: `$env:DEBUG = "agenda:*"`
@@ -1044,18 +1037,9 @@ While not necessary, attaching a text file with this debug information would
 be extremely useful in debugging certain issues and is encouraged.
 
 # Acknowledgements
-
-Agenda has some great community members that help a great deal.
-
-- [@rschmukler](https://github.com/rschmukler)
-- [@joeframbach](https://github.com/joeframbach)
-- [@droppedoncaprica](http://github.com/droppedoncaprica)
-- [@nwkeeley](http://github.com/nwkeeley)
-- [@liamdon](http://github.com/liamdon)
-- [@loris](http://github.com/loris)
-- [@jakeorr](http://github.com/jakeorr)
-- [@niftylettuce](http://github.com/niftylettuce)
-
+- Agenda was originally created by [@rschmukler](https://github.com/rschmukler).
+- [Agendash](https://github.com/agenda/agendash) was originally created by [@joeframbach](https://github.com/joeframbach).
+- These days Agenda has a great community of [contributors](https://github.com/agenda/agenda/graphs/contributors) around it. [Join us!](https://github.com/agenda/agenda/wiki)
 
 # License
 [The MIT License](LICENSE.md)
