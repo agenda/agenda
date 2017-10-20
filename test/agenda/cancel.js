@@ -51,7 +51,7 @@ test('should cancel a job', async t => {
   });
 });
 
-test('should cancel multiple agenda', async t => {
+test('should cancel multiple jobs', async t => {
   const {agenda} = t.context;
 
   await createJobs(t);
@@ -75,7 +75,7 @@ test('should cancel multiple agenda', async t => {
   });
 });
 
-test('should cancel agenda only if the data matches', async t => {
+test('should cancel jobs only if the data matches', async t => {
   const {agenda} = t.context;
 
   await createJobs(t);

@@ -10,7 +10,7 @@ test('returns nothing', t => {
   t.is(agenda.purge(), undefined);
 });
 
-test.cb('removes all agenda without definitions', t => {
+test.cb('removes all jobs without definitions', t => {
   const {agenda} = t.context;
   const job = agenda.create('no definition');
 

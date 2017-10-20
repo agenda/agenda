@@ -29,7 +29,7 @@ test.cb('calls saveJob on the agenda', t => {
   job.save();
 });
 
-test('doesnt save the job if its been removed', async t => {
+test(`doesn't save the job if it's been removed`, async t => {
   const {agenda} = t.context;
   const job = agenda.create('another job');
 

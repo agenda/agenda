@@ -117,7 +117,7 @@ test('should not modify job when unique matches and insertOnly is set to true', 
   });
 });
 
-test(`should create two agenda when unique doesn't match`, async t => {
+test(`should create two jobs when unique doesn't match`, async t => {
   const {agenda, mongo} = t.context;
 
   const time = new Date(Date.now() + (1000 * 60 * 3));
