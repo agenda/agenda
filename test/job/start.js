@@ -1,4 +1,3 @@
-import {promisify} from 'util';
 import test from 'ava';
 import {Job} from '../../lib';
 import {startAgenda, stopAgenda, clearJobs, beforeEach, afterEach} from '../helpers';
@@ -36,11 +35,8 @@ test('starts/stops the job queue', t => {
   });
 });
 
-test.skip('does not run disabled jobs', async t => {
+test('does not run disabled jobs', async t => {
   const {agenda} = t.context;
-
-  await stopAgenda(agenda);
-  await clearJobs(agenda);
 
   agenda.define('disabledJob', (job, done) => {
     t.fail();
@@ -49,14 +45,21 @@ test.skip('does not run disabled jobs', async t => {
 
   const job = agenda.create('disabledJob').disable().schedule('now');
 
-  const {lastRunAt} = promisify(job.save)().then(job => job.attrs);
+  await new Promise(resolve => {
+    job.save((err, job) => {
+      t.ifError(err);
+      resolve(job);
+    });
+  });
 
-  await startAgenda(agenda);
-
-  t.true(lastRunAt === undefined);
+  await new Promise(resolve => {
+    setTimeout(() => {
+      resolve();
+    }, 1500);
+  });
 });
 
-test.skip('does not throw an error trying to process undefined jobs', async t => {
+test('does not throw an error trying to process undefined jobs', async t => {
   const {agenda} = t.context;
 
   const job = agenda.create('jobDefinedOnAnotherServer').schedule('now');
@@ -64,27 +67,37 @@ test.skip('does not throw an error trying to process undefined jobs', async t =>
   await new Promise(resolve => {
     job.save(err => {
       t.ifError(err);
-      t.pass();
       resolve();
     });
   });
-
-  await stopAgenda(agenda);
 });
 
-test.skip('clears locks on stop', async t => {
+test('clears locks on stop', async t => {
   const {agenda} = t.context;
 
   agenda.define('longRunningJob', (job, done) => { // eslint-disable-line no-unused-vars
     // Never finishes
   });
   agenda.every('10 seconds', 'longRunningJob');
-  agenda.processEvery('1 second');
 
-  await startAgenda(agenda);
+  await new Promise(resolve => {
+    setTimeout(async () => {
+      resolve();
+    }, 1500);
+  });
+
+  await new Promise(resolve => {
+    agenda._collection.findOne({name: 'longRunningJob'}, (err, job) => {
+      t.ifError(err);
+
+      t.truthy(job.lockedAt);
+      resolve();
+    });
+  });
+
   await stopAgenda(agenda);
 
-  return new Promise(resolve => {
+  await new Promise(resolve => {
     agenda._collection.findOne({name: 'longRunningJob'}, (err, job) => {
       t.ifError(err);
 
