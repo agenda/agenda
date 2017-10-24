@@ -31,7 +31,7 @@ test('starts/stops the job queue', t => {
     agenda.processEvery('1 second');
 
     await startAgenda(agenda);
-    t.true(agenda._processInterval);
+    t.truthy(agenda._processInterval);
   });
 });
 
