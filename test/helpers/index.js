@@ -9,13 +9,22 @@ const debug = new Debug('agenda:test:helpers');
 const jobProcessor = () => {};
 
 const startAgenda = async agenda => {
-  return new Promise(resolve => {
-    agenda.on('ready', () => {
-      agenda.processEvery(500);
-      agenda.start();
-      debug('agenda started');
-      resolve();
-    });
+  const onReady = resolve => {
+    agenda.processEvery(500);
+    agenda.start();
+    debug('agenda started');
+    resolve();
+  };
+
+  await new Promise(resolve => {
+    if (agenda.isReady) {
+      onReady(resolve);
+    } else {
+      agenda.on('ready', () => {
+        agenda.isReady = true;
+        onReady(resolve);
+      });
+    }
   });
 };
 
