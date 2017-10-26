@@ -168,6 +168,82 @@ describe('Agenda', () => {
     });
   });
 
+  describe('create index', () => {
+    it('defaults should create index', done => {
+      const agenda = new Agenda({mongo});
+      expect(agenda._createIndex).to.equal(true);
+
+      let indexCreated = false;
+
+      agenda.on('index:created', (result) => {
+        expect(result).to.not.be.empty();
+        indexCreated = true;
+      });
+
+      agenda.on('ready', () => {
+        expect(indexCreated).to.be.equal(true);
+        done();
+      });
+    });
+
+    describe('when disabled on startup', () => {
+      it('does not create index', done => {
+        const agenda = new Agenda({mongo, index: false});
+        expect(agenda._createIndex).to.equal(false);
+
+        let indexCreated = false;
+
+        agenda.on('index:created', () => {
+          indexCreated = true;
+        });
+
+        agenda.on('ready', () => {
+          expect(indexCreated).to.equal(false);
+          done();
+        });
+      });
+
+      it('can call create index after ready', done => {
+        const agenda = new Agenda({mongo, index: false});
+
+        agenda.on('ready', () => {
+          agenda.createIndex(done);
+        });
+      });
+
+      it('sends index:created if called directly after ready', done => {
+        const agenda = new Agenda({mongo, index: false});
+
+        agenda.on('ready', () => {
+          agenda.createIndex();
+        });
+
+        agenda.on('index:created', result => {
+          expect(result).to.not.be.empty();
+          done();
+        });
+      });
+    });
+
+    it('can be called even if already called', done => {
+      const agenda = new Agenda({mongo});
+
+      let indexCreated = 0;
+
+      agenda.on('index:created', result => {
+        expect(result).to.not.be.empty();
+
+        if (++indexCreated > 1) {
+          done();
+        }
+      });
+
+      agenda.on('ready', () => {
+        agenda.createIndex();
+      });
+    });
+  });
+
   describe('job methods', () => {
     describe('create', () => {
       let job;
