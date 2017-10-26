@@ -168,12 +168,36 @@ describe('Agenda', () => {
     });
   });
 
+  describe('config events', () => {
+    it('can provide onReady on setup', done => {
+      const agenda = new Agenda({
+        mongo,
+        events: {
+          'ready': () => {
+            done();
+          }
+        }
+      });
+    });
+
+    it('can provide onIndexCreated on setup', done => {
+      const agenda = new Agenda({
+        mongo,
+        events: {
+          'index:created': () => {
+            done();
+          }
+        }
+      });
+    });
+  });
+
   describe('create index', () => {
     it('defaults should create index', done => {
+      let indexCreated = false;
+
       const agenda = new Agenda({mongo});
       expect(agenda._createIndex).to.equal(true);
-
-      let indexCreated = false;
 
       agenda.on('index:created', (result) => {
         expect(result).to.not.be.empty();
@@ -188,40 +212,53 @@ describe('Agenda', () => {
 
     describe('when disabled on startup', () => {
       it('does not create index', done => {
-        const agenda = new Agenda({mongo, index: false});
-        expect(agenda._createIndex).to.equal(false);
-
         let indexCreated = false;
+        let readyCalled = false;
+
+        const agenda = new Agenda({
+          mongo,
+          index: false,
+          events: {
+            'ready': () => {
+              readyCalled = true;
+              expect(indexCreated).to.equal(false);
+            }
+          }
+        });
+        expect(agenda._createIndex).to.equal(false);
 
         agenda.on('index:created', () => {
           indexCreated = true;
         });
 
-        agenda.on('ready', () => {
+        setTimeout(() => {
           expect(indexCreated).to.equal(false);
+          expect(readyCalled).to.equal(true);
           done();
-        });
+        }, 1000);
       });
 
-      it('can call create index after ready', done => {
-        const agenda = new Agenda({mongo, index: false});
-
-        agenda.on('ready', () => {
-          agenda.createIndex(done);
+      it('calls callback if called directly', done => {
+        const agenda = new Agenda({
+          mongo,
+          index: false
         });
+
+        agenda.createIndex(done);
       });
 
-      it('sends index:created if called directly after ready', done => {
-        const agenda = new Agenda({mongo, index: false});
-
-        agenda.on('ready', () => {
-          agenda.createIndex();
+      it('sends index:created if called directly', done => {
+        const agenda = new Agenda({
+          mongo,
+          index: false
         });
 
         agenda.on('index:created', result => {
           expect(result).to.not.be.empty();
           done();
         });
+
+        agenda.createIndex();
       });
     });
 
