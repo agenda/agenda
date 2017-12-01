@@ -19,8 +19,8 @@
 
 - Minimal overhead. Agenda aims to keep its code base small.
 - Mongo backed persistence layer.
-- Scheduling with configurable priority, concurrency, and repeating
-- Scheduling via cron or human readable syntax.
+- Scheduling with configurable priority, concurrency, and repeating.
+- Scheduling via cron, human readable syntax or your own parser (ex. using later.js).
 - Event backed job queue that you can hook into.
 - [Agendash](https://github.com/agenda/agendash): optional standalone web-interface
 
@@ -136,6 +136,24 @@ agenda.processEvery('1.5 minutes');
 agenda.processEvery('3 days and 4 hours');
 agenda.processEvery('3 days, 4 hours and 36 seconds');
 ```
+
+Feel free to use your own parser like later.js 
+```js
+var agenda = new Agenda({
+  getNextRunAt(job) {
+    // parse time (ex. using Later.js)
+    // calc and return the next run date
+  }
+});
+
+agenda.every(
+  'Every 2 weeks on Mon, Fri at 07:07 pm', 
+  'my task', 
+  { ... }, 
+  { timezone: 'America/Los_Angeles' }
+);
+```
+Also it will work for `agenda.schedule`, `job.repeatEvery`, `job.repeatAt` and `job.schedule`
 
 ### database(url, [collectionName])
 

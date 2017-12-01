@@ -102,7 +102,7 @@ describe('Job', () => {
   describe('schedule', () => {
     let job;
     beforeEach(() => {
-      job = new Job();
+      job = new Job({ agenda: jobs });
     });
     it('sets the next run time', () => {
       job.schedule('in 5 minutes');
@@ -113,6 +113,21 @@ describe('Job', () => {
       job.schedule(when);
       expect(job.attrs.nextRunAt).to.be.a(Date);
       expect(job.attrs.nextRunAt.getTime()).to.eql(when.getTime());
+    });
+    it('sets the next run time using defined getNextRunAt', () => {
+      const date = new Date(0);
+      const when = 'some schedule string for custom parser';
+
+      jobs._getNextRunAt = (_job, time) => {
+        expect(time).to.be(when);
+        expect(_job).to.be(job);
+
+        return date;
+      };
+
+      job.schedule(when);
+
+      expect(job.attrs.nextRunAt).to.be(date);
     });
     it('returns the job', () => {
       expect(job.schedule('tomorrow at noon')).to.be(job);
@@ -141,7 +156,7 @@ describe('Job', () => {
     let job;
 
     beforeEach(() => {
-      job = new Job();
+      job = new Job({ agenda: jobs });
     });
 
     it('returns the job', () => {
@@ -210,6 +225,34 @@ describe('Job', () => {
       job.computeNextRunAt();
       expect(moment(job.attrs.nextRunAt).tz('GMT').hour()).to.be(6);
       expect(moment(job.attrs.nextRunAt).toDate().getDate()).to.be(moment(job.attrs.lastRunAt).add(1, 'days').toDate().getDate());
+    });
+
+    it('applies getNextRunAt for repeatEvery', () => {
+      const date = new Date(0);
+
+      jobs._getNextRunAt = _job => {
+        expect(_job).to.be(job);
+
+        return date;
+      };
+
+      job.repeatEvery('On Mon at 6:00 pm');
+      job.computeNextRunAt();
+      expect(job.attrs.nextRunAt).to.be(date);
+    });
+
+    it('applies getNextRunAt for repeatAt', () => {
+      const date = new Date(0);
+
+      jobs._getNextRunAt = _job => {
+        expect(_job).to.be(job);
+
+        return date;
+      };
+
+      job.repeatAt('at 6:00 pm');
+      job.computeNextRunAt();
+      expect(job.attrs.nextRunAt).to.be(date);
     });
 
     describe('when repeat at time is invalid', () => {
