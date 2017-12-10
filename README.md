@@ -55,13 +55,13 @@ agenda.define('delete old users', function(job, done) {
   User.remove({lastLogIn: { $lt: twoDaysAgo }}, done);
 });
 
-agenda.on('ready', function() {
+agenda.on('ready', async function() {
   agenda.every('3 minutes', 'delete old users');
 
   // Alternatively, you could also do:
   agenda.every('*/3 * * * *', 'delete old users');
 
-  agenda.start();
+  await agenda.start();
 });
 
 ```
@@ -77,17 +77,17 @@ agenda.define('send email report', {priority: 'high', concurrency: 10}, function
   }, done);
 });
 
-agenda.on('ready', function() {
+agenda.on('ready', async function() {
   agenda.schedule('in 20 minutes', 'send email report', {to: 'admin@example.com'});
-  agenda.start();
+  await agenda.start();
 });
 ```
 
 ```js
-agenda.on('ready', function() {
+agenda.on('ready', async function() {
   var weeklyReport = agenda.create('send email report', {to: 'another-guy@example.com'})
   weeklyReport.repeatEvery('1 week').save();
-  agenda.start();
+  await agenda.start();
 });
 ```
 
@@ -323,8 +323,8 @@ An instance of an agenda will emit the following events:
 - `error` - called when Agenda mongo connection process has thrown an error
 
 ```js
-agenda.on('ready', function() {
-  agenda.start();
+agenda.on('ready', async function() {
+  await agenda.start();
 });
 ```
 

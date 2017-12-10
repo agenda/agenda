@@ -77,6 +77,6 @@ describe('Retry', () => {
 
     jobs.now('a job');
 
-    jobs.start();
+    jobs.start().then(() => {});
   });
 });

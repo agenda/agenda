@@ -482,7 +482,7 @@ describe('Job', () => {
 
   describe('start/stop', () => {
     it('starts/stops the job queue', done => {
-      jobs.define('jobQueueTest', (job, cb) => {
+      jobs.define('jobQueueTest', async (job, cb) => {
         jobs.stop().then(() => {});
         clearJobs(() => {
           cb();
@@ -494,7 +494,7 @@ describe('Job', () => {
       });
       jobs.every('1 second', 'jobQueueTest');
       jobs.processEvery('1 second');
-      jobs.start();
+      jobs.start().then(() => {});
     });
 
     it('does not run disabled jobs', done => {
@@ -503,11 +503,11 @@ describe('Job', () => {
         ran = true;
       });
       const job = jobs.create('disabledJob').disable().schedule('now');
-      job.save(err => {
+      job.save(async err => {
         if (err) {
           return done(err);
         }
-        jobs.start();
+        await jobs.start();
         setTimeout(() => {
           expect(ran).to.be(false);
           jobs.stop().then(() => {});
@@ -517,7 +517,7 @@ describe('Job', () => {
     });
 
     it('does not throw an error trying to process undefined jobs', done => {
-      jobs.start();
+      jobs.start().then(() => {});
       const job = jobs.create('jobDefinedOnAnotherServer').schedule('now');
 
       job.save(err => {
@@ -536,7 +536,7 @@ describe('Job', () => {
       });
       jobs.every('10 seconds', 'longRunningJob');
       jobs.processEvery('1 second');
-      jobs.start();
+      jobs.start().then(() => {});
       setTimeout(() => {
         jobs.stop().then(() => {}).catch(err => done(err));
         jobs._collection.findOne({name: 'longRunningJob'}, (err, job) => {
@@ -661,7 +661,7 @@ describe('Job', () => {
       jobs.processEvery(10);
       jobs.every('0.02 seconds', 'lock job');
       jobs.stop().then(() => {});
-      jobs.start();
+      jobs.start().then(() => {});
     });
 
     it('runs a one-time job after its lock expires', done => {
@@ -680,7 +680,7 @@ describe('Job', () => {
       });
 
       jobs.processEvery(50);
-      jobs.start();
+      jobs.start().then(() => {});
       jobs.now('lock job', {
         i: 1
       });
@@ -699,7 +699,7 @@ describe('Job', () => {
         }, 150);
       });
 
-      jobs.start();
+      jobs.start().then(() => {});
 
       jobs.now('lock job', {i: 1});
       jobs.now('lock job', {i: 2});
@@ -719,7 +719,7 @@ describe('Job', () => {
 
       jobs.define('lock job', (job, cb) => {}); // eslint-disable-line no-unused-vars
 
-      jobs.start();
+      jobs.start().then(() => {});
 
       setTimeout(() => {
         jobs.now('lock job', {i: 1});
@@ -736,7 +736,7 @@ describe('Job', () => {
     it('does not on-the-fly lock more than definition.lockLimit jobs', done => {
       jobs.define('lock job', {lockLimit: 1}, (job, cb) => {}); // eslint-disable-line no-unused-vars
 
-      jobs.start();
+      jobs.start().then(() => {});
 
       setTimeout(() => {
         jobs.now('lock job', {i: 1});
@@ -756,7 +756,7 @@ describe('Job', () => {
 
       jobs.define('lock job', (job, cb) => {}); // eslint-disable-line no-unused-vars
 
-      jobs.start();
+      jobs.start().then(() => {});
 
       const when = moment().add(300, 'ms').toDate();
 
@@ -775,7 +775,7 @@ describe('Job', () => {
 
       jobs.define('lock job', {lockLimit: 1}, (job, cb) => {}); // eslint-disable-line no-unused-vars
 
-      jobs.start();
+      jobs.start().then(() => {});
 
       const when = moment().add(300, 'ms').toDate();
 
@@ -824,7 +824,7 @@ describe('Job', () => {
         expect(err).to.be(undefined);
       });
 
-      jobs.start();
+      jobs.start().then(() => {});
 
       jobs.schedule(new Date(now + 100), 'blocking', {i: 1});
 
@@ -864,7 +864,7 @@ describe('Job', () => {
                 if (err) {
                   return done(err);
                 }
-                jobs.start();
+                jobs.start().then(() => {});
               });
             }, 50);
           });
@@ -904,7 +904,7 @@ describe('Job', () => {
             if (err) {
               return done(err);
             }
-            jobs.start();
+            jobs.start().then(() => {});
           });
         });
       });
@@ -941,7 +941,7 @@ describe('Job', () => {
             if (err) {
               return done(err);
             }
-            jobs.start();
+            jobs.start().then(() => {});
           });
         });
       });
@@ -974,7 +974,7 @@ describe('Job', () => {
 
       jobs.every(10, 'everyRunTest1');
 
-      jobs.start();
+      jobs.start().then(() => {});
 
       setTimeout(() => {
         jobs.jobs({name: 'everyRunTest1'}, () => {
@@ -995,7 +995,7 @@ describe('Job', () => {
       });
       jobs.every(10, 'everyRunTest2');
 
-      jobs.start();
+      jobs.start().then(() => {});
 
       setTimeout(() => {
         jobs.jobs({name: 'everyRunTest2'}, (err, res) => {
@@ -1089,8 +1089,8 @@ describe('Job', () => {
 
         job.disable();
 
-        job.save(() => {
-          jobs.start();
+        job.save(async () => {
+          await jobs.start();
 
           setTimeout(() => {
             jobs.jobs({name: 'everyDisabledTest'}, err => {

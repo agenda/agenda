@@ -413,7 +413,7 @@ describe('Agenda', () => {
           done();
         });
         jobs.now('immediateJob');
-        jobs.start();
+        jobs.start().then(() => {});
       });
     });
 
