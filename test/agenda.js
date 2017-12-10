@@ -247,17 +247,18 @@ describe('Agenda', () => {
 
     describe('schedule', () => {
       describe('with a job name specified', () => {
-        it('returns a job', () => {
-          expect(jobs.schedule('in 5 minutes', 'send email')).to.be.a(Job);
+        it('returns a job', async () => {
+          expect(await jobs.schedule('in 5 minutes', 'send email')).to.be.a(Job);
         });
-        it('sets the schedule', () => {
+        it('sets the schedule', async () => {
           const fiveish = (new Date()).valueOf() + 250000;
-          expect(jobs.schedule('in 5 minutes', 'send email').attrs.nextRunAt.valueOf()).to.be.greaterThan(fiveish);
+          const scheduledJob = await jobs.schedule('in 5 minutes', 'send email');
+          expect(scheduledJob.attrs.nextRunAt.valueOf()).to.be.greaterThan(fiveish);
         });
       });
       describe('with array of names specified', () => {
-        it('returns array of jobs', () => {
-          expect(jobs.schedule('5 minutes', ['send email', 'some job'])).to.be.an('array');
+        it('returns array of jobs', async () => {
+          expect(await jobs.schedule('5 minutes', ['send email', 'some job'])).to.be.an('array');
         });
       });
     });
