@@ -56,11 +56,10 @@ describe('Job', () => {
 
   afterEach(done => {
     setTimeout(() => {
-      jobs.stop(() => {
-        clearJobs(() => {
-          mongo.close(() => {
-            jobs._mdb.close(done);
-          });
+      jobs.stop().then(() => {});
+      clearJobs(() => {
+        mongo.close(() => {
+          jobs._mdb.close(done);
         });
       });
     }, 50);
@@ -484,14 +483,13 @@ describe('Job', () => {
   describe('start/stop', () => {
     it('starts/stops the job queue', done => {
       jobs.define('jobQueueTest', (job, cb) => {
-        jobs.stop(() => {
-          clearJobs(() => {
+        jobs.stop().then(() => {});
+        clearJobs(() => {
+          cb();
+          jobs.define('jobQueueTest', (job, cb) => { // eslint-disable-line max-nested-callbacks
             cb();
-            jobs.define('jobQueueTest', (job, cb) => { // eslint-disable-line max-nested-callbacks
-              cb();
-            });
-            done();
           });
+          done();
         });
       });
       jobs.every('1 second', 'jobQueueTest');
@@ -512,7 +510,8 @@ describe('Job', () => {
         jobs.start();
         setTimeout(() => {
           expect(ran).to.be(false);
-          jobs.stop(done);
+          jobs.stop().then(() => {});
+          done();
         }, jobTimeout);
       });
     });
@@ -526,7 +525,8 @@ describe('Job', () => {
       });
 
       setTimeout(() => {
-        jobs.stop(done);
+        jobs.stop().then(() => {});
+        done();
       }, jobTimeout);
     });
 
@@ -538,17 +538,13 @@ describe('Job', () => {
       jobs.processEvery('1 second');
       jobs.start();
       setTimeout(() => {
-        jobs.stop(err => {
+        jobs.stop().then(() => {}).catch(err => done(err));
+        jobs._collection.findOne({name: 'longRunningJob'}, (err, job) => {
           if (err) {
             done(err);
           }
-          jobs._collection.findOne({name: 'longRunningJob'}, (err, job) => {
-            if (err) {
-              done(err);
-            }
-            expect(job.lockedAt).to.be(null);
-            done();
-          });
+          expect(job.lockedAt).to.be(null);
+          done();
         });
       }, jobTimeout);
     });
@@ -654,7 +650,8 @@ describe('Job', () => {
 
         if (startCounter !== 1) {
           expect(startCounter).to.be(2);
-          jobs.stop(done);
+          jobs.stop().then(() => {});
+          done();
         }
       });
 
@@ -663,7 +660,7 @@ describe('Job', () => {
       jobs.defaultConcurrency(100);
       jobs.processEvery(10);
       jobs.every('0.02 seconds', 'lock job');
-      jobs.stop();
+      jobs.stop().then(() => {});
       jobs.start();
     });
 
@@ -677,7 +674,8 @@ describe('Job', () => {
 
         if (runCount !== 1) {
           expect(runCount).to.be(2);
-          jobs.stop(done);
+          jobs.stop().then(() => {});
+          done();
         }
       });
 
@@ -729,7 +727,8 @@ describe('Job', () => {
 
         setTimeout(() => {
           expect(jobs._lockedJobs).to.have.length(1);
-          jobs.stop(done);
+          jobs.stop().then(() => {});
+          done();
         }, 500);
       }, 500);
     });
@@ -745,7 +744,8 @@ describe('Job', () => {
 
         setTimeout(() => {
           expect(jobs._lockedJobs).to.have.length(1);
-          jobs.stop(done);
+          jobs.stop().then(() => {});
+          done();
         }, 500);
       }, 500);
     });
@@ -765,7 +765,8 @@ describe('Job', () => {
 
       setTimeout(() => {
         expect(jobs._lockedJobs).to.have.length(1);
-        jobs.stop(done);
+        jobs.stop().then(() => {});
+        done();
       }, 500);
     });
 
@@ -783,7 +784,8 @@ describe('Job', () => {
 
       setTimeout(() => {
         expect(jobs._lockedJobs).to.have.length(1);
-        jobs.stop(done);
+        jobs.stop().then(() => {});
+        done();
       }, 500);
     });
   });
@@ -957,7 +959,7 @@ describe('Job', () => {
       jobs.defaultConcurrency(1);
       jobs.processEvery(5);
 
-      jobs.stop(done);
+      jobs.stop().then(done);
     });
 
     it('should run the same job multiple times', done => {
@@ -977,7 +979,7 @@ describe('Job', () => {
       setTimeout(() => {
         jobs.jobs({name: 'everyRunTest1'}, () => {
           expect(counter).to.be(2);
-          jobs.stop(done);
+          jobs.stop().then(done);
         });
       }, jobTimeout);
     });
@@ -1001,7 +1003,8 @@ describe('Job', () => {
             done(err);
           }
           expect(res).to.have.length(1);
-          jobs.stop(done);
+          jobs.stop().then(() => {});
+          done();
         });
       }, jobTimeout);
     });
@@ -1095,7 +1098,8 @@ describe('Job', () => {
                 return done(err);
               }
               expect(counter).to.be(0);
-              jobs.stop(done);
+              jobs.stop().then(() => {});
+              done();
             });
           }, jobTimeout);
         });

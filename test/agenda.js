@@ -48,12 +48,11 @@ describe('Agenda', () => {
   });
 
   afterEach(done => {
-    setTimeout(() => {
-      jobs.stop(() => {
-        clearJobs(() => {
-          mongo.close(() => {
-            jobs._mdb.close(done);
-          });
+    setTimeout(async () => {
+      await jobs.stop();
+      clearJobs(() => {
+        mongo.close(() => {
+          jobs._mdb.close(done);
         });
       });
     }, 50);
@@ -408,9 +407,10 @@ describe('Agenda', () => {
       });
 
       it('runs the job immediately', done => {
-        jobs.define('immediateJob', job => {
+        jobs.define('immediateJob', async job => {
           expect(job.isRunning()).to.be(true);
-          jobs.stop(done);
+          await jobs.stop();
+          done();
         });
         jobs.now('immediateJob');
         jobs.start();
@@ -436,28 +436,27 @@ describe('Agenda', () => {
     describe('purge', () => {
       it('removes all jobs without definitions', done => {
         const job = jobs.create('no definition');
-        jobs.stop(() => {
-          job.save(() => {
-            jobs.jobs({
-              name: 'no definition'
-            }, (err, j) => { // eslint-disable-line max-nested-callbacks
+        jobs.stop().then(() => {});
+        job.save(() => {
+          jobs.jobs({
+            name: 'no definition'
+          }, (err, j) => { // eslint-disable-line max-nested-callbacks
+            if (err) {
+              return done(err);
+            }
+            expect(j).to.have.length(1);
+            jobs.purge(err => { // eslint-disable-line max-nested-callbacks
               if (err) {
                 return done(err);
               }
-              expect(j).to.have.length(1);
-              jobs.purge(err => { // eslint-disable-line max-nested-callbacks
+              jobs.jobs({
+                name: 'no definition'
+              }, (err, j) => { // eslint-disable-line max-nested-callbacks
                 if (err) {
                   return done(err);
                 }
-                jobs.jobs({
-                  name: 'no definition'
-                }, (err, j) => { // eslint-disable-line max-nested-callbacks
-                  if (err) {
-                    return done(err);
-                  }
-                  expect(j).to.have.length(0);
-                  done();
-                });
+                expect(j).to.have.length(0);
+                done();
               });
             });
           });

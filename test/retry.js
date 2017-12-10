@@ -44,12 +44,11 @@ describe('Retry', () => {
   });
 
   afterEach(done => {
-    setTimeout(() => {
-      jobs.stop(() => {
-        clearJobs(() => {
-          mongo.close(() => {
-            jobs._mdb.close(done);
-          });
+    setTimeout(async () => {
+      await jobs.stop();
+      clearJobs(() => {
+        mongo.close(() => {
+          jobs._mdb.close(done);
         });
       });
     }, 50);

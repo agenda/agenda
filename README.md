@@ -534,10 +534,9 @@ job queues can grab them / they are unlocked should the job queue start again. H
 shutdown.
 
 ```js
-function graceful() {
-  agenda.stop(function() {
-    process.exit(0);
-  });
+async function graceful() {
+  await agenda.stop();
+  process.exit(0);
 }
 
 process.on('SIGTERM', graceful);
