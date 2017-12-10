@@ -440,24 +440,20 @@ describe('Agenda', () => {
         job.save(() => {
           jobs.jobs({
             name: 'no definition'
-          }, (err, j) => { // eslint-disable-line max-nested-callbacks
+          }, async (err, j) => { // eslint-disable-line max-nested-callbacks
             if (err) {
               return done(err);
             }
             expect(j).to.have.length(1);
-            jobs.purge(err => { // eslint-disable-line max-nested-callbacks
+            await jobs.purge();
+            jobs.jobs({
+              name: 'no definition'
+            }, (err, j) => { // eslint-disable-line max-nested-callbacks
               if (err) {
                 return done(err);
               }
-              jobs.jobs({
-                name: 'no definition'
-              }, (err, j) => { // eslint-disable-line max-nested-callbacks
-                if (err) {
-                  return done(err);
-                }
-                expect(j).to.have.length(0);
-                done();
-              });
+              expect(j).to.have.length(0);
+              done();
             });
           });
         });
@@ -505,69 +501,57 @@ describe('Agenda', () => {
     });
 
     it('should cancel a job', done => {
-      jobs.jobs({name: 'jobA'}, (err, j) => {
+      jobs.jobs({name: 'jobA'}, async (err, j) => {
         if (err) {
           return done(err);
         }
         expect(j).to.have.length(2);
-        jobs.cancel({name: 'jobA'}, err => {
+        await jobs.cancel({name: 'jobA'});
+        jobs.jobs({name: 'jobA'}, (err, j) => {
           if (err) {
             return done(err);
           }
-          jobs.jobs({name: 'jobA'}, (err, j) => {
-            if (err) {
-              return done(err);
-            }
-            expect(j).to.have.length(0);
-            done();
-          });
+          expect(j).to.have.length(0);
+          done();
         });
       });
     });
 
     it('should cancel multiple jobs', done => {
-      jobs.jobs({name: {$in: ['jobA', 'jobB']}}, (err, j) => {
+      jobs.jobs({name: {$in: ['jobA', 'jobB']}}, async (err, j) => {
         if (err) {
           return done(err);
         }
         expect(j).to.have.length(3);
-        jobs.cancel({name: {$in: ['jobA', 'jobB']}}, err => {
+        await jobs.cancel({name: {$in: ['jobA', 'jobB']}});
+        jobs.jobs({name: {$in: ['jobA', 'jobB']}}, (err, j) => {
           if (err) {
             return done(err);
           }
-          jobs.jobs({name: {$in: ['jobA', 'jobB']}}, (err, j) => {
-            if (err) {
-              return done(err);
-            }
-            expect(j).to.have.length(0);
-            done();
-          });
+          expect(j).to.have.length(0);
+          done();
         });
       });
     });
 
     it('should cancel jobs only if the data matches', done => {
-      jobs.jobs({name: 'jobA', data: 'someData'}, (err, j) => {
+      jobs.jobs({name: 'jobA', data: 'someData'}, async (err, j) => {
         if (err) {
           return done(err);
         }
         expect(j).to.have.length(1);
-        jobs.cancel({name: 'jobA', data: 'someData'}, err => {
+        await jobs.cancel({name: 'jobA', data: 'someData'});
+        jobs.jobs({name: 'jobA', data: 'someData'}, (err, j) => {
           if (err) {
             return done(err);
           }
-          jobs.jobs({name: 'jobA', data: 'someData'}, (err, j) => {
+          expect(j).to.have.length(0);
+          jobs.jobs({name: 'jobA'}, (err, j) => {
             if (err) {
               return done(err);
             }
-            expect(j).to.have.length(0);
-            jobs.jobs({name: 'jobA'}, (err, j) => {
-              if (err) {
-                return done(err);
-              }
-              expect(j).to.have.length(1);
-              done();
-            });
+            expect(j).to.have.length(1);
+            done();
           });
         });
       });

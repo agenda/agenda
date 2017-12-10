@@ -248,23 +248,19 @@ describe('Job', () => {
         agenda: jobs,
         name: 'removed job'
       });
-      job.save(err => {
+      job.save(async err => {
         if (err) {
           return done(err);
         }
-        job.remove(err => {
+        await job.remove();
+        mongo.collection('agendaJobs').find({
+          _id: job.attrs._id
+        }).toArray((err, j) => {
           if (err) {
-            return done(err);
+            done(err);
           }
-          mongo.collection('agendaJobs').find({
-            _id: job.attrs._id
-          }).toArray((err, j) => {
-            if (err) {
-              done(err);
-            }
-            expect(j).to.have.length(0);
-            done();
-          });
+          expect(j).to.have.length(0);
+          done();
         });
       });
     });
@@ -343,16 +339,12 @@ describe('Job', () => {
         jobs.define('failBoat3', (job, cb) => {
           // Explicitly find the job again,
           // so we have a new job object
-          jobs.jobs({name: 'failBoat3'}, (err, j) => {
+          jobs.jobs({name: 'failBoat3'}, async (err, j) => {
             if (err) {
               return done(err);
             }
-            j[0].remove(err => { // eslint-disable-line max-nested-callbacks
-              if (err) {
-                return done(err);
-              }
-              cb();
-            });
+            await j[0].remove();
+            cb();
           });
         });
 
@@ -451,22 +443,21 @@ describe('Job', () => {
       const job = jobs.create('another job');
       // Save, then remove, then try and save again.
       // The second save should fail.
-      job.save((err, j) => {
+      job.save(async (err, j) => {
         if (err) {
           return done(err);
         }
-        j.remove(() => {
-          j.save(err => {
+        await j.remove();
+        j.save(err => {
+          if (err) {
+            return done(err);
+          }
+          jobs.jobs({name: 'another job'}, (err, res) => {
             if (err) {
               return done(err);
             }
-            jobs.jobs({name: 'another job'}, (err, res) => {
-              if (err) {
-                return done(err);
-              }
-              expect(res).to.have.length(0);
-              done();
-            });
+            expect(res).to.have.length(0);
+            done();
           });
         });
       });
@@ -860,11 +851,11 @@ describe('Job', () => {
               return done(err);
             }
             setTimeout(() => { // eslint-disable-line max-nested-callbacks
-              jobs.now('fifo', err => { // eslint-disable-line max-nested-callbacks
+              jobs.now('fifo', async err => { // eslint-disable-line max-nested-callbacks
                 if (err) {
                   return done(err);
                 }
-                jobs.start().then(() => {});
+                await jobs.start();
               });
             }, 50);
           });
@@ -900,11 +891,11 @@ describe('Job', () => {
           if (err) {
             return done(err);
           }
-          jobs.create('fifo-priority').schedule(new Date(now + 100)).priority('high').save(err => {
+          jobs.create('fifo-priority').schedule(new Date(now + 100)).priority('high').save(async err => {
             if (err) {
               return done(err);
             }
-            jobs.start().then(() => {});
+            await jobs.start();
           });
         });
       });

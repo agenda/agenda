@@ -10,6 +10,7 @@
     "test": "npm run lint && npm run mocha",
     "lint": "xo --verbose",
     "mocha": "mocha --reporter spec --timeout 8000 -b",
+    "mocha-debug": "DEBUG=agenda:** mocha --reporter spec --timeout 8000 -b",
     "blanket": {
       "pattern": "lib",
       "data-cover-never": "node_modules"
