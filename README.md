@@ -932,7 +932,9 @@ jobTypes.forEach(function(type) {
 })
 
 if(jobTypes.length) {
-  agenda.start();
+  agenda.on('ready', function() {
+    agenda.start();
+  });
 }
 
 module.exports = agenda;
