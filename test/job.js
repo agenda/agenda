@@ -928,14 +928,14 @@ describe('Job', () => {
   });
 
   describe('every running', () => {
-    beforeEach(done => {
+    beforeEach(async () => {
       agenda.defaultConcurrency(1);
       agenda.processEvery(5);
 
-      agenda.stop().then(done);
+      await agenda.stop();
     });
 
-    it('should run the same job multiple times', done => {
+    it('should run the same job multiple times', async () => {
       let counter = 0;
 
       agenda.define('everyRunTest1', (job, cb) => {
@@ -947,14 +947,13 @@ describe('Job', () => {
 
       agenda.every(10, 'everyRunTest1');
 
-      agenda.start().then(() => {});
+      await agenda.start();
 
-      setTimeout(() => {
-        agenda.jobs({name: 'everyRunTest1'}, () => {
-          expect(counter).to.be(2);
-          agenda.stop().then(done);
-        });
-      }, jobTimeout);
+      await delay(jobTimeout);
+      await agenda.jobs({name: 'everyRunTest1'});
+      expect(counter).to.be(2);
+
+      await agenda.stop();
     });
 
     it('should reuse the same job on multiple runs', done => {
