@@ -225,22 +225,16 @@ describe('Agenda', () => {
         it('sets the agenda', async () => {
           expect(await jobs.every('5 seconds', 'send email').then(({agenda}) => agenda)).to.be(jobs);
         });
-        it('should update a job that was previously scheduled with `every`', done => {
-          jobs.every(10, 'shouldBeSingleJob').then(() => {});
-          setTimeout(async () => {
-            await jobs.every(20, 'shouldBeSingleJob');
-          }, 10);
+        it('should update a job that was previously scheduled with `every`', async () => {
+          await jobs.every(10, 'shouldBeSingleJob');
+          await delay(10);
+          await jobs.every(20, 'shouldBeSingleJob');
 
           // Give the saves a little time to propagate
-          setTimeout(() => {
-            jobs.jobs({name: 'shouldBeSingleJob'}, (err, res) => { // eslint-disable-line max-nested-callbacks
-              if (err) {
-                throw err;
-              }
-              expect(res).to.have.length(1);
-              done();
-            });
-          }, jobTimeout);
+          await delay(jobTimeout);
+
+          const res = await jobs.jobs({name: 'shouldBeSingleJob'});
+          expect(res).to.have.length(1);
         });
       });
       describe('with array of names specified', () => {
@@ -466,61 +460,35 @@ describe('Agenda', () => {
       });
     });
 
-    it('should cancel a job', done => {
-      jobs.jobs({name: 'jobA'}, async (err, j) => {
-        if (err) {
-          return done(err);
-        }
-        expect(j).to.have.length(2);
-        await jobs.cancel({name: 'jobA'});
-        jobs.jobs({name: 'jobA'}, (err, j) => {
-          if (err) {
-            return done(err);
-          }
-          expect(j).to.have.length(0);
-          done();
-        });
-      });
+    it('should cancel a job', async () => {
+      const j = await jobs.jobs({name: 'jobA'});
+      expect(j).to.have.length(2);
+
+      await jobs.cancel({name: 'jobA'});
+      const job = await jobs.jobs({name: 'jobA'});
+
+      expect(job).to.have.length(0);
     });
 
-    it('should cancel multiple jobs', done => {
-      jobs.jobs({name: {$in: ['jobA', 'jobB']}}, async (err, j) => {
-        if (err) {
-          return done(err);
-        }
-        expect(j).to.have.length(3);
-        await jobs.cancel({name: {$in: ['jobA', 'jobB']}});
-        jobs.jobs({name: {$in: ['jobA', 'jobB']}}, (err, j) => {
-          if (err) {
-            return done(err);
-          }
-          expect(j).to.have.length(0);
-          done();
-        });
-      });
+    it('should cancel multiple jobs', async () => {
+      const jobs1 = await jobs.jobs({name: {$in: ['jobA', 'jobB']}});
+      expect(jobs1).to.have.length(3);
+      await jobs.cancel({name: {$in: ['jobA', 'jobB']}});
+
+      const jobs2 = await jobs.jobs({name: {$in: ['jobA', 'jobB']}});
+      expect(jobs2).to.have.length(0);
     });
 
-    it('should cancel jobs only if the data matches', done => {
-      jobs.jobs({name: 'jobA', data: 'someData'}, async (err, j) => {
-        if (err) {
-          return done(err);
-        }
-        expect(j).to.have.length(1);
-        await jobs.cancel({name: 'jobA', data: 'someData'});
-        jobs.jobs({name: 'jobA', data: 'someData'}, (err, j) => {
-          if (err) {
-            return done(err);
-          }
-          expect(j).to.have.length(0);
-          jobs.jobs({name: 'jobA'}, (err, j) => {
-            if (err) {
-              return done(err);
-            }
-            expect(j).to.have.length(1);
-            done();
-          });
-        });
-      });
+    it('should cancel jobs only if the data matches', async () => {
+      const jobs1 = await jobs.jobs({name: 'jobA', data: 'someData'});
+      expect(jobs1).to.have.length(1);
+      await jobs.cancel({name: 'jobA', data: 'someData'});
+
+      const jobs2 = await jobs.jobs({name: 'jobA', data: 'someData'});
+      expect(jobs2).to.have.length(0);
+
+      const jobs3 = await jobs.jobs({name: 'jobA'});
+      expect(jobs3).to.have.length(1);
     });
   });
 });
