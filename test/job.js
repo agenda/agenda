@@ -330,27 +330,20 @@ describe('Job', () => {
     it(`doesn't allow a stale job to be saved`, async () => {
       job.attrs.name = 'failBoat3';
       await job.save();
-      agenda.define('failBoat3', (job, cb) => {
+      agenda.define('failBoat3', async (job, cb) => {
         // Explicitly find the job again,
         // so we have a new job object
-        agenda.jobs({name: 'failBoat3'}, async (err, j) => {
-          if (err) {
-            throw err;
-          }
-          await j[0].remove();
-          cb();
-        });
+        const jobs = await agenda.jobs({name: 'failBoat3'});
+        expect(jobs).to.have.length(1);
+        await jobs[0].remove();
+        cb();
       });
 
       await job.run();
 
       // Expect the deleted job to not exist in the database
-      agenda.jobs({name: 'failBoat3'}, (err, j) => {
-        if (err) {
-          throw err;
-        }
-        expect(j).to.have.length(0);
-      });
+      const deletedJob = await agenda.jobs({name: 'failBoat3'});
+      expect(deletedJob).to.have.length(0);
     });
   });
 
