@@ -2,3 +2,4 @@ node_modules
 coverage.html
 .idea
 .DS_Store
+docs
