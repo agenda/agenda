@@ -41,13 +41,16 @@ You will also need a working [Mongo](https://www.mongodb.com/) database (v3) to 
 
 var mongoConnectionString = 'mongodb://127.0.0.1/agenda';
 
-var agenda = new Agenda({db: {address: mongoConnectionString}});
+var agenda = new Agenda({db: {db: 'agenda-test', address: mongoConnectionString}});
 
 // or override the default collection name:
-// var agenda = new Agenda({db: {address: mongoConnectionString, collection: 'jobCollectionName'}});
+// var agenda = new Agenda({db: {db: 'agenda-test', address: mongoConnectionString, collection: 'jobCollectionName'}});
 
 // or pass additional connection options:
-// var agenda = new Agenda({db: {address: mongoConnectionString, collection: 'jobCollectionName', options: {ssl: true}}});
+// var agenda = new Agenda({db: {db: 'agenda-test', address: mongoConnectionString, collection: 'jobCollectionName', options: {ssl: true}}});
+
+// or disable auto index creation: noIndexCheck
+// var agenda = new Agenda({db: {db: 'agenda-test', address: mongoConnectionString, collection: 'jobCollectionName', noIndexCheck: true}});
 
 // or pass in an existing mongodb-native MongoClient instance
 // var agenda = new Agenda({mongo: myMongoClient});
