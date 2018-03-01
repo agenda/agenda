@@ -54,7 +54,10 @@ describe('Agenda', () => {
     setTimeout(() => {
       jobs.stop(() => {
         clearJobs(() => {
-          mongoClient.close(done);
+          mongoClient.close(() => {
+            if (jobs._db) jobs._db.close(done);
+            else done();
+          });
         });
       });
     }, 50);

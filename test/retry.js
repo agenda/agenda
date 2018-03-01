@@ -49,7 +49,10 @@ describe('Retry', () => {
     setTimeout(() => {
       jobs.stop(() => {
         clearJobs(() => {
-          mongoClient.close(done);
+          mongoClient.close(() => {
+            if (jobs._db) jobs._db.close(done);
+            else done();
+          });
         });
       });
     }, 50);
@@ -73,6 +76,7 @@ describe('Retry', () => {
     });
 
     jobs.on('success:a job', () => {
+      jobs.stop();
       done();
     });
 
