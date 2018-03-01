@@ -34,6 +34,13 @@ Install via NPM
 
 You will also need a working [Mongo](https://www.mongodb.com/) database (v3) to point it to.
 
+# Breaking changes for agenda 1.1
+Set the "db" config paramter to your agenda database.
+```js
+var agenda = new Agenda({db: {db: mongoAgendaDatabase, address: mongoConnectionString}});
+```
+`db: mongoAgendaDatabase` is a new parameter to specify the database. The database you are specifying in the connection string is the authentication database only. In generell it's the same value.
+E.g.: mongodb://127.0.0.1/agenda-db would need a paramater 'db': 'agenda-db'.
 
 # Example Usage
 
