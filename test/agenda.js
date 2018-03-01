@@ -15,7 +15,7 @@ let mongoDb = null;
 let mongoClient = null;
 
 const clearJobs = done => {
-  mongoDb.collection('agendaJobs').remove({}, done);
+  mongoDb.collection('agendaJobs').removeMany({}, done);
 };
 
 // Slow timeouts for Travis
@@ -27,6 +27,7 @@ describe('Agenda', () => {
   beforeEach(done => {
     jobs = new Agenda({
       db: {
+        db: 'agenda-test',
         address: mongoCfg
       }
     }, () => {
