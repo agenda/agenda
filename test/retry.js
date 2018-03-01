@@ -28,8 +28,8 @@ describe('Retry', () => {
       if (err) {
         done(err);
       }
-      MongoClient.connect(mongoCfg, (error, db) => {
-        mongo = db;
+      MongoClient.connect(mongoCfg, (error, client) => {
+        mongo = client.db('agenda-test');
         setTimeout(() => {
           clearJobs(() => {
             jobs.define('someJob', jobProcessor);

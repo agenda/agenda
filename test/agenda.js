@@ -29,11 +29,11 @@ describe('Agenda', () => {
         address: mongoCfg
       }
     }, () => {
-      MongoClient.connect(mongoCfg, (err, db) => {
+      MongoClient.connect(mongoCfg, (err, client) => {
         if (err) {
           done(err);
         }
-        mongo = db;
+        mongo = client.db('agenda-test');
         setTimeout(() => {
           clearJobs(() => {
             jobs.define('someJob', jobProcessor);
