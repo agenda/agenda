@@ -385,7 +385,7 @@ describe('Agenda', () => {
               if (err) {
                 done(err);
               }
-              mongo.collection('agendaJobs').find({
+              mongoDb.collection('agendaJobs').find({
                 name: 'unique job'
               }).toArray((err, job) => { // eslint-disable-line max-nested-callbacks
                 if (err) {

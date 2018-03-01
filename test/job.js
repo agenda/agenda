@@ -60,9 +60,7 @@ describe('Job', () => {
     setTimeout(() => {
       jobs.stop(() => {
         clearJobs(() => {
-          mongoClient.close(() => {
-            jobs._mdb.close(done);
-          });
+          mongoClient.close(done);
         });
       });
     }, 50);
@@ -259,7 +257,7 @@ describe('Job', () => {
           if (err) {
             return done(err);
           }
-          mongo.collection('agendaJobs').find({
+          mongoDb.collection('agendaJobs').find({
             _id: job.attrs._id
           }).toArray((err, j) => {
             if (err) {
