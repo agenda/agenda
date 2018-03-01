@@ -11,10 +11,11 @@ const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/agenda-test';
 
 // Create agenda instances
 let jobs = null;
-let mongo = null;
+let mongoDb = null;
+let mongoClient = null;
 
 const clearJobs = done => {
-  mongo.collection('agendaJobs').remove({}, done);
+  mongoDb.collection('agendaJobs').remove({}, done);
 };
 
 // Slow timeouts for Travis
@@ -33,7 +34,8 @@ describe('Agenda', () => {
         if (err) {
           done(err);
         }
-        mongo = client.db('agenda-test');
+        mongoClient = client;
+        mongoDb = client.db('agenda-test');
         setTimeout(() => {
           clearJobs(() => {
             jobs.define('someJob', jobProcessor);
@@ -51,7 +53,7 @@ describe('Agenda', () => {
     setTimeout(() => {
       jobs.stop(() => {
         clearJobs(() => {
-          mongo.close(() => {
+          mongoClient.close(() => {
             jobs._mdb.close(done);
           });
         });
@@ -65,7 +67,7 @@ describe('Agenda', () => {
 
   describe('configuration methods', () => {
     it('sets the _db directly when passed as an option', () => {
-      const agenda = new Agenda({mongo});
+      const agenda = new Agenda({mongo: mongoDb});
       expect(agenda._mdb.databaseName).to.equal('agenda-test');
     });
   });
@@ -74,13 +76,13 @@ describe('Agenda', () => {
     describe('mongo', () => {
       it('sets the _db directly', () => {
         const agenda = new Agenda();
-        agenda.mongo(mongo);
+        agenda.mongo(mongoDb);
         expect(agenda._mdb.databaseName).to.equal('agenda-test');
       });
 
       it('returns itself', () => {
         const agenda = new Agenda();
-        expect(agenda.mongo(mongo)).to.be(agenda);
+        expect(agenda.mongo(mongoDb)).to.be(agenda);
       });
     });
 
@@ -294,7 +296,7 @@ describe('Agenda', () => {
 
                 expect(job1.attrs.nextRunAt.toISOString()).not.to.equal(job2.attrs.nextRunAt.toISOString());
 
-                mongo.collection('agendaJobs').find({
+                mongoDb.collection('agendaJobs').find({
                   name: 'unique job'
                 }).toArray((err, j) => { // eslint-disable-line max-nested-callbacks
                   if (err) {
@@ -340,7 +342,7 @@ describe('Agenda', () => {
 
               expect(job1.attrs.nextRunAt.toISOString()).to.equal(job2.attrs.nextRunAt.toISOString());
 
-              mongo.collection('agendaJobs').find({
+              mongoDb.collection('agendaJobs').find({
                 name: 'unique job'
               }).toArray((err, job) => { // eslint-disable-line max-nested-callbacks
                 if (err) {

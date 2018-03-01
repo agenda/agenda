@@ -9,10 +9,11 @@ const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/agenda-test';
 
 // Create agenda instances
 let jobs = null;
-let mongo = null;
+let mongoDb = null;
+let mongoClient = null;
 
 const clearJobs = done => {
-  mongo.collection('agendaJobs').remove({}, done);
+  mongoDb.collection('agendaJobs').remove({}, done);
 };
 
 const jobType = 'do work';
@@ -29,7 +30,8 @@ describe('Retry', () => {
         done(err);
       }
       MongoClient.connect(mongoCfg, (error, client) => {
-        mongo = client.db('agenda-test');
+        mongoClient = client;
+        mongoDb = client.db('agenda-test');
         setTimeout(() => {
           clearJobs(() => {
             jobs.define('someJob', jobProcessor);
@@ -47,7 +49,7 @@ describe('Retry', () => {
     setTimeout(() => {
       jobs.stop(() => {
         clearJobs(() => {
-          mongo.close(() => {
+          mongoClient.close(() => {
             jobs._mdb.close(done);
           });
         });
