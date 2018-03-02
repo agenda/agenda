@@ -11,7 +11,8 @@ const Job = require('../lib/job');
 
 const mongoHost = process.env.MONGODB_HOST || 'localhost';
 const mongoPort = process.env.MONGODB_PORT || '27017';
-const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/agenda-test';
+const mongoCfgDb = 'agenda-test';
+const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/' + mongoCfgDb;
 
 // Create agenda instances
 let jobs = null;
@@ -19,7 +20,7 @@ let mongoDb = null;
 let mongoClient = null;
 
 const clearJobs = done => {
-  mongoDb.collection('agendaJobs').removeMany({}, done);
+  mongoDb.collection('agendaJobs').deleteMany({}, done);
 };
 
 // Slow timeouts for Travis
@@ -31,6 +32,7 @@ describe('Job', () => {
   beforeEach(done => {
     jobs = new Agenda({
       db: {
+        database: mongoCfgDb,
         address: mongoCfg
       }
     }, err => {
@@ -42,16 +44,14 @@ describe('Job', () => {
           done(err);
         }
         mongoClient = client;
-        mongoDb = client.db('agenda-test');
-        setTimeout(() => {
-          clearJobs(() => {
-            jobs.define('someJob', jobProcessor);
-            jobs.define('send email', jobProcessor);
-            jobs.define('some job', jobProcessor);
-            jobs.define(jobType, jobProcessor);
-            done();
-          });
-        }, 50);
+        mongoDb = client.db(mongoCfgDb);
+        clearJobs(() => {
+          jobs.define('someJob', jobProcessor);
+          jobs.define('send email', jobProcessor);
+          jobs.define('some job', jobProcessor);
+          jobs.define(jobType, jobProcessor);
+          done();
+        });
       });
     });
   });

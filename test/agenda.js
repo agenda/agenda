@@ -7,7 +7,8 @@ const Job = require('../lib/job');
 
 const mongoHost = process.env.MONGODB_HOST || 'localhost';
 const mongoPort = process.env.MONGODB_PORT || '27017';
-const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/agenda-test';
+const mongoCfgDb = 'agenda-test';
+const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/' + mongoCfgDb;
 
 // Create agenda instances
 let jobs = null;
@@ -27,7 +28,7 @@ describe('Agenda', () => {
   beforeEach(done => {
     jobs = new Agenda({
       db: {
-        db: 'agenda-test',
+        database: mongoCfgDb,
         address: mongoCfg
       }
     }, () => {
@@ -36,16 +37,14 @@ describe('Agenda', () => {
           done(err);
         }
         mongoClient = client;
-        mongoDb = client.db('agenda-test');
-        setTimeout(() => {
-          clearJobs(() => {
-            jobs.define('someJob', jobProcessor);
-            jobs.define('send email', jobProcessor);
-            jobs.define('some job', jobProcessor);
-            jobs.define(jobType, jobProcessor);
-            done();
-          });
-        }, 50);
+        mongoDb = client.db(mongoCfgDb);
+        clearJobs(() => {
+          jobs.define('someJob', jobProcessor);
+          jobs.define('send email', jobProcessor);
+          jobs.define('some job', jobProcessor);
+          jobs.define(jobType, jobProcessor);
+          done();
+        });;
       });
     });
   });
@@ -70,7 +69,7 @@ describe('Agenda', () => {
   describe('configuration methods', () => {
     it('sets the _db directly when passed as an option', () => {
       const agenda = new Agenda({mongo: mongoDb});
-      expect(agenda._mdb.databaseName).to.equal('agenda-test');
+      expect(agenda._mdb.databaseName).to.equal(mongoCfgDb);
     });
   });
 
@@ -79,7 +78,7 @@ describe('Agenda', () => {
       it('sets the _db directly', () => {
         const agenda = new Agenda();
         agenda.mongo(mongoDb);
-        expect(agenda._mdb.databaseName).to.equal('agenda-test');
+        expect(agenda._mdb.databaseName).to.equal(mongoCfgDb);
       });
 
       it('returns itself', () => {
