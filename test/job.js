@@ -243,12 +243,35 @@ describe('Job', () => {
       expect(job.attrs.nextRunAt.valueOf()).to.greaterThan(_start.valueOf());
     });
 
+    it('set after startDate when startDate is in future and interval is humanInterval ', () => {
+      const now = new Date('2015-01-01T06:00:00-00:00');
+      const _start = new Date('2015-01-03');
+      job.attrs.lastRunAt = now;
+      job.repeatEvery('5 minutes', {
+        timezone: 'GMT',
+        startDate: _start
+      });
+      job.computeNextRunAt();
+      expect(job.attrs.nextRunAt.valueOf()).to.greaterThan(_start.valueOf());
+    });
+
     it('sets to undefined if endDate is less than nextRunAt', () => {
       const now = new Date('2015-01-01T06:00:00-00:00');
       job.attrs.lastRunAt = now;
       job.repeatEvery('0 6 * * *', {
         timezone: 'GMT',
         endDate: new Date('2015-01-01')
+      });
+      job.computeNextRunAt();
+      expect(job.attrs.nextRunAt).to.be(undefined);
+    });
+
+    it('sets to undefined if endDate is less than nextRunAt and interval is humanInterval', () => {
+      const now = new Date('2015-01-01T06:00:00-00:00');
+      job.attrs.lastRunAt = now;
+      job.repeatEvery('15 minutes', {
+        timezone: 'GMT',
+        endDate: new Date('2015-01-01T06:01:00-00:00')
       });
       job.computeNextRunAt();
       expect(job.attrs.nextRunAt).to.be(undefined);
