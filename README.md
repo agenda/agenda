@@ -582,9 +582,12 @@ Specifies an `interval` on which the job should repeat.
 
 `interval` can be a human-readable format `String`, a cron format `String`, or a `Number`.
 
-`options` is an optional argument that can include a `timezone` field. The timezone should
+`options` is an optional argument. It can take any of the following:
+- `timezone` The timezone should
 be a string as accepted by [moment-timezone](http://momentjs.com/timezone/) and is considered
 when using an interval in the cron string format.
+- `startDate` : `Date` or `String` can be used to start the recurring job in a future date
+- `endDate` : `Date` or `String` can be used to stop the recurring job at a predefined date
 
 ```js
 job.repeatEvery('10 minutes');
@@ -595,6 +598,14 @@ job.save();
 job.repeatEvery('0 6 * * *', {
   timezone: 'America/New_York'
 });
+job.save();
+```
+```js
+job.repeatEvery('0 6 * * *', {
+  startDate: new Date('2018-05-01T00:00:00.000Z'),
+  endDate: new Date('2018-05-31T00:00:00.000Z')
+});
+// runs every day at 6pm from May 1 - May 15
 job.save();
 ```
 
