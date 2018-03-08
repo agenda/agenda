@@ -259,6 +259,7 @@ describe('Job', () => {
       });
       job.computeNextRunAt();
       expect(job.attrs.nextRunAt).to.be(undefined);
+      expect(job.attrs.repeatInterval).to.be(undefined);
     });
 
     it('sets to undefined if endDate is less than nextRunAt and interval is humanInterval', () => {
@@ -270,6 +271,7 @@ describe('Job', () => {
       });
       job.computeNextRunAt();
       expect(job.attrs.nextRunAt).to.be(undefined);
+      expect(job.attrs.repeatInterval).to.be(undefined);
     });
 
     describe('when repeat at time is invalid', () => {
