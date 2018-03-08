@@ -94,6 +94,20 @@ describe('Job', () => {
       job.repeatEvery(5000);
       expect(job.attrs.repeatInterval).to.be(5000);
     });
+    it('sets the startDate', () => {
+      const _start = new Date('2018-01-01T06:00:00-00:00');
+      job.repeatEvery(5000, {
+        startDate: _start
+      });
+      expect(job.attrs.startDate.valueOf()).to.be(_start.valueOf());
+    });
+    it('sets the endDate', () => {
+      const _end = new Date('2018-01-01T06:00:00-00:00');
+      job.repeatEvery(5000, {
+        endDate: _end
+      });
+      expect(job.attrs.endDate.valueOf()).to.be(_end.valueOf());
+    });
     it('returns the job', () => {
       expect(job.repeatEvery('one second')).to.be(job);
     });
@@ -215,6 +229,29 @@ describe('Job', () => {
       job.computeNextRunAt();
       expect(moment(job.attrs.nextRunAt).tz('GMT').hour()).to.be(6);
       expect(moment(job.attrs.nextRunAt).toDate().getDate()).to.be(moment(job.attrs.lastRunAt).add(1, 'days').toDate().getDate());
+    });
+
+    it('set after startDate when startDate is in future ', () => {
+      const now = new Date('2015-01-01T06:00:00-00:00');
+      const _start = new Date('2015-01-03');
+      job.attrs.lastRunAt = now;
+      job.repeatEvery('0 6 * * *', {
+        timezone: 'GMT',
+        startDate: _start
+      });
+      job.computeNextRunAt();
+      expect(job.attrs.nextRunAt.valueOf()).to.greaterThan(_start.valueOf());
+    });
+
+    it('sets to undefined if endDate is less than nextRunAt', () => {
+      const now = new Date('2015-01-01T06:00:00-00:00');
+      job.attrs.lastRunAt = now;
+      job.repeatEvery('0 6 * * *', {
+        timezone: 'GMT',
+        endDate: new Date('2015-01-01')
+      });
+      job.computeNextRunAt();
+      expect(job.attrs.nextRunAt).to.be(undefined);
     });
 
     describe('when repeat at time is invalid', () => {
