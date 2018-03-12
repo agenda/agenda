@@ -238,7 +238,7 @@ describe('Job', () => {
       expect(job.attrs.nextRunAt.valueOf()).to.greaterThan(_start.valueOf());
     });
 
-    it('set after startDate when startDate is in future and interval is humanInterval ', () => {
+    it('set at startDate when startDate is in future and interval is humanInterval ', () => {
       const now = new Date('2015-01-01T06:00:00-00:00');
       const _start = new Date('2015-01-03');
       job.attrs.lastRunAt = now;
@@ -247,7 +247,7 @@ describe('Job', () => {
         startDate: _start
       });
       job.computeNextRunAt();
-      expect(job.attrs.nextRunAt.valueOf()).to.greaterThan(_start.valueOf());
+      expect(job.attrs.nextRunAt.valueOf()).to.be(_start.valueOf());
     });
 
     it('sets to undefined if endDate is less than nextRunAt', () => {
