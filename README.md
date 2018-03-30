@@ -338,7 +338,10 @@ Before you can use a job, you must define its processing behavior.
 Defines a job with the name of `jobName`. When a job of `jobName` gets run, it
 will be passed to `fn(job, done)`. To maintain asynchronous behavior, you must
 call `done()` when you are processing the job. If your function is synchronous,
-you may omit `done` from the signature.
+you may omit `done` from the signature. You can also provide a callback function
+to the `done()` function, which will be called with the result of updating the
+job in the database. If both an error and a callback are provided, the error
+must come first (i.e. `done(err, cb)`).
 
 `options` is an optional argument which can overwrite the defaults. It can take
 the following:

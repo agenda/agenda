@@ -302,6 +302,7 @@ describe('Job', () => {
         done();
       });
     });
+
     it('updates nextRunAt', done => {
       const now = new Date();
       job.repeatEvery('10 minutes');
@@ -312,6 +313,7 @@ describe('Job', () => {
         });
       }, 5);
     });
+
     it('handles errors', done => {
       job.attrs.name = 'failBoat';
       jobs.define('failBoat', () => {
@@ -322,6 +324,7 @@ describe('Job', () => {
         done();
       });
     });
+
     it('handles errors with q promises', done => {
       job.attrs.name = 'failBoat2';
       jobs.define('failBoat2', (job, cb) => {
@@ -370,6 +373,42 @@ describe('Job', () => {
             done();
           });
         });
+      });
+    });
+
+    it('allows a callback to be provided for the underlying save operation', done => {
+      jobs.define('testRunCb', (job, defineDone) => {
+        setTimeout(() => {
+          defineDone(err => {
+            if (err) {
+              return done(err);
+            }
+
+            done();
+          });
+        }, 100);
+      });
+
+      job = new Job({agenda: jobs, name: 'testRunCb'});
+      job.run();
+    });
+
+    it('allows an error and a callback to be provided', done => {
+      jobs.define('testRunCb', (job, defineDone) => {
+        setTimeout(() => {
+          defineDone(new Error('fail'), err => {
+            if (err) {
+              return done(err);
+            }
+
+            done();
+          });
+        }, 100);
+      });
+
+      job = new Job({agenda: jobs, name: 'testRunCb'});
+      job.run(err => {
+        expect(err).to.be.ok();
       });
     });
   });
