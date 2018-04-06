@@ -889,6 +889,27 @@ describe('Job', () => {
       await checkResultsPromise;
     });
 
+    it('should free up jobs from the running list once their locks expire', done => {
+      (async () => {
+        let callCount = 0;
+        agenda.define(
+          'quickExpire',
+          {lockLimit: 2, concurrency: 1, lockLifetime: 50},
+          (job, cb) => { // eslint-disable-line no-unused-vars
+            if (callCount++ > 0) {
+              agenda.stop().then(() => done(), done);
+            }
+            // Don't finish the job - let the lock expire
+          }
+        );
+
+        const now = Date.now();
+        await agenda.create('quickExpire').schedule(new Date(now)).save();
+        await agenda.create('quickExpire').schedule(new Date(now + 50)).save();
+        await agenda.start();
+      })().catch(done);
+    });
+
     it('should support custom sort option', () => {
       const sort = {foo: 1};
       const agenda = new Agenda({sort});
