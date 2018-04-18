@@ -243,6 +243,30 @@ describe('Job', () => {
       expect(job.attrs.nextRunAt.valueOf()).to.greaterThan(_start.valueOf());
     });
 
+    it('set to next occurence when startDate is in past ', () => {
+      const now = new Date();
+      const _start = new Date('2018-04-17T18:00:00-00:00');
+      job.attrs.lastRunAt = null;
+      job.repeatEvery('0 6 * * *', {
+        timezone: 'GMT',
+        startDate: _start
+      });
+      job.computeNextRunAt();
+      expect(job.attrs.nextRunAt.valueOf()).to.greaterThan(now.valueOf());
+    });
+
+    it('set to next occurence when startDate is in past and interval is humanInterval', () => {
+      const now = new Date();
+      const _start = new Date('2018-04-17T06:00:00-00:00');
+      job.attrs.lastRunAt = null;
+      job.repeatEvery('day', {
+        timezone: 'GMT',
+        startDate: _start
+      });
+      job.computeNextRunAt();
+      expect(job.attrs.nextRunAt.valueOf()).to.greaterThan(now.valueOf());
+    });
+
     it('set at startDate when startDate is in future and interval is humanInterval ', () => {
       const now = new Date('2015-01-01T06:00:00-00:00');
       const _start = new Date('2015-01-03');
