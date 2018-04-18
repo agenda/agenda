@@ -1,0 +1,5 @@
+{
+  "eslint.enable": false,
+  "xo.enable": true,
+  "javascript.format.enable": false
+}
