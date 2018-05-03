@@ -673,6 +673,7 @@ describe('Job', () => {
         }, 150);
       });
 
+      agenda.processEvery(100);
       await agenda.start();
 
       await Promise.all([
@@ -960,7 +961,7 @@ describe('Job', () => {
       await agenda.start();
 
       await delay(jobTimeout);
-      const result = await agenda.jobs({name: 'everyRunTest2'})
+      const result = await agenda.jobs({name: 'everyRunTest2'});
 
       expect(result).to.have.length(1);
       await agenda.stop();
