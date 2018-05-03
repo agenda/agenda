@@ -58,16 +58,11 @@ describe('Job', () => {
     });
   });
 
-  afterEach(() => {
-    return new Promise(async resolve => {
-      await agenda.stop();
-      await clearJobs();
-      mongo.close(() => {
-        agenda._mdb.close(() => {
-          return resolve();
-        });
-      });
-    });
+  afterEach(async () => {
+    await agenda.stop();
+    await clearJobs();
+    await mongo.close();
+    await agenda._mdb.close();
   });
 
   describe('repeatAt', () => {
@@ -446,19 +441,21 @@ describe('Job', () => {
   });
 
   describe('start/stop', () => {
-    it('starts/stops the job queue', done => {
-      agenda.define('jobQueueTest', async (job, cb) => {
-        await agenda.stop();
-        await clearJobs();
-        cb();
-        agenda.define('jobQueueTest', (job, cb) => { // eslint-disable-line max-nested-callbacks
+    it('starts/stops the job queue', async () => {
+      return new Promise(async resolve => {
+        agenda.define('jobQueueTest', async (job, cb) => {
+          await agenda.stop();
+          await clearJobs();
           cb();
+          agenda.define('jobQueueTest', (job, cb) => { // eslint-disable-line max-nested-callbacks
+            cb();
+          });
+          resolve();
         });
-        done();
+        await agenda.every('1 second', 'jobQueueTest');
+        agenda.processEvery('1 second');
+        await agenda.start();
       });
-      agenda.every('1 second', 'jobQueueTest');
-      agenda.processEvery('1 second');
-      agenda.start().then(() => {});
     });
 
     it('does not run disabled jobs', async () => {
@@ -613,20 +610,21 @@ describe('Job', () => {
   });
 
   describe('job lock', () => {
-    it('runs a recurring job after a lock has expired', done => {
+    it('runs a recurring job after a lock has expired', async () => {
       let startCounter = 0;
 
-      agenda.define('lock job', {
-        lockLifetime: 50
-      }, () => {
-        startCounter++;
+      const processorPromise = new Promise(async resolve =>
+        agenda.define('lock job', {
+          lockLifetime: 50
+        }, () => {
+          startCounter++;
 
-        if (startCounter !== 1) {
-          expect(startCounter).to.be(2);
-          agenda.stop().then(() => {});
-          done();
-        }
-      });
+          if (startCounter !== 1) {
+            expect(startCounter).to.be(2);
+            agenda.stop().then(resolve);
+          }
+        })
+      );
 
       expect(agenda._definitions['lock job'].lockLifetime).to.be(50);
 
@@ -634,32 +632,35 @@ describe('Job', () => {
       agenda.processEvery(10);
       agenda.every('0.02 seconds', 'lock job');
       agenda.stop().then(() => {});
-      agenda.start().then(() => {});
+      await agenda.start();
+      await processorPromise;
     });
 
-    it('runs a one-time job after its lock expires', done => {
+    it('runs a one-time job after its lock expires', async () => {
       let runCount = 0;
 
-      agenda.define('lock job', {
-        lockLifetime: 50
-      }, (job, cb) => { // eslint-disable-line no-unused-vars
-        runCount++;
+      const processorPromise = new Promise(async resolve =>
+        agenda.define('lock job', {
+          lockLifetime: 50
+        }, (job, cb) => { // eslint-disable-line no-unused-vars
+          runCount++;
 
-        if (runCount !== 1) {
-          expect(runCount).to.be(2);
-          agenda.stop().then(() => {});
-          done();
-        }
-      });
+          if (runCount !== 1) {
+            expect(runCount).to.be(2);
+            agenda.stop().then(resolve);
+          }
+        })
+      );
 
       agenda.processEvery(50);
-      agenda.start().then(() => {});
+      await agenda.start();
       agenda.now('lock job', {
         i: 1
       });
+      await processorPromise;
     });
 
-    it('does not process locked jobs', done => {
+    it('does not process locked jobs', async () => {
       const history = [];
 
       agenda.define('lock job', {
@@ -672,94 +673,90 @@ describe('Job', () => {
         }, 150);
       });
 
-      agenda.start().then(() => {});
+      await agenda.start();
 
-      agenda.now('lock job', {i: 1});
-      agenda.now('lock job', {i: 2});
-      agenda.now('lock job', {i: 3});
+      await Promise.all([
+        agenda.now('lock job', {i: 1}),
+        agenda.now('lock job', {i: 2}),
+        agenda.now('lock job', {i: 3})
+      ]);
 
-      setTimeout(() => {
-        expect(history).to.have.length(3);
-        expect(history).to.contain(1);
-        expect(history).to.contain(2);
-        expect(history).to.contain(3);
-        done();
-      }, 500);
+      await delay(500);
+      expect(history).to.have.length(3);
+      expect(history).to.contain(1);
+      expect(history).to.contain(2);
+      expect(history).to.contain(3);
     });
 
-    it('does not on-the-fly lock more than agenda._lockLimit jobs', done => {
+    it('does not on-the-fly lock more than agenda._lockLimit jobs', async () => {
       agenda.lockLimit(1);
 
       agenda.define('lock job', (job, cb) => {}); // eslint-disable-line no-unused-vars
 
-      agenda.start().then(() => {});
+      await agenda.start();
 
-      setTimeout(() => {
-        agenda.now('lock job', {i: 1});
-        agenda.now('lock job', {i: 2});
+      await Promise.all([
+        agenda.now('lock job', {i: 1}),
+        agenda.now('lock job', {i: 2})
+      ]);
 
-        setTimeout(() => {
-          expect(agenda._lockedJobs).to.have.length(1);
-          agenda.stop().then(() => {});
-          done();
-        }, 500);
-      }, 500);
+      await delay(500);
+      expect(agenda._lockedJobs).to.have.length(1);
+      await agenda.stop();
     });
 
-    it('does not on-the-fly lock more than definition.lockLimit jobs', done => {
+    it('does not on-the-fly lock more than definition.lockLimit jobs', async () => {
       agenda.define('lock job', {lockLimit: 1}, (job, cb) => {}); // eslint-disable-line no-unused-vars
 
-      agenda.start().then(() => {});
+      await agenda.start();
 
-      setTimeout(() => {
-        agenda.now('lock job', {i: 1});
-        agenda.now('lock job', {i: 2});
+      await Promise.all([
+        agenda.now('lock job', {i: 1}),
+        agenda.now('lock job', {i: 2})
+      ]);
 
-        setTimeout(() => {
-          expect(agenda._lockedJobs).to.have.length(1);
-          agenda.stop().then(() => {});
-          done();
-        }, 500);
-      }, 500);
+      await delay(500);
+      expect(agenda._lockedJobs).to.have.length(1);
+      await agenda.stop();
     });
 
-    it('does not lock more than agenda._lockLimit jobs during processing interval', done => {
+    it('does not lock more than agenda._lockLimit jobs during processing interval', async () => {
       agenda.lockLimit(1);
       agenda.processEvery(200);
 
       agenda.define('lock job', (job, cb) => {}); // eslint-disable-line no-unused-vars
 
-      agenda.start().then(() => {});
+      await agenda.start();
 
       const when = moment().add(300, 'ms').toDate();
 
-      agenda.schedule(when, 'lock job', {i: 1});
-      agenda.schedule(when, 'lock job', {i: 2});
+      await Promise.all([
+        agenda.schedule(when, 'lock job', {i: 1}),
+        agenda.schedule(when, 'lock job', {i: 2})
+      ]);
 
-      setTimeout(() => {
-        expect(agenda._lockedJobs).to.have.length(1);
-        agenda.stop().then(() => {});
-        done();
-      }, 500);
+      await delay(500);
+      expect(agenda._lockedJobs).to.have.length(1);
+      await agenda.stop();
     });
 
-    it('does not lock more than definition.lockLimit jobs during processing interval', done => {
+    it('does not lock more than definition.lockLimit jobs during processing interval', async () => {
       agenda.processEvery(200);
 
       agenda.define('lock job', {lockLimit: 1}, (job, cb) => {}); // eslint-disable-line no-unused-vars
 
-      agenda.start().then(() => {});
+      await agenda.start();
 
       const when = moment().add(300, 'ms').toDate();
 
-      agenda.schedule(when, 'lock job', {i: 1});
-      agenda.schedule(when, 'lock job', {i: 2});
+      await Promise.all([
+        agenda.schedule(when, 'lock job', {i: 1}),
+        agenda.schedule(when, 'lock job', {i: 2})
+      ]);
 
-      setTimeout(() => {
-        expect(agenda._lockedJobs).to.have.length(1);
-        agenda.stop().then(() => {});
-        done();
-      }, 500);
+      await delay(500);
+      expect(agenda._lockedJobs).to.have.length(1);
+      await agenda.stop();
     });
   });
 
@@ -793,7 +790,7 @@ describe('Job', () => {
         }
       });
 
-      agenda.start().then(() => {});
+      agenda.start();
 
       agenda.schedule(new Date(now + 100), 'blocking', {i: 1}).then(() => {});
       agenda.schedule(new Date(now + 100), 'blocking', {i: 2}).then(() => {});
@@ -907,7 +904,7 @@ describe('Job', () => {
             if (err) {
               return done(err);
             }
-            agenda.start().then(() => {});
+            agenda.start();
           });
         });
       });
@@ -938,18 +935,18 @@ describe('Job', () => {
         cb();
       });
 
-      agenda.every(10, 'everyRunTest1');
+      await agenda.every(10, 'everyRunTest1');
 
       await agenda.start();
 
-      await delay(jobTimeout);
       await agenda.jobs({name: 'everyRunTest1'});
+      await delay(jobTimeout);
       expect(counter).to.be(2);
 
       await agenda.stop();
     });
 
-    it('should reuse the same job on multiple runs', done => {
+    it('should reuse the same job on multiple runs', async () => {
       let counter = 0;
 
       agenda.define('everyRunTest2', (job, cb) => {
@@ -958,20 +955,15 @@ describe('Job', () => {
         }
         cb();
       });
-      agenda.every(10, 'everyRunTest2');
+      await agenda.every(10, 'everyRunTest2');
 
-      agenda.start().then(() => {});
+      await agenda.start();
 
-      setTimeout(() => {
-        agenda.jobs({name: 'everyRunTest2'}, (err, res) => {
-          if (err) {
-            done(err);
-          }
-          expect(res).to.have.length(1);
-          agenda.stop().then(() => {});
-          done();
-        });
-      }, jobTimeout);
+      await delay(jobTimeout);
+      const result = await agenda.jobs({name: 'everyRunTest2'})
+
+      expect(result).to.have.length(1);
+      await agenda.stop();
     });
   });
 
@@ -1042,7 +1034,7 @@ describe('Job', () => {
         n.on('error', serviceError);
       });
 
-      it('should not run if job is disabled', done => {
+      it('should not run if job is disabled', async () => {
         let counter = 0;
 
         agenda.define('everyDisabledTest', (job, cb) => {
@@ -1050,24 +1042,17 @@ describe('Job', () => {
           cb();
         });
 
-        const job = agenda.every(10, 'everyDisabledTest');
+        const job = await agenda.every(10, 'everyDisabledTest');
 
         job.disable();
 
-        job.save(async () => {
-          await agenda.start();
+        await job.save();
+        await agenda.start();
 
-          setTimeout(() => {
-            agenda.jobs({name: 'everyDisabledTest'}, err => {
-              if (err) {
-                return done(err);
-              }
-              expect(counter).to.be(0);
-              agenda.stop().then(() => {});
-              done();
-            });
-          }, jobTimeout);
-        });
+        await delay(jobTimeout);
+        await agenda.jobs({name: 'everyDisabledTest'});
+        expect(counter).to.be(0);
+        await agenda.stop();
       });
     });
 
@@ -1182,29 +1167,29 @@ describe('Job', () => {
     });
 
     describe('General Integration', () => {
-      it('Should not run a job that has already been run', done => {
+      it('Should not run a job that has already been run', async () => {
         const runCount = {};
 
         agenda.define('test-job', (job, cb) => {
           const id = job.attrs._id.toString();
+
           runCount[id] = runCount[id] ? runCount[id] + 1 : 1;
           cb();
         });
 
-        agenda.start();
+        agenda.processEvery(100);
+        await agenda.start();
 
-        for (let i = 0; i < 10; i++) {
-          agenda.now('test-job');
-        }
+        await Promise.all(
+          [...new Array(10)].map(() => agenda.now('test-job'))
+        );
 
-        setTimeout(() => {
-          const ids = Object.keys(runCount);
-          expect(ids).to.have.length(10);
-          Object.keys(runCount).forEach(id => {
-            expect(runCount[id]).to.be(1);
-          });
-          done();
-        }, jobTimeout);
+        await delay(jobTimeout);
+        const ids = Object.keys(runCount);
+        expect(ids).to.have.length(10);
+        Object.keys(runCount).forEach(id => {
+          expect(runCount[id]).to.be(1);
+        });
       });
     });
   });
