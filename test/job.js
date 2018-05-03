@@ -761,7 +761,7 @@ describe('Job', () => {
     });
   });
 
-  describe.skip('job concurrency', () => {
+  describe('job concurrency', () => {
     it('should not block a job for concurrency of another job', done => {
       agenda.processEvery(50);
 
@@ -798,83 +798,64 @@ describe('Job', () => {
       agenda.schedule(new Date(now + 100), 'non-blocking', {i: 3}).then(() => {});
     });
 
-    it('should run jobs as first in first out (FIFO)', done => {
+    it('should run jobs as first in first out (FIFO)', async () => {
       const results = [];
 
+      agenda.processEvery(100);
       agenda.define('fifo', {concurrency: 1}, (job, cb) => cb());
 
-      const checkResults = job => {
-        results.push(new Date(job.attrs.nextRunAt).getTime());
-        if (results.length !== 3) {
-          return;
-        }
-        expect(results.join('')).to.eql(results.sort().join(''));
-        done();
-      };
+      const checkResultsPromise = new Promise(resolve =>
+        agenda.on('start:fifo', job => {
+          results.push(new Date(job.attrs.nextRunAt).getTime());
+          if (results.length !== 3) {
+            return;
+          }
+          expect(results.join('')).to.eql(results.sort().join(''));
+          resolve();
+        })
+      );
 
-      agenda.on('start:fifo', checkResults);
+      await agenda.start();
 
-      agenda.now('fifo', err => {
-        if (err) {
-          return done(err);
-        }
-        setTimeout(() => {
-          agenda.now('fifo', err => {
-            if (err) {
-              return done(err);
-            }
-            setTimeout(() => { // eslint-disable-line max-nested-callbacks
-              agenda.now('fifo', async err => { // eslint-disable-line max-nested-callbacks
-                if (err) {
-                  return done(err);
-                }
-                await agenda.start();
-              });
-            }, 50);
-          });
-        }, 50);
-      });
+      await agenda.now('fifo');
+      await delay(50);
+      await agenda.now('fifo');
+      await delay(50);
+      await agenda.now('fifo');
+      await delay(50);
+      await checkResultsPromise;
     });
 
-    it('should run jobs as first in first out (FIFO) with respect to priority', done => {
+    it('should run jobs as first in first out (FIFO) with respect to priority', async () => {
       const times = [];
       const priorities = [];
       const now = Date.now();
 
       agenda.define('fifo-priority', {concurrency: 1}, (job, cb) => cb());
 
-      const checkResults = job => {
-        priorities.push(job.attrs.priority);
-        times.push(new Date(job.attrs.nextRunAt).getTime());
-        if (priorities.length !== 3 || times.length !== 3) {
-          return;
-        }
-        expect(times.join('')).to.eql(times.sort().join(''));
-        expect(priorities).to.eql([10, 10, -10]);
-        done();
-      };
-
-      agenda.on('start:fifo-priority', checkResults);
-
-      agenda.create('fifo-priority').schedule(new Date(now)).priority('high').save(err => {
-        if (err) {
-          return done(err);
-        }
-        agenda.create('fifo-priority').schedule(new Date(now + 100)).priority('low').save(err => {
-          if (err) {
-            return done(err);
+      const checkResultsPromise = new Promise(resolve =>
+        agenda.on('start:fifo-priority', job => {
+          priorities.push(job.attrs.priority);
+          times.push(new Date(job.attrs.nextRunAt).getTime());
+          if (priorities.length !== 3 || times.length !== 3) {
+            return;
           }
-          agenda.create('fifo-priority').schedule(new Date(now + 100)).priority('high').save(async err => {
-            if (err) {
-              return done(err);
-            }
-            await agenda.start();
-          });
-        });
-      });
+          expect(times.join('')).to.eql(times.sort().join(''));
+          expect(priorities).to.eql([10, 10, -10]);
+          resolve();
+        })
+      );
+
+      await Promise.all([
+        agenda.create('fifo-priority', {i: 1}).schedule(new Date(now)).priority('high').save(),
+        agenda.create('fifo-priority', {i: 2}).schedule(new Date(now + 100)).priority('low').save(),
+        agenda.create('fifo-priority', {i: 3}).schedule(new Date(now + 100)).priority('high').save()
+      ]);
+      await agenda.start();
+      await checkResultsPromise;
     });
 
-    it('should run higher priority jobs first', done => {
+    it('should run higher priority jobs first', async () => {
       // Inspired by tests added by @lushc here:
       // <https://github.com/agenda/agenda/pull/451/commits/336ff6445803606a6dc468a6f26c637145790adc>
       const now = new Date();
@@ -882,33 +863,24 @@ describe('Job', () => {
 
       agenda.define('priority', {concurrency: 1}, (job, cb) => cb());
 
-      const checkResults = job => {
-        results.push(job.attrs.priority);
-        if (results.length !== 3) {
-          return;
-        }
-        expect(results).to.eql([10, 0, -10]);
-        done();
-      };
-
-      agenda.on('start:priority', checkResults);
-
-      agenda.create('priority').schedule(now).save(err => {
-        if (err) {
-          return done(err);
-        }
-        agenda.create('priority').schedule(now).priority('low').save(err => {
-          if (err) {
-            return done(err);
+      const checkResultsPromise = new Promise(resolve =>
+        agenda.on('start:priority', job => {
+          results.push(job.attrs.priority);
+          if (results.length !== 3) {
+            return;
           }
-          agenda.create('priority').schedule(now).priority('high').save(err => {
-            if (err) {
-              return done(err);
-            }
-            agenda.start();
-          });
-        });
-      });
+          expect(results).to.eql([10, 0, -10]);
+          resolve();
+        })
+      );
+
+      await Promise.all([
+        agenda.create('priority').schedule(now).save(),
+        agenda.create('priority').schedule(now).priority('low').save(),
+        agenda.create('priority').schedule(now).priority('high').save()
+      ]);
+      await agenda.start();
+      await checkResultsPromise;
     });
 
     it('should support custom sort option', () => {
