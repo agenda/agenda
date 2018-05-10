@@ -12,9 +12,9 @@ const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/agenda-test';
 // Create agenda instances
 let jobs = null;
 let mongo = null;
-
+const collectionName = 'agendaJobs';
 const clearJobs = done => {
-  mongo.collection('agendaJobs').remove({}, done);
+  mongo.collection(collectionName).remove({}, done);
 };
 
 // Slow timeouts for Travis
@@ -294,7 +294,7 @@ describe('Agenda', () => {
 
                 expect(job1.attrs.nextRunAt.toISOString()).not.to.equal(job2.attrs.nextRunAt.toISOString());
 
-                mongo.collection('agendaJobs').find({
+                mongo.collection(collectionName).find({
                   name: 'unique job'
                 }).toArray((err, j) => { // eslint-disable-line max-nested-callbacks
                   if (err) {
@@ -340,7 +340,7 @@ describe('Agenda', () => {
 
               expect(job1.attrs.nextRunAt.toISOString()).to.equal(job2.attrs.nextRunAt.toISOString());
 
-              mongo.collection('agendaJobs').find({
+              mongo.collection(collectionName).find({
                 name: 'unique job'
               }).toArray((err, job) => { // eslint-disable-line max-nested-callbacks
                 if (err) {
@@ -383,7 +383,7 @@ describe('Agenda', () => {
               if (err) {
                 done(err);
               }
-              mongo.collection('agendaJobs').find({
+              mongo.collection(collectionName).find({
                 name: 'unique job'
               }).toArray((err, job) => { // eslint-disable-line max-nested-callbacks
                 if (err) {
@@ -572,6 +572,40 @@ describe('Agenda', () => {
           });
         });
       });
+    });
+  });
+});
+
+describe('Agenda is not ready', () => {
+  beforeEach(done => {
+    MongoClient.connect(mongoCfg, (err, db) => {
+      if (err) {
+        done(err);
+      }
+      db.collection(collectionName).drop({}, err => {
+        jobs = new Agenda({
+          db: {
+            address: mongoCfg
+          }
+        }, () => {
+          // The only way to produce the bug is to not use a callback or at least not wait
+        });
+        done(err);
+      });
+    });
+  });
+
+  afterEach(done => {
+    setTimeout(() => {
+      jobs.stop(done);
+    }, 50);
+  });
+
+  it('cancel function should throw an error if agenda is not ready', done => {
+    jobs.cancel({}, err => {
+      expect(err).to.be.eql(Error('agenda is not ready'));
+      expect(err.message).to.be.eql('agenda is not ready');
+      done();
     });
   });
 });
