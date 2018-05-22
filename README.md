@@ -356,7 +356,7 @@ Priority mapping:
 {
   highest: 20,
   high: 10,
-  default: 0,
+  normal: 0,
   low: -10,
   lowest: -20
 }
