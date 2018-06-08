@@ -96,7 +96,7 @@ describe('Job', () => {
     it('returns the job', () => {
       expect(job.repeatEvery('one second')).to.be(job);
     });
-    it('sets the nextRunAt property with skipImmediate', () =>{
+    it('sets the nextRunAt property with skipImmediate', () => {
       const now = new Date();
       job.repeatEvery('3 minutes', {skipImmediate: true});
       expect(job.attrs.nextRunAt).to.be(now.valueOf() + 180000);
