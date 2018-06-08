@@ -1,10 +1,20 @@
 Next
 ====
-  * Drop support for Node.js 4, 5 and 6
-  * Drop support for MongoDB 2.4 ([#497](https://github.com/agenda/agenda/pull/497))
-  * Rewrite tests: replace mocha and blanket with ava and nyc ([#506](https://github.com/agenda/agenda/pull/506))
+  * Rewrite tests: replace `mocha` and `blanket` with `ava` and `nyc` ([#506](https://github.com/agenda/agenda/pull/506))
   * Optimization: don't try and unlock jobs when `_lockedJobs` is empty ([#509](https://github.com/agenda/agenda/pull/509))
   * Code cleanup ([#503](https://github.com/agenda/agenda/pull/503))
+  * Ensure tests pass for Node.js version 10 [#608](https://github.com/agenda/agenda/pull/608))
+  * Add `skipImmediate` to `repeatEvery()` options to skip immediate run of repeated jobs when Agenda starts. See [documentation](https://github.com/agenda/agenda/blob/202c9e95b40115dc763641f55180db9a4f358272/README.md#repeateveryinterval-options) ([#594](https://github.com/agenda/agenda/pull/594))
+
+BREAKING
+--------
+  * Promises rewrite ([#557](https://github.com/agenda/agenda/pull/557))
+  * Drop support for Node.js versions 4, 5 and 6 ([#557](https://github.com/agenda/agenda/pull/557) / [#608](https://github.com/agenda/agenda/pull/608))
+  * Drop support for MongoDB 2.4 ([#497](https://github.com/agenda/agenda/pull/497))
+
+1.0.3 / 2017-10-17
+==================
+  * Update dependencies ([2854c7e](https://github.com/agenda/agenda/commit/65159172b34b9a1344814619c117474bcc323f8d))
 
 1.0.2 / 2017-10-17
 ==================
