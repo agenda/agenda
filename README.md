@@ -34,6 +34,13 @@ Install via NPM
 
 You will also need a working [Mongo](https://www.mongodb.com/) database (v3) to point it to.
 
+# Breaking changes for agenda 1.1
+Set the "database" config paramter to your agenda database.
+```js
+var agenda = new Agenda({db: {database: mongoAgendaDatabase, address: mongoConnectionString}});
+```
+`database: mongoAgendaDatabase` is a new parameter to specify the database. The database you are specifying in the connection string is the authentication database only. In generell it's the same value.
+E.g.: mongodb://127.0.0.1/agenda-db would need a paramater 'database': 'agenda-db'.
 
 # Example Usage
 
@@ -41,13 +48,16 @@ You will also need a working [Mongo](https://www.mongodb.com/) database (v3) to 
 
 var mongoConnectionString = 'mongodb://127.0.0.1/agenda';
 
-var agenda = new Agenda({db: {address: mongoConnectionString}});
+var agenda = new Agenda({db: {database: 'agenda-test', address: mongoConnectionString}});
 
 // or override the default collection name:
-// var agenda = new Agenda({db: {address: mongoConnectionString, collection: 'jobCollectionName'}});
+// var agenda = new Agenda({db: {database: 'agenda-test', address: mongoConnectionString, collection: 'jobCollectionName'}});
 
 // or pass additional connection options:
-// var agenda = new Agenda({db: {address: mongoConnectionString, collection: 'jobCollectionName', options: {ssl: true}}});
+// var agenda = new Agenda({db: {database: 'agenda-test', address: mongoConnectionString, collection: 'jobCollectionName', options: {ssl: true}}});
+
+// or disable auto index creation: noIndexCheck
+// var agenda = new Agenda({db: {database: 'agenda-test', address: mongoConnectionString, collection: 'jobCollectionName', noIndexCheck: true}});
 
 // or pass in an existing mongodb-native MongoClient instance
 // var agenda = new Agenda({mongo: myMongoClient});
@@ -150,7 +160,7 @@ agenda.database('localhost:27017/agenda-test', 'agendaJobs');
 You can also specify it during instantiation.
 
 ```js
-var agenda = new Agenda({db: { address: 'localhost:27017/agenda-test', collection: 'agendaJobs' }});
+var agenda = new Agenda({db: { database: 'agenad-test', address: 'localhost:27017/agenda-test', collection: 'agendaJobs' }});
 ```
 
 Agenda will emit a `ready` event (see [Agenda Events](#agenda-events)) when properly connected to the database and it is safe to start using Agenda.

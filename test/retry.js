@@ -5,14 +5,16 @@ const Agenda = require('../index');
 
 const mongoHost = process.env.MONGODB_HOST || 'localhost';
 const mongoPort = process.env.MONGODB_PORT || '27017';
-const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/agenda-test';
+const mongoCfgDb = 'agenda-test';
+const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/' + mongoCfgDb;
 
 // Create agenda instances
 let jobs = null;
-let mongo = null;
+let mongoDb = null;
+let mongoClient = null;
 
 const clearJobs = done => {
-  mongo.collection('agendaJobs').remove({}, done);
+  mongoDb.collection('agendaJobs').deleteMany({}, done);
 };
 
 const jobType = 'do work';
@@ -22,23 +24,23 @@ describe('Retry', () => {
   beforeEach(done => {
     jobs = new Agenda({
       db: {
+        database: mongoCfgDb,
         address: mongoCfg
       }
     }, err => {
       if (err) {
         done(err);
       }
-      MongoClient.connect(mongoCfg, (error, db) => {
-        mongo = db;
-        setTimeout(() => {
-          clearJobs(() => {
-            jobs.define('someJob', jobProcessor);
-            jobs.define('send email', jobProcessor);
-            jobs.define('some job', jobProcessor);
-            jobs.define(jobType, jobProcessor);
-            done();
-          });
-        }, 50);
+      MongoClient.connect(mongoCfg, (error, client) => {
+        mongoClient = client;
+        mongoDb = client.db(mongoCfgDb);
+        clearJobs(() => {
+          jobs.define('someJob', jobProcessor);
+          jobs.define('send email', jobProcessor);
+          jobs.define('some job', jobProcessor);
+          jobs.define(jobType, jobProcessor);
+          done();
+        });
       });
     });
   });
@@ -47,8 +49,9 @@ describe('Retry', () => {
     setTimeout(() => {
       jobs.stop(() => {
         clearJobs(() => {
-          mongo.close(() => {
-            jobs._mdb.close(done);
+          mongoClient.close(() => {
+            if (jobs._db) jobs._db.close(done);
+            else done();
           });
         });
       });

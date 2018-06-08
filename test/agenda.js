@@ -7,14 +7,16 @@ const Job = require('../lib/job');
 
 const mongoHost = process.env.MONGODB_HOST || 'localhost';
 const mongoPort = process.env.MONGODB_PORT || '27017';
-const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/agenda-test';
+const mongoCfgDb = 'agenda-test';
+const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/' + mongoCfgDb;
 
 // Create agenda instances
 let jobs = null;
-let mongo = null;
+let mongoDb = null;
+let mongoClient = null;
 
 const clearJobs = done => {
-  mongo.collection('agendaJobs').remove({}, done);
+  mongoDb.collection('agendaJobs').removeMany({}, done);
 };
 
 // Slow timeouts for Travis
@@ -26,23 +28,23 @@ describe('Agenda', () => {
   beforeEach(done => {
     jobs = new Agenda({
       db: {
+        database: mongoCfgDb,
         address: mongoCfg
       }
     }, () => {
-      MongoClient.connect(mongoCfg, (err, db) => {
+      MongoClient.connect(mongoCfg, (err, client) => {
         if (err) {
           done(err);
         }
-        mongo = db;
-        setTimeout(() => {
-          clearJobs(() => {
-            jobs.define('someJob', jobProcessor);
-            jobs.define('send email', jobProcessor);
-            jobs.define('some job', jobProcessor);
-            jobs.define(jobType, jobProcessor);
-            done();
-          });
-        }, 50);
+        mongoClient = client;
+        mongoDb = client.db(mongoCfgDb);
+        clearJobs(() => {
+          jobs.define('someJob', jobProcessor);
+          jobs.define('send email', jobProcessor);
+          jobs.define('some job', jobProcessor);
+          jobs.define(jobType, jobProcessor);
+          done();
+        });;
       });
     });
   });
@@ -51,8 +53,9 @@ describe('Agenda', () => {
     setTimeout(() => {
       jobs.stop(() => {
         clearJobs(() => {
-          mongo.close(() => {
-            jobs._mdb.close(done);
+          mongoClient.close(() => {
+            if (jobs._db) jobs._db.close(done);
+            else done();
           });
         });
       });
@@ -65,8 +68,8 @@ describe('Agenda', () => {
 
   describe('configuration methods', () => {
     it('sets the _db directly when passed as an option', () => {
-      const agenda = new Agenda({mongo});
-      expect(agenda._mdb.databaseName).to.equal('agenda-test');
+      const agenda = new Agenda({mongo: mongoDb});
+      expect(agenda._mdb.databaseName).to.equal(mongoCfgDb);
     });
   });
 
@@ -74,13 +77,13 @@ describe('Agenda', () => {
     describe('mongo', () => {
       it('sets the _db directly', () => {
         const agenda = new Agenda();
-        agenda.mongo(mongo);
-        expect(agenda._mdb.databaseName).to.equal('agenda-test');
+        agenda.mongo(mongoDb);
+        expect(agenda._mdb.databaseName).to.equal(mongoCfgDb);
       });
 
       it('returns itself', () => {
         const agenda = new Agenda();
-        expect(agenda.mongo(mongo)).to.be(agenda);
+        expect(agenda.mongo(mongoDb)).to.be(agenda);
       });
     });
 
@@ -294,7 +297,7 @@ describe('Agenda', () => {
 
                 expect(job1.attrs.nextRunAt.toISOString()).not.to.equal(job2.attrs.nextRunAt.toISOString());
 
-                mongo.collection('agendaJobs').find({
+                mongoDb.collection('agendaJobs').find({
                   name: 'unique job'
                 }).toArray((err, j) => { // eslint-disable-line max-nested-callbacks
                   if (err) {
@@ -340,7 +343,7 @@ describe('Agenda', () => {
 
               expect(job1.attrs.nextRunAt.toISOString()).to.equal(job2.attrs.nextRunAt.toISOString());
 
-              mongo.collection('agendaJobs').find({
+              mongoDb.collection('agendaJobs').find({
                 name: 'unique job'
               }).toArray((err, job) => { // eslint-disable-line max-nested-callbacks
                 if (err) {
@@ -383,7 +386,7 @@ describe('Agenda', () => {
               if (err) {
                 done(err);
               }
-              mongo.collection('agendaJobs').find({
+              mongoDb.collection('agendaJobs').find({
                 name: 'unique job'
               }).toArray((err, job) => { // eslint-disable-line max-nested-callbacks
                 if (err) {
