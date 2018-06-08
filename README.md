@@ -578,16 +578,25 @@ with a call to `job.save()` in order to persist the changes to the database.
 
 ### repeatEvery(interval, [options])
 
-Specifies an `interval` on which the job should repeat.
+Specifies an `interval` on which the job should repeat. The job runs at the time of defining as well in configured intervals, that is "run _now_ and in intervals".
 
 `interval` can be a human-readable format `String`, a cron format `String`, or a `Number`.
 
-`options` is an optional argument that can include a `timezone` field. The timezone should
-be a string as accepted by [moment-timezone](http://momentjs.com/timezone/) and is considered
-when using an interval in the cron string format.
+`options` is an optional argument containing:
+
+`options.timezone`: should be a string as accepted by [moment-timezone](https://momentjs.com/timezone/) and is considered when using an interval in the cron string format.
+
+`options.skipImmediate`: `true` | `false` (default) Setting this `true` will skip the immediate run. The first run will occur only in configured interval.
 
 ```js
 job.repeatEvery('10 minutes');
+job.save();
+```
+
+```js
+job.repeatEvery('3 minutes', {
+  skipImmediate: true
+});
 job.save();
 ```
 
