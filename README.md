@@ -586,7 +586,7 @@ Specifies an `interval` on which the job should repeat. The job runs at the time
 
 `options.timezone`: should be a string as accepted by [moment-timezone](https://momentjs.com/timezone/) and is considered when using an interval in the cron string format.
 
-`options.skipImmediate`: `true` | `false` (default) Setting this `true` will skip the immediate run. The first run will occur only in confured interval.
+`options.skipImmediate`: `true` | `false` (default) Setting this `true` will skip the immediate run. The first run will occur only in configured interval.
 
 ```js
 job.repeatEvery('10 minutes');
