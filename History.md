@@ -1,5 +1,6 @@
 Next
 ====
+  * Drop support for Node.js 4, 5 and 6
   * Drop support for MongoDB 2.4 ([#497](https://github.com/agenda/agenda/pull/497))
   * Rewrite tests: replace mocha and blanket with ava and nyc ([#506](https://github.com/agenda/agenda/pull/506))
   * Optimization: don't try and unlock jobs when `_lockedJobs` is empty ([#509](https://github.com/agenda/agenda/pull/509))
