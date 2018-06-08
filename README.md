@@ -867,7 +867,7 @@ when no connection is available on each [process tick](#processeveryinterval), a
 instance without having to restart the application.
 
 However, if you are using an [existing Mongo client](#mongomongoclientinstance)
-you'll need to configure the `reconnectTries` and `reconnectInterval` [connection settings](http://mongodb.github.io/node-mongodb-native/2.2/reference/connecting/connection-settings/)
+you'll need to configure the `reconnectTries` and `reconnectInterval` [connection settings](http://mongodb.github.io/node-mongodb-native/3.0/reference/connecting/connection-settings/)
 manually, otherwise you'll find that Agenda will throw an error with the message "MongoDB connection is not recoverable,
 application restart required" if the connection cannot be recovered within 30 seconds.
 
