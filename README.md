@@ -23,6 +23,7 @@
 - Scheduling via cron or human readable syntax.
 - Event backed job queue that you can hook into.
 - [Agendash](https://github.com/agenda/agendash): optional standalone web-interface
+- [Agenda-rest](https://github.com/agenda/agenda-rest): optional standalone REST API
 
 
 # Installation
@@ -940,7 +941,9 @@ jobTypes.forEach(function(type) {
 })
 
 if(jobTypes.length) {
-  agenda.start();
+  agenda.on('ready', function() {
+    agenda.start();
+  });
 }
 
 module.exports = agenda;
