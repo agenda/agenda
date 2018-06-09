@@ -888,9 +888,13 @@ describe('Job', () => {
         if (priorities.length !== 3 || times.length !== 3) {
           return;
         }
-        expect(times.join('')).to.eql(times.sort().join(''));
-        expect(priorities).to.eql([10, 10, -10]);
-        done();
+        try {
+          expect(times.join('')).to.eql(times.sort().join(''));
+          expect(priorities).to.eql([10, 10, -10]);
+          done();
+        } catch (err) {
+          done(err);
+        }
       };
 
       jobs.on('start:fifo-priority', checkResults);
@@ -899,11 +903,14 @@ describe('Job', () => {
         if (err) {
           return done(err);
         }
-        jobs.create('fifo-priority').schedule(new Date(now + 100)).priority('low').save(err => {
+        // Lock both the low and high priority jobs to the exact same date so
+        // that the ordering is predictable
+        const nextDate = new Date(now + 100);
+        jobs.create('fifo-priority').schedule(nextDate).priority('low').save(err => {
           if (err) {
             return done(err);
           }
-          jobs.create('fifo-priority').schedule(new Date(now + 100)).priority('high').save(err => {
+          jobs.create('fifo-priority').schedule(nextDate).priority('high').save(err => {
             if (err) {
               return done(err);
             }
