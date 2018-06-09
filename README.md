@@ -1011,6 +1011,10 @@ for a heavy hitting server.
 
 # Known Issues
 
+#### "Multiple order-by items are not supported. Please specify a single order-by item."
+
+When running Agenda on Azure cosmosDB, you might run into this issue caused by Agenda's sort query used for finding and locking the next job. To fix this, you can pass [custom sort option](https://github.com/agenda/agenda#sortquery): `sort: { nextRunAt: 1 }`
+
 ## Versions <= 0.9.1
 
 #### Cron string parsing ([PR](https://github.com/agenda/agenda/pull/475))
