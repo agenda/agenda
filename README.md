@@ -803,7 +803,7 @@ Thanks! I'm flattered, but it's really not necessary. If you really want to, you
 
 Agenda itself does not have a web interface built in but we do offer stand-alone web interface [Agendash](https://github.com/agenda/agendash):
 
-![agendash interface](https://raw.githubusercontent.com/agenda/agendash/master/job-details.png)
+<a href="https://raw.githubusercontent.com/agenda/agendash/master/job-details.png"><img src="https://raw.githubusercontent.com/agenda/agendash/master/job-details.png" style="max-width:100%" alt="Agendash interface"></a>
 
 ### Mongo vs Redis
 
