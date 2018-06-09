@@ -327,9 +327,9 @@ By default it is `{ nextRunAt: 1, priority: -1 }`, which obeys a first in first 
 
 An instance of an agenda will emit the following events:
 
-- `ready` - called when Agenda mongo connection is successfully opened and indeces created.
-        If you're passing agenda an existing connection, ou shouldn't need to listen for this, as `agenda.start()` will not resolve until indeces have been created.
-        If you're using the `db` options, or call `database`, then you may still need to listen for `ready` before saving jobs. `agenda.start()` will still wait for the connection to be opened.
+- `ready` - called when Agenda mongo connection is successfully opened and indices created.
+        If you're passing agenda an existing connection, you shouldn't need to listen for this, as `agenda.start()` will not resolve until indices have been created.
+        If you're using the `db` options, or call `database`, then you may still need to listen for the `ready` event before saving jobs. `agenda.start()` will still wait for the connection to be opened.
 - `error` - called when Agenda mongo connection process has thrown an error
 
 ```js
