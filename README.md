@@ -56,14 +56,14 @@ agenda.define('delete old users', function(job, done) {
   User.remove({lastLogIn: { $lt: twoDaysAgo }}, done);
 });
 
-agenda.on('ready', function() {
-  agenda.every('3 minutes', 'delete old users');
+(async function() { // IIFE to give access to async/await
+  await agenda.start();
+
+  await agenda.every('3 minutes', 'delete old users');
 
   // Alternatively, you could also do:
-  agenda.every('*/3 * * * *', 'delete old users');
-
-  agenda.start();
-});
+  await agenda.every('*/3 * * * *', 'delete old users');
+})();
 
 ```
 
@@ -78,18 +78,18 @@ agenda.define('send email report', {priority: 'high', concurrency: 10}, function
   }, done);
 });
 
-agenda.on('ready', function() {
-  agenda.schedule('in 20 minutes', 'send email report', {to: 'admin@example.com'});
-  agenda.start();
-});
+(async function() {
+  await agenda.start();
+  await agenda.schedule('in 20 minutes', 'send email report', {to: 'admin@example.com'});
+})();
 ```
 
 ```js
-agenda.on('ready', function() {
+(async function() {
   var weeklyReport = agenda.create('send email report', {to: 'another-guy@example.com'})
-  weeklyReport.repeatEvery('1 week').save();
-  agenda.start();
-});
+  await agenda.start();
+  await weeklyReport.repeatEvery('1 week').save();
+})();
 ```
 
 # Full documentation
@@ -153,7 +153,9 @@ You can also specify it during instantiation.
 var agenda = new Agenda({db: { address: 'localhost:27017/agenda-test', collection: 'agendaJobs' }});
 ```
 
-Agenda will emit a `ready` event (see [Agenda Events](#agenda-events)) when properly connected to the database and it is safe to start using Agenda.
+Agenda will emit a `ready` event (see [Agenda Events](#agenda-events)) when properly connected to the database.
+It is safe to call `agenda.start()` without waiting for this event, as this is handled internally.
+If you're using the `db` options, or call `database`, then you may still need to listen for `ready` before saving jobs.
 
 ### mongo(mongoClientInstance)
 
@@ -165,24 +167,29 @@ Please note that this must be a *collection*. Also, you will want to run the fol
 afterwards to ensure the database has the proper indexes:
 
 ```js
-agenda.on('ready', () => {
-  agenda._collection.createIndex({
-    disabled: 1,
-    lockedAt: 1,
-    name: 1,
-    nextRunAt: 1,
-    priority: -1
-  }, {
-    name: 'findAndLockNextJobIndex'
-  }, (err) => {
-    if (err) {
-      console.log('Failed to create Agenda index!');
-      console.error(err);
-    } else {
-      console.log('Agenda index created.');
-    }
-  });
-});
+(async () => {
+  await agenda._ready;
+
+  try {
+    agenda._collection.createIndex({
+      disabled: 1,
+      lockedAt: 1,
+      name: 1,
+      nextRunAt: 1,
+      priority: -1
+    }, {
+      name: 'findAndLockNextJobIndex'
+    });
+  } catch (err) {
+    console.log('Failed to create Agenda index!');
+    console.error(err);
+
+    throw err;
+  }
+
+  console.log('Agenda index created.');
+
+})();
 ```
 
 You can also specify it during instantiation.
@@ -320,13 +327,13 @@ By default it is `{ nextRunAt: 1, priority: -1 }`, which obeys a first in first 
 
 An instance of an agenda will emit the following events:
 
-- `ready` - called when Agenda mongo connection is successfully opened
+- `ready` - called when Agenda mongo connection is successfully opened and indeces created.
+        If you're passing agenda an existing connection, ou shouldn't need to listen for this, as `agenda.start()` will not resolve until indeces have been created.
+        If you're using the `db` options, or call `database`, then you may still need to listen for `ready` before saving jobs. `agenda.start()` will still wait for the connection to be opened.
 - `error` - called when Agenda mongo connection process has thrown an error
 
 ```js
-agenda.on('ready', function() {
-  agenda.start();
-});
+  await agenda.start();
 ```
 
 ## Defining Job Processors
@@ -535,10 +542,9 @@ job queues can grab them / they are unlocked should the job queue start again. H
 shutdown.
 
 ```js
-function graceful() {
-  agenda.stop(function() {
-    process.exit(0);
-  });
+async function graceful() {
+  await agenda.stop();
+  process.exit(0);
 }
 
 process.on('SIGTERM', graceful);
@@ -948,10 +954,8 @@ jobTypes.forEach(function(type) {
   require('./lib/jobs/' + type)(agenda);
 })
 
-if(jobTypes.length) {
-  agenda.on('ready', function() {
-    agenda.start();
-  });
+if (jobTypes.length) {
+  agenda.start(); // Returns a promise, which should be handled appropriately
 }
 
 module.exports = agenda;
