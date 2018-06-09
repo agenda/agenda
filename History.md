@@ -5,12 +5,50 @@ Next
   * Code cleanup ([#503](https://github.com/agenda/agenda/pull/503))
   * Ensure tests pass for Node.js version 10 [#608](https://github.com/agenda/agenda/pull/608))
   * Add `skipImmediate` to `repeatEvery()` options to skip immediate run of repeated jobs when Agenda starts. See [documentation](https://github.com/agenda/agenda/blob/202c9e95b40115dc763641f55180db9a4f358272/README.md#repeateveryinterval-options) ([#594](https://github.com/agenda/agenda/pull/594))
+  * Fixes some flaky tests
+  * Adds docs generator (`npm run docs` to generate `/docs`)
 
 BREAKING
 --------
-  * Promises rewrite ([#557](https://github.com/agenda/agenda/pull/557))
+  * Rewrite Agenda API support promises! ([#557](https://github.com/agenda/agenda/pull/557))
+  
+    No more callbacks! Instead of:
+
+    ```js
+    function graceful() {
+      agenda.stop(function() {
+        process.exit(0);
+      });
+    }
+    ```
+
+    You need to:
+    ```js
+    async function graceful() {
+      await agenda.stop();
+      process.exit(0);
+    }
+    ```
+    
+    You don't anymore have to listen for `start` event. Instead you can do:
+    ```js
+    await agenda.start();
+    agenda.every('10 minutes', 'example');
+    ```
+    
+    However, this will still work:
+    ```js
+    agenda.on('ready', function () {
+      agenda.every('10 minutes', 'example');
+      agenda.start();
+    });
+    ```
+    
+    See the documentation for more!
+
   * Drop support for Node.js versions 4, 5 and 6 ([#557](https://github.com/agenda/agenda/pull/557) / [#608](https://github.com/agenda/agenda/pull/608))
   * Drop support for MongoDB 2.4 ([#497](https://github.com/agenda/agenda/pull/497))
+  * Jobs _emit_ errors instead of throwing them
 
 1.0.3 / 2017-10-17
 ==================
