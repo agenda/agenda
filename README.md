@@ -56,14 +56,14 @@ agenda.define('delete old users', function(job, done) {
   User.remove({lastLogIn: { $lt: twoDaysAgo }}, done);
 });
 
-agenda.on('ready', function() {
-  agenda.every('3 minutes', 'delete old users');
+(async function() { // IIFE to give access to async/await
+  await agenda.start();
+
+  await agenda.every('3 minutes', 'delete old users');
 
   // Alternatively, you could also do:
-  agenda.every('*/3 * * * *', 'delete old users');
-
-  agenda.start();
-});
+  await agenda.every('*/3 * * * *', 'delete old users');
+})();
 
 ```
 
@@ -78,18 +78,18 @@ agenda.define('send email report', {priority: 'high', concurrency: 10}, function
   }, done);
 });
 
-agenda.on('ready', function() {
-  agenda.schedule('in 20 minutes', 'send email report', {to: 'admin@example.com'});
-  agenda.start();
-});
+(async function() {
+  await agenda.start();
+  await agenda.schedule('in 20 minutes', 'send email report', {to: 'admin@example.com'});
+})();
 ```
 
 ```js
-agenda.on('ready', function() {
+(async function() {
   var weeklyReport = agenda.create('send email report', {to: 'another-guy@example.com'})
-  weeklyReport.repeatEvery('1 week').save();
-  agenda.start();
-});
+  await agenda.start();
+  await weeklyReport.repeatEvery('1 week').save();
+})();
 ```
 
 # Full documentation
@@ -153,7 +153,9 @@ You can also specify it during instantiation.
 var agenda = new Agenda({db: { address: 'localhost:27017/agenda-test', collection: 'agendaJobs' }});
 ```
 
-Agenda will emit a `ready` event (see [Agenda Events](#agenda-events)) when properly connected to the database and it is safe to start using Agenda.
+Agenda will emit a `ready` event (see [Agenda Events](#agenda-events)) when properly connected to the database.
+It is safe to call `agenda.start()` without waiting for this event, as this is handled internally.
+If you're using the `db` options, or call `database`, then you may still need to listen for `ready` before saving jobs.
 
 ### mongo(mongoClientInstance)
 
@@ -165,24 +167,29 @@ Please note that this must be a *collection*. Also, you will want to run the fol
 afterwards to ensure the database has the proper indexes:
 
 ```js
-agenda.on('ready', () => {
-  agenda._collection.createIndex({
-    disabled: 1,
-    lockedAt: 1,
-    name: 1,
-    nextRunAt: 1,
-    priority: -1
-  }, {
-    name: 'findAndLockNextJobIndex'
-  }, (err) => {
-    if (err) {
-      console.log('Failed to create Agenda index!');
-      console.error(err);
-    } else {
-      console.log('Agenda index created.');
-    }
-  });
-});
+(async () => {
+  await agenda._ready;
+
+  try {
+    agenda._collection.createIndex({
+      disabled: 1,
+      lockedAt: 1,
+      name: 1,
+      nextRunAt: 1,
+      priority: -1
+    }, {
+      name: 'findAndLockNextJobIndex'
+    });
+  } catch (err) {
+    console.log('Failed to create Agenda index!');
+    console.error(err);
+
+    throw err;
+  }
+
+  console.log('Agenda index created.');
+
+})();
 ```
 
 You can also specify it during instantiation.
@@ -320,13 +327,13 @@ By default it is `{ nextRunAt: 1, priority: -1 }`, which obeys a first in first 
 
 An instance of an agenda will emit the following events:
 
-- `ready` - called when Agenda mongo connection is successfully opened
+- `ready` - called when Agenda mongo connection is successfully opened and indeces created.
+        If you're passing agenda an existing connection, ou shouldn't need to listen for this, as `agenda.start()` will not resolve until indeces have been created.
+        If you're using the `db` options, or call `database`, then you may still need to listen for `ready` before saving jobs. `agenda.start()` will still wait for the connection to be opened.
 - `error` - called when Agenda mongo connection process has thrown an error
 
 ```js
-agenda.on('ready', function() {
-  agenda.start();
-});
+  await agenda.start();
 ```
 
 ## Defining Job Processors
@@ -356,7 +363,7 @@ Priority mapping:
 {
   highest: 20,
   high: 10,
-  default: 0,
+  normal: 0,
   low: -10,
   lowest: -20
 }
@@ -535,10 +542,9 @@ job queues can grab them / they are unlocked should the job queue start again. H
 shutdown.
 
 ```js
-function graceful() {
-  agenda.stop(function() {
-    process.exit(0);
-  });
+async function graceful() {
+  await agenda.stop();
+  process.exit(0);
 }
 
 process.on('SIGTERM', graceful);
@@ -578,16 +584,25 @@ with a call to `job.save()` in order to persist the changes to the database.
 
 ### repeatEvery(interval, [options])
 
-Specifies an `interval` on which the job should repeat.
+Specifies an `interval` on which the job should repeat. The job runs at the time of defining as well in configured intervals, that is "run _now_ and in intervals".
 
 `interval` can be a human-readable format `String`, a cron format `String`, or a `Number`.
 
-`options` is an optional argument that can include a `timezone` field. The timezone should
-be a string as accepted by [moment-timezone](http://momentjs.com/timezone/) and is considered
-when using an interval in the cron string format.
+`options` is an optional argument containing:
+
+`options.timezone`: should be a string as accepted by [moment-timezone](https://momentjs.com/timezone/) and is considered when using an interval in the cron string format.
+
+`options.skipImmediate`: `true` | `false` (default) Setting this `true` will skip the immediate run. The first run will occur only in configured interval.
 
 ```js
 job.repeatEvery('10 minutes');
+job.save();
+```
+
+```js
+job.repeatEvery('3 minutes', {
+  skipImmediate: true
+});
 job.save();
 ```
 
@@ -765,6 +780,13 @@ For example, if we have two jobs named "send-email" queued (both with the same p
 
 The default [MongoDB sort object](https://docs.mongodb.com/manual/reference/method/cursor.sort/) is `{ nextRunAt: 1, priority: -1 }` and can be changed through the option `sort` when configuring Agenda.
 
+### What is the difference between `lockLimit` and `maxConcurrency`?
+
+Agenda will lock jobs 1 by one, setting the `lockedAt` property in mongoDB, and creating an instance of the `Job` class which it caches into the `_lockedJobs` array. This defaults to having no limit, but can be managed using lockLimit. If all jobs will need to be run before agenda's next interval (set via `agenda.processEvery`), then agenda will attempt to lock all jobs.
+
+Agenda will also pull jobs from `_lockedJobs` and into `_runningJobs`. These jobs are actively being worked on by user code, and this is limited by `maxConcurrency` (defaults to 20).
+
+If you have multiple instances of agenda processing the same job definition with a fast repeat time you may find they get unevenly loaded. This is because they will compete to lock as many jobs as possible, even if they don't have enough concurrency to process them. This can be resolved by tweaking the `maxConcurrency` and `lockLimit` properties.
 
 ### Sample Project Structure?
 
@@ -781,7 +803,7 @@ Thanks! I'm flattered, but it's really not necessary. If you really want to, you
 
 Agenda itself does not have a web interface built in but we do offer stand-alone web interface [Agendash](https://github.com/agenda/agendash):
 
-![agendash interface](https://raw.githubusercontent.com/agenda/agendash/master/job-details.png)
+<a href="https://raw.githubusercontent.com/agenda/agendash/master/job-details.png"><img src="https://raw.githubusercontent.com/agenda/agendash/master/job-details.png" style="max-width:100%" alt="Agendash interface"></a>
 
 ### Mongo vs Redis
 
@@ -867,7 +889,7 @@ when no connection is available on each [process tick](#processeveryinterval), a
 instance without having to restart the application.
 
 However, if you are using an [existing Mongo client](#mongomongoclientinstance)
-you'll need to configure the `reconnectTries` and `reconnectInterval` [connection settings](http://mongodb.github.io/node-mongodb-native/2.2/reference/connecting/connection-settings/)
+you'll need to configure the `reconnectTries` and `reconnectInterval` [connection settings](http://mongodb.github.io/node-mongodb-native/3.0/reference/connecting/connection-settings/)
 manually, otherwise you'll find that Agenda will throw an error with the message "MongoDB connection is not recoverable,
 application restart required" if the connection cannot be recovered within 30 seconds.
 
@@ -932,10 +954,8 @@ jobTypes.forEach(function(type) {
   require('./lib/jobs/' + type)(agenda);
 })
 
-if(jobTypes.length) {
-  agenda.on('ready', function() {
-    agenda.start();
-  });
+if (jobTypes.length) {
+  agenda.start(); // Returns a promise, which should be handled appropriately
 }
 
 module.exports = agenda;

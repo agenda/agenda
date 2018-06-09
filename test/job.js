@@ -6,6 +6,8 @@ const expect = require('expect.js');
 const moment = require('moment-timezone');
 const MongoClient = require('mongodb').MongoClient;
 const Q = require('q');
+const delay = require('delay');
+const sinon = require('sinon');
 const Agenda = require('../index');
 const Job = require('../lib/job');
 
@@ -14,11 +16,13 @@ const mongoPort = process.env.MONGODB_PORT || '27017';
 const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/agenda-test';
 
 // Create agenda instances
-let jobs = null;
+let agenda = null;
 let mongo = null;
 
-const clearJobs = done => {
-  mongo.collection('agendaJobs').remove({}, done);
+const clearJobs = () => {
+  return new Promise(resolve => {
+    mongo.collection('agendaJobs').remove({}, resolve);
+  });
 };
 
 // Slow timeouts for Travis
@@ -28,7 +32,7 @@ const jobProcessor = () => {};
 
 describe('Job', () => {
   beforeEach(done => {
-    jobs = new Agenda({
+    agenda = new Agenda({
       db: {
         address: mongoCfg
       }
@@ -36,34 +40,29 @@ describe('Job', () => {
       if (err) {
         done(err);
       }
-      MongoClient.connect(mongoCfg, (err, db) => {
+      MongoClient.connect(mongoCfg, async (err, db) => {
         if (err) {
           done(err);
         }
         mongo = db;
-        setTimeout(() => {
-          clearJobs(() => {
-            jobs.define('someJob', jobProcessor);
-            jobs.define('send email', jobProcessor);
-            jobs.define('some job', jobProcessor);
-            jobs.define(jobType, jobProcessor);
-            done();
-          });
-        }, 50);
+
+        await delay(50);
+        await clearJobs();
+
+        agenda.define('someJob', jobProcessor);
+        agenda.define('send email', jobProcessor);
+        agenda.define('some job', jobProcessor);
+        agenda.define(jobType, jobProcessor);
+        done();
       });
     });
   });
 
-  afterEach(done => {
-    setTimeout(() => {
-      jobs.stop(() => {
-        clearJobs(() => {
-          mongo.close(() => {
-            jobs._mdb.close(done);
-          });
-        });
-      });
-    }, 50);
+  afterEach(async () => {
+    await agenda.stop();
+    await clearJobs();
+    await mongo.close();
+    await agenda._mdb.close();
   });
 
   describe('repeatAt', () => {
@@ -251,27 +250,19 @@ describe('Job', () => {
   describe('remove', () => {
     it('removes the job', done => {
       const job = new Job({
-        agenda: jobs,
+        agenda,
         name: 'removed job'
       });
-      job.save(err => {
+      job.save().then(() => {});
+      job.remove().then(() => {});
+      mongo.collection('agendaJobs').find({
+        _id: job.attrs._id
+      }).toArray((err, j) => {
         if (err) {
-          return done(err);
+          done(err);
         }
-        job.remove(err => {
-          if (err) {
-            return done(err);
-          }
-          mongo.collection('agendaJobs').find({
-            _id: job.attrs._id
-          }).toArray((err, j) => {
-            if (err) {
-              done(err);
-            }
-            expect(j).to.have.length(0);
-            done();
-          });
-        });
+        expect(j).to.have.length(0);
+        done();
       });
     });
   });
@@ -280,109 +271,86 @@ describe('Job', () => {
     let job;
 
     beforeEach(() => {
-      jobs.define('testRun', (job, done) => {
+      agenda.define('testRun', (job, done) => {
         setTimeout(() => {
           done();
         }, 100);
       });
 
-      job = new Job({agenda: jobs, name: 'testRun'});
+      job = new Job({agenda, name: 'testRun'});
     });
 
-    it('updates lastRunAt', done => {
+    it('updates lastRunAt', async () => {
       const now = new Date();
-      setTimeout(() => {
-        job.run(() => {
-          expect(job.attrs.lastRunAt.valueOf()).to.be.greaterThan(now.valueOf());
-          done();
-        });
-      }, 5);
+      await delay(5);
+      await job.run();
+
+      expect(job.attrs.lastRunAt.valueOf()).to.be.greaterThan(now.valueOf());
     });
 
-    it('fails if job is undefined', done => {
-      job = new Job({agenda: jobs, name: 'not defined'});
-      job.run(() => {
-        expect(job.attrs.failedAt).to.be.ok();
-        expect(job.attrs.failReason).to.be('Undefined job');
-        done();
+    it('fails if job is undefined', async () => {
+      job = new Job({agenda, name: 'not defined'});
+      await job.run().catch(err => {
+        expect(err.message).to.be('Undefined job');
       });
+      expect(job.attrs.failedAt).to.be.ok();
+      expect(job.attrs.failReason).to.be('Undefined job');
     });
-    it('updates nextRunAt', done => {
+
+    it('updates nextRunAt', async () => {
       const now = new Date();
       job.repeatEvery('10 minutes');
-      setTimeout(() => {
-        job.run(() => {
-          expect(job.attrs.nextRunAt.valueOf()).to.be.greaterThan(now.valueOf() + 59999);
-          done();
-        });
-      }, 5);
+      await delay(5);
+      await job.run();
+      expect(job.attrs.nextRunAt.valueOf()).to.be.greaterThan(now.valueOf() + 59999);
     });
-    it('handles errors', done => {
+
+    it('handles errors', async () => {
       job.attrs.name = 'failBoat';
-      jobs.define('failBoat', () => {
+      agenda.define('failBoat', () => {
         throw new Error('Zomg fail');
       });
-      job.run(err => {
-        expect(err).to.be.ok();
-        done();
+      job.run().catch(err => {
+        expect(err.message).to.be('Zomg fail');
       });
     });
-    it('handles errors with q promises', done => {
+
+    it('handles errors with q promises', () => {
       job.attrs.name = 'failBoat2';
-      jobs.define('failBoat2', (job, cb) => {
+      agenda.define('failBoat2', (job, cb) => {
         Q.delay(100).then(() => {
           throw new Error('Zomg fail');
         }).fail(cb).done();
       });
-      job.run(err => {
+      job.run().catch(err => {
         expect(err).to.be.ok();
-        done();
       });
     });
 
-    it(`doesn't allow a stale job to be saved`, done => {
+    it(`doesn't allow a stale job to be saved`, async () => {
       job.attrs.name = 'failBoat3';
-      job.save(err => {
-        if (err) {
-          return done(err);
-        }
-        jobs.define('failBoat3', (job, cb) => {
-          // Explicitly find the job again,
-          // so we have a new job object
-          jobs.jobs({name: 'failBoat3'}, (err, j) => {
-            if (err) {
-              return done(err);
-            }
-            j[0].remove(err => { // eslint-disable-line max-nested-callbacks
-              if (err) {
-                return done(err);
-              }
-              cb();
-            });
-          });
-        });
-
-        job.run(err => { // eslint-disable-line max-nested-callbacks
-          if (err) {
-            done(err);
-          }
-          // Expect the deleted job to not exist in the database
-          jobs.jobs({name: 'failBoat3'}, (err, j) => {
-            if (err) {
-              return done(err);
-            }
-            expect(j).to.have.length(0);
-            done();
-          });
-        });
+      await job.save();
+      agenda.define('failBoat3', async (job, cb) => {
+        // Explicitly find the job again,
+        // so we have a new job object
+        const jobs = await agenda.jobs({name: 'failBoat3'});
+        expect(jobs).to.have.length(1);
+        await jobs[0].remove();
+        cb();
       });
+
+      await job.run();
+
+      // Expect the deleted job to not exist in the database
+      const deletedJob = await agenda.jobs({name: 'failBoat3'});
+      expect(deletedJob).to.have.length(0);
     });
   });
 
   describe('touch', () => {
     it('extends the lock lifetime', done => {
       const lockedAt = new Date();
-      const job = new Job({agenda: jobs, name: 'some job', lockedAt});
+      const job = new Job({agenda, name: 'some job', lockedAt});
       job.save = function(cb) {
         cb();
       };
@@ -442,261 +410,265 @@ describe('Job', () => {
 
   describe('save', () => {
     it('calls saveJob on the agenda', done => {
-      const oldSaveJob = jobs.saveJob;
-      jobs.saveJob = () => {
-        jobs.saveJob = oldSaveJob;
+      const oldSaveJob = agenda.saveJob;
+      agenda.saveJob = () => {
+        agenda.saveJob = oldSaveJob;
         done();
       };
-      const job = jobs.create('some job', {
+      const job = agenda.create('some job', {
         wee: 1
       });
       job.save();
     });
 
-    it('doesnt save the job if its been removed', done => {
-      const job = jobs.create('another job');
+    it('doesnt save the job if its been removed', async () => {
+      const job = agenda.create('another job');
       // Save, then remove, then try and save again.
       // The second save should fail.
-      job.save((err, j) => {
+      const j = await job.save();
+      await j.remove();
+      await j.save();
+
+      agenda.jobs({name: 'another job'}, (err, res) => {
         if (err) {
-          return done(err);
+          throw err;
         }
-        j.remove(() => {
-          j.save(err => {
-            if (err) {
-              return done(err);
-            }
-            jobs.jobs({name: 'another job'}, (err, res) => {
-              if (err) {
-                return done(err);
-              }
-              expect(res).to.have.length(0);
-              done();
-            });
-          });
-        });
+        expect(res).to.have.length(0);
       });
     });
 
-    it('returns the job', () => {
-      const job = jobs.create('some job', {
+    it('returns the job', async () => {
+      const job = agenda.create('some job', {
         wee: 1
       });
-      expect(job.save()).to.be(job);
+      expect(await job.save()).to.be(job);
     });
   });
 
   describe('start/stop', () => {
-    it('starts/stops the job queue', done => {
-      jobs.define('jobQueueTest', (job, cb) => {
-        jobs.stop(() => {
-          clearJobs(() => {
+    it('starts/stops the job queue', async () => {
+      return new Promise(async resolve => {
+        agenda.define('jobQueueTest', async (job, cb) => {
+          await agenda.stop();
+          await clearJobs();
+          cb();
+          agenda.define('jobQueueTest', (job, cb) => { // eslint-disable-line max-nested-callbacks
             cb();
-            jobs.define('jobQueueTest', (job, cb) => { // eslint-disable-line max-nested-callbacks
-              cb();
-            });
-            done();
           });
+          resolve();
         });
+        await agenda.every('1 second', 'jobQueueTest');
+        agenda.processEvery('1 second');
+        await agenda.start();
       });
-      jobs.every('1 second', 'jobQueueTest');
-      jobs.processEvery('1 second');
-      jobs.start();
     });
 
-    it('does not run disabled jobs', done => {
+    it('does not run disabled jobs', async () => {
       let ran = false;
-      jobs.define('disabledJob', () => {
+      agenda.define('disabledJob', () => {
         ran = true;
       });
-      const job = jobs.create('disabledJob').disable().schedule('now');
-      job.save(err => {
-        if (err) {
-          return done(err);
-        }
-        jobs.start();
-        setTimeout(() => {
-          expect(ran).to.be(false);
-          jobs.stop(done);
-        }, jobTimeout);
-      });
+
+      const job = await agenda.create('disabledJob').disable().schedule('now');
+      await job.save();
+      await agenda.start();
+      await delay(jobTimeout);
+
+      expect(ran).to.be(false);
+
+      await agenda.stop();
     });
 
-    it('does not throw an error trying to process undefined jobs', done => {
-      jobs.start();
-      const job = jobs.create('jobDefinedOnAnotherServer').schedule('now');
+    it('does not throw an error trying to process undefined jobs', async () => {
+      await agenda.start();
+      const job = agenda.create('jobDefinedOnAnotherServer').schedule('now');
 
-      job.save(err => {
-        expect(err).to.be(null);
-      });
+      await job.save();
 
-      setTimeout(() => {
-        jobs.stop(done);
-      }, jobTimeout);
+      await delay(jobTimeout);
+      await agenda.stop();
     });
 
-    it('clears locks on stop', done => {
-      jobs.define('longRunningJob', () => {
+    it('clears locks on stop', async () => {
+      agenda.define('longRunningJob', () => {
         // Job never finishes
       });
-      jobs.every('10 seconds', 'longRunningJob');
-      jobs.processEvery('1 second');
-      jobs.start();
-      setTimeout(() => {
-        jobs.stop(err => {
-          if (err) {
-            done(err);
-          }
-          jobs._collection.findOne({name: 'longRunningJob'}, (err, job) => {
-            if (err) {
-              done(err);
-            }
-            expect(job.lockedAt).to.be(null);
-            done();
-          });
-        });
-      }, jobTimeout);
+      agenda.every('10 seconds', 'longRunningJob');
+      agenda.processEvery('1 second');
+
+      await agenda.start();
+      await delay(jobTimeout);
+      await agenda.stop();
+
+      agenda._collection.findOne({name: 'longRunningJob'}, (err, job) => {
+        if (err) {
+          throw err;
+        }
+        expect(job.lockedAt).to.be(null);
+      });
     });
 
     describe('events', () => {
       beforeEach(() => {
-        jobs.define('jobQueueTest', (job, cb) => {
+        agenda.define('jobQueueTest', (job, cb) => {
           cb();
         });
-        jobs.define('failBoat', () => {
+        agenda.define('failBoat', () => {
           throw new Error('Zomg fail');
         });
       });
 
-      it('emits start event', done => {
-        const job = new Job({agenda: jobs, name: 'jobQueueTest'});
-        jobs.once('start', j => {
-          expect(j).to.be(job);
-          done();
-        });
-        job.run();
-      });
-      it('emits start:job name event', done => {
-        const job = new Job({agenda: jobs, name: 'jobQueueTest'});
-        jobs.once('start:jobQueueTest', j => {
-          expect(j).to.be(job);
-          done();
-        });
-        job.run();
-      });
-      it('emits complete event', done => {
-        const job = new Job({agenda: jobs, name: 'jobQueueTest'});
-        jobs.once('complete', j => {
-          expect(job.attrs._id.toString()).to.be(j.attrs._id.toString());
-          done();
-        });
-        job.run();
-      });
-      it('emits complete:job name event', done => {
-        const job = new Job({agenda: jobs, name: 'jobQueueTest'});
-        jobs.once('complete:jobQueueTest', j => {
-          expect(job.attrs._id.toString()).to.be(j.attrs._id.toString());
-          done();
-        });
-        job.run();
-      });
-      it('emits success event', done => {
-        const job = new Job({agenda: jobs, name: 'jobQueueTest'});
-        jobs.once('success', j => {
-          expect(j).to.be.ok();
-          done();
-        });
-        job.run();
-      });
-      it('emits success:job name event', done => {
-        const job = new Job({agenda: jobs, name: 'jobQueueTest'});
-        jobs.once('success:jobQueueTest', j => {
-          expect(j).to.be.ok();
-          done();
-        });
-        job.run();
-      });
-      it('emits fail event', done => {
-        const job = new Job({agenda: jobs, name: 'failBoat'});
-        jobs.once('fail', (err, j) => {
-          expect(err.message).to.be('Zomg fail');
-          expect(j).to.be(job);
-          expect(j.attrs.failCount).to.be(1);
-          expect(j.attrs.failedAt.valueOf()).not.to.be.below(j.attrs.lastFinishedAt.valueOf());
+      it('emits start event', async () => {
+        const spy = sinon.spy();
+        const job = new Job({agenda, name: 'jobQueueTest'});
+        agenda.once('start', spy);
 
-          jobs.once('fail', (err, j) => {
-            if (err) {
-              // Expect fail
-            }
-            expect(j).to.be(job);
-            expect(j.attrs.failCount).to.be(2);
-            done();
-          });
-          job.run();
-        });
-        job.run();
+        await job.run();
+        expect(spy.called).to.be(true);
+        expect(spy.calledWithExactly(job)).to.be(true);
       });
-      it('emits fail:job name event', done => {
-        const job = new Job({agenda: jobs, name: 'failBoat'});
-        jobs.once('fail:failBoat', (err, j) => {
+
+      it('emits start:job name event', async () => {
+        const spy = sinon.spy();
+        const job = new Job({agenda, name: 'jobQueueTest'});
+        agenda.once('start:jobQueueTest', spy);
+
+        await job.run();
+        expect(spy.called).to.be(true);
+        expect(spy.calledWithExactly(job)).to.be(true);
+      });
+
+      it('emits complete event', async () => {
+        const spy = sinon.spy();
+        const job = new Job({agenda, name: 'jobQueueTest'});
+        agenda.once('complete', spy);
+
+        await job.run();
+        expect(spy.called).to.be(true);
+        expect(spy.calledWithExactly(job)).to.be(true);
+      });
+
+      it('emits complete:job name event', async () => {
+        const spy = sinon.spy();
+        const job = new Job({agenda, name: 'jobQueueTest'});
+        agenda.once('complete:jobQueueTest', spy);
+
+        await job.run();
+        expect(spy.called).to.be(true);
+        expect(spy.calledWithExactly(job)).to.be(true);
+      });
+
+      it('emits success event', async () => {
+        const spy = sinon.spy();
+        const job = new Job({agenda, name: 'jobQueueTest'});
+        agenda.once('success', spy);
+
+        await job.run();
+        expect(spy.called).to.be(true);
+        expect(spy.calledWithExactly(job)).to.be(true);
+      });
+
+      it('emits success:job name event', async () => {
+        const spy = sinon.spy();
+        const job = new Job({agenda, name: 'jobQueueTest'});
+        agenda.once('success:jobQueueTest', spy);
+
+        await job.run();
+        expect(spy.called).to.be(true);
+        expect(spy.calledWithExactly(job)).to.be(true);
+      });
+
+      it('emits fail event', async () => {
+        const spy = sinon.spy();
+        const job = new Job({agenda, name: 'failBoat'});
+        agenda.once('fail', spy);
+
+        await job.run().catch(err => {
           expect(err.message).to.be('Zomg fail');
-          expect(j).to.be(job);
-          done();
         });
-        job.run();
+
+        expect(spy.called).to.be(true);
+
+        const err = spy.args[0][0];
+        expect(err.message).to.be('Zomg fail');
+        expect(job.attrs.failCount).to.be(1);
+        expect(job.attrs.failedAt.valueOf()).not.to.be.below(job.attrs.lastFinishedAt.valueOf());
+      });
+
+      it('emits fail:job name event', async () => {
+        const spy = sinon.spy();
+        const job = new Job({agenda, name: 'failBoat'});
+        agenda.once('fail:failBoat', spy);
+
+        await job.run().catch(err => {
+          expect(err.message).to.be('Zomg fail');
+        });
+
+        expect(spy.called).to.be(true);
+
+        const err = spy.args[0][0];
+        expect(err.message).to.be('Zomg fail');
+        expect(job.attrs.failCount).to.be(1);
+        expect(job.attrs.failedAt.valueOf()).not.to.be.below(job.attrs.lastFinishedAt.valueOf());
       });
     });
   });
 
   describe('job lock', () => {
-    it('runs a recurring job after a lock has expired', done => {
+    it('runs a recurring job after a lock has expired', async () => {
       let startCounter = 0;
 
-      jobs.define('lock job', {
-        lockLifetime: 50
-      }, () => {
-        startCounter++;
+      const processorPromise = new Promise(async resolve =>
+        agenda.define('lock job', {
+          lockLifetime: 50
+        }, () => {
+          startCounter++;
 
-        if (startCounter !== 1) {
-          expect(startCounter).to.be(2);
-          jobs.stop(done);
-        }
-      });
+          if (startCounter !== 1) {
+            expect(startCounter).to.be(2);
+            agenda.stop().then(resolve);
+          }
+        })
+      );
 
-      expect(jobs._definitions['lock job'].lockLifetime).to.be(50);
+      expect(agenda._definitions['lock job'].lockLifetime).to.be(50);
 
-      jobs.defaultConcurrency(100);
-      jobs.processEvery(10);
-      jobs.every('0.02 seconds', 'lock job');
-      jobs.stop();
-      jobs.start();
+      agenda.defaultConcurrency(100);
+      agenda.processEvery(10);
+      agenda.every('0.02 seconds', 'lock job');
+      agenda.stop().then(() => {});
+      await agenda.start();
+      await processorPromise;
     });
 
-    it('runs a one-time job after its lock expires', done => {
+    it('runs a one-time job after its lock expires', async () => {
       let runCount = 0;
 
-      jobs.define('lock job', {
-        lockLifetime: 50
-      }, (job, cb) => { // eslint-disable-line no-unused-vars
-        runCount++;
+      const processorPromise = new Promise(async resolve =>
+        agenda.define('lock job', {
+          lockLifetime: 50
+        }, (job, cb) => { // eslint-disable-line no-unused-vars
+          runCount++;
 
-        if (runCount !== 1) {
-          expect(runCount).to.be(2);
-          jobs.stop(done);
-        }
-      });
+          if (runCount !== 1) {
+            expect(runCount).to.be(2);
+            agenda.stop().then(resolve);
+          }
+        })
+      );
 
-      jobs.processEvery(50);
-      jobs.start();
-      jobs.now('lock job', {
+      agenda.processEvery(50);
+      await agenda.start();
+      agenda.now('lock job', {
         i: 1
       });
+      await processorPromise;
     });
 
-    it('does not process locked jobs', done => {
+    it('does not process locked jobs', async () => {
       const history = [];
 
-      jobs.define('lock job', {
+      agenda.define('lock job', {
         lockLifetime: 300
       }, (job, cb) => {
         history.push(job.attrs.data.i);
@@ -706,108 +678,109 @@ describe('Job', () => {
         }, 150);
       });
 
-      jobs.start();
+      agenda.processEvery(100);
+      await agenda.start();
 
-      jobs.now('lock job', {i: 1});
-      jobs.now('lock job', {i: 2});
-      jobs.now('lock job', {i: 3});
+      await Promise.all([
+        agenda.now('lock job', {i: 1}),
+        agenda.now('lock job', {i: 2}),
+        agenda.now('lock job', {i: 3})
+      ]);
 
-      setTimeout(() => {
-        expect(history).to.have.length(3);
-        expect(history).to.contain(1);
-        expect(history).to.contain(2);
-        expect(history).to.contain(3);
-        done();
-      }, 500);
+      await delay(500);
+      expect(history).to.have.length(3);
+      expect(history).to.contain(1);
+      expect(history).to.contain(2);
+      expect(history).to.contain(3);
     });
 
-    it('does not on-the-fly lock more than agenda._lockLimit jobs', done => {
-      jobs.lockLimit(1);
+    it('does not on-the-fly lock more than agenda._lockLimit jobs', async () => {
+      agenda.lockLimit(1);
 
-      jobs.define('lock job', (job, cb) => {}); // eslint-disable-line no-unused-vars
+      agenda.define('lock job', (job, cb) => {}); // eslint-disable-line no-unused-vars
 
-      jobs.start();
+      await agenda.start();
 
-      setTimeout(() => {
-        jobs.now('lock job', {i: 1});
-        jobs.now('lock job', {i: 2});
+      await Promise.all([
+        agenda.now('lock job', {i: 1}),
+        agenda.now('lock job', {i: 2})
+      ]);
 
-        setTimeout(() => {
-          expect(jobs._lockedJobs).to.have.length(1);
-          jobs.stop(done);
-        }, 500);
-      }, 500);
+      await delay(500);
+      expect(agenda._lockedJobs).to.have.length(1);
+      await agenda.stop();
     });
 
-    it('does not on-the-fly lock more than definition.lockLimit jobs', done => {
-      jobs.define('lock job', {lockLimit: 1}, (job, cb) => {}); // eslint-disable-line no-unused-vars
+    it('does not on-the-fly lock more than definition.lockLimit jobs', async () => {
+      agenda.define('lock job', {lockLimit: 1}, (job, cb) => {}); // eslint-disable-line no-unused-vars
 
-      jobs.start();
+      await agenda.start();
 
-      setTimeout(() => {
-        jobs.now('lock job', {i: 1});
-        jobs.now('lock job', {i: 2});
+      await Promise.all([
+        agenda.now('lock job', {i: 1}),
+        agenda.now('lock job', {i: 2})
+      ]);
 
-        setTimeout(() => {
-          expect(jobs._lockedJobs).to.have.length(1);
-          jobs.stop(done);
-        }, 500);
-      }, 500);
+      await delay(500);
+      expect(agenda._lockedJobs).to.have.length(1);
+      await agenda.stop();
     });
 
-    it('does not lock more than agenda._lockLimit jobs during processing interval', done => {
-      jobs.lockLimit(1);
-      jobs.processEvery(200);
+    it('does not lock more than agenda._lockLimit jobs during processing interval', async () => {
+      agenda.lockLimit(1);
+      agenda.processEvery(200);
 
-      jobs.define('lock job', (job, cb) => {}); // eslint-disable-line no-unused-vars
+      agenda.define('lock job', (job, cb) => {}); // eslint-disable-line no-unused-vars
 
-      jobs.start();
+      await agenda.start();
 
       const when = moment().add(300, 'ms').toDate();
 
-      jobs.schedule(when, 'lock job', {i: 1});
-      jobs.schedule(when, 'lock job', {i: 2});
+      await Promise.all([
+        agenda.schedule(when, 'lock job', {i: 1}),
+        agenda.schedule(when, 'lock job', {i: 2})
+      ]);
 
-      setTimeout(() => {
-        expect(jobs._lockedJobs).to.have.length(1);
-        jobs.stop(done);
-      }, 500);
+      await delay(500);
+      expect(agenda._lockedJobs).to.have.length(1);
+      await agenda.stop();
     });
 
-    it('does not lock more than definition.lockLimit jobs during processing interval', done => {
-      jobs.processEvery(200);
+    it('does not lock more than definition.lockLimit jobs during processing interval', async () => {
+      agenda.processEvery(200);
 
-      jobs.define('lock job', {lockLimit: 1}, (job, cb) => {}); // eslint-disable-line no-unused-vars
+      agenda.define('lock job', {lockLimit: 1}, (job, cb) => {}); // eslint-disable-line no-unused-vars
 
-      jobs.start();
+      await agenda.start();
 
       const when = moment().add(300, 'ms').toDate();
 
-      jobs.schedule(when, 'lock job', {i: 1});
-      jobs.schedule(when, 'lock job', {i: 2});
+      await Promise.all([
+        agenda.schedule(when, 'lock job', {i: 1}),
+        agenda.schedule(when, 'lock job', {i: 2})
+      ]);
 
-      setTimeout(() => {
-        expect(jobs._lockedJobs).to.have.length(1);
-        jobs.stop(done);
-      }, 500);
+      await delay(500);
+      expect(agenda._lockedJobs).to.have.length(1);
+      await agenda.stop();
     });
   });
 
   describe('job concurrency', () => {
     it('should not block a job for concurrency of another job', done => {
-      jobs.processEvery(50);
+      agenda.processEvery(50);
 
       const processed = [];
       const now = Date.now();
 
-      jobs.define('blocking', {
+      agenda.define('blocking', {
         concurrency: 1
       }, (job, cb) => {
         processed.push(job.attrs.data.i);
         setTimeout(cb, 400);
       });
 
-      jobs.define('non-blocking', {
+      agenda.define('non-blocking', {
         // Lower priority to keep it at the back in the queue
         priority: 'lowest'
       }, job => {
@@ -816,138 +789,103 @@ describe('Job', () => {
       });
 
       let finished = false;
-      jobs.on('complete', () => {
+      agenda.on('complete', () => {
         if (!finished && processed.length === 3) {
           finished = true;
           done();
         }
       });
 
-      jobs.on('fail', err => {
-        expect(err).to.be(undefined);
-      });
+      agenda.start();
 
-      jobs.start();
-
-      jobs.schedule(new Date(now + 100), 'blocking', {i: 1});
-
-      setTimeout(() => {
-        jobs.schedule(new Date(now + 100), 'blocking', {i: 2});
-        jobs.schedule(new Date(now + 100), 'non-blocking', {i: 3});
-      }, 100);
+      agenda.schedule(new Date(now + 100), 'blocking', {i: 1}).then(() => {});
+      agenda.schedule(new Date(now + 100), 'blocking', {i: 2}).then(() => {});
+      agenda.schedule(new Date(now + 100), 'non-blocking', {i: 3}).then(() => {});
     });
 
-    it('should run jobs as first in first out (FIFO)', done => {
+    it('should run jobs as first in first out (FIFO)', async () => {
       const results = [];
 
-      jobs.define('fifo', {concurrency: 1}, (job, cb) => cb());
+      agenda.processEvery(100);
+      agenda.define('fifo', {concurrency: 1}, (job, cb) => cb());
 
-      const checkResults = job => {
-        results.push(new Date(job.attrs.nextRunAt).getTime());
-        if (results.length !== 3) {
-          return;
-        }
-        expect(results.join('')).to.eql(results.sort().join(''));
-        done();
-      };
+      const checkResultsPromise = new Promise(resolve =>
+        agenda.on('start:fifo', job => {
+          results.push(new Date(job.attrs.nextRunAt).getTime());
+          if (results.length !== 3) {
+            return;
+          }
+          expect(results.join('')).to.eql(results.sort().join(''));
+          resolve();
+        })
+      );
 
-      jobs.on('start:fifo', checkResults);
+      await agenda.start();
 
-      jobs.now('fifo', err => {
-        if (err) {
-          return done(err);
-        }
-        setTimeout(() => {
-          jobs.now('fifo', err => {
-            if (err) {
-              return done(err);
-            }
-            setTimeout(() => { // eslint-disable-line max-nested-callbacks
-              jobs.now('fifo', err => { // eslint-disable-line max-nested-callbacks
-                if (err) {
-                  return done(err);
-                }
-                jobs.start();
-              });
-            }, 50);
-          });
-        }, 50);
-      });
+      await agenda.now('fifo');
+      await delay(50);
+      await agenda.now('fifo');
+      await delay(50);
+      await agenda.now('fifo');
+      await delay(50);
+      await checkResultsPromise;
     });
 
-    it('should run jobs as first in first out (FIFO) with respect to priority', done => {
+    it('should run jobs as first in first out (FIFO) with respect to priority', async () => {
       const times = [];
       const priorities = [];
       const now = Date.now();
 
-      jobs.define('fifo-priority', {concurrency: 1}, (job, cb) => cb());
+      agenda.define('fifo-priority', {concurrency: 1}, (job, cb) => cb());
 
-      const checkResults = job => {
-        priorities.push(job.attrs.priority);
-        times.push(new Date(job.attrs.nextRunAt).getTime());
-        if (priorities.length !== 3 || times.length !== 3) {
-          return;
-        }
-        expect(times.join('')).to.eql(times.sort().join(''));
-        expect(priorities).to.eql([10, 10, -10]);
-        done();
-      };
-
-      jobs.on('start:fifo-priority', checkResults);
-
-      jobs.create('fifo-priority').schedule(new Date(now)).priority('high').save(err => {
-        if (err) {
-          return done(err);
-        }
-        jobs.create('fifo-priority').schedule(new Date(now + 100)).priority('low').save(err => {
-          if (err) {
-            return done(err);
+      const checkResultsPromise = new Promise(resolve =>
+        agenda.on('start:fifo-priority', job => {
+          priorities.push(job.attrs.priority);
+          times.push(new Date(job.attrs.nextRunAt).getTime());
+          if (priorities.length !== 3 || times.length !== 3) {
+            return;
           }
-          jobs.create('fifo-priority').schedule(new Date(now + 100)).priority('high').save(err => {
-            if (err) {
-              return done(err);
-            }
-            jobs.start();
-          });
-        });
-      });
+          expect(times.join('')).to.eql(times.sort().join(''));
+          expect(priorities).to.eql([10, 10, -10]);
+          resolve();
+        })
+      );
+
+      await Promise.all([
+        agenda.create('fifo-priority', {i: 1}).schedule(new Date(now)).priority('high').save(),
+        agenda.create('fifo-priority', {i: 2}).schedule(new Date(now + 100)).priority('low').save(),
+        agenda.create('fifo-priority', {i: 3}).schedule(new Date(now + 100)).priority('high').save()
+      ]);
+      await agenda.start();
+      await checkResultsPromise;
     });
 
-    it('should run higher priority jobs first', done => {
+    it('should run higher priority jobs first', async () => {
       // Inspired by tests added by @lushc here:
       // <https://github.com/agenda/agenda/pull/451/commits/336ff6445803606a6dc468a6f26c637145790adc>
       const now = new Date();
       const results = [];
 
-      jobs.define('priority', {concurrency: 1}, (job, cb) => cb());
+      agenda.define('priority', {concurrency: 1}, (job, cb) => cb());
 
-      const checkResults = job => {
-        results.push(job.attrs.priority);
-        if (results.length !== 3) {
-          return;
-        }
-        expect(results).to.eql([10, 0, -10]);
-        done();
-      };
-
-      jobs.on('start:priority', checkResults);
-
-      jobs.create('priority').schedule(now).save(err => {
-        if (err) {
-          return done(err);
-        }
-        jobs.create('priority').schedule(now).priority('low').save(err => {
-          if (err) {
-            return done(err);
+      const checkResultsPromise = new Promise(resolve =>
+        agenda.on('start:priority', job => {
+          results.push(job.attrs.priority);
+          if (results.length !== 3) {
+            return;
           }
-          jobs.create('priority').schedule(now).priority('high').save(err => {
-            if (err) {
-              return done(err);
-            }
-            jobs.start();
-          });
-        });
-      });
+          expect(results).to.eql([10, 0, -10]);
+          resolve();
+        })
+      );
+
+      await Promise.all([
+        agenda.create('priority').schedule(now).save(),
+        agenda.create('priority').schedule(now).priority('low').save(),
+        agenda.create('priority').schedule(now).priority('high').save()
+      ]);
+      await agenda.start();
+      await checkResultsPromise;
     });
 
     it('should support custom sort option', () => {
@@ -958,57 +896,52 @@ describe('Job', () => {
   });
 
   describe('every running', () => {
-    beforeEach(done => {
-      jobs.defaultConcurrency(1);
-      jobs.processEvery(5);
+    beforeEach(async () => {
+      agenda.defaultConcurrency(1);
+      agenda.processEvery(5);
 
-      jobs.stop(done);
+      await agenda.stop();
     });
 
-    it('should run the same job multiple times', done => {
+    it('should run the same job multiple times', async () => {
       let counter = 0;
 
-      jobs.define('everyRunTest1', (job, cb) => {
+      agenda.define('everyRunTest1', (job, cb) => {
         if (counter < 2) {
           counter++;
         }
         cb();
       });
 
-      jobs.every(10, 'everyRunTest1');
+      await agenda.every(10, 'everyRunTest1');
 
-      jobs.start();
+      await agenda.start();
 
-      setTimeout(() => {
-        jobs.jobs({name: 'everyRunTest1'}, () => {
-          expect(counter).to.be(2);
-          jobs.stop(done);
-        });
-      }, jobTimeout);
+      await agenda.jobs({name: 'everyRunTest1'});
+      await delay(jobTimeout);
+      expect(counter).to.be(2);
+
+      await agenda.stop();
     });
 
-    it('should reuse the same job on multiple runs', done => {
+    it('should reuse the same job on multiple runs', async () => {
       let counter = 0;
 
-      jobs.define('everyRunTest2', (job, cb) => {
+      agenda.define('everyRunTest2', (job, cb) => {
         if (counter < 2) {
           counter++;
         }
         cb();
       });
-      jobs.every(10, 'everyRunTest2');
+      await agenda.every(10, 'everyRunTest2');
 
-      jobs.start();
+      await agenda.start();
 
-      setTimeout(() => {
-        jobs.jobs({name: 'everyRunTest2'}, (err, res) => {
-          if (err) {
-            done(err);
-          }
-          expect(res).to.have.length(1);
-          jobs.stop(done);
-        });
-      }, jobTimeout);
+      await delay(jobTimeout);
+      const result = await agenda.jobs({name: 'everyRunTest2'});
+
+      expect(result).to.have.length(1);
+      await agenda.stop();
     });
   });
 
@@ -1079,31 +1012,25 @@ describe('Job', () => {
         n.on('error', serviceError);
       });
 
-      it('should not run if job is disabled', done => {
+      it('should not run if job is disabled', async () => {
         let counter = 0;
 
-        jobs.define('everyDisabledTest', (job, cb) => {
+        agenda.define('everyDisabledTest', (job, cb) => {
           counter++;
           cb();
         });
 
-        const job = jobs.every(10, 'everyDisabledTest');
+        const job = await agenda.every(10, 'everyDisabledTest');
 
         job.disable();
 
-        job.save(() => {
-          jobs.start();
+        await job.save();
+        await agenda.start();
 
-          setTimeout(() => {
-            jobs.jobs({name: 'everyDisabledTest'}, err => {
-              if (err) {
-                return done(err);
-              }
-              expect(counter).to.be(0);
-              jobs.stop(done);
-            });
-          }, jobTimeout);
-        });
+        await delay(jobTimeout);
+        await agenda.jobs({name: 'everyDisabledTest'});
+        expect(counter).to.be(0);
+        await agenda.stop();
       });
     });
 
@@ -1218,29 +1145,29 @@ describe('Job', () => {
     });
 
     describe('General Integration', () => {
-      it('Should not run a job that has already been run', done => {
+      it('Should not run a job that has already been run', async () => {
         const runCount = {};
 
-        jobs.define('test-job', (job, cb) => {
+        agenda.define('test-job', (job, cb) => {
           const id = job.attrs._id.toString();
+
           runCount[id] = runCount[id] ? runCount[id] + 1 : 1;
           cb();
         });
 
-        jobs.start();
+        agenda.processEvery(100);
+        await agenda.start();
 
-        for (let i = 0; i < 10; i++) {
-          jobs.now('test-job');
-        }
+        await Promise.all(
+          [...new Array(10)].map(() => agenda.now('test-job'))
+        );
 
-        setTimeout(() => {
-          const ids = Object.keys(runCount);
-          expect(ids).to.have.length(10);
-          Object.keys(runCount).forEach(id => {
-            expect(runCount[id]).to.be(1);
-          });
-          done();
-        }, jobTimeout);
+        await delay(jobTimeout);
+        const ids = Object.keys(runCount);
+        expect(ids).to.have.length(10);
+        Object.keys(runCount).forEach(id => {
+          expect(runCount[id]).to.be(1);
+        });
       });
     });
   });
