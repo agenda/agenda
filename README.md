@@ -57,12 +57,12 @@ agenda.define('delete old users', function(job, done) {
 });
 
 (async function() { // IIFE to give access to async/await
-  agenda.every('3 minutes', 'delete old users');
+  await agenda.start();
+
+  await agenda.every('3 minutes', 'delete old users');
 
   // Alternatively, you could also do:
-  agenda.every('*/3 * * * *', 'delete old users');
-
-  await agenda.start();
+  await agenda.every('*/3 * * * *', 'delete old users');
 })();
 
 ```
@@ -79,16 +79,16 @@ agenda.define('send email report', {priority: 'high', concurrency: 10}, function
 });
 
 (async function() {
-  agenda.schedule('in 20 minutes', 'send email report', {to: 'admin@example.com'});
   await agenda.start();
+  await agenda.schedule('in 20 minutes', 'send email report', {to: 'admin@example.com'});
 })();
 ```
 
 ```js
 (async function() {
   var weeklyReport = agenda.create('send email report', {to: 'another-guy@example.com'})
-  weeklyReport.repeatEvery('1 week').save();
   await agenda.start();
+  await weeklyReport.repeatEvery('1 week').save();
 })();
 ```
 
