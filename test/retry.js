@@ -5,14 +5,16 @@ const Agenda = require('../index');
 
 const mongoHost = process.env.MONGODB_HOST || 'localhost';
 const mongoPort = process.env.MONGODB_PORT || '27017';
-const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/agenda-test';
+const agendaDatabase = 'agenda-test';
+const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/' + agendaDatabase;
 
 // Create agenda instances
 let agenda = null;
-let mongo = null;
+let mongoDb = null;
+let mongoClient = null;
 
 const clearJobs = done => {
-  mongo.collection('agendaJobs').remove({}, done);
+  mongoDb.collection('agendaJobs').deleteMany({}, done);
 };
 
 const jobType = 'do work';
@@ -28,8 +30,9 @@ describe('Retry', () => {
       if (err) {
         done(err);
       }
-      MongoClient.connect(mongoCfg, (error, db) => {
-        mongo = db;
+      MongoClient.connect(mongoCfg, (error, client) => {
+        mongoClient = client;
+        mongoDb = client.db(agendaDatabase);
         setTimeout(() => {
           clearJobs(() => {
             agenda.define('someJob', jobProcessor);
@@ -47,8 +50,8 @@ describe('Retry', () => {
     await new Promise(resolve => setTimeout(resolve, 50));
     await agenda.stop();
     await clearJobs();
-    await mongo.close();
-    await agenda._mdb.close();
+    await mongoClient.close();
+    await agenda._db.close();
   });
 
   it('should retry a job', async () => {
