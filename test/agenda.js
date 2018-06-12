@@ -173,11 +173,12 @@ describe('Agenda', () => {
       const agenda = new Agenda({
         mongo,
         events: {
-          'ready': () => {
+          ready: () => {
             done();
           }
         }
       });
+      expect(agenda._createIndex).to.equal(true);
     });
 
     it('can provide onIndexCreated on setup', done => {
@@ -189,6 +190,7 @@ describe('Agenda', () => {
           }
         }
       });
+      expect(agenda._createIndex).to.equal(true);
     });
   });
 
@@ -199,7 +201,7 @@ describe('Agenda', () => {
       const agenda = new Agenda({mongo});
       expect(agenda._createIndex).to.equal(true);
 
-      agenda.on('index:created', (result) => {
+      agenda.on('index:created', result => {
         expect(result).to.not.be.empty();
         indexCreated = true;
       });
@@ -219,7 +221,7 @@ describe('Agenda', () => {
           mongo,
           index: false,
           events: {
-            'ready': () => {
+            ready: () => {
               readyCalled = true;
               expect(indexCreated).to.equal(false);
             }
