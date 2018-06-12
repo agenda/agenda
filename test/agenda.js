@@ -213,7 +213,7 @@ describe('Agenda', () => {
     });
 
     describe('when disabled on startup', () => {
-      it('does not create index', done => {
+      it('does not create index', async () => {
         let indexCreated = false;
         let readyCalled = false;
 
@@ -233,23 +233,24 @@ describe('Agenda', () => {
           indexCreated = true;
         });
 
-        setTimeout(() => {
-          expect(indexCreated).to.equal(false);
-          expect(readyCalled).to.equal(true);
-          done();
-        }, 1000);
+        await delay(jobTimeout);
+
+        expect(indexCreated).to.equal(false);
+        expect(readyCalled).to.equal(true);
       });
 
-      it('calls callback if called directly', done => {
+      it('returns if called directly', async () => {
         const agenda = new Agenda({
           mongo,
           index: false
         });
 
-        agenda.createIndex(done);
+        await agenda.createIndex();
       });
 
-      it('sends index:created if called directly', done => {
+      it('sends index:created if called directly', async () => {
+        let indexCreated = false;
+
         const agenda = new Agenda({
           mongo,
           index: false
@@ -257,10 +258,12 @@ describe('Agenda', () => {
 
         agenda.on('index:created', result => {
           expect(result).to.not.be.empty();
-          done();
+          indexCreated = true;
         });
 
-        agenda.createIndex();
+        await agenda.createIndex();
+
+        expect(indexCreated).to.equal(true);
       });
     });
 
