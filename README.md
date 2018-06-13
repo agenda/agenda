@@ -359,6 +359,29 @@ An instance of an agenda will emit the following events:
 await agenda.start();
 ```
 
+### Defining Callbacks
+
+EventEmitter Standard
+
+```js
+agenda.on('ready', () => {
+  console.log('Agenda Ready');
+});
+```
+
+Via Config
+
+```js
+const agenda = new Agenda({
+  ...,
+  events: {
+    ready: () => {
+      console.log('Agenda Ready');
+    },
+  },
+});
+```
+
 ## Defining Job Processors
 
 Before you can use a job, you must define its processing behavior.

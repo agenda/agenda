@@ -180,6 +180,42 @@ describe('Agenda', () => {
     });
   });
 
+  describe('config events', () => {
+    it('can provide onReady on setup', done => {
+      const agenda = new Agenda({
+        mongo,
+        events: {
+          ready: () => {
+            done();
+          }
+        }
+      });
+      expect(agenda._name).to.eql(undefined);
+    });
+
+    it('can provide onError on setup', done => {
+      const dummyError = {
+        collection: () => {
+          return {
+            createIndex: (indices, options, cb) => {
+              cb('Dummy Error');
+            }
+          };
+        }
+      };
+
+      const agenda = new Agenda({
+        mongo: dummyError,
+        events: {
+          error: () => {
+            done();
+          }
+        }
+      });
+      expect(agenda._name).to.eql(undefined);
+    });
+  });
+
   describe('job methods', () => {
     describe('create', () => {
       let job;
