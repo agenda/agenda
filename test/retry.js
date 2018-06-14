@@ -1,5 +1,6 @@
 /* globals describe, it, beforeEach, afterEach */
 'use strict';
+const delay = require('delay');
 const MongoClient = require('mongodb').MongoClient;
 const Agenda = require('../index');
 
@@ -13,8 +14,8 @@ let agenda = null;
 let mongoDb = null;
 let mongoClient = null;
 
-const clearJobs = done => {
-  mongoDb.collection('agendaJobs').deleteMany({}, done);
+const clearJobs = () => {
+  return mongoDb.collection('agendaJobs').deleteMany({});
 };
 
 const jobType = 'do work';
@@ -30,24 +31,25 @@ describe('Retry', () => {
       if (err) {
         done(err);
       }
-      MongoClient.connect(mongoCfg, (error, client) => {
+      MongoClient.connect(mongoCfg, async (error, client) => {
         mongoClient = client;
         mongoDb = client.db(agendaDatabase);
-        setTimeout(() => {
-          clearJobs(() => {
-            agenda.define('someJob', jobProcessor);
-            agenda.define('send email', jobProcessor);
-            agenda.define('some job', jobProcessor);
-            agenda.define(jobType, jobProcessor);
-            done();
-          });
-        }, 50);
+
+        await delay(50);
+        await clearJobs();
+
+        agenda.define('someJob', jobProcessor);
+        agenda.define('send email', jobProcessor);
+        agenda.define('some job', jobProcessor);
+        agenda.define(jobType, jobProcessor);
+
+        done();
       });
     });
   });
 
   afterEach(async () => {
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await delay(50);
     await agenda.stop();
     await clearJobs();
     await mongoClient.close();

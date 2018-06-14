@@ -17,9 +17,7 @@ let mongoDb = null;
 let mongoClient = null;
 
 const clearJobs = () => {
-  return new Promise(resolve => {
-    mongoDb.collection('agendaJobs').removeMany({}, resolve);
-  });
+  return mongoDb.collection('agendaJobs').deleteMany({});
 };
 
 // Slow timeouts for Travis
