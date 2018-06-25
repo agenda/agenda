@@ -1,7 +1,7 @@
 # Run tests in Docker `docker-compose up` on Node.js v4
 # - install node deps first `docker-compose run agenda npm install`
 agenda:
-  image: nodesource/jessie:4
+  image: nodesource/jessie:4@sha256:bea1b7be5d6ddf69863faa66c6d1dac1408f8cd314c933afa4773be3e8f388f7
   command: npm test
   volumes:
     - ./:/usr/src/app
@@ -11,7 +11,7 @@ agenda:
     - mongodb
 
 mongodb:
-  image: mongo:latest
+  image: mongo:latest@sha256:3a09cd85fb4e76f1d5832f9ea1d4e7481f76e807389b7d8ea6ac4d4ba96f83e5
   ports:
     - "27017"
   command:
