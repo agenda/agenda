@@ -52,7 +52,7 @@
     "expect.js": "0.3.1",
     "jsdoc": "3.5.5",
     "jsdoc-template": "https://github.com/braintree/jsdoc-template",
-    "mocha": "4.0.1",
+    "mocha": "4.1.0",
     "mocha-lcov-reporter": "1.3.0",
     "q": "1.5.0",
     "sinon": "4.1.3",
