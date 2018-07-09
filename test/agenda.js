@@ -134,6 +134,16 @@ describe('Agenda', () => {
         expect(jobs.lockLimit(10)).to.be(jobs);
       });
     });
+    describe('singleQuery', () => {
+      it('sets singleQuery', () => {
+        const singleQuery = props => ({name: props.name});
+        jobs.singleQuery(singleQuery);
+        expect(jobs._singleQuery).to.be(singleQuery);
+      });
+      it('returns itself', () => {
+        expect(jobs.lockLimit(10)).to.be(jobs);
+      });
+    });
     describe('defaultLockLimit', () => {
       it('sets the defaultLockLimit', () => {
         jobs.defaultLockLimit(1);
@@ -235,6 +245,23 @@ describe('Agenda', () => {
 
           const res = await jobs.jobs({name: 'shouldBeSingleJob'});
           expect(res).to.have.length(1);
+        });
+        it('uses `singleQuery` to differentiate jobs', async () => {
+          jobs.singleQuery(props => ({
+            name: props.name,
+            data: props.data
+          }));
+          await jobs.every(10, 'shouldBeTwoJobs', {foo: 1});
+          await delay(10);
+          await jobs.every(20, 'shouldBeTwoJobs', {foo: 2});
+          await delay(10);
+          await jobs.every(20, 'shouldBeTwoJobs', {foo: 2});
+
+          // Give the saves a little time to propagate
+          await delay(jobTimeout);
+
+          const res = await jobs.jobs({name: 'shouldBeTwoJobs'});
+          expect(res).to.have.length(2);
         });
       });
       describe('with array of names specified', () => {
