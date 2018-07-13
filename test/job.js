@@ -351,11 +351,11 @@ describe('Job', () => {
     it('extends the lock lifetime', done => {
       const lockedAt = new Date();
       const job = new Job({agenda, name: 'some job', lockedAt});
-      job.save = function(cb) {
-        cb();
+      job.save = function() {
+        return Promise.resolve();
       };
       setTimeout(() => {
-        job.touch(() => {
+        job.touch().then(() => {
           expect(job.attrs.lockedAt).to.be.greaterThan(lockedAt);
           done();
         });
