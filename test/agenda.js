@@ -27,39 +27,40 @@ const jobProcessor = () => {};
 
 describe('Agenda', () => {
   beforeEach(() => {
-    return new Promise(async resolve => {
+    return new Promise((resolve, reject) => {
       jobs = new Agenda({
         db: {
           address: mongoCfg
         }
       }, () => {
         MongoClient.connect(mongoCfg, async(err, client) => {
-          if (err) {
-            throw err;
+          try {
+            if (err) {
+              throw err;
+            }
+            mongoClient = client;
+            mongoDb = client.db(agendaDatabase);
+            await delay(50);
+            await clearJobs();
+            jobs.define('someJob', jobProcessor);
+            jobs.define('send email', jobProcessor);
+            jobs.define('some job', jobProcessor);
+            jobs.define(jobType, jobProcessor);
+            resolve();
+          } catch (err) {
+            reject(err);
           }
-          mongoClient = client;
-          mongoDb = client.db(agendaDatabase);
-          await delay(50);
-          await clearJobs();
-          jobs.define('someJob', jobProcessor);
-          jobs.define('send email', jobProcessor);
-          jobs.define('some job', jobProcessor);
-          jobs.define(jobType, jobProcessor);
-          return resolve();
         });
       });
     });
   });
 
-  afterEach(() => {
-    return new Promise(async resolve => {
-      await delay(50);
-      await jobs.stop();
-      await clearJobs();
-      await mongoClient.close();
-      await jobs._db.close();
-      return resolve();
-    });
+  afterEach(async() => {
+    await delay(50);
+    await jobs.stop();
+    await clearJobs();
+    await mongoClient.close();
+    await jobs._db.close();
   });
 
   it('sets a default processEvery', () => {
