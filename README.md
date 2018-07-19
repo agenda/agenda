@@ -19,6 +19,7 @@
 
 - Minimal overhead. Agenda aims to keep its code base small.
 - Mongo backed persistence layer.
+- Promises based API
 - Scheduling with configurable priority, concurrency, and repeating
 - Scheduling via cron or human readable syntax.
 - Event backed job queue that you can hook into.
