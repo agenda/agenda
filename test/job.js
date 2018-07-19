@@ -13,16 +13,16 @@ const Job = require('../lib/job');
 
 const mongoHost = process.env.MONGODB_HOST || 'localhost';
 const mongoPort = process.env.MONGODB_PORT || '27017';
-const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/agenda-test';
+const agendaDatabase = 'agenda-test';
+const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/' + agendaDatabase;
 
 // Create agenda instances
 let agenda = null;
-let mongo = null;
+let mongoDb = null;
+let mongoClient = null;
 
 const clearJobs = () => {
-  return new Promise(resolve => {
-    mongo.collection('agendaJobs').remove({}, resolve);
-  });
+  return mongoDb.collection('agendaJobs').deleteMany({});
 };
 
 // Slow timeouts for Travis
@@ -40,11 +40,12 @@ describe('Job', () => {
       if (err) {
         done(err);
       }
-      MongoClient.connect(mongoCfg, async (err, db) => {
+      MongoClient.connect(mongoCfg, async (err, client) => {
         if (err) {
           done(err);
         }
-        mongo = db;
+        mongoClient = client;
+        mongoDb = client.db(agendaDatabase);
 
         await delay(50);
         await clearJobs();
@@ -61,8 +62,8 @@ describe('Job', () => {
   afterEach(async () => {
     await agenda.stop();
     await clearJobs();
-    await mongo.close();
-    await agenda._mdb.close();
+    await mongoClient.close();
+    await agenda._db.close();
   });
 
   describe('repeatAt', () => {
@@ -255,7 +256,7 @@ describe('Job', () => {
       });
       job.save().then(() => {});
       job.remove().then(() => {});
-      mongo.collection('agendaJobs').find({
+      mongoDb.collection('agendaJobs').find({
         _id: job.attrs._id
       }).toArray((err, j) => {
         if (err) {

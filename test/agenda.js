@@ -8,16 +8,16 @@ const Job = require('../lib/job');
 
 const mongoHost = process.env.MONGODB_HOST || 'localhost';
 const mongoPort = process.env.MONGODB_PORT || '27017';
-const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/agenda-test';
+const agendaDatabase = 'agenda-test';
+const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/' + agendaDatabase;
 
 // Create agenda instances
 let jobs = null;
-let mongo = null;
+let mongoDb = null;
+let mongoClient = null;
 
 const clearJobs = () => {
-  return new Promise(resolve => {
-    mongo.collection('agendaJobs').remove({}, resolve);
-  });
+  return mongoDb.collection('agendaJobs').deleteMany({});
 };
 
 // Slow timeouts for Travis
@@ -33,11 +33,12 @@ describe('Agenda', () => {
           address: mongoCfg
         }
       }, () => {
-        MongoClient.connect(mongoCfg, async (err, db) => {
+        MongoClient.connect(mongoCfg, async (err, client) => {
           if (err) {
             throw err;
           }
-          mongo = db;
+          mongoClient = client;
+          mongoDb = client.db(agendaDatabase);
           await delay(50);
           await clearJobs();
           jobs.define('someJob', jobProcessor);
@@ -55,11 +56,9 @@ describe('Agenda', () => {
       await delay(50);
       await jobs.stop();
       await clearJobs();
-      mongo.close(() => {
-        jobs._mdb.close(() => {
-          return resolve();
-        });
-      });
+      await mongoClient.close();
+      await jobs._db.close();
+      return resolve();
     });
   });
 
@@ -69,8 +68,8 @@ describe('Agenda', () => {
 
   describe('configuration methods', () => {
     it('sets the _db directly when passed as an option', () => {
-      const agenda = new Agenda({mongo});
-      expect(agenda._mdb.databaseName).to.equal('agenda-test');
+      const agenda = new Agenda({mongo: mongoDb});
+      expect(agenda._mdb.databaseName).to.equal(agendaDatabase);
     });
   });
 
@@ -78,13 +77,13 @@ describe('Agenda', () => {
     describe('mongo', () => {
       it('sets the _db directly', () => {
         const agenda = new Agenda();
-        agenda.mongo(mongo);
-        expect(agenda._mdb.databaseName).to.equal('agenda-test');
+        agenda.mongo(mongoDb);
+        expect(agenda._mdb.databaseName).to.equal(agendaDatabase);
       });
 
       it('returns itself', () => {
         const agenda = new Agenda();
-        expect(agenda.mongo(mongo)).to.be(agenda);
+        expect(agenda.mongo(mongoDb)).to.be(agenda);
       });
     });
 
@@ -285,7 +284,7 @@ describe('Agenda', () => {
 
           expect(job1.attrs.nextRunAt.toISOString()).not.to.equal(job2.attrs.nextRunAt.toISOString());
 
-          mongo.collection('agendaJobs').find({
+          mongoDb.collection('agendaJobs').find({
             name: 'unique job'
           }).toArray((err, jobs) => {
             if (err) {
@@ -321,7 +320,7 @@ describe('Agenda', () => {
 
           expect(job1.attrs.nextRunAt.toISOString()).to.equal(job2.attrs.nextRunAt.toISOString());
 
-          mongo.collection('agendaJobs').find({
+          mongoDb.collection('agendaJobs').find({
             name: 'unique job'
           }).toArray((err, jobs) => {
             if (err) {
@@ -357,7 +356,7 @@ describe('Agenda', () => {
             nextRunAt: time2
           }).schedule(time).save();
 
-          mongo.collection('agendaJobs').find({
+          mongoDb.collection('agendaJobs').find({
             name: 'unique job'
           }).toArray((err, jobs) => {
             if (err) {
