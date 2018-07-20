@@ -1,6 +1,6 @@
 {
   "name": "agenda",
-  "version": "1.0.3",
+  "version": "2.0.0",
   "description": "Light weight job scheduler for Node.js",
   "main": "index.js",
   "files": [
@@ -10,10 +10,14 @@
     "test": "npm run lint && npm run mocha",
     "lint": "xo --verbose",
     "mocha": "mocha --reporter spec --timeout 8000 -b",
+    "mocha-debug": "DEBUG=agenda:**,-agenda:internal:** mocha --reporter spec --timeout 8000 -b",
+    "mocha-debug-internal": "DEBUG=agenda:internal:** mocha --reporter spec --timeout 8000 -b",
+    "mocha-debug-all": "DEBUG=agenda:** mocha --reporter spec --timeout 8000 -b",
     "blanket": {
       "pattern": "lib",
       "data-cover-never": "node_modules"
-    }
+    },
+    "docs": "jsdoc --configure .jsdoc.json --verbose"
   },
   "repository": {
     "type": "git",
@@ -38,17 +42,21 @@
     "debug": "~3.1.0",
     "human-interval": "~0.1.3",
     "moment-timezone": "~0.5.0",
-    "mongodb": "~2.2.33"
+    "mongodb": "~3.1"
   },
   "devDependencies": {
-    "blanket": "^1.2.3",
-    "coveralls": "^3.0.0",
-    "eslint": "^4.9.0",
-    "expect.js": "^0.3.1",
-    "mocha": "^4.0.1",
-    "mocha-lcov-reporter": "^1.3.0",
-    "q": "^1.5.0",
-    "xo": "^0.18.2"
+    "blanket": "1.2.3",
+    "coveralls": "3.0.2",
+    "delay": "3.0.0",
+    "eslint": "4.9.0",
+    "expect.js": "0.3.1",
+    "jsdoc": "3.5.5",
+    "jsdoc-template": "https://github.com/braintree/jsdoc-template",
+    "mocha": "4.1.0",
+    "mocha-lcov-reporter": "1.3.0",
+    "q": "1.5.0",
+    "sinon": "4.5.0",
+    "xo": "0.18.2"
   },
   "xo": {
     "space": 2,

@@ -2,11 +2,8 @@ language: node_js
 services: mongodb
 sudo: required
 node_js:
-  - "4"
-  - "5"
-  - "6"
-  - "7"
   - "8"
+  - "10"
 addons:
   apt:
     sources:
@@ -24,7 +21,7 @@ env:
   global:
     # NodeJS v4+ requires gcc 4.8+
     - CXX=g++-4.9 CC=gcc-4.9
-script: make test-once
+script: npm test
 before_script:
   - mongo --version
   - mongod --version
