@@ -48,7 +48,7 @@
     "blanket": "1.2.3",
     "coveralls": "3.0.2",
     "delay": "3.0.0",
-    "eslint": "4.9.0",
+    "eslint": "4.19.1",
     "expect.js": "0.3.1",
     "jsdoc": "3.5.5",
     "jsdoc-template": "https://github.com/braintree/jsdoc-template",
