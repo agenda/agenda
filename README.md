@@ -26,6 +26,30 @@
 - [Agendash](https://github.com/agenda/agendash): optional standalone web-interface
 - [Agenda-rest](https://github.com/agenda/agenda-rest): optional standalone REST API
 
+### Feature Comparison
+
+Since there are a few job queue solutions, here a table comparing them to help you use the one that
+better suits your needs.
+
+Agenda is great if you need something that is simple and backed by MongoDB.
+
+| Feature         | Bull          | Kue   | Bee | Agenda |
+| :-------------  |:-------------:|:-----:|:---:|:------:|
+| Backend         | redis         | redis |redis| mongo  |
+| Priorities      | ✓             |  ✓    |     |   ✓    |
+| Concurrency     | ✓             |  ✓    |  ✓  |   ✓    |
+| Delayed jobs    | ✓             |  ✓    |     |   ✓    |
+| Global events   | ✓             |  ✓    |     |        |
+| Rate Limiter    | ✓             |       |     |        |
+| Pause/Resume    | ✓             |  ✓    |     |        |
+| Sandboxed worker| ✓             |       |     |        |
+| Repeatable jobs | ✓             |       |     |   ✓    |
+| Atomic ops      | ✓             |       |  ✓  |        |
+| Persistence     | ✓             |   ✓   |  ✓  |   ✓    |
+| UI              | ✓             |   ✓   |     |   ✓    |
+| Optimized for   | Jobs / Messages | Jobs | Messages | Jobs |
+
+_Kudos for making the comparison chart goes to [Bull](https://www.npmjs.com/package/bull#feature-comparison) maintainers._
 
 # Installation
 
