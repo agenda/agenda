@@ -58,6 +58,9 @@
     "sinon": "6.1.4",
     "xo": "0.21.1"
   },
+  "engines": {
+    "node": ">=8"
+  },
   "xo": {
     "space": 2,
     "rules": {
