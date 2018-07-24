@@ -349,18 +349,12 @@ describe('Job', () => {
   });
 
   describe('touch', () => {
-    it('extends the lock lifetime', done => {
+    it('extends the lock lifetime', async() => {
       const lockedAt = new Date();
       const job = new Job({agenda, name: 'some job', lockedAt});
-      job.save = function(cb) {
-        cb();
-      };
-      setTimeout(() => {
-        job.touch(() => {
-          expect(job.attrs.lockedAt).to.be.greaterThan(lockedAt);
-          done();
-        });
-      }, 2);
+      await delay(2);
+      await job.touch();
+      expect(job.attrs.lockedAt).to.be.greaterThan(lockedAt);
     });
   });
 

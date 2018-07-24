@@ -739,22 +739,21 @@ Disables the `job`. Upcoming runs won't execute.
 
 Enables the `job` if it got disabled before. Upcoming runs will execute.
 
-### touch(callback)
+### touch()
 
 Resets the lock on the job. Useful to indicate that the job hasn't timed out
-when you have very long running jobs.
+when you have very long running jobs. The call returns a promise that resolves
+when the job's lock has been renewed.
 
 ```js
 agenda.define('super long job', (job, done) => {
-  doSomeLongTask(() => {
-    job.touch(() => {
-      doAnotherLongTask(() => {
-        job.touch(() => {
-          finishOurLongTasks(done);
-        });
-      });
-    });
-  });
+  (async () => {
+    await doSomeLongTask();
+    await job.touch();
+    await doAnotherLongTask();
+    await job.touch();
+    await finishOurLongTasks();
+  })().then(done, done);
 });
 ```
 
