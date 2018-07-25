@@ -1,3 +1,8 @@
+# Next
+======
+
+  * Fix a bug where `job.touch()` wasn't promise based, as it should've been ([#667](https://github.com/agenda/agenda/pull/667)
+
 2.0.0 / 2018-07-19
 ==================
   * Rewrite tests: replace `mocha` and `blanket` with `ava` and `nyc` ([#506](https://github.com/agenda/agenda/pull/506))
