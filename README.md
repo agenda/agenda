@@ -221,7 +221,7 @@ const agenda = new Agenda({mongo: mongoClientInstance});
 ```
 
 #### Using a mongoose connection
-To share the connection pool with an already existing mongoose connecting, pass mongoose.connection to agenda.
+To share the connection pool with an already existing mongoose connection, pass mongoose.connection to agenda.
 
 ```js
 await mongoose.connect('mongodb://localhost:27017/agenda'); // connect mongoose
