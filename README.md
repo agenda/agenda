@@ -234,8 +234,12 @@ to create your index manually, run this:
   } catch (err) {
     console.log('Failed to create Agenda index!');
     console.error(err);
+
     throw err;
   }
+
+  console.log('Agenda index created.');
+})();
 ```
 
 ### name(name)
