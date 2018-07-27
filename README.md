@@ -180,6 +180,15 @@ Agenda will emit a `ready` event (see [Agenda Events](#agenda-events)) when prop
 It is safe to call `agenda.start()` without waiting for this event, as this is handled internally.
 If you're using the `db` options, or call `database`, then you may still need to listen for `ready` before saving jobs.
 
+#### Using a mongoose connection
+To share the connection pool with an already existing mongoose connecting, pass mongoose.connection to agenda.
+
+```js
+await mongoose.connect('mongodb://localhost:27017/agenda'); // connect mongoose
+
+const agenda = new Agenda({mongo: mongoose.connection});
+```
+
 ### mongo(mongoClientInstance)
 
 Use an existing mongodb-native MongoClient instance. This can help consolidate connections to a
