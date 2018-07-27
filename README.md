@@ -186,33 +186,7 @@ Use an existing mongodb-native MongoClient instance. This can help consolidate c
 database. You can instead use `.database` to have agenda handle connecting for
 you.
 
-Please note that this must be a *collection*. Also, you will want to run the following
-afterwards to ensure the database has the proper indexes:
-
-```js
-(async () => {
-  await agenda._ready;
-
-  try {
-    agenda._collection.createIndex({
-      disabled: 1,
-      lockedAt: 1,
-      name: 1,
-      nextRunAt: 1,
-      priority: -1
-    }, {
-      name: 'findAndLockNextJobIndex'
-    });
-  } catch (err) {
-    console.log('Failed to create Agenda index!');
-    console.error(err);
-
-    throw err;
-  }
-
-  console.log('Agenda index created.');
-})();
-```
+Please note that this must be a *Db instance*.
 
 You can also specify it during instantiation.
 
@@ -227,6 +201,18 @@ To share the connection pool with an already existing mongoose connection, pass 
 await mongoose.connect('mongodb://localhost:27017/agenda'); // connect mongoose
 
 const agenda = new Agenda({mongo: mongoose.connection});
+```
+
+#### Disable auto "createIndex"
+This is useful for production use, where you do not want to run createIndex on your agenda collection each time agenda starts.
+Add noIndexCheck to your db connection settings.
+
+```js
+const agenda = new Agenda({db: {noIndexCheck: true}});
+
+const agenda = new Agenda({mongo: mongoose.connection, db: {noIndexCheck: true}});
+
+const agenda = new Agenda({db: {address: 'localhost:27017/agenda-test', collection: 'agendaJobs', noIndexCheck: true}});
 ```
 
 ### name(name)
