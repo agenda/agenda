@@ -210,9 +210,32 @@ Add noIndexCheck to your db connection settings.
 ```js
 const agenda = new Agenda({db: {noIndexCheck: true}});
 
-const agenda = new Agenda({mongo: mongoose.connection, db: {noIndexCheck: true}});
+const agenda = new Agenda({mongo: mongoClientInstance, db: {noIndexCheck: true}});
 
 const agenda = new Agenda({db: {address: 'localhost:27017/agenda-test', collection: 'agendaJobs', noIndexCheck: true}});
+```
+
+to create your index manually, run this:
+
+```js
+(async () => {
+  await agenda._ready;
+
+  try {
+    agenda._collection.createIndex({
+      disabled: 1,
+      lockedAt: 1,
+      name: 1,
+      nextRunAt: 1,
+      priority: -1
+    }, {
+      name: 'findAndLockNextJobIndex'
+    });
+  } catch (err) {
+    console.log('Failed to create Agenda index!');
+    console.error(err);
+    throw err;
+  }
 ```
 
 ### name(name)
