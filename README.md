@@ -517,9 +517,13 @@ Lets you query all of the jobs in the agenda job's database. This is a full [mon
 `find` query. See mongodb-native's documentation for details.
 
 ```js
-agenda.jobs({name: 'printAnalyticsReport'}, (err, jobs) => {
-  // Work with jobs (see below)
-});
+agenda.jobs({name: 'printAnalyticsReport'})
+    .then(jobs => {
+         // Work with jobs (see below)
+    })
+    .catch(err => {
+         // handle err
+    })
 ```
 
 ### cancel(mongodb-native query, cb)
