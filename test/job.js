@@ -249,22 +249,19 @@ describe('Job', () => {
   });
 
   describe('remove', () => {
-    it('removes the job', done => {
+    it('removes the job', async() => {
       const job = new Job({
         agenda,
         name: 'removed job'
       });
-      job.save().then(() => {});
-      job.remove().then(() => {});
-      mongoDb.collection('agendaJobs').find({
+      await job.save();
+      await job.remove();
+
+      const j = await mongoDb.collection('agendaJobs').find({
         _id: job.attrs._id
-      }).toArray((err, j) => {
-        if (err) {
-          done(err);
-        }
-        expect(j).to.have.length(0);
-        done();
-      });
+      }).toArray();
+
+      expect(j).to.have.length(0);
     });
   });
 
@@ -318,10 +315,15 @@ describe('Job', () => {
 
     it('handles errors with q promises', () => {
       job.attrs.name = 'failBoat2';
-      agenda.define('failBoat2', (job, cb) => {
-        Q.delay(100).then(() => {
+      agenda.define('failBoat2', async(job, cb) => {
+        let promise;
+
+        try {
+          promise = await Q.delay(100);
           throw new Error('Zomg fail');
-        }).fail(cb).done();
+        } catch (err) {
+          promise.fail(cb).done();
+        }
       });
       job.run().catch(err => {
         expect(err).to.be.ok();
@@ -616,12 +618,14 @@ describe('Job', () => {
       const processorPromise = new Promise(async resolve =>
         agenda.define('lock job', {
           lockLifetime: 50
-        }, () => {
+        }, async() => {
           startCounter++;
 
           if (startCounter !== 1) {
             expect(startCounter).to.be(2);
-            agenda.stop().then(resolve);
+            const stoppedJob = await agenda.stop();
+
+            resolve(stoppedJob);
           }
         })
       );
@@ -631,7 +635,7 @@ describe('Job', () => {
       agenda.defaultConcurrency(100);
       agenda.processEvery(10);
       agenda.every('0.02 seconds', 'lock job');
-      agenda.stop().then(() => {});
+      await agenda.stop();
       await agenda.start();
       await processorPromise;
     });
@@ -642,12 +646,14 @@ describe('Job', () => {
       const processorPromise = new Promise(async resolve =>
         agenda.define('lock job', {
           lockLifetime: 50
-        }, (job, cb) => { // eslint-disable-line no-unused-vars
+        }, async(job, cb) => { // eslint-disable-line no-unused-vars
           runCount++;
 
           if (runCount !== 1) {
             expect(runCount).to.be(2);
-            agenda.stop().then(resolve);
+            const stoppedJob = await agenda.stop();
+
+            resolve(stoppedJob);
           }
         })
       );
@@ -762,7 +768,7 @@ describe('Job', () => {
   });
 
   describe('job concurrency', () => {
-    it('should not block a job for concurrency of another job', done => {
+    it('should not block a job for concurrency of another job', async done => {
       agenda.processEvery(50);
 
       const processed = [];
@@ -793,9 +799,9 @@ describe('Job', () => {
 
       agenda.start();
 
-      agenda.schedule(new Date(now + 100), 'blocking', {i: 1}).then(() => {});
-      agenda.schedule(new Date(now + 100), 'blocking', {i: 2}).then(() => {});
-      agenda.schedule(new Date(now + 100), 'non-blocking', {i: 3}).then(() => {});
+      await agenda.schedule(new Date(now + 100), 'blocking', {i: 1});
+      await agenda.schedule(new Date(now + 100), 'blocking', {i: 2});
+      await agenda.schedule(new Date(now + 100), 'non-blocking', {i: 3});
     });
 
     it('should run jobs as first in first out (FIFO)', async() => {
