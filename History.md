@@ -1,5 +1,5 @@
-# Next
-======
+Next
+====
 
   * https://github.com/agenda/agenda/pulls
 
