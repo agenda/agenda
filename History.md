@@ -1,6 +1,10 @@
 # Next
 ======
 
+  * https://github.com/agenda/agenda/pulls
+
+2.0.1 / 2018-08-30
+==================
   * Fix a bug where `job.touch()` wasn't promise based, as it should've been ([#667](https://github.com/agenda/agenda/pull/667)
 
 2.0.0 / 2018-07-19
