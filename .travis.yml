@@ -2,9 +2,8 @@ language: node_js
 services: mongodb
 sudo: required
 node_js:
-  - "8"
-  - node
-cache: yarn
+  - 8
+  - latest
 addons:
   apt:
     sources:
