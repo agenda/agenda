@@ -768,7 +768,7 @@ describe('Job', () => {
   });
 
   describe('job concurrency', () => {
-    it('should not block a job for concurrency of another job', async done => {
+    it('should not block a job for concurrency of another job', async() => {
       agenda.processEvery(50);
 
       const processed = [];
@@ -790,11 +790,14 @@ describe('Job', () => {
       });
 
       let finished = false;
-      agenda.on('complete', () => {
-        if (!finished && processed.length === 3) {
-          finished = true;
-          done();
-        }
+
+      const checkResultsPromise = new Promise(resolve => {
+        agenda.on('complete', () => {
+          if (!finished && processed.length === 3) {
+            finished = true;
+            resolve();
+          }
+        });
       });
 
       agenda.start();
@@ -802,6 +805,8 @@ describe('Job', () => {
       await agenda.schedule(new Date(now + 100), 'blocking', {i: 1});
       await agenda.schedule(new Date(now + 100), 'blocking', {i: 2});
       await agenda.schedule(new Date(now + 100), 'non-blocking', {i: 3});
+
+      await checkResultsPromise;
     });
 
     it('should run jobs as first in first out (FIFO)', async() => {
