@@ -57,7 +57,7 @@
     "jsdoc-template": "https://github.com/braintree/jsdoc-template",
     "mocha": "5.2.0",
     "mocha-lcov-reporter": "1.3.0",
-    "q": "1.5.0",
+    "q": "1.5.1",
     "sinon": "6.1.4",
     "xo": "0.21.1"
   },
