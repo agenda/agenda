@@ -3,7 +3,8 @@ services: mongodb
 sudo: required
 node_js:
   - "8"
-  - "10"
+  - node
+cache: yarn
 addons:
   apt:
     sources:
@@ -21,7 +22,6 @@ env:
   global:
     # NodeJS v4+ requires gcc 4.8+
     - CXX=g++-4.9 CC=gcc-4.9
-script: npm test
 before_script:
   - mongo --version
   - mongod --version
