@@ -7,7 +7,7 @@
     "lib"
   ],
   "engines": {
-    "node": ">=8.0.0",
+    "node": ">=8.0.0"
   },
   "scripts": {
     "test": "npm run lint && npm run mocha",
