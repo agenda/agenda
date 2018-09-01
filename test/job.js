@@ -1,3 +1,4 @@
+/* eslint promise/prefer-await-to-then: 0 */
 /* globals describe, it, beforeEach, afterEach */
 'use strict';
 const path = require('path');
