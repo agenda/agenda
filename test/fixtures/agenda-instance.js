@@ -8,12 +8,12 @@ const agenda = new Agenda({
   db: {
     address: connStr
   }
-}, (err, collection) => {
+}, async (err, collection) => {
 	tests.forEach(test => {
 	  addTests[test](agenda);
 	});
 
-	agenda.start();
+	await agenda.start();
 
 	// Ensure we can shut down the process from tests
 	process.on('message', msg => {
