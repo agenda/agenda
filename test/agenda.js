@@ -5,6 +5,7 @@ const {MongoClient} = require('mongodb');
 const delay = require('delay');
 const Agenda = require('..');
 const Job = require('../lib/job');
+const checkUrl = require('../lib/agenda/check-url');
 
 const mongoHost = process.env.MONGODB_HOST || 'localhost';
 const mongoPort = process.env.MONGODB_PORT || '27017';
@@ -74,6 +75,19 @@ describe('Agenda', () => {
   });
 
   describe('configuration methods', () => {
+    describe('mongo connection tester', () => {
+      it('passing a valid multiple server connection string', () => {
+        expect(checkUrl(mongoCfg)).to.equal(true);
+      });
+
+      it('passing a valid multiple server connection string', () => {
+        expect(checkUrl('mongodb+srv://' + mongoHost + '/agenda-test')).to.equal(true);
+      });
+
+      it('passing an invalid connection string', () => {
+        expect(checkUrl(mongoHost + '/agenda-test')).to.equal(false);
+      });
+    });
     describe('mongo', () => {
       it('sets the _db directly', () => {
         const agenda = new Agenda();
@@ -96,7 +110,6 @@ describe('Agenda', () => {
         expect(jobs.name('test queue')).to.be(jobs);
       });
     });
-
     describe('processEvery', () => {
       it('sets the processEvery time', () => {
         jobs.processEvery('3 minutes');
