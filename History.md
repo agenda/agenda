@@ -3,6 +3,11 @@ Next
 
   * https://github.com/agenda/agenda/pulls
 
+2.0.2 / 2018-09-15
+==================
+  * Fixes a MongoDB connection string issue with Atlas ([#674](
+https://github.com/agenda/agenda/pull/674)
+  
 2.0.1 / 2018-08-30
 ==================
   * Fix a bug where `job.touch()` wasn't promise based, as it should've been ([#667](https://github.com/agenda/agenda/pull/667)
