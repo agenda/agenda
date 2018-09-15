@@ -689,7 +689,7 @@ Optionally, `reason` can be an error, in which case `job.attrs.failReason` will
 be set to `error.message`
 
 ```js
-job.fail('insuficient disk space');
+job.fail('insufficient disk space');
 // or
 job.fail(new Error('insufficient disk space'));
 job.save();
