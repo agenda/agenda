@@ -47,6 +47,7 @@ Agenda is great if you need something that is simple and backed by MongoDB.
 | Atomic ops      | ✓             |       |  ✓  |        |
 | Persistence     | ✓             |   ✓   |  ✓  |   ✓    |
 | UI              | ✓             |   ✓   |     |   ✓    |
+| REST API        |               |       |     |   ✓    |
 | Optimized for   | Jobs / Messages | Jobs | Messages | Jobs |
 
 _Kudos for making the comparison chart goes to [Bull](https://www.npmjs.com/package/bull#feature-comparison) maintainers._
