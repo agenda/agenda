@@ -11,11 +11,13 @@ const mongoHost = process.env.MONGODB_HOST || 'localhost';
 const mongoPort = process.env.MONGODB_PORT || '27017';
 const agendaDatabase = 'agenda-test';
 const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/' + agendaDatabase;
+const mongoURI = process.env.MONGODB_URI || mongoCfg;
 
 // Create agenda instances
 let jobs = null;
 let mongoDb = null;
 let mongoClient = null;
+let mongoSession = null;
 
 const clearJobs = () => {
   return mongoDb.collection('agendaJobs').deleteMany({});
@@ -31,10 +33,10 @@ describe('Agenda', () => {
     return new Promise(async resolve => {
       jobs = new Agenda({
         db: {
-          address: mongoCfg
+          address: mongoURI
         }
       }, () => {
-        MongoClient.connect(mongoCfg, async(err, client) => {
+        MongoClient.connect(mongoURI, async(err, client) => {
           if (err) {
             throw err;
           }
@@ -77,7 +79,7 @@ describe('Agenda', () => {
   describe('configuration methods', () => {
     describe('mongo connection tester', () => {
       it('passing a valid server connection string', () => {
-        expect(hasMongoProtocol(mongoCfg)).to.equal(true);
+        expect(hasMongoProtocol(mongoURI)).to.equal(true);
       });
 
       it('passing a valid multiple server connection string', () => {
@@ -501,6 +503,52 @@ describe('Agenda', () => {
 
       const jobs3 = await jobs.jobs({name: 'jobA'});
       expect(jobs3).to.have.length(1);
+    });
+  });
+
+  describe('transactions', () => {
+    before(async function () {
+      if(!mongoURI.includes('replicaSet')){
+        this.skip();
+      }
+    });
+
+    beforeEach(async() => {
+      mongoSession = mongoClient.startSession();
+      mongoSession.startTransaction();
+    });
+
+    afterEach(async() => {
+      await mongoSession.abortTransaction();
+      mongoSession = null;
+    });
+
+    it('should scope job with session', async() => {
+      const jobs1 = await jobs.jobs({name: 'jobA', data: 'someData'});
+      expect(jobs1).to.have.length(0);
+
+      const jobs1S = await jobs.jobs({name: 'jobA', data: 'someData'}, {session: mongoSession});
+      expect(jobs1S).to.have.length(0);
+
+      await jobs.create('jobA', 'someData', {session: mongoSession}).save();
+      await jobs.schedule('in 10 minutes', 'jobA', 'someData', {session: mongoSession});
+      await jobs.now('jobA', 'someData', {session: mongoSession});
+
+      const jobs2 = await jobs.jobs({name: 'jobA', data: 'someData'});
+      expect(jobs2).to.have.length(0);
+
+      const jobs2S = await jobs.jobs({name: 'jobA', data: 'someData'}, {session: mongoSession});
+      expect(jobs2S).to.have.length(3);
+
+      await jobs.cancel({name: 'jobA', data: 'someData'});
+
+      const jobs3S = await jobs.jobs({name: 'jobA', data: 'someData'}, {session: mongoSession});
+      expect(jobs3S).to.have.length(3);
+
+      await jobs.cancel({name: 'jobA', data: 'someData'}, {session: mongoSession});
+
+      const jobs4S = await jobs.jobs({name: 'jobA', data: 'someData'}, {session: mongoSession});
+      expect(jobs4S).to.have.length(0);
     });
   });
 });

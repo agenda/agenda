@@ -16,6 +16,7 @@
     "mocha-debug": "DEBUG=agenda:**,-agenda:internal:** mocha --reporter spec --timeout 8000 -b",
     "mocha-debug-internal": "DEBUG=agenda:internal:** mocha --reporter spec --timeout 8000 -b",
     "mocha-debug-all": "DEBUG=agenda:** mocha --reporter spec --timeout 8000 -b",
+    "mongo-rs": "run-rs -v 4.0.0 --quiet",
     "blanket": {
       "pattern": "lib",
       "data-cover-never": "node_modules"
