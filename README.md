@@ -612,21 +612,12 @@ Specifies an `interval` on which the job should repeat. The job runs at the time
 
 `interval` can be a human-readable format `String`, a cron format `String`, or a `Number`.
 
-<<<<<<< HEAD
 `options` is an optional argument containing:
 - `startDate` : `Date` or `String` can be used to start the recurring job in a future date
 - `endDate` : `Date` or `String` can be used to stop the recurring job at a predefined date
 `options.timezone`: should be a string as accepted by [moment-timezone](https://momentjs.com/timezone/) and is considered when using an interval in the cron string format.
 
 `options.skipImmediate`: `true` | `false` (default) Setting this `true` will skip the immediate run. The first run will occur only in configured interval.
-=======
-`options` is an optional argument. It can take any of the following:
-- `timezone` The timezone should
-be a string as accepted by [moment-timezone](http://momentjs.com/timezone/) and is considered
-when using an interval in the cron string format.
-- `startDate` : `Date` or `String` can be used to start the recurring job in a future date
-- `endDate` : `Date` or `String` can be used to stop the recurring job at a predefined date
->>>>>>> Update Readme for startDate and endDate under `repeatEvery`
 
 ```js
 job.repeatEvery('10 minutes');
