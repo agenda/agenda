@@ -75,6 +75,12 @@
       "max-nested-callbacks": [
         "error",
         5
+      ],
+      "no-unused-vars": [
+        "error",
+        {
+          "argsIgnorePattern": "^_"
+        }
       ]
     },
     "envs": [
