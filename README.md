@@ -614,7 +614,8 @@ Specifies an `interval` on which the job should repeat. The job runs at the time
 
 <<<<<<< HEAD
 `options` is an optional argument containing:
-
+- `startDate` : `Date` or `String` can be used to start the recurring job in a future date
+- `endDate` : `Date` or `String` can be used to stop the recurring job at a predefined date
 `options.timezone`: should be a string as accepted by [moment-timezone](https://momentjs.com/timezone/) and is considered when using an interval in the cron string format.
 
 `options.skipImmediate`: `true` | `false` (default) Setting this `true` will skip the immediate run. The first run will occur only in configured interval.
