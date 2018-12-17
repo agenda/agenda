@@ -3,3 +3,5 @@ coverage.html
 .idea
 .DS_Store
 docs
+
+package-lock.json
