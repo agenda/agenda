@@ -1,4 +1,5 @@
 /* globals describe, it, beforeEach, afterEach */
+/* eslint promise/prefer-await-to-then: warn */
 'use strict';
 const path = require('path');
 const cp = require('child_process');
