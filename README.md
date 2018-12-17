@@ -251,7 +251,7 @@ being stored in memory.
 
 Also worth noting is that if the job queue is shutdown, any jobs stored in memory
 that haven't run will still be locked, meaning that you may have to wait for the
-lock to expire.
+lock to expire. By default it is `'5 seconds'`.
 
 ```js
 agenda.processEvery('1 minute');
