@@ -130,6 +130,8 @@ mapped to a database collection and load the jobs from within.
 - [Starting the job processor](#starting-the-job-processor)
 - [Multiple job processors](#multiple-job-processors)
 - [Manually working with jobs](#manually-working-with-a-job)
+- [Cancellation of a running job](#cancellation-of-a-running-job)
+- [Job Events](#job-events)
 - [Job Queue Events](#job-queue-events)
 - [Frequently asked questions](#frequently-asked-questions)
 - [Example Project structure](#example-project-structure)
@@ -557,17 +559,21 @@ run them. You can also stop the queue.
 Starts the job queue processing, checking `processEvery` time to see if there
 are new jobs.
 
-### stop
+### stop([timeout])
 
-Stops the job queue processing. Unlocks currently running jobs.
+Stops the job queue processing, unlock grabbed jobs, and optionally cancel all running jobs with a timeout.
 
-This can be very useful for graceful shutdowns so that currently running/grabbed jobs are abandoned so that other
-job queues can grab them / they are unlocked should the job queue start again. Here is an example of how to do a graceful
+This can be very useful for graceful shutdowns so that currently running/grabbed jobs are cancelled/released so that other
+job queues can re-run them / they are unlocked should the job queue start again. Here is an example of how to do a graceful
 shutdown.
 
 ```js
 async function graceful() {
-  await agenda.stop();
+  try {
+    await agenda.stop(5000); // wait for 5s
+  } catch (err) {
+    await agenda.unlock();
+  }
   process.exit(0);
 }
 
@@ -575,6 +581,38 @@ process.on('SIGTERM', graceful);
 process.on('SIGINT' , graceful);
 ```
 
+The timeout parameter specifies how long to wait for running jobs to be completed:
+
+-   Stop the job queue processing, but NOT cancelling running jobs
+
+    `await agenda.stop()`
+
+-   Stop the job queue processing, cancel all running jobs and wait indefinitely until all jobs completed
+
+    `await agenda.stop(0)`
+
+-   Stop the job queue processing, cancel all running jobs and wait at most `timeout` ms.
+    An error is thrown if timeout occur.
+
+    ```js
+    try {
+      await agenda.stop(1000); // 1s
+    } catch (err) {
+      console.log('timeout')
+    }
+    ```
+
+See [Cancellation of a running job](#cancellation-of-a-running-job) for how to handle
+job cancellation in processors.
+
+### unlock
+
+Stops processing new jobs and unlocks all currently locked/running jobs. This is useful when you want
+to terminate agenda immediately after stop() has been timed out.
+
+NOTE:
+This method only unlocks jobs. It does NOT cancel currently running jobs.
+Any running processors may still be able to update the job attrs directly to the database.
 
 ## Multiple job processors
 
@@ -731,6 +769,14 @@ job.remove(err => {
 });
 ```
 
+### cancel()
+
+Cancel the `job` if it is running. This only works for jobs currently running in
+the local processor (if you have [Multiple job processors](#multiple-job-processors)).
+The call does nothing if the job is not running or has been cancelled already.
+
+See [Cancellation of a running job](#cancellation-of-a-running-job).
+
 ### disable()
 
 Disables the `job`. Upcoming runs won't execute.
@@ -756,6 +802,111 @@ agenda.define('super long job', (job, done) => {
   })().then(done, done);
 });
 ```
+
+## Cancellation of a running job
+
+If you want to support graceful shutdown/job cancellation, you will have to modify the job processor
+function to handle such a case.
+
+NOTE: cancellation only make sense in async processors.
+
+You can handle the cancellation in two ways: poll or listen, or both
+
+- Poll `job.cancelled`
+
+  Suitable if your job runs a loop, and each iteration usually completes in a short time.
+  
+  ```js
+  agenda.define('some looping task', async (job, done) => {
+    for (let i = 0; i < 100; i++) {
+      await queryDatabase();
+      await updateDatabase();
+
+      // check for cancellation on every iteration
+      if (job.cancelled) {
+        done(new Error('aborted'));
+        return;
+      }
+    }
+    done();
+  });
+  ```
+
+- Listen for `job.on('cancel')`
+
+  Suitable if your job calls some external service, spawn some lengthy processes,
+  opens a socket etc., which you can quit early by killing the process/closing the socket etc.
+
+  ```js
+  agenda.define('exec child process', (job, done) => {
+    const proc = child_process.spawn(cmd);
+    proc.on('exit', () => done());
+    proc.on('error', err => done(err));
+
+    // listen for job cancellation
+    job.once('cancel', () => {
+      proc.kill('SIGINT');
+      done(new Error('aborted'));
+    });
+  });
+  ```
+
+Of course you can combine both ways to suit your needs.
+
+If you would like to re-run the same job again when it is cancelled, it is possible to re-schedule
+the job in the cancellation handler.
+
+```js
+job.once('cancel', () => {
+  proc.kill('SIGINT');
+  job.attrs.nextRunAt = new Date(); // re-run immediately
+  // or
+  job.schedule(new Date()); // same as above
+  done(new Error('aborted'));
+});
+```
+
+NOTE: If you do not re-schedule the job, agenda will treat it as completed and will not be picked up
+by other processors (will never re-run if the job is a one-time schedule).
+
+
+## Job Events
+
+An instance of a job will emit the following events:
+
+- `success` - called when the job finishes successfully
+
+```js
+job.on('success', job => {
+  console.log(`Sent Email Successfully to ${job.attrs.data.to}`);
+});
+```
+
+- `fail` - called when the job throws an error
+
+```js
+job.on('fail', (err, job) => {
+  console.log('Job failed with error: ${err.message}');
+});
+```
+
+- `complete` - called when the job finishes, regardless of if it succeeds or fails
+
+```js
+job.on('complete', job => {
+  console.log(`Job ${job.attrs.name} finished`);
+});
+```
+
+- `cancel` - called when someone request to cancel the running job
+
+```js
+job.on('cancel', job => {
+  console.log(`Job ${job.attrs.name} requested cancellation`);
+  console.log(job.cancelled); // => true
+});
+```
+
 
 ## Job Queue Events
 
