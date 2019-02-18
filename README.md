@@ -793,7 +793,7 @@ agenda.on('success:send email', job => {
 
 ```js
 agenda.on('fail:send email', (err, job) => {
-  console.log('Job failed with error: ${err.message}');
+  console.log(`Job failed with error: ${err.message}`);
 });
 ```
 
