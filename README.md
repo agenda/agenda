@@ -411,6 +411,9 @@ agenda.define('say hello', job => {
 });
 ```
 
+`define()` acts like an assignment: if `define(jobName, ...)` is called multiple times (e.g. every time your script starts), the definition in the last call will overwrite the previous one. Thus, if you `define` the `jobName` only once in your code, it's safe for that call to execute multiple times.
+
+
 ## Creating Jobs
 
 ### every(interval, name, [data], [options], [cb])
