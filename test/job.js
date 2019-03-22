@@ -10,6 +10,7 @@ const delay = require('delay');
 const sinon = require('sinon');
 const Agenda = require('..');
 const Job = require('../lib/job');
+const {RRule} = require('rrule');
 
 const mongoHost = process.env.MONGODB_HOST || 'localhost';
 const mongoPort = process.env.MONGODB_PORT || '27017';
@@ -121,6 +122,49 @@ describe('Job', () => {
     });
     it('returns the job', () => {
       expect(job.schedule('tomorrow at noon')).to.be(job);
+    });
+  });
+
+  describe('rrule', () => {
+    let job;
+    beforeEach(() => {
+      job = new Job();
+    });
+    it('sets the next run time', () => {
+      job.rrule({
+        freq: RRule.WEEKLY,
+        interval: 5,
+        byweekday: [RRule.MO, RRule.FR],
+        dtstart: Date.now()
+      });
+      expect(job.attrs.nextRunAt).to.be.a(Date);
+    });
+    it('sets the nextRunAt property with skipImmediate', () => {
+      const now = new Date();
+      const tomorrow = new Date();
+      tomorrow.setDate(now.getDate()+1);
+      job.rrule({
+        freq: RRule.DAILY,
+        interval: 1,
+        dtstart: tomorrow
+      }, {skipImmediate: true});
+      expect(job.attrs.nextRunAt.toString()).to.equal(tomorrow.toString());
+    });
+    it('sets nextRunAt undefined if there are no more dates to run', () => {
+      const now = new Date();
+      const yesterday = new Date();
+      yesterday.setDate(now.getDate()-1);
+      const dayBeforeYesterday = new Date();
+      dayBeforeYesterday.setDate(yesterday.getDate()-1);
+      job.rrule({
+        freq: RRule.DAILY,
+        dtstart: dayBeforeYesterday,
+        until: yesterday
+      }, {skipImmediate: true});
+      expect(job.attrs.nextRunAt).to.be(undefined);
+    });
+    it('returns the job', () => {
+      expect(job.rrule({freq: RRule.DAILY})).to.be(job);
     });
   });
 
