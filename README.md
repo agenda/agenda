@@ -554,8 +554,8 @@ run them. You can also stop the queue.
 
 ### start
 
-Starts the job queue processing, checking `processEvery` time to see if there
-are new jobs.
+Starts the job queue processing, checking [`processEvery`](#processeveryinterval) time to see if there
+are new jobs. Must be called *after* `processEvery`, and *before* any job scheduling (e.g. `every`).
 
 ### stop
 
