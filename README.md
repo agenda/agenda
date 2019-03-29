@@ -240,9 +240,9 @@ const agenda = new Agenda({name: 'test queue'});
 ### processEvery(interval)
 
 Takes a string `interval` which can be either a traditional javascript number,
-or a string such as `3 minutes`
+or a string such as `3 minutes`. By default it is `'5 seconds'`.
 
-Specifies the frequency at which agenda will query the database looking for jobs
+Specifies the frequency with which agenda will query the database looking for jobs
 that need to be processed. Agenda internally uses `setTimeout` to guarantee that
 jobs run at (close to ~3ms) the right time.
 
@@ -251,7 +251,7 @@ being stored in memory.
 
 Also worth noting is that if the job queue is shutdown, any jobs stored in memory
 that haven't run will still be [locked](#locking-and-multiple-job-processors),
-meaning that you may have to wait for the lock to expire. By default it is `'5 seconds'`.
+meaning that you may have to wait for the lock to expire.
 
 ```js
 agenda.processEvery('1 minute');
