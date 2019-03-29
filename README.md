@@ -473,7 +473,7 @@ Returns the `job`.
 agenda.schedule('tomorrow at noon', 'printAnalyticsReport', {userCount: 100});
 ```
 
-Optionally, `name` could be array of job names, similar to `every` method.
+Optionally, `name` could be array of job names, similar to the `every` method.
 
 ```js
 agenda.schedule('tomorrow at noon', ['printAnalyticsReport', 'sendNotifications', 'updateUserRecords']);
@@ -672,19 +672,18 @@ Ensure that only one instance of this job exists with the specified properties
 `options` is an optional argument which can overwrite the defaults. It can take
 the following:
 
-- `insertOnly`: `boolean` will prevent any properties from persisting if job already exists. Defaults to false.
+- `insertOnly`: `boolean` will prevent any properties from persisting if the job already exists. Defaults to false.
 
 ```js
 job.unique({'data.type': 'active', 'data.userId': '123', nextRunAt(date)});
 job.save();
 ```
 
-*IMPORTANT:* To avoid high CPU usage by MongoDB, Make sure to create an index on the used fields, like: `data.type` and `data.userId` for the example above.
+*IMPORTANT:* To avoid high CPU usage by MongoDB, make sure to create an index on the used fields, like `data.type` and `data.userId` for the example above.
 
 ### fail(reason)
 
-Sets `job.attrs.failedAt` to `now`, and sets `job.attrs.failReason`
-to `reason`.
+Sets `job.attrs.failedAt` to `now`, and sets `job.attrs.failReason` to `reason`.
 
 Optionally, `reason` can be an error, in which case `job.attrs.failReason` will
 be set to `error.message`
@@ -847,7 +846,7 @@ Ultimately if enough people want a Redis driver instead of Mongo, I will write
 one. (Please open an issue requesting it). For now, Agenda decided to focus on
 guaranteed persistence.
 
-### Spawning / forking processes.
+### Spawning / forking processes
 
 Ultimately Agenda can work from a single job queue across multiple machines, node processes, or forks. If you are interested in having more than one worker, [Bars3s](http://github.com/bars3s) has written up a fantastic example of how one might do it:
 
