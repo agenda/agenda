@@ -442,19 +442,27 @@ describe('Job', () => {
 
   describe('start/stop', () => {
     it('starts/stops the job queue', async() => {
-      return new Promise(async resolve => {
-        agenda.define('jobQueueTest', async(job, cb) => {
-          await agenda.stop();
-          await clearJobs();
-          cb();
-          agenda.define('jobQueueTest', (job, cb) => { // eslint-disable-line max-nested-callbacks
-            cb();
+      return new Promise(async(resolve, reject) => {
+        try {
+          agenda.define('jobQueueTest', async(job, cb) => {
+            try {
+              await agenda.stop();
+              await clearJobs();
+              cb();
+              agenda.define('jobQueueTest', (job, cb) => { // eslint-disable-line max-nested-callbacks
+                cb();
+              });
+              resolve();
+            } catch (err) {
+              reject(err);
+            }
           });
-          resolve();
-        });
-        await agenda.every('1 second', 'jobQueueTest');
-        agenda.processEvery('1 second');
-        await agenda.start();
+          await agenda.every('1 second', 'jobQueueTest');
+          agenda.processEvery('1 second');
+          await agenda.start();
+        } catch (err) {
+          reject(err);
+        }
       });
     });
 
@@ -613,7 +621,7 @@ describe('Job', () => {
     it('runs a recurring job after a lock has expired', async() => {
       let startCounter = 0;
 
-      const processorPromise = new Promise(async resolve =>
+      const processorPromise = new Promise((resolve, reject) =>
         agenda.define('lock job', {
           lockLifetime: 50
         }, () => {
@@ -621,7 +629,7 @@ describe('Job', () => {
 
           if (startCounter !== 1) {
             expect(startCounter).to.be(2);
-            agenda.stop().then(resolve);
+            agenda.stop().then(resolve, reject);
           }
         })
       );
@@ -639,7 +647,7 @@ describe('Job', () => {
     it('runs a one-time job after its lock expires', async() => {
       let runCount = 0;
 
-      const processorPromise = new Promise(async resolve =>
+      const processorPromise = new Promise((resolve, reject) =>
         agenda.define('lock job', {
           lockLifetime: 50
         }, (job, cb) => { // eslint-disable-line no-unused-vars
@@ -647,7 +655,7 @@ describe('Job', () => {
 
           if (runCount !== 1) {
             expect(runCount).to.be(2);
-            agenda.stop().then(resolve);
+            agenda.stop().then(resolve, reject);
           }
         })
       );
@@ -804,14 +812,18 @@ describe('Job', () => {
       agenda.processEvery(100);
       agenda.define('fifo', {concurrency: 1}, (job, cb) => cb());
 
-      const checkResultsPromise = new Promise(resolve =>
+      const checkResultsPromise = new Promise((resolve, reject) =>
         agenda.on('start:fifo', job => {
-          results.push(new Date(job.attrs.nextRunAt).getTime());
-          if (results.length !== 3) {
-            return;
+          try {
+            results.push(new Date(job.attrs.nextRunAt).getTime());
+            if (results.length !== 3) {
+              return;
+            }
+            expect(results.join('')).to.eql(results.sort().join(''));
+            resolve();
+          } catch (err) {
+            reject(err);
           }
-          expect(results.join('')).to.eql(results.sort().join(''));
-          resolve();
         })
       );
 
@@ -833,16 +845,20 @@ describe('Job', () => {
 
       agenda.define('fifo-priority', {concurrency: 1}, (job, cb) => cb());
 
-      const checkResultsPromise = new Promise(resolve =>
+      const checkResultsPromise = new Promise((resolve, reject) =>
         agenda.on('start:fifo-priority', job => {
-          priorities.push(job.attrs.priority);
-          times.push(new Date(job.attrs.lastRunAt).getTime());
-          if (priorities.length !== 3 || times.length !== 3) {
-            return;
+          try {
+            priorities.push(job.attrs.priority);
+            times.push(new Date(job.attrs.lastRunAt).getTime());
+            if (priorities.length !== 3 || times.length !== 3) {
+              return;
+            }
+            expect(times.join('')).to.eql(times.sort().join(''));
+            expect(priorities).to.eql([10, 10, -10]);
+            resolve();
+          } catch (err) {
+            reject(err);
           }
-          expect(times.join('')).to.eql(times.sort().join(''));
-          expect(priorities).to.eql([10, 10, -10]);
-          resolve();
         })
       );
 
@@ -863,14 +879,18 @@ describe('Job', () => {
 
       agenda.define('priority', {concurrency: 1}, (job, cb) => cb());
 
-      const checkResultsPromise = new Promise(resolve =>
+      const checkResultsPromise = new Promise((resolve, reject) =>
         agenda.on('start:priority', job => {
-          results.push(job.attrs.priority);
-          if (results.length !== 3) {
-            return;
+          try {
+            results.push(job.attrs.priority);
+            if (results.length !== 3) {
+              return;
+            }
+            expect(results).to.eql([10, 0, -10]);
+            resolve();
+          } catch (err) {
+            reject(err);
           }
-          expect(results).to.eql([10, 0, -10]);
-          resolve();
         })
       );
 
