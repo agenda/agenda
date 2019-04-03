@@ -507,9 +507,8 @@ the database. See below to learn how to manually work with jobs.
 
 ```js
 const job = agenda.create('printAnalyticsReport', {userCount: 100});
-job.save(err => {
-  console.log('Job successfully saved');
-});
+await job.save();
+console.log('Job successfully saved');
 ```
 
 ## Managing Jobs
@@ -606,7 +605,7 @@ When a job is finished (ie. `done` is called), it will automatically unlock.
 ## Manually working with a job
 
 A job instance has many instance methods. All mutating methods must be followed
-with a call to `job.save()` in order to persist the changes to the database.
+with a call to `await job.save()` in order to persist the changes to the database.
 
 
 ### repeatEvery(interval, [options])
@@ -623,21 +622,21 @@ Specifies an `interval` on which the job should repeat. The job runs at the time
 
 ```js
 job.repeatEvery('10 minutes');
-job.save();
+await job.save();
 ```
 
 ```js
 job.repeatEvery('3 minutes', {
   skipImmediate: true
 });
-job.save();
+await job.save();
 ```
 
 ```js
 job.repeatEvery('0 6 * * *', {
   timezone: 'America/New_York'
 });
-job.save();
+await job.save();
 ```
 
 ### repeatAt(time)
@@ -646,7 +645,7 @@ Specifies a `time` when the job should repeat. [Possible values](https://github.
 
 ```js
 job.repeatAt('3:30pm');
-job.save();
+await job.save();
 ```
 
 ### schedule(time)
@@ -655,7 +654,7 @@ Specifies the next `time` at which the job should run.
 
 ```js
 job.schedule('tomorrow at 6pm');
-job.save();
+await job.save();
 ```
 
 ### priority(priority)
@@ -665,7 +664,7 @@ the above priority table.
 
 ```js
 job.priority('low');
-job.save();
+await job.save();
 ```
 
 ### unique(properties, [options])
@@ -679,7 +678,7 @@ the following:
 
 ```js
 job.unique({'data.type': 'active', 'data.userId': '123', nextRunAt(date)});
-job.save();
+await job.save();
 ```
 
 *IMPORTANT:* To avoid high CPU usage by MongoDB, make sure to create an index on the used fields, like `data.type` and `data.userId` for the example above.
@@ -695,7 +694,7 @@ be set to `error.message`
 job.fail('insufficient disk space');
 // or
 job.fail(new Error('insufficient disk space'));
-job.save();
+await job.save();
 ```
 
 ### run(callback)
@@ -709,27 +708,29 @@ job.run((err, job) => {
 });
 ```
 
-### save(callback)
+### save()
 
-Saves the `job.attrs` into the database.
+Saves the `job.attrs` into the database. Returns a Promise resolving to a Job instance, or rejecting on error.
 
 ```js
-job.save(err => {
-  if (!err) {
-    console.log('Successfully saved job to collection');
-  }
-});
+try {
+  await job.save();
+  cosole.log('Successfully saved job to collection');
+} catch (e) {
+  console.error('Error saving job to collection');
+}
 ```
 
-### remove(callback)
+### remove()
 
-Removes the `job` from the database.
+Removes the `job` from the database. Returns a Promise resolving to the number of jobs removed, or rejecting on error.
 
 ```js
-job.remove(err => {
-  if (!err) {
-    console.log('Successfully removed job from collection');
-  }
+try {
+  await job.remove();
+  console.log('Successfully removed job from collection');
+} catch (e) {
+  console.error('Error removing job from collection');
 });
 ```
 
