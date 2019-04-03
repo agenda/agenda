@@ -507,9 +507,8 @@ the database. See below to learn how to manually work with jobs.
 
 ```js
 const job = agenda.create('printAnalyticsReport', {userCount: 100});
-await job.save(err => {
-  console.log('Job successfully saved');
-});
+await job.save();
+console.log('Job successfully saved');
 ```
 
 ## Managing Jobs
@@ -711,7 +710,7 @@ job.run((err, job) => {
 
 ### save()
 
-Saves the `job.attrs` into the database. Returns a Promise resolving to a Job instance, or throws on error.
+Saves the `job.attrs` into the database. Returns a Promise resolving to a Job instance, or rejecting on error.
 
 ```js
 try {
@@ -724,7 +723,7 @@ try {
 
 ### remove()
 
-Removes the `job` from the database. Returns a Promise resolving to the number of jobs removed, or throws on error.
+Removes the `job` from the database. Returns a Promise resolving to the number of jobs removed, or rejecting on error.
 
 ```js
 try {
