@@ -324,7 +324,7 @@ describe('Job', () => {
       job.attrs.name = 'failBoat2';
       agenda.define('failBoat2', (job, cb) => {
         Q.delay(100)
-          .then(() => { // eslint-disable-line
+          .then(() => { // eslint-disable-line promise/prefer-await-to-then
             throw new Error('Zomg fail');
           })
           .fail(cb)
