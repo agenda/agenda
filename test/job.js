@@ -257,18 +257,14 @@ describe('Job', () => {
       await job.save();
       await job.remove();
 
-      try {
-        const result = await mongoDb
-          .collection('agendaJobs')
-          .find({
-            _id: job.attrs._id
-          })
-          .toArray();
+      const result = await mongoDb
+        .collection('agendaJobs')
+        .find({
+          _id: job.attrs._id
+        })
+        .toArray();
 
-        expect(result).to.have.length(0);
-      } catch (e) {
-        throw e;
-      }
+      expect(result).to.have.length(0);
     });
   });
 
