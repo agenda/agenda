@@ -801,9 +801,11 @@ describe('Job', () => {
 
       agenda.start();
 
-      await agenda.schedule(new Date(now + 100), 'blocking', {i: 1});
-      await agenda.schedule(new Date(now + 100), 'blocking', {i: 2});
-      await agenda.schedule(new Date(now + 100), 'non-blocking', {i: 3});
+      return Promise.all([
+        agenda.schedule(new Date(now + 100), 'blocking', {i: 1}),
+        agenda.schedule(new Date(now + 100), 'blocking', {i: 2}),
+        agenda.schedule(new Date(now + 100), 'non-blocking', {i: 3})
+      ]);
     });
 
     it('should run jobs as first in first out (FIFO)', async() => {
