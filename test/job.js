@@ -36,14 +36,12 @@ describe('Job', () => {
       db: {
         address: mongoCfg
       }
-    }, err => {
+    }, async err => {
       if (err) {
         done(err);
       }
-      MongoClient.connect(mongoCfg, async(err, client) => {
-        if (err) {
-          done(err);
-        }
+      try {
+        const client = await MongoClient.connect(mongoCfg, {useNewUrlParser: true});
         mongoClient = client;
         mongoDb = client.db(agendaDatabase);
 
@@ -55,7 +53,9 @@ describe('Job', () => {
         agenda.define('some job', jobProcessor);
         agenda.define(jobType, jobProcessor);
         done();
-      });
+      } catch (err) {
+        done(err);
+      }
     });
   });
 
@@ -249,22 +249,22 @@ describe('Job', () => {
   });
 
   describe('remove', () => {
-    it('removes the job', done => {
+    it('removes the job', async() => {
       const job = new Job({
         agenda,
         name: 'removed job'
       });
-      job.save().then(() => {});
-      job.remove().then(() => {});
-      mongoDb.collection('agendaJobs').find({
-        _id: job.attrs._id
-      }).toArray((err, j) => {
-        if (err) {
-          done(err);
-        }
-        expect(j).to.have.length(0);
-        done();
-      });
+      await job.save();
+      await job.remove();
+
+      const result = await mongoDb
+        .collection('agendaJobs')
+        .find({
+          _id: job.attrs._id
+        })
+        .toArray();
+
+      expect(result).to.have.length(0);
     });
   });
 
@@ -319,9 +319,12 @@ describe('Job', () => {
     it('handles errors with q promises', () => {
       job.attrs.name = 'failBoat2';
       agenda.define('failBoat2', (job, cb) => {
-        Q.delay(100).then(() => {
-          throw new Error('Zomg fail');
-        }).fail(cb).done();
+        Q.delay(100)
+          .then(() => { // eslint-disable-line promise/prefer-await-to-then
+            throw new Error('Zomg fail');
+          })
+          .fail(cb)
+          .done();
       });
       job.run().catch(err => {
         expect(err).to.be.ok();
@@ -616,12 +619,13 @@ describe('Job', () => {
       const processorPromise = new Promise(async resolve =>
         agenda.define('lock job', {
           lockLifetime: 50
-        }, () => {
+        }, async() => {
           startCounter++;
 
           if (startCounter !== 1) {
             expect(startCounter).to.be(2);
-            agenda.stop().then(resolve);
+            await agenda.stop();
+            resolve();
           }
         })
       );
@@ -631,7 +635,7 @@ describe('Job', () => {
       agenda.defaultConcurrency(100);
       agenda.processEvery(10);
       agenda.every('0.02 seconds', 'lock job');
-      agenda.stop().then(() => {});
+      await agenda.stop();
       await agenda.start();
       await processorPromise;
     });
@@ -642,12 +646,13 @@ describe('Job', () => {
       const processorPromise = new Promise(async resolve =>
         agenda.define('lock job', {
           lockLifetime: 50
-        }, (job, cb) => { // eslint-disable-line no-unused-vars
+        }, async(job, cb) => { // eslint-disable-line no-unused-vars
           runCount++;
 
           if (runCount !== 1) {
             expect(runCount).to.be(2);
-            agenda.stop().then(resolve);
+            await agenda.stop();
+            resolve();
           }
         })
       );
@@ -762,7 +767,7 @@ describe('Job', () => {
   });
 
   describe('job concurrency', () => {
-    it('should not block a job for concurrency of another job', done => {
+    it('should not block a job for concurrency of another job', async() => {
       agenda.processEvery(50);
 
       const processed = [];
@@ -787,15 +792,16 @@ describe('Job', () => {
       agenda.on('complete', () => {
         if (!finished && processed.length === 3) {
           finished = true;
-          done();
         }
       });
 
       agenda.start();
 
-      agenda.schedule(new Date(now + 100), 'blocking', {i: 1}).then(() => {});
-      agenda.schedule(new Date(now + 100), 'blocking', {i: 2}).then(() => {});
-      agenda.schedule(new Date(now + 100), 'non-blocking', {i: 3}).then(() => {});
+      return Promise.all([
+        agenda.schedule(new Date(now + 100), 'blocking', {i: 1}),
+        agenda.schedule(new Date(now + 100), 'blocking', {i: 2}),
+        agenda.schedule(new Date(now + 100), 'non-blocking', {i: 3})
+      ]);
     });
 
     it('should run jobs as first in first out (FIFO)', async() => {
