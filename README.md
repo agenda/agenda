@@ -184,38 +184,9 @@ If you're using the `db` options, or call `database`, then you may still need to
 ### mongo(mongoClientInstance)
 
 Use an existing mongodb-native MongoClient instance. This can help consolidate connections to a
-database. You can instead use `.database` to have agenda handle connecting for
-you.
+database. You can instead use `.database` to have agenda handle connecting for you.
 
-Please note that this must be a *collection*. Also, you will want to run the following
-afterwards to ensure the database has the proper indexes:
-
-```js
-(async () => {
-  await agenda._ready;
-
-  try {
-    agenda._collection.createIndex({
-      disabled: 1,
-      lockedAt: 1,
-      name: 1,
-      nextRunAt: 1,
-      priority: -1
-    }, {
-      name: 'findAndLockNextJobIndex'
-    });
-  } catch (err) {
-    console.log('Failed to create Agenda index!');
-    console.error(err);
-
-    throw err;
-  }
-
-  console.log('Agenda index created.');
-})();
-```
-
-You can also specify it during instantiation.
+You can also specify it during instantiation:
 
 ```js
 const agenda = new Agenda({mongo: mongoClientInstance});
