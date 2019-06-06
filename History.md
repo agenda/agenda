@@ -2,6 +2,8 @@ Next
 ====
 
   * https://github.com/agenda/agenda/pulls
+  * Update dependencies
+  * Updates to documentation (kudos @dandv!)
 
 2.0.2 / 2018-09-15
 ==================
