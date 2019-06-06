@@ -1,11 +1,11 @@
 'use strict';
 module.exports = {
-  none: agenda => {},
+  none: () => {},
   daily: agenda => {
     agenda.define('once a day test job', (job, done) => {
       process.send('ran');
       done();
-      process.exit(0);
+      process.exit(0); // eslint-disable-line unicorn/no-process-exit
     });
 
     agenda.every('one day', 'once a day test job');
@@ -30,7 +30,7 @@ module.exports = {
     agenda.define('job in the future', (job, done) => {
       process.send('ran');
       done();
-      process.exit(0);
+      process.exit(0); // eslint-disable-line unicorn/no-process-exit
     });
 
     agenda.schedule(future, 'job in the future');
@@ -42,7 +42,7 @@ module.exports = {
     agenda.define('job in the past', (job, done) => {
       process.send('ran');
       done();
-      process.exit(0);
+      process.exit(0); // eslint-disable-line unicorn/no-process-exit
     });
 
     agenda.schedule(past, 'job in the past');
@@ -63,11 +63,11 @@ module.exports = {
 
     agenda.schedule(past, ['scheduled test 1', 'scheduled test 2']);
   },
-  now(agenda) {
+  now: agenda => {
     agenda.define('now run this job', (job, done) => {
       process.send('ran');
       done();
-      process.exit(0);
+      process.exit(0); // eslint-disable-line unicorn/no-process-exit
     });
 
     agenda.now('now run this job');

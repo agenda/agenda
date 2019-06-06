@@ -2,7 +2,7 @@
 'use strict';
 const path = require('path');
 const cp = require('child_process');
-const expect = require('expect.js');
+const expect = require('expect.js'); // eslint-disable-line ava/no-import-test-files
 const moment = require('moment-timezone');
 const {MongoClient} = require('mongodb');
 const Q = require('q');
@@ -36,9 +36,9 @@ describe('Job', () => {
       db: {
         address: mongoCfg
       }
-    }, async err => {
-      if (err) {
-        done(err);
+    }, async error => {
+      if (error) {
+        return done(error);
       }
 
       try {
@@ -53,9 +53,9 @@ describe('Job', () => {
         agenda.define('send email', jobProcessor);
         agenda.define('some job', jobProcessor);
         agenda.define(jobType, jobProcessor);
-        done();
-      } catch (error) {
-        done(error);
+        return done();
+      } catch (error2) {
+        return done(error2);
       }
     });
   });
@@ -293,7 +293,7 @@ describe('Job', () => {
     it('fails if job is undefined', async() => {
       job = new Job({agenda, name: 'not defined'});
       await job.run().catch(error => {
-        expect(err.message).to.be('Undefined job');
+        expect(error.message).to.be('Undefined job');
       });
       expect(job.attrs.failedAt).to.be.ok();
       expect(job.attrs.failReason).to.be('Undefined job');
@@ -313,7 +313,7 @@ describe('Job', () => {
         throw new Error('Zomg fail');
       });
       job.run().catch(error => {
-        expect(err.message).to.be('Zomg fail');
+        expect(error.message).to.be('Zomg fail');
       });
     });
 
@@ -328,7 +328,7 @@ describe('Job', () => {
           .done();
       });
       job.run().catch(error => {
-        expect(err).to.be.ok();
+        expect(error).to.be.ok();
       });
     });
 
@@ -429,9 +429,9 @@ describe('Job', () => {
       await j.remove();
       await j.save();
 
-      agenda.jobs({name: 'another job'}, (err, res) => {
-        if (err) {
-          throw err;
+      agenda.jobs({name: 'another job'}, (error, res) => {
+        if (error) {
+          throw error;
         }
 
         expect(res).to.have.length(0);
@@ -448,14 +448,14 @@ describe('Job', () => {
 
   describe('start/stop', () => {
     it('starts/stops the job queue', async() => {
+      // @TODO: fixme https://eslint.org/docs/rules/no-async-promise-executor
+      // eslint-disable-next-line no-async-promise-executor
       return new Promise(async resolve => {
         agenda.define('jobQueueTest', async(job, cb) => {
           await agenda.stop();
           await clearJobs();
           cb();
-          agenda.define('jobQueueTest', (job, cb) => { // eslint-disable-line max-nested-callbacks
-            cb();
-          });
+          agenda.define('jobQueueTest', (job, cb) => cb);
           resolve();
         });
         await agenda.every('1 second', 'jobQueueTest');
@@ -501,9 +501,9 @@ describe('Job', () => {
       await delay(jobTimeout);
       await agenda.stop();
 
-      agenda._collection.findOne({name: 'longRunningJob'}, (err, job) => {
-        if (err) {
-          throw err;
+      agenda._collection.findOne({name: 'longRunningJob'}, (error, job) => {
+        if (error) {
+          throw error;
         }
 
         expect(job.lockedAt).to.be(null);
@@ -585,8 +585,8 @@ describe('Job', () => {
         const job = new Job({agenda, name: 'failBoat'});
         agenda.once('fail', spy);
 
-        await job.run().catch(error2 => {
-          expect(err.message).to.be('Zomg fail');
+        await job.run().catch(error => {
+          expect(error.message).to.be('Zomg fail');
         });
 
         expect(spy.called).to.be(true);
@@ -602,8 +602,8 @@ describe('Job', () => {
         const job = new Job({agenda, name: 'failBoat'});
         agenda.once('fail:failBoat', spy);
 
-        await job.run().catch(error2 => {
-          expect(err.message).to.be('Zomg fail');
+        await job.run().catch(error => {
+          expect(error.message).to.be('Zomg fail');
         });
 
         expect(spy.called).to.be(true);
@@ -620,6 +620,8 @@ describe('Job', () => {
     it('runs a recurring job after a lock has expired', async() => {
       let startCounter = 0;
 
+      // @TODO: fixme https://eslint.org/docs/rules/no-async-promise-executor
+      // eslint-disable-next-line no-async-promise-executor
       const processorPromise = new Promise(async resolve =>
         agenda.define('lock job', {
           lockLifetime: 50
@@ -641,16 +643,18 @@ describe('Job', () => {
       agenda.every('0.02 seconds', 'lock job');
       await agenda.stop();
       await agenda.start();
-      await processorPromise;
+      return processorPromise;
     });
 
     it('runs a one-time job after its lock expires', async() => {
       let runCount = 0;
 
+      // @TODO: fixme https://eslint.org/docs/rules/no-async-promise-executor
+      // eslint-disable-next-line no-async-promise-executor
       const processorPromise = new Promise(async resolve =>
         agenda.define('lock job', {
           lockLifetime: 50
-        }, async(job, cb) => { // eslint-disable-line no-unused-vars
+        }, async() => {
           runCount++;
 
           if (runCount !== 1) {
@@ -666,7 +670,7 @@ describe('Job', () => {
       agenda.now('lock job', {
         i: 1
       });
-      await processorPromise;
+      return processorPromise;
     });
 
     it('does not process locked jobs', async() => {
@@ -716,7 +720,7 @@ describe('Job', () => {
     });
 
     it('does not on-the-fly lock more than definition.lockLimit jobs', async() => {
-      agenda.define('lock job', {lockLimit: 1}, (job, cb) => {}); // eslint-disable-line no-unused-vars
+      agenda.define('lock job', {lockLimit: 1}, () => {});
 
       await agenda.start();
 
@@ -848,10 +852,8 @@ describe('Job', () => {
         agenda.on('start:fifo-priority', job => {
           priorities.push(job.attrs.priority);
           times.push(new Date(job.attrs.lastRunAt).getTime());
-          if (priorities.length !== 3 || times.length !== 3) {
-            return;
-          }
-
+          expect(priorities.length).to.eql(3);
+          expect(times.length).to.eql(3);
           expect(times.join('')).to.eql(times.sort().join(''));
           expect(priorities).to.eql([10, 10, -10]);
           resolve();
@@ -864,7 +866,7 @@ describe('Job', () => {
         agenda.create('fifo-priority', {i: 3}).schedule(new Date(now + 100)).priority('high').save()
       ]);
       await agenda.start();
-      await checkResultsPromise;
+      return checkResultsPromise;
     });
 
     it('should run higher priority jobs first', async() => {
@@ -968,7 +970,7 @@ describe('Job', () => {
           if (msg === 'ran') {
             expect(i).to.be(0);
             i += 1;
-            startService(); // eslint-disable-line no-use-before-define
+            startService();
           } else if (msg === 'notRan') {
             expect(i).to.be(1);
             done();
@@ -996,11 +998,12 @@ describe('Job', () => {
         let ran2 = true;
         let doneCalled = false;
 
-        const serviceError = function(e) {
-          done(e);
+        const serviceError = error => {
+          done(error);
+          return n.send('exit');
         };
 
-        const receiveMessage = function(msg) {
+        const receiveMessage = msg => {
           if (msg === 'test1-ran') {
             ran1 = true;
             if (ran1 && ran2 && !doneCalled) {
@@ -1061,7 +1064,7 @@ describe('Job', () => {
             }
 
             i += 1;
-            startService(); // eslint-disable-line no-use-before-define
+            startService();
           } else {
             return done(new Error('Job scheduled in future was ran!'));
           }
@@ -1110,8 +1113,9 @@ describe('Job', () => {
         let ran2 = false;
         let doneCalled = false;
 
-        const serviceError = err => {
-          done(err);
+        const serviceError = error => {
+          done(error);
+          return n.send('exit');
         };
 
         const receiveMessage = msg => {
@@ -1130,7 +1134,8 @@ describe('Job', () => {
               return n.send('exit');
             }
           } else {
-            return done(new Error('Jobs did not run!'));
+            done(new Error('Jobs did not run!'));
+            return n.send('exit');
           }
         };
 
@@ -1141,16 +1146,19 @@ describe('Job', () => {
 
     describe('now()', () => {
       it('Should immediately run the job', done => {
-        const serviceError = function(e) {
-          done(e);
+        const serviceError = error => {
+          done(error);
+          return n.send('exit');
         };
 
-        const receiveMessage = function(msg) {
-          if (msg === 'ran') {
-            return done();
+        const receiveMessage = message => {
+          if (message === 'ran') {
+            done();
+          } else {
+            done(new Error('Job did not immediately run!'));
           }
 
-          return done(new Error('Job did not immediately run!'));
+          return n.send('exit');
         };
 
         const serverPath = path.join(__dirname, 'fixtures', 'agenda-instance.js');

@@ -1,6 +1,6 @@
 /* globals describe, it, beforeEach, afterEach */
 'use strict';
-const expect = require('expect.js');
+const expect = require('expect.js'); // eslint-disable-line ava/no-import-test-files
 const {MongoClient} = require('mongodb');
 const delay = require('delay');
 const Agenda = require('..');
@@ -28,6 +28,8 @@ const jobProcessor = () => {};
 
 describe('Agenda', () => {
   beforeEach(() => {
+    // @TODO: fixme https://eslint.org/docs/rules/no-async-promise-executor
+    // eslint-disable-next-line no-async-promise-executor
     return new Promise(async resolve => {
       jobs = new Agenda({
         db: {
@@ -54,6 +56,8 @@ describe('Agenda', () => {
   });
 
   afterEach(() => {
+    // @TODO: fixme https://eslint.org/docs/rules/no-async-promise-executor
+    // eslint-disable-next-line no-async-promise-executor
     return new Promise(async resolve => {
       await delay(50);
       await jobs.stop();
@@ -425,7 +429,7 @@ describe('Agenda', () => {
         await job.save();
         jobs.jobs({
           name: 'no definition'
-        }, async(err, j) => { // eslint-disable-line max-nested-callbacks
+        }, async(err, j) => {
           if (err) {
             throw err;
           }
@@ -434,7 +438,7 @@ describe('Agenda', () => {
           await jobs.purge();
           jobs.jobs({
             name: 'no definition'
-          }, (err, j) => { // eslint-disable-line max-nested-callbacks
+          }, (err, j) => {
             if (err) {
               throw err;
             }
