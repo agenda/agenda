@@ -40,6 +40,7 @@ describe('Job', () => {
       if (err) {
         done(err);
       }
+
       try {
         const client = await MongoClient.connect(mongoCfg, {useNewUrlParser: true});
         mongoClient = client;
@@ -53,8 +54,8 @@ describe('Job', () => {
         agenda.define('some job', jobProcessor);
         agenda.define(jobType, jobProcessor);
         done();
-      } catch (err) {
-        done(err);
+      } catch (error) {
+        done(error);
       }
     });
   });
@@ -291,7 +292,7 @@ describe('Job', () => {
 
     it('fails if job is undefined', async() => {
       job = new Job({agenda, name: 'not defined'});
-      await job.run().catch(err => {
+      await job.run().catch(error => {
         expect(err.message).to.be('Undefined job');
       });
       expect(job.attrs.failedAt).to.be.ok();
@@ -311,7 +312,7 @@ describe('Job', () => {
       agenda.define('failBoat', () => {
         throw new Error('Zomg fail');
       });
-      job.run().catch(err => {
+      job.run().catch(error => {
         expect(err.message).to.be('Zomg fail');
       });
     });
@@ -326,12 +327,12 @@ describe('Job', () => {
           .fail(cb)
           .done();
       });
-      job.run().catch(err => {
+      job.run().catch(error => {
         expect(err).to.be.ok();
       });
     });
 
-    it(`doesn't allow a stale job to be saved`, async() => {
+    it('doesn\'t allow a stale job to be saved', async() => {
       job.attrs.name = 'failBoat3';
       await job.save();
       agenda.define('failBoat3', async(job, cb) => {
@@ -413,6 +414,7 @@ describe('Job', () => {
         agenda.saveJob = oldSaveJob;
         done();
       };
+
       const job = agenda.create('some job', {
         wee: 1
       });
@@ -431,6 +433,7 @@ describe('Job', () => {
         if (err) {
           throw err;
         }
+
         expect(res).to.have.length(0);
       });
     });
@@ -502,6 +505,7 @@ describe('Job', () => {
         if (err) {
           throw err;
         }
+
         expect(job.lockedAt).to.be(null);
       });
     });
@@ -581,14 +585,14 @@ describe('Job', () => {
         const job = new Job({agenda, name: 'failBoat'});
         agenda.once('fail', spy);
 
-        await job.run().catch(err => {
+        await job.run().catch(error2 => {
           expect(err.message).to.be('Zomg fail');
         });
 
         expect(spy.called).to.be(true);
 
-        const err = spy.args[0][0];
-        expect(err.message).to.be('Zomg fail');
+        const error2 = spy.args[0][0];
+        expect(error2.message).to.be('Zomg fail');
         expect(job.attrs.failCount).to.be(1);
         expect(job.attrs.failedAt.valueOf()).not.to.be.below(job.attrs.lastFinishedAt.valueOf());
       });
@@ -598,14 +602,14 @@ describe('Job', () => {
         const job = new Job({agenda, name: 'failBoat'});
         agenda.once('fail:failBoat', spy);
 
-        await job.run().catch(err => {
+        await job.run().catch(error2 => {
           expect(err.message).to.be('Zomg fail');
         });
 
         expect(spy.called).to.be(true);
 
-        const err = spy.args[0][0];
-        expect(err.message).to.be('Zomg fail');
+        const error2 = spy.args[0][0];
+        expect(error2.message).to.be('Zomg fail');
         expect(job.attrs.failCount).to.be(1);
         expect(job.attrs.failedAt.valueOf()).not.to.be.below(job.attrs.lastFinishedAt.valueOf());
       });
@@ -816,6 +820,7 @@ describe('Job', () => {
           if (results.length !== 3) {
             return;
           }
+
           expect(results.join('')).to.eql(results.sort().join(''));
           resolve();
         })
@@ -846,6 +851,7 @@ describe('Job', () => {
           if (priorities.length !== 3 || times.length !== 3) {
             return;
           }
+
           expect(times.join('')).to.eql(times.sort().join(''));
           expect(priorities).to.eql([10, 10, -10]);
           resolve();
@@ -875,6 +881,7 @@ describe('Job', () => {
           if (results.length !== 3) {
             return;
           }
+
           expect(results).to.eql([10, 0, -10]);
           resolve();
         })
@@ -911,6 +918,7 @@ describe('Job', () => {
         if (counter < 2) {
           counter++;
         }
+
         cb();
       });
 
@@ -932,6 +940,7 @@ describe('Job', () => {
         if (counter < 2) {
           counter++;
         }
+
         cb();
       });
       await agenda.every(10, 'everyRunTest2');
@@ -954,6 +963,7 @@ describe('Job', () => {
         const serviceError = function(e) {
           done(e);
         };
+
         const receiveMessage = function(msg) {
           if (msg === 'ran') {
             expect(i).to.be(0);
@@ -989,6 +999,7 @@ describe('Job', () => {
         const serviceError = function(e) {
           done(e);
         };
+
         const receiveMessage = function(msg) {
           if (msg === 'test1-ran') {
             ran1 = true;
@@ -1042,6 +1053,7 @@ describe('Job', () => {
         const serviceError = function(e) {
           done(e);
         };
+
         const receiveMessage = function(msg) {
           if (msg === 'notRan') {
             if (i < 5) {
@@ -1070,6 +1082,7 @@ describe('Job', () => {
         const serviceError = function(e) {
           done(e);
         };
+
         const receiveMessage = function(msg) {
           if (msg === 'ran') {
             done();
@@ -1100,6 +1113,7 @@ describe('Job', () => {
         const serviceError = err => {
           done(err);
         };
+
         const receiveMessage = msg => {
           if (msg === 'test1-ran') {
             ran1 = true;
@@ -1130,10 +1144,12 @@ describe('Job', () => {
         const serviceError = function(e) {
           done(e);
         };
+
         const receiveMessage = function(msg) {
           if (msg === 'ran') {
             return done();
           }
+
           return done(new Error('Job did not immediately run!'));
         };
 

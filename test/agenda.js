@@ -38,6 +38,7 @@ describe('Agenda', () => {
           if (err) {
             throw err;
           }
+
           mongoClient = client;
           mongoDb = client.db(agendaDatabase);
           await delay(50);
@@ -339,13 +340,14 @@ describe('Agenda', () => {
             if (err) {
               throw err;
             }
+
             expect(jobs).to.have.length(1);
           });
         });
       });
 
       describe('should demonstrate non-unique contraint', () => {
-        it(`should create two jobs when unique doesn't match`, async() => {
+        it('should create two jobs when unique doesn\'t match', async() => {
           const time = new Date(Date.now() + (1000 * 60 * 3));
           const time2 = new Date(Date.now() + (1000 * 60 * 4));
 
@@ -375,6 +377,7 @@ describe('Agenda', () => {
             if (err) {
               throw err;
             }
+
             expect(jobs).to.have.length(2);
           });
         });
@@ -407,6 +410,7 @@ describe('Agenda', () => {
           if (err) {
             throw err;
           }
+
           expect(c.length).to.not.be(0);
           expect(c[0]).to.be.a(Job);
           await clearJobs();
@@ -425,6 +429,7 @@ describe('Agenda', () => {
           if (err) {
             throw err;
           }
+
           expect(j).to.have.length(1);
           await jobs.purge();
           jobs.jobs({
@@ -433,6 +438,7 @@ describe('Agenda', () => {
             if (err) {
               throw err;
             }
+
             expect(j).to.have.length(0);
           });
         });
@@ -457,6 +463,7 @@ describe('Agenda', () => {
       const checkDone = () => {
         remaining--;
       };
+
       await jobs.create('jobA').save().then(checkDone);
       await jobs.create('jobA', 'someData').save().then(checkDone);
       await jobs.create('jobB').save().then(checkDone);
@@ -468,6 +475,7 @@ describe('Agenda', () => {
         if (err) {
           return done(err);
         }
+
         done();
       });
     });
