@@ -237,7 +237,7 @@ const agenda = new Agenda({processEvery: '30 seconds'});
 ### maxConcurrency(number)
 
 Takes a `number` which specifies the max number of jobs that can be running at
-any given moment. By default it is `20`.
+any given moment. By default it is `20`. If it is negative, the maxConcurrency is limitless.
 
 ```js
 agenda.maxConcurrency(20);
@@ -252,7 +252,7 @@ const agenda = new Agenda({maxConcurrency: 20});
 ### defaultConcurrency(number)
 
 Takes a `number` which specifies the default number of a specific job that can be running at
-any given moment. By default it is `5`.
+any given moment. By default it is `5`. If it is negative, the maxConcurrency is limitless.
 
 ```js
 agenda.defaultConcurrency(5);
