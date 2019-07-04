@@ -485,13 +485,13 @@ console.log('Job successfully saved');
 ## Managing Jobs
 
 
-### jobs(mongodb-native query)
+### jobs(mongodb-native query, mongodb-native sort, mongodb-native limit)
 
-Lets you query all of the jobs in the agenda job's database. This is a full [mongodb-native](https://github.com/mongodb/node-mongodb-native)
-`find` query. See mongodb-native's documentation for details.
+Lets you query for then sort and limit the query result of all of the jobs in the agenda job's database. These are full [mongodb-native](https://github.com/mongodb/node-mongodb-native)
+`find` commands. See mongodb-native's documentation for details.
 
 ```js
-const jobs = await agenda.jobs({name: 'printAnalyticsReport'});
+const jobs = await agenda.jobs({name: 'printAnalyticsReport'}, {data:-1}, 3);
 // Work with jobs (see below)
 ```
 
