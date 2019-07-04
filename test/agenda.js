@@ -503,4 +503,40 @@ describe('Agenda', () => {
       expect(jobs3).to.have.length(1);
     });
   });
+
+  describe('search', () => {
+    beforeEach(async() => {
+      await jobs.create('jobA', 1).save();
+      await jobs.create('jobA', 2).save();
+      await jobs.create('jobA', 3).save();
+    });
+
+    afterEach(done => {
+      jobs._collection.remove({name: 'jobA'}, err => {
+        if (err) {
+          return done(err);
+        }
+        done();
+      });
+    });
+
+    it('should limit jobs', async() => {
+      const results = await jobs.jobs({name: 'jobA'}, {}, 2);
+      expect(results).to.have.length(2);
+    });
+
+    it('should sort jobs', async() => {
+      const results = await jobs.jobs({name: 'jobA'}, {data: -1});
+
+      expect(results).to.have.length(3);
+
+      const job1 = results[0];
+      const job2 = results[1];
+      const job3 = results[2];
+
+      expect(job1.attrs.data).to.be(3);
+      expect(job2.attrs.data).to.be(2);
+      expect(job3.attrs.data).to.be(1);
+    });
+  });
 });
