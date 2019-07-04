@@ -487,8 +487,7 @@ console.log('Job successfully saved');
 
 ### jobs(mongodb-native query, mongodb-native sort, mongodb-native limit)
 
-Lets you query for then sort and limit the query result of all of the jobs in the agenda job's database. These are full [mongodb-native](https://github.com/mongodb/node-mongodb-native)
-`find` commands. See mongodb-native's documentation for details.
+Lets you query (then sort and limit the result) all of the jobs in the agenda job's database. These are full [mongodb-native](https://github.com/mongodb/node-mongodb-native) `find`, `sort` and `limit` commands. See mongodb-native's documentation for details.
 
 ```js
 const jobs = await agenda.jobs({name: 'printAnalyticsReport'}, {data:-1}, 3);
