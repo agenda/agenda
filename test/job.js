@@ -8,8 +8,8 @@ const {MongoClient} = require('mongodb');
 const Q = require('q');
 const delay = require('delay');
 const sinon = require('sinon');
-const Agenda = require('..');
 const Job = require('../lib/job');
+const Agenda = require('..');
 
 const mongoHost = process.env.MONGODB_HOST || 'localhost';
 const mongoPort = process.env.MONGODB_PORT || '27017';
