@@ -100,7 +100,9 @@ describe('Job', () => {
     it('sets the nextRunAt property with skipImmediate', () => {
       const now = new Date();
       job.repeatEvery('3 minutes', {skipImmediate: true});
-      expect(job.attrs.nextRunAt).to.be(now.valueOf() + 180000);
+      const lowerBound = now.valueOf() + 180000;
+      const upperBound = now.valueOf() + 180000 + 2;
+      expect(job.attrs.nextRunAt).to.be.within(lowerBound, upperBound); // Inclusive
     });
   });
 
