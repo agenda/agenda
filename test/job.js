@@ -490,7 +490,7 @@ describe('Job', () => {
     });
 
     it('clears locks on stop', async() => {
-      agenda.define('longRunningJob', () => {
+      agenda.define('longRunningJob', job => { // eslint-disable-line no-unused-vars
         // Job never finishes
       });
       agenda.every('10 seconds', 'longRunningJob');
