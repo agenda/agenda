@@ -33,21 +33,21 @@ better suits your needs.
 
 Agenda is great if you need something that is simple and backed by MongoDB.
 
-| Feature         | Bull          | Kue   | Bee | Agenda |
-| :-------------  |:-------------:|:-----:|:---:|:------:|
-| Backend         | redis         | redis |redis| mongo  |
-| Priorities      | ✓             |  ✓    |     |   ✓    |
-| Concurrency     | ✓             |  ✓    |  ✓  |   ✓    |
-| Delayed jobs    | ✓             |  ✓    |     |   ✓    |
-| Global events   | ✓             |  ✓    |     |        |
-| Rate Limiter    | ✓             |       |     |        |
-| Pause/Resume    | ✓             |  ✓    |     |        |
-| Sandboxed worker| ✓             |       |     |        |
-| Repeatable jobs | ✓             |       |     |   ✓    |
-| Atomic ops      | ✓             |       |  ✓  |        |
-| Persistence     | ✓             |   ✓   |  ✓  |   ✓    |
-| UI              | ✓             |   ✓   |     |   ✓    |
-| REST API        |               |       |     |   ✓    |
+| Feature         | Bull          | Bee | Agenda |
+| :-------------  |:-------------:|:---:|:------:|
+| Backend         | redis         |redis| mongo  |
+| Priorities      | ✓             |     |   ✓    |
+| Concurrency     | ✓             |  ✓  |   ✓    |
+| Delayed jobs    | ✓             |     |   ✓    |
+| Global events   | ✓             |     |        |
+| Rate Limiter    | ✓             |     |        |
+| Pause/Resume    | ✓             |     |        |
+| Sandboxed worker| ✓             |     |        |
+| Repeatable jobs | ✓             |     |   ✓    |
+| Atomic ops      | ✓             |  ✓  |        |
+| Persistence     | ✓             |  ✓  |   ✓    |
+| UI              | ✓             |     |   ✓    |
+| REST API        |               |     |   ✓    |
 | Optimized for   | Jobs / Messages | Jobs | Messages | Jobs |
 
 _Kudos for making the comparison chart goes to [Bull](https://www.npmjs.com/package/bull#feature-comparison) maintainers._
@@ -77,8 +77,8 @@ const agenda = new Agenda({db: {address: mongoConnectionString}});
 // or pass in an existing mongodb-native MongoClient instance
 // const agenda = new Agenda({mongo: myMongoClient});
 
-agenda.define('delete old users', (job, done) => {
-  User.remove({lastLogIn: {$lt: twoDaysAgo}}, done);
+agenda.define('delete old users', async job => {
+  await User.remove({lastLogIn: {$lt: twoDaysAgo}});
 });
 
 (async function() { // IIFE to give access to async/await
@@ -92,14 +92,14 @@ agenda.define('delete old users', (job, done) => {
 ```
 
 ```js
-agenda.define('send email report', {priority: 'high', concurrency: 10}, (job, done) => {
+agenda.define('send email report', {priority: 'high', concurrency: 10}, async job => {
   const {to} = job.attrs.data;
-  emailClient.send({
+  await emailClient.send({
     to,
     from: 'example@example.com',
     subject: 'Email Report',
     body: '...'
-  }, done);
+  });
 });
 
 (async function() {
@@ -181,16 +181,17 @@ Agenda will emit a `ready` event (see [Agenda Events](#agenda-events)) when prop
 It is safe to call `agenda.start()` without waiting for this event, as this is handled internally.
 If you're using the `db` options, or call `database`, then you may still need to listen for `ready` before saving jobs.
 
-### mongo(mongoClientInstance)
+### mongo(dbInstance)
 
-Use an existing mongodb-native MongoClient instance. This can help consolidate connections to a
+Use an existing mongodb-native MongoClient/Db instance. This can help consolidate connections to a
 database. You can instead use `.database` to have agenda handle connecting for you.
 
 You can also specify it during instantiation:
 
 ```js
-const agenda = new Agenda({mongo: mongoClientInstance});
+const agenda = new Agenda({mongo: mongoClientInstance.db('agenda-test')});
 ```
+Note that MongoClient.connect() returns a mongoClientInstance since [node-mongodb-native 3.0.0](https://github.com/mongodb/node-mongodb-native/blob/master/CHANGES_3.0.0.md), while it used to return a dbInstance that could then be directly passed to agenda.
 
 ### name(name)
 
@@ -298,8 +299,9 @@ Takes a `number` which specifies the default lock lifetime in milliseconds. By
 default it is 10 minutes. This can be overridden by specifying the
 `lockLifetime` option to a defined job.
 
-A job will unlock if it is finished (ie. `done` is called) before the `lockLifetime`.
-The lock is useful if the job crashes or times out.
+A job will unlock if it is finished (ie. the returned Promise resolves/rejects
+or `done` is specified in the params and `done()` is called) before the
+`lockLifetime`. The lock is useful if the job crashes or times out.
 
 ```js
 agenda.defaultLockLifetime(10000);
@@ -337,9 +339,11 @@ Before you can use a job, you must define its processing behavior.
 ### define(jobName, [options], fn)
 
 Defines a job with the name of `jobName`. When a job of `jobName` gets run, it
-will be passed to `fn(job, done)`. To maintain asynchronous behavior, you must
-call `done()` when you are processing the job. If your function is synchronous,
-you may omit `done` from the signature.
+will be passed to `fn(job, done)`. To maintain asynchronous behavior, you may
+either provide a Promise-returning function in `fn` *or* provide `done` as a
+second parameter to `fn`. If `done` is specified in the function signature, you
+must call `done()` when you are processing the job. If your function is
+synchronous or returns a Promise, you may omit `done` from the signature.
 
 `options` is an optional argument which can overwrite the defaults. It can take
 the following:
@@ -347,7 +351,7 @@ the following:
 - `concurrency`: `number` maximum number of that job that can be running at once (per instance of agenda)
 - `lockLimit`: `number` maximum number of that job that can be locked at once (per instance of agenda)
 - `lockLifetime`: `number` interval in ms of how long the job stays locked for (see [multiple job processors](#multiple-job-processors) for more info).
-A job will automatically unlock if `done()` is called.
+A job will automatically unlock once a returned promise resolves/rejects (or if `done` is specified in the signature and `done()` is called).
 - `priority`: `(lowest|low|normal|high|highest|number)` specifies the priority
   of the job. Higher priority jobs will run first. See the priority mapping
   below
@@ -364,6 +368,15 @@ Priority mapping:
 ```
 
 Async Job:
+```js
+agenda.define('some long running job', async job => {
+  const data = await doSomelengthyTask();
+  await formatThatData(data);
+  await sendThatData(data);
+});
+```
+
+Async Job (using `done`):
 ```js
 agenda.define('some long running job', (job, done) => {
   doSomelengthyTask(data => {
@@ -387,7 +400,7 @@ agenda.define('say hello', job => {
 
 ## Creating Jobs
 
-### every(interval, name, [data], [options], [cb])
+### every(interval, name, [data], [options])
 
 Runs job `name` at the given `interval`. Optionally, data and options can be passed in.
 Every creates a job of type `single`, which means that it will only create one
@@ -410,12 +423,10 @@ persisted in the database.
 Returns the `job`.
 
 ```js
-agenda.define('printAnalyticsReport', (job, done) => {
-  User.doSomethingReallyIntensive((err, users) => {
-    processUserData();
-    console.log('I print a report!');
-    done();
-  });
+agenda.define('printAnalyticsReport', async job => {
+  const users = await User.doSomethingReallyIntensive();
+  processUserData(users);
+  console.log('I print a report!');
 });
 
 agenda.every('15 minutes', 'printAnalyticsReport');
@@ -430,7 +441,7 @@ agenda.every('15 minutes', ['printAnalyticsReport', 'sendNotifications', 'update
 
 In this case, `every` returns array of `jobs`.
 
-### schedule(when, name, [data], [cb])
+### schedule(when, name, [data])
 
 Schedules a job to run `name` once at a given time. `when` can be a `Date` or a
 `String` such as `tomorrow at 5pm`.
@@ -455,15 +466,12 @@ agenda.schedule('tomorrow at noon', ['printAnalyticsReport', 'sendNotifications'
 
 In this case, `schedule` returns array of `jobs`.
 
-### now(name, [data], [cb])
+### now(name, [data])
 
 Schedules a job to run `name` once immediately.
 
 `data` is an optional argument that will be passed to the processing function
 under `job.attrs.data`.
-
-`cb` is an optional callback function which will be called when the job has been
-persisted in the database.
 
 Returns the `job`.
 
@@ -570,7 +578,8 @@ specify a longer lockLifetime.
 By default it is 10 minutes. Typically you shouldn't have a job that runs for 10 minutes,
 so this is really insurance should the job queue crash before the job is unlocked.
 
-When a job is finished (ie. `done` is called), it will automatically unlock.
+When a job is finished (i.e. the returned promise resolves/rejects or `done` is
+specified in the signature and `done()` is called), it will automatically unlock.
 
 ## Manually working with a job
 
@@ -719,14 +728,12 @@ when you have very long running jobs. The call returns a promise that resolves
 when the job's lock has been renewed.
 
 ```js
-agenda.define('super long job', (job, done) => {
-  (async () => {
-    await doSomeLongTask();
-    await job.touch();
-    await doAnotherLongTask();
-    await job.touch();
-    await finishOurLongTasks();
-  })().then(done, done);
+agenda.define('super long job', async job => {
+  await doSomeLongTask();
+  await job.touch();
+  await doAnotherLongTask();
+  await job.touch();
+  await finishOurLongTasks();
 });
 ```
 
@@ -929,16 +936,12 @@ let email = require('some-email-lib'),
   User = require('../models/user-model.js');
 
 module.exports = function(agenda) {
-  agenda.define('registration email', (job, done) => {
-    User.get(job.attrs.data.userId, (err, user) => {
-      if (err) {
-        return done(err);
-      }
-      email(user.email(), 'Thanks for registering', 'Thanks for registering ' + user.name(), done);
-    });
+  agenda.define('registration email', async job => {
+    const user = await User.get(job.attrs.data.userId);
+    await email(user.email(), 'Thanks for registering', 'Thanks for registering ' + user.name());
   });
 
-  agenda.define('reset password', (job, done) => {
+  agenda.define('reset password', async job => {
     // Etc
   });
 
