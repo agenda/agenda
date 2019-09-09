@@ -181,16 +181,17 @@ Agenda will emit a `ready` event (see [Agenda Events](#agenda-events)) when prop
 It is safe to call `agenda.start()` without waiting for this event, as this is handled internally.
 If you're using the `db` options, or call `database`, then you may still need to listen for `ready` before saving jobs.
 
-### mongo(mongoClientInstance)
+### mongo(dbInstance)
 
-Use an existing mongodb-native MongoClient instance. This can help consolidate connections to a
+Use an existing mongodb-native MongoClient/Db instance. This can help consolidate connections to a
 database. You can instead use `.database` to have agenda handle connecting for you.
 
 You can also specify it during instantiation:
 
 ```js
-const agenda = new Agenda({mongo: mongoClientInstance});
+const agenda = new Agenda({mongo: mongoClientInstance.db('agenda-test')});
 ```
+Note that MongoClient.connect() returns a mongoClientInstance since [node-mongodb-native 3.0.0](https://github.com/mongodb/node-mongodb-native/blob/master/CHANGES_3.0.0.md), while it used to return a dbInstance that could then be directly passed to agenda.
 
 ### name(name)
 
