@@ -6,7 +6,7 @@ Next
 2.1.0 / 2019-09-09
 ==================
   * Support async functions in job processing ([#653](https://github.com/agenda/agenda/pull/653)) (thanks @princjef!)
-  * Allow sorting and limiting jobs when searching ((#665)[https://github.com/agenda/agenda/pull/665]) (thank you @edwin-jones)
+  * Allow sorting and limiting jobs when searching ([#665](https://github.com/agenda/agenda/pull/665)) (thank you @edwin-jones)
   * Update MongoClient connection settings with `useNewUrlParser: true` to remove the deprecation warning. ([#806](https://github.com/agenda/agenda/pull/806)) (thanks @dpawson905!)
   * Allow valid date strings when scheduling ([#808](https://github.com/agenda/agenda/pull/808)) (Thanks @wingsbob!)
   * Update dependencies ([#820](https://github.com/agenda/agenda/pull/820))
