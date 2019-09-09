@@ -122,6 +122,9 @@ describe('Job', () => {
     it('returns the job', () => {
       expect(job.schedule('tomorrow at noon')).to.be(job);
     });
+    it('understands ISODates on the 30th', () => { // https://github.com/agenda/agenda/issues/807
+      expect(job.schedule('2019-04-30T22:31:00.00Z').attrs.nextRunAt.getTime()).to.equal(1556663460000);
+    });
   });
 
   describe('priority', () => {
