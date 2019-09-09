@@ -331,6 +331,128 @@ describe('Job', () => {
       });
     });
 
+    it('allows async functions', async() => {
+      job.attrs.name = 'async';
+
+      const successSpy = sinon.stub();
+      let finished = false;
+
+      agenda.once('success:async', successSpy);
+
+      agenda.define('async', async() => {
+        await delay(5);
+        finished = true;
+      });
+
+      expect(finished).to.equal(false);
+      await job.run();
+      expect(successSpy.callCount).to.equal(1);
+      expect(finished).to.equal(true);
+    });
+
+    it('handles errors from async functions', async() => {
+      job.attrs.name = 'asyncFail';
+
+      const failSpy = sinon.stub();
+      const err = new Error('failure');
+
+      agenda.once('fail:asyncFail', failSpy);
+
+      agenda.define('asyncFail', async() => {
+        await delay(5);
+        throw err;
+      });
+
+      await job.run();
+      expect(failSpy.callCount).to.equal(1);
+      expect(failSpy.calledWith(err)).to.equal(true);
+    });
+
+    it('waits for the callback to be called even if the function is async', async() => {
+      job.attrs.name = 'asyncCb';
+
+      const successSpy = sinon.stub();
+      let finishedCb = false;
+
+      agenda.once('success:asyncCb', successSpy);
+
+      agenda.define('asyncCb', async(job, cb) => {
+        (async() => {
+          await delay(5);
+          finishedCb = true;
+          cb();
+        })();
+      });
+
+      await job.run();
+      expect(finishedCb).to.equal(true);
+      expect(successSpy.callCount).to.equal(1);
+    });
+
+    it('uses the callback error if the function is async and didn\'t reject', async() => {
+      job.attrs.name = 'asyncCbError';
+
+      const failSpy = sinon.stub();
+      const err = new Error('failure');
+
+      agenda.once('fail:asyncCbError', failSpy);
+
+      agenda.define('asyncCbError', async(job, cb) => {
+        (async() => {
+          await delay(5);
+          cb(err);
+        })();
+      });
+
+      await job.run();
+      expect(failSpy.callCount).to.equal(1);
+      expect(failSpy.calledWith(err)).to.equal(true);
+    });
+
+    it('favors the async function error over the callback error if it comes first', async() => {
+      job.attrs.name = 'asyncCbTwoError';
+
+      const failSpy = sinon.stub();
+      const fnErr = new Error('functionFailure');
+      const cbErr = new Error('callbackFailure');
+
+      agenda.on('fail:asyncCbTwoError', failSpy);
+
+      agenda.define('asyncCbTwoError', async(job, cb) => {
+        (async() => {
+          await delay(5);
+          cb(cbErr);
+        })();
+        throw fnErr;
+      });
+
+      await job.run();
+      expect(failSpy.callCount).to.equal(1);
+      expect(failSpy.calledWith(fnErr)).to.equal(true);
+      expect(failSpy.calledWith(cbErr)).to.equal(false);
+    });
+
+    it('favors the callback error over the async function error if it comes first', async() => {
+      job.attrs.name = 'asyncCbTwoErrorCb';
+
+      const failSpy = sinon.stub();
+      const fnErr = new Error('functionFailure');
+      const cbErr = new Error('callbackFailure');
+
+      agenda.on('fail:asyncCbTwoErrorCb', failSpy);
+
+      agenda.define('asyncCbTwoErrorCb', async(job, cb) => {
+        cb(cbErr);
+        await delay(5);
+        throw fnErr;
+      });
+
+      await job.run();
+      expect(failSpy.callCount).to.equal(1);
+      expect(failSpy.calledWith(cbErr)).to.equal(true);
+      expect(failSpy.calledWith(fnErr)).to.equal(false);
+    });
+
     it(`doesn't allow a stale job to be saved`, async() => {
       job.attrs.name = 'failBoat3';
       await job.save();
