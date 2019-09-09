@@ -128,7 +128,7 @@ mapped to a database collection and load the jobs from within.
 - [Creating jobs](#creating-jobs)
 - [Managing jobs](#managing-jobs)
 - [Starting the job processor](#starting-the-job-processor)
-- [Multiple job processors](#multiple-job-processors)
+- [Locking and multiple job processors](#locking-and-multiple-job-processors)
 - [Manually working with jobs](#manually-working-with-a-job)
 - [Job Queue Events](#job-queue-events)
 - [Frequently asked questions](#frequently-asked-questions)
@@ -212,9 +212,9 @@ const agenda = new Agenda({name: 'test queue'});
 ### processEvery(interval)
 
 Takes a string `interval` which can be either a traditional javascript number,
-or a string such as `3 minutes`
+or a string such as `3 minutes`. By default it is `'5 seconds'`.
 
-Specifies the frequency at which agenda will query the database looking for jobs
+Specifies the frequency with which agenda will query the database looking for jobs
 that need to be processed. Agenda internally uses `setTimeout` to guarantee that
 jobs run at (close to ~3ms) the right time.
 
@@ -222,8 +222,8 @@ Decreasing the frequency will result in fewer database queries, but more jobs
 being stored in memory.
 
 Also worth noting is that if the job queue is shutdown, any jobs stored in memory
-that haven't run will still be locked, meaning that you may have to wait for the
-lock to expire. By default it is `'5 seconds'`.
+that haven't run will still be [locked](#locking-and-multiple-job-processors),
+meaning that you may have to wait for the lock to expire.
 
 ```js
 agenda.processEvery('1 minute');
@@ -255,6 +255,16 @@ const agenda = new Agenda({maxConcurrency: 20});
 Takes a `number` which specifies the default number of a specific job that can be running at
 any given moment. By default it is `5`.
 
+The concurrency parameter is only important when the job takes longer than its
+[`lockLifetime`](#definejobname-options-fn) to finish (i.e. call `done`). If the job takes
+less time to finish than its `lockLifetime`, Agenda will only run one instance of it at a time,
+even if the job is scheduled to run more often. For example, an `every('1 second')` job that
+takes 10 seconds to run, will result in one instance of that job running at one time, because
+the `lockLifetime` is by default 10 minutes. If `lockLifetime` were 3 seconds in the example,
+you'd see 3 instances of the job running at the same time.
+
+Learn more at [Locking and multiple job processors](#locking-and-multiple-job-processors).
+
 ```js
 agenda.defaultConcurrency(5);
 ```
@@ -267,7 +277,8 @@ const agenda = new Agenda({defaultConcurrency: 5});
 
 ### lockLimit(number)
 
-Takes a `number` which specifies the max number jobs that can be locked at any given moment. By default it is `0` for no max.
+Takes a `number` which specifies the max number jobs that can be [locked](#locking-and-multiple-job-processors)
+at any given moment. By default it is `0` for no max.
 
 ```js
 agenda.lockLimit(0);
@@ -281,7 +292,8 @@ const agenda = new Agenda({lockLimit: 0});
 
 ### defaultLockLimit(number)
 
-Takes a `number` which specifies the default number of a specific job that can be locked at any given moment. By default it is `0` for no max.
+Takes a `number` which specifies the default number of a specific job that can be
+[locked](#locking-and-multiple-job-processors) at any given moment. By default it is `0` for no max.
 
 ```js
 agenda.defaultLockLimit(0);
@@ -295,9 +307,9 @@ const agenda = new Agenda({defaultLockLimit: 0});
 
 ### defaultLockLifetime(number)
 
-Takes a `number` which specifies the default lock lifetime in milliseconds. By
-default it is 10 minutes. This can be overridden by specifying the
-`lockLifetime` option to a defined job.
+Takes a `number` which specifies the default [lock](#locking-and-multiple-job-processors)
+lifetime in milliseconds. By default it is 10 minutes. This can be overridden by specifying
+the `lockLifetime` option to a defined job.
 
 A job will unlock if it is finished (ie. `done` is called) before the `lockLifetime`.
 The lock is useful if the job crashes or times out.
@@ -314,7 +326,8 @@ const agenda = new Agenda({defaultLockLifetime: 10000});
 
 ### sort(query)
 
-Takes a `query` which specifies the sort query to be used for finding and locking the next job.
+Takes a `query` which specifies the sort query to be used for finding and
+[locking](#locking-and-multiple-job-processors) the next job.
 
 By default it is `{ nextRunAt: 1, priority: -1 }`, which obeys a first in first out approach, with respect to priority.
 
@@ -347,7 +360,7 @@ the following:
 
 - `concurrency`: `number` maximum number of that job that can be running at once (per instance of agenda)
 - `lockLimit`: `number` maximum number of that job that can be locked at once (per instance of agenda)
-- `lockLifetime`: `number` interval in ms of how long the job stays locked for (see [multiple job processors](#multiple-job-processors) for more info).
+- `lockLifetime`: `number` interval in ms of how long the job stays [locked](#locking-and-multiple-job-processors).
 A job will automatically unlock if `done()` is called.
 - `priority`: `(lowest|low|normal|high|highest|number)` specifies the priority
   of the job. Higher priority jobs will run first. See the priority mapping
@@ -549,11 +562,20 @@ process.on('SIGINT' , graceful);
 ```
 
 
-## Multiple job processors
+## Locking and multiple job processors
 
 Sometimes you may want to have multiple node instances / machines process from
-the same queue. Agenda supports a locking mechanism to ensure that multiple
-queues don't process the same job.
+the same queue. Agenda supports a locking mechanism to ensure that,
+
+* Multiple queues don't process the same job
+* The same job doesn't get run again before it has finished. For example, if a job
+  is scheduled to run [`every`](#everyinterval-name-data-options-cb) 5 seconds but
+  takes 15 seconds to complete on one occasion, Agenda will wait for it to finish
+  before running it again (assuming it takes less than[`lockLifetime`](#definejobname-options-fn)
+  milliseconds).
+* Jobs that time out on occasion still get to run as scheduled - they will automatically
+  be unlocked after [`defaultLockLifetime`](#defaultlocklifetimenumber) milliseconds
+  (or their own `lockLifetime` specified when the job was `define`d).
 
 You can configure the locking mechanism by specifying `lockLifetime` as an
 interval when defining the job.
@@ -566,12 +588,14 @@ agenda.define('someJob', {lockLifetime: 10000}, (job, cb) => {
 
 This will ensure that no other job processor (this one included) attempts to run the job again
 for the next 10 seconds. If you have a particularly long running job, you will want to
-specify a longer lockLifetime.
+specify a longer `lockLifetime`, or call `#touch()` from the job processor.
 
-By default it is 10 minutes. Typically you shouldn't have a job that runs for 10 minutes,
-so this is really insurance should the job queue crash before the job is unlocked.
+By default, the `lockLifetime` is 10 minutes. Typically you shouldn't have a job that runs
+for 10 minutes, so this is really insurance should the job queue crash before the job is unlocked.
 
-When a job is finished (ie. `done` is called), it will automatically unlock.
+When a job is finished (i.e. `done` is called), it will unlock.
+
+To visualize locking and `concurrency` settings, see the [concurrency example](https://github.com/agenda/agenda/blob/master/examples/concurrency.js).
 
 ## Manually working with a job
 
@@ -770,6 +794,12 @@ agenda.on('fail:send email', (err, job) => {
   console.log(`Job failed with error: ${err.message}`);
 });
 ```
+
+## Examples
+
+These examples will help you understand how various aspects of Agenda job processing work.
+
+* [Locking and concurrency](https://github.com/agenda/agenda/blob/master/examples/concurrency.js)
 
 ## Frequently Asked Questions
 
