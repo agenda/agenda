@@ -463,9 +463,6 @@ Schedules a job to run `name` once immediately.
 `data` is an optional argument that will be passed to the processing function
 under `job.attrs.data`.
 
-`cb` is an optional callback function which will be called when the job has been
-persisted in the database.
-
 Returns the `job`.
 
 ```js
