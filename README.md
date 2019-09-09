@@ -33,21 +33,21 @@ better suits your needs.
 
 Agenda is great if you need something that is simple and backed by MongoDB.
 
-| Feature         | Bull          | Kue   | Bee | Agenda |
-| :-------------  |:-------------:|:-----:|:---:|:------:|
-| Backend         | redis         | redis |redis| mongo  |
-| Priorities      | ✓             |  ✓    |     |   ✓    |
-| Concurrency     | ✓             |  ✓    |  ✓  |   ✓    |
-| Delayed jobs    | ✓             |  ✓    |     |   ✓    |
-| Global events   | ✓             |  ✓    |     |        |
-| Rate Limiter    | ✓             |       |     |        |
-| Pause/Resume    | ✓             |  ✓    |     |        |
-| Sandboxed worker| ✓             |       |     |        |
-| Repeatable jobs | ✓             |       |     |   ✓    |
-| Atomic ops      | ✓             |       |  ✓  |        |
-| Persistence     | ✓             |   ✓   |  ✓  |   ✓    |
-| UI              | ✓             |   ✓   |     |   ✓    |
-| REST API        |               |       |     |   ✓    |
+| Feature         | Bull          | Bee | Agenda |
+| :-------------  |:-------------:|:---:|:------:|
+| Backend         | redis         |redis| mongo  |
+| Priorities      | ✓             |     |   ✓    |
+| Concurrency     | ✓             |  ✓  |   ✓    |
+| Delayed jobs    | ✓             |     |   ✓    |
+| Global events   | ✓             |     |        |
+| Rate Limiter    | ✓             |     |        |
+| Pause/Resume    | ✓             |     |        |
+| Sandboxed worker| ✓             |     |        |
+| Repeatable jobs | ✓             |     |   ✓    |
+| Atomic ops      | ✓             |  ✓  |        |
+| Persistence     | ✓             |  ✓  |   ✓    |
+| UI              | ✓             |     |   ✓    |
+| REST API        |               |     |   ✓    |
 | Optimized for   | Jobs / Messages | Jobs | Messages | Jobs |
 
 _Kudos for making the comparison chart goes to [Bull](https://www.npmjs.com/package/bull#feature-comparison) maintainers._
@@ -400,7 +400,7 @@ agenda.define('say hello', job => {
 
 ## Creating Jobs
 
-### every(interval, name, [data], [options], [cb])
+### every(interval, name, [data], [options])
 
 Runs job `name` at the given `interval`. Optionally, data and options can be passed in.
 Every creates a job of type `single`, which means that it will only create one
@@ -441,7 +441,7 @@ agenda.every('15 minutes', ['printAnalyticsReport', 'sendNotifications', 'update
 
 In this case, `every` returns array of `jobs`.
 
-### schedule(when, name, [data], [cb])
+### schedule(when, name, [data])
 
 Schedules a job to run `name` once at a given time. `when` can be a `Date` or a
 `String` such as `tomorrow at 5pm`.
@@ -466,7 +466,7 @@ agenda.schedule('tomorrow at noon', ['printAnalyticsReport', 'sendNotifications'
 
 In this case, `schedule` returns array of `jobs`.
 
-### now(name, [data], [cb])
+### now(name, [data])
 
 Schedules a job to run `name` once immediately.
 
