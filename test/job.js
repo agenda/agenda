@@ -8,8 +8,8 @@ const {MongoClient} = require('mongodb');
 const Q = require('q');
 const delay = require('delay');
 const sinon = require('sinon');
-const Agenda = require('..');
 const Job = require('../lib/job');
+const Agenda = require('..');
 
 const mongoHost = process.env.MONGODB_HOST || 'localhost';
 const mongoPort = process.env.MONGODB_PORT || '27017';
@@ -36,14 +36,12 @@ describe('Job', () => {
       db: {
         address: mongoCfg
       }
-    }, err => {
+    }, async err => {
       if (err) {
         done(err);
       }
-      MongoClient.connect(mongoCfg, async(err, client) => {
-        if (err) {
-          done(err);
-        }
+      try {
+        const client = await MongoClient.connect(mongoCfg, {useNewUrlParser: true});
         mongoClient = client;
         mongoDb = client.db(agendaDatabase);
 
@@ -55,7 +53,9 @@ describe('Job', () => {
         agenda.define('some job', jobProcessor);
         agenda.define(jobType, jobProcessor);
         done();
-      });
+      } catch (err) {
+        done(err);
+      }
     });
   });
 
@@ -121,6 +121,9 @@ describe('Job', () => {
     });
     it('returns the job', () => {
       expect(job.schedule('tomorrow at noon')).to.be(job);
+    });
+    it('understands ISODates on the 30th', () => { // https://github.com/agenda/agenda/issues/807
+      expect(job.schedule('2019-04-30T22:31:00.00Z').attrs.nextRunAt.getTime()).to.equal(1556663460000);
     });
   });
 
@@ -249,22 +252,22 @@ describe('Job', () => {
   });
 
   describe('remove', () => {
-    it('removes the job', done => {
+    it('removes the job', async() => {
       const job = new Job({
         agenda,
         name: 'removed job'
       });
-      job.save().then(() => {});
-      job.remove().then(() => {});
-      mongoDb.collection('agendaJobs').find({
-        _id: job.attrs._id
-      }).toArray((err, j) => {
-        if (err) {
-          done(err);
-        }
-        expect(j).to.have.length(0);
-        done();
-      });
+      await job.save();
+      await job.remove();
+
+      const result = await mongoDb
+        .collection('agendaJobs')
+        .find({
+          _id: job.attrs._id
+        })
+        .toArray();
+
+      expect(result).to.have.length(0);
     });
   });
 
@@ -319,13 +322,138 @@ describe('Job', () => {
     it('handles errors with q promises', () => {
       job.attrs.name = 'failBoat2';
       agenda.define('failBoat2', (job, cb) => {
-        Q.delay(100).then(() => {
-          throw new Error('Zomg fail');
-        }).fail(cb).done();
+        Q.delay(100)
+          .then(() => { // eslint-disable-line promise/prefer-await-to-then
+            throw new Error('Zomg fail');
+          })
+          .fail(cb)
+          .done();
       });
       job.run().catch(err => {
         expect(err).to.be.ok();
       });
+    });
+
+    it('allows async functions', async() => {
+      job.attrs.name = 'async';
+
+      const successSpy = sinon.stub();
+      let finished = false;
+
+      agenda.once('success:async', successSpy);
+
+      agenda.define('async', async() => {
+        await delay(5);
+        finished = true;
+      });
+
+      expect(finished).to.equal(false);
+      await job.run();
+      expect(successSpy.callCount).to.equal(1);
+      expect(finished).to.equal(true);
+    });
+
+    it('handles errors from async functions', async() => {
+      job.attrs.name = 'asyncFail';
+
+      const failSpy = sinon.stub();
+      const err = new Error('failure');
+
+      agenda.once('fail:asyncFail', failSpy);
+
+      agenda.define('asyncFail', async() => {
+        await delay(5);
+        throw err;
+      });
+
+      await job.run();
+      expect(failSpy.callCount).to.equal(1);
+      expect(failSpy.calledWith(err)).to.equal(true);
+    });
+
+    it('waits for the callback to be called even if the function is async', async() => {
+      job.attrs.name = 'asyncCb';
+
+      const successSpy = sinon.stub();
+      let finishedCb = false;
+
+      agenda.once('success:asyncCb', successSpy);
+
+      agenda.define('asyncCb', async(job, cb) => {
+        (async() => {
+          await delay(5);
+          finishedCb = true;
+          cb();
+        })();
+      });
+
+      await job.run();
+      expect(finishedCb).to.equal(true);
+      expect(successSpy.callCount).to.equal(1);
+    });
+
+    it('uses the callback error if the function is async and didn\'t reject', async() => {
+      job.attrs.name = 'asyncCbError';
+
+      const failSpy = sinon.stub();
+      const err = new Error('failure');
+
+      agenda.once('fail:asyncCbError', failSpy);
+
+      agenda.define('asyncCbError', async(job, cb) => {
+        (async() => {
+          await delay(5);
+          cb(err);
+        })();
+      });
+
+      await job.run();
+      expect(failSpy.callCount).to.equal(1);
+      expect(failSpy.calledWith(err)).to.equal(true);
+    });
+
+    it('favors the async function error over the callback error if it comes first', async() => {
+      job.attrs.name = 'asyncCbTwoError';
+
+      const failSpy = sinon.stub();
+      const fnErr = new Error('functionFailure');
+      const cbErr = new Error('callbackFailure');
+
+      agenda.on('fail:asyncCbTwoError', failSpy);
+
+      agenda.define('asyncCbTwoError', async(job, cb) => {
+        (async() => {
+          await delay(5);
+          cb(cbErr);
+        })();
+        throw fnErr;
+      });
+
+      await job.run();
+      expect(failSpy.callCount).to.equal(1);
+      expect(failSpy.calledWith(fnErr)).to.equal(true);
+      expect(failSpy.calledWith(cbErr)).to.equal(false);
+    });
+
+    it('favors the callback error over the async function error if it comes first', async() => {
+      job.attrs.name = 'asyncCbTwoErrorCb';
+
+      const failSpy = sinon.stub();
+      const fnErr = new Error('functionFailure');
+      const cbErr = new Error('callbackFailure');
+
+      agenda.on('fail:asyncCbTwoErrorCb', failSpy);
+
+      agenda.define('asyncCbTwoErrorCb', async(job, cb) => {
+        cb(cbErr);
+        await delay(5);
+        throw fnErr;
+      });
+
+      await job.run();
+      expect(failSpy.callCount).to.equal(1);
+      expect(failSpy.calledWith(cbErr)).to.equal(true);
+      expect(failSpy.calledWith(fnErr)).to.equal(false);
     });
 
     it(`doesn't allow a stale job to be saved`, async() => {
@@ -616,12 +744,13 @@ describe('Job', () => {
       const processorPromise = new Promise(async resolve =>
         agenda.define('lock job', {
           lockLifetime: 50
-        }, () => {
+        }, async() => {
           startCounter++;
 
           if (startCounter !== 1) {
             expect(startCounter).to.be(2);
-            agenda.stop().then(resolve);
+            await agenda.stop();
+            resolve();
           }
         })
       );
@@ -631,7 +760,7 @@ describe('Job', () => {
       agenda.defaultConcurrency(100);
       agenda.processEvery(10);
       agenda.every('0.02 seconds', 'lock job');
-      agenda.stop().then(() => {});
+      await agenda.stop();
       await agenda.start();
       await processorPromise;
     });
@@ -642,12 +771,13 @@ describe('Job', () => {
       const processorPromise = new Promise(async resolve =>
         agenda.define('lock job', {
           lockLifetime: 50
-        }, (job, cb) => { // eslint-disable-line no-unused-vars
+        }, async(job, cb) => { // eslint-disable-line no-unused-vars
           runCount++;
 
           if (runCount !== 1) {
             expect(runCount).to.be(2);
-            agenda.stop().then(resolve);
+            await agenda.stop();
+            resolve();
           }
         })
       );
@@ -762,7 +892,7 @@ describe('Job', () => {
   });
 
   describe('job concurrency', () => {
-    it('should not block a job for concurrency of another job', done => {
+    it('should not block a job for concurrency of another job', async() => {
       agenda.processEvery(50);
 
       const processed = [];
@@ -787,15 +917,16 @@ describe('Job', () => {
       agenda.on('complete', () => {
         if (!finished && processed.length === 3) {
           finished = true;
-          done();
         }
       });
 
       agenda.start();
 
-      agenda.schedule(new Date(now + 100), 'blocking', {i: 1}).then(() => {});
-      agenda.schedule(new Date(now + 100), 'blocking', {i: 2}).then(() => {});
-      agenda.schedule(new Date(now + 100), 'non-blocking', {i: 3}).then(() => {});
+      return Promise.all([
+        agenda.schedule(new Date(now + 100), 'blocking', {i: 1}),
+        agenda.schedule(new Date(now + 100), 'blocking', {i: 2}),
+        agenda.schedule(new Date(now + 100), 'non-blocking', {i: 3})
+      ]);
     });
 
     it('should run jobs as first in first out (FIFO)', async() => {

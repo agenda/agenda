@@ -3,11 +3,21 @@ Next
 
   * https://github.com/agenda/agenda/pulls
 
+2.1.0 / 2019-09-09
+==================
+  * Support async functions in job processing ([#653](https://github.com/agenda/agenda/pull/653)) (thanks @princjef!)
+  * Allow sorting and limiting jobs when searching ([#665](https://github.com/agenda/agenda/pull/665)) (thank you @edwin-jones)
+  * Update MongoClient connection settings with `useNewUrlParser: true` to remove the deprecation warning. ([#806](https://github.com/agenda/agenda/pull/806)) (thanks @dpawson905!)
+  * Allow valid date strings when scheduling ([#808](https://github.com/agenda/agenda/pull/808)) (Thanks @wingsbob!)
+  * Update dependencies ([#820](https://github.com/agenda/agenda/pull/820))
+  * Update documentation (kudos @dandv, @pedruino and many others!)
+  * Fix linting errors ([#847](https://github.com/agenda/agenda/pull/847)) (thanks @dmbarreiro!)
+
 2.0.2 / 2018-09-15
 ==================
   * Fixes a MongoDB connection string issue with Atlas ([#674](
 https://github.com/agenda/agenda/pull/674)
-  
+
 2.0.1 / 2018-08-30
 ==================
   * Fix a bug where `job.touch()` wasn't promise based, as it should've been ([#667](https://github.com/agenda/agenda/pull/667)
