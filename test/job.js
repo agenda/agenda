@@ -615,21 +615,17 @@ describe('Job', () => {
     });
 
     it('clears locks on stop', async() => {
-      try {
-        agenda.define('longRunningJob', job => { // eslint-disable-line no-unused-vars
-          // Job never finishes
-        });
-        agenda.every('10 seconds', 'longRunningJob');
-        agenda.processEvery('1 second');
+      agenda.define('longRunningJob', job => { // eslint-disable-line no-unused-vars
+        // Job never finishes
+      });
+      agenda.every('10 seconds', 'longRunningJob');
+      agenda.processEvery('1 second');
 
-        await agenda.start();
-        await delay(jobTimeout);
-        await agenda.stop();
-        const job = await agenda._collection.findOne({name: 'longRunningJob'});
-        expect(job.lockedAt).to.be(null);
-      } catch (err) {
-        throw err;
-      }
+      await agenda.start();
+      await delay(jobTimeout);
+      await agenda.stop();
+      const job = await agenda._collection.findOne({name: 'longRunningJob'});
+      expect(job.lockedAt).to.be(null);
     });
 
     describe('events', () => {
