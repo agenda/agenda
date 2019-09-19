@@ -90,6 +90,7 @@ describe('Job', () => {
 
   describe('repeatEvery', () => {
     const job = new Job();
+    const now = new Date();
     it('sets the repeat interval', () => {
       job.repeatEvery(5000);
       expect(job.attrs.repeatInterval).to.be(5000);
@@ -98,9 +99,15 @@ describe('Job', () => {
       expect(job.repeatEvery('one second')).to.be(job);
     });
     it('sets the nextRunAt property with skipImmediate', () => {
-      const now = new Date();
       job.repeatEvery('3 minutes', {skipImmediate: true});
       expect(job.attrs.nextRunAt).to.be(now.valueOf() + 180000);
+    });
+    it('repeats from the existing nextRunAt property with skipImmediate', () => {
+      const job2 = new Job();
+      const futureDate = (new Date('3000-01-01T00:00:00')).valueOf();
+      job2.attrs.nextRunAt = futureDate;
+      job2.repeatEvery('3 minutes', {skipImmediate: true});
+      expect(job2.attrs.nextRunAt).to.be(futureDate + 180000);
     });
   });
 
