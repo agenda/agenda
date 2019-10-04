@@ -223,6 +223,22 @@ describe('Job', () => {
       expect(moment(job.attrs.nextRunAt).toDate().getDate()).to.be(moment(job.attrs.lastRunAt).add(1, 'days').toDate().getDate());
     });
 
+    it('gives the correct nextDate when the lastRun is 1ms before the expected time', () => {
+      // (Issue #858): lastRunAt being 1ms before the nextRunAt makes cronTime return the same nextRunAt
+      const last = new Date();
+      last.setSeconds(59);
+      last.setMilliseconds(999);
+      const next = new Date(last.valueOf() + 1);
+      const expectedDate = new Date(next.valueOf() + 60000);
+      job.attrs.lastRunAt = last;
+      job.attrs.nextRunAt = next;
+      job.repeatEvery('* * * * *', {
+        timezone: 'GMT'
+      });
+      job.computeNextRunAt();
+      expect(job.attrs.nextRunAt.valueOf()).to.be(expectedDate.valueOf());
+    });
+
     describe('when repeat at time is invalid', () => {
       beforeEach(() => {
         job.attrs.repeatAt = 'foo';
