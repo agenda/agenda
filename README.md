@@ -416,10 +416,6 @@ under `job.attrs.data`.
 `options` is an optional argument that will be passed to [`job.repeatEvery`](#repeateveryinterval-options).
 In order to use this argument, `data` must also be specified.
 
-`cb` is an optional callback function which will be called when the job has been
-persisted in the database.
-
-
 Returns the `job`.
 
 ```js
@@ -448,9 +444,6 @@ Schedules a job to run `name` once at a given time. `when` can be a `Date` or a
 
 `data` is an optional argument that will be passed to the processing function
 under `job.attrs.data`.
-
-`cb` is an optional callback function which will be called when the job has been
-persisted in the database.
 
 Returns the `job`.
 
