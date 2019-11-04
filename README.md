@@ -473,7 +473,7 @@ Schedules a job to run `name` once immediately.
 `data` is an optional argument that will be passed to the processing function
 under `job.attrs.data`.
 
-Returns the `job`.
+Saves the job instance and returns a promise which resolves with the `job`.
 
 ```js
 agenda.now('do the hokey pokey');
@@ -978,11 +978,17 @@ let app = express(),
 
 app.post('/users', (req, res, next) => {
   const user = new User(req.body);
-  user.save(err => {
+  user.save(async err => {
     if (err) {
       return next(err);
     }
-    agenda.now('registration email', {userId: user.primary()});
+    
+    try {
+      await agenda.now('registration email', {userId: user.primary()});
+    } catch (err) {
+      return next(err);
+    }
+    
     res.send(201, user.toJson());
   });
 });
