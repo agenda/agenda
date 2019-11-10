@@ -25,6 +25,7 @@
 - Event backed job queue that you can hook into.
 - [Agendash](https://github.com/agenda/agendash): optional standalone web-interface.
 - [Agenda-rest](https://github.com/agenda/agenda-rest): optional standalone REST API.
+- [inversify-agenda](https://github.com/lautarobock/inversify-agenda) - Some utilities for the development of agenda workers with Inversify
 
 ### Feature Comparison
 
