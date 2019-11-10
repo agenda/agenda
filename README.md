@@ -416,10 +416,6 @@ under `job.attrs.data`.
 `options` is an optional argument that will be passed to [`job.repeatEvery`](#repeateveryinterval-options).
 In order to use this argument, `data` must also be specified.
 
-`cb` is an optional callback function which will be called when the job has been
-persisted in the database.
-
-
 Returns the `job`.
 
 ```js
@@ -448,9 +444,6 @@ Schedules a job to run `name` once at a given time. `when` can be a `Date` or a
 
 `data` is an optional argument that will be passed to the processing function
 under `job.attrs.data`.
-
-`cb` is an optional callback function which will be called when the job has been
-persisted in the database.
 
 Returns the `job`.
 
@@ -502,28 +495,24 @@ const jobs = await agenda.jobs({name: 'printAnalyticsReport'}, {data:-1}, 3);
 // Work with jobs (see below)
 ```
 
-### cancel(mongodb-native query, cb)
+### cancel(mongodb-native query)
 
-Cancels any jobs matching the passed mongodb-native query, and removes them from the database.
+Cancels any jobs matching the passed mongodb-native query, and removes them from the database. Returns a Promise resolving to the number of cancelled jobs, or rejecting on error.
 
 ```js
-agenda.cancel({name: 'printAnalyticsReport'}, (err, numRemoved) => {
-  // ...
-});
+const numRemoved = await agenda.cancel({name: 'printAnalyticsReport'});
 ```
 
 This functionality can also be achieved by first retrieving all the jobs from the database using `agenda.jobs()`, looping through the resulting array and calling `job.remove()` on each. It is however preferable to use `agenda.cancel()` for this use case, as this ensures the operation is atomic.
 
-### purge(cb)
+### purge()
 
-Removes all jobs in the database without defined behaviors. Useful if you change a definition name and want to remove old jobs.
+Removes all jobs in the database without defined behaviors. Useful if you change a definition name and want to remove old jobs. Returns a Promise resolving to the number of removed jobs, or rejecting on error.
 
 *IMPORTANT:* Do not run this before you finish defining all of your jobs. If you do, you will nuke your database of jobs.
 
 ```js
-agenda.purge((err, numRemoved) => {
-  // ...
-});
+const numRemoved = await agenda.purge();
 ```
 
 ## Starting the job processor
