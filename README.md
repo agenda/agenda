@@ -473,10 +473,10 @@ Schedules a job to run `name` once immediately.
 `data` is an optional argument that will be passed to the processing function
 under `job.attrs.data`.
 
-Saves the job instance and returns a promise which resolves with the `job`.
+Returns a promise which resolves with the created job or rejects with an error.
 
 ```js
-agenda.now('do the hokey pokey');
+const job = await agenda.now('do the hokey pokey');
 ```
 
 ### create(jobName, data)
@@ -656,7 +656,7 @@ the following:
 - `insertOnly`: `boolean` will prevent any properties from persisting if the job already exists. Defaults to false.
 
 ```js
-job.unique({'data.type': 'active', 'data.userId': '123', nextRunAt(date)});
+job.unique({'data.type': 'active', 'data.userId': '123'});
 await job.save();
 ```
 
