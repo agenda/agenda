@@ -28,6 +28,8 @@ const jobProcessor = () => {};
 
 describe('Agenda', () => {
   beforeEach(() => {
+    // @TODO: this lint issue should be looked into: https://eslint.org/docs/rules/no-async-promise-executor
+    // eslint-disable-next-line no-async-promise-executor
     return new Promise(async resolve => {
       jobs = new Agenda({
         db: {
@@ -38,6 +40,7 @@ describe('Agenda', () => {
           if (err) {
             throw err;
           }
+
           mongoClient = client;
           mongoDb = client.db(agendaDatabase);
           await delay(50);
@@ -53,6 +56,8 @@ describe('Agenda', () => {
   });
 
   afterEach(() => {
+    // @TODO: this lint issue should be looked into: https://eslint.org/docs/rules/no-async-promise-executor
+    // eslint-disable-next-line no-async-promise-executor
     return new Promise(async resolve => {
       await delay(50);
       await jobs.stop();
@@ -339,13 +344,14 @@ describe('Agenda', () => {
             if (err) {
               throw err;
             }
+
             expect(jobs).to.have.length(1);
           });
         });
       });
 
       describe('should demonstrate non-unique contraint', () => {
-        it(`should create two jobs when unique doesn't match`, async() => {
+        it('should create two jobs when unique doesn\'t match', async() => {
           const time = new Date(Date.now() + (1000 * 60 * 3));
           const time2 = new Date(Date.now() + (1000 * 60 * 4));
 
@@ -375,6 +381,7 @@ describe('Agenda', () => {
             if (err) {
               throw err;
             }
+
             expect(jobs).to.have.length(2);
           });
         });
@@ -407,6 +414,7 @@ describe('Agenda', () => {
           if (err) {
             throw err;
           }
+
           expect(c.length).to.not.be(0);
           expect(c[0]).to.be.a(Job);
           await clearJobs();
@@ -421,18 +429,20 @@ describe('Agenda', () => {
         await job.save();
         jobs.jobs({
           name: 'no definition'
-        }, async(err, j) => { // eslint-disable-line max-nested-callbacks
+        }, async(err, j) => {
           if (err) {
             throw err;
           }
+
           expect(j).to.have.length(1);
           await jobs.purge();
           jobs.jobs({
             name: 'no definition'
-          }, (err, j) => { // eslint-disable-line max-nested-callbacks
+          }, (err, j) => {
             if (err) {
               throw err;
             }
+
             expect(j).to.have.length(0);
           });
         });
@@ -457,6 +467,7 @@ describe('Agenda', () => {
       const checkDone = () => {
         remaining--;
       };
+
       await jobs.create('jobA').save().then(checkDone);
       await jobs.create('jobA', 'someData').save().then(checkDone);
       await jobs.create('jobB').save().then(checkDone);
@@ -468,6 +479,7 @@ describe('Agenda', () => {
         if (err) {
           return done(err);
         }
+
         done();
       });
     });
@@ -516,6 +528,7 @@ describe('Agenda', () => {
         if (err) {
           return done(err);
         }
+
         done();
       });
     });

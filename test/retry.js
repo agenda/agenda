@@ -31,6 +31,7 @@ describe('Retry', () => {
       if (err) {
         done(err);
       }
+
       MongoClient.connect(mongoCfg, async(error, client) => {
         mongoClient = client;
         mongoDb = client.db(agendaDatabase);
@@ -65,6 +66,7 @@ describe('Retry', () => {
         shouldFail = false;
         return done(new Error('test failure'));
       }
+
       done();
     });
 
@@ -72,6 +74,7 @@ describe('Retry', () => {
       if (err) {
         // Do nothing as this is expected to fail.
       }
+
       job.schedule('now').save();
     });
 
