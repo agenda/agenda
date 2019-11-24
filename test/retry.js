@@ -60,19 +60,12 @@ describe('Retry', () => {
     let shouldFail = true;
 
     agenda.processEvery(100); // Shave 5s off test runtime :grin:
-    agenda.define('a job', (job, done) => {
+    agenda.define('a job', { maxRetries: 2 }, (job, done) => {
       if (shouldFail) {
         shouldFail = false;
         return done(new Error('test failure'));
       }
       done();
-    });
-
-    agenda.on('fail:a job', (err, job) => {
-      if (err) {
-        // Do nothing as this is expected to fail.
-      }
-      job.schedule('now').save();
     });
 
     const successPromise = new Promise(resolve =>
@@ -83,5 +76,5 @@ describe('Retry', () => {
 
     await agenda.start();
     await successPromise;
-  });
+  }).timeout((15 + 30) * 1000);
 });
