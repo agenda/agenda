@@ -5,3 +5,4 @@ coverage.html
 docs/agenda/*
 !docs/agenda/1.0.3/
 !docs/agenda/2.0.0/
+!docs/agenda/2.2.0/
