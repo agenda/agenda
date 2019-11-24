@@ -569,6 +569,8 @@ describe('Job', () => {
 
   describe('start/stop', () => {
     it('starts/stops the job queue', async() => {
+      // @TODO: this lint issue should be looked into: https://eslint.org/docs/rules/no-async-promise-executor
+      // eslint-disable-next-line no-async-promise-executor
       return new Promise(async resolve => {
         agenda.define('jobQueueTest', async(job, cb) => {
           await agenda.stop();
@@ -735,6 +737,8 @@ describe('Job', () => {
     it('runs a recurring job after a lock has expired', async() => {
       let startCounter = 0;
 
+      // @TODO: this lint issue should be looked into: https://eslint.org/docs/rules/no-async-promise-executor
+      // eslint-disable-next-line no-async-promise-executor
       const processorPromise = new Promise(async resolve =>
         agenda.define('lock job', {
           lockLifetime: 50
@@ -762,6 +766,8 @@ describe('Job', () => {
     it('runs a one-time job after its lock expires', async() => {
       let runCount = 0;
 
+      // @TODO: this lint issue should be looked into: https://eslint.org/docs/rules/no-async-promise-executor
+      // eslint-disable-next-line no-async-promise-executor
       const processorPromise = new Promise(async resolve =>
         agenda.define('lock job', {
           lockLifetime: 50

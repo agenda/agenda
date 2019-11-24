@@ -28,6 +28,8 @@ const jobProcessor = () => {};
 
 describe('Agenda', () => {
   beforeEach(() => {
+    // @TODO: this lint issue should be looked into: https://eslint.org/docs/rules/no-async-promise-executor
+    // eslint-disable-next-line no-async-promise-executor
     return new Promise(async resolve => {
       jobs = new Agenda({
         db: {
@@ -54,6 +56,8 @@ describe('Agenda', () => {
   });
 
   afterEach(() => {
+    // @TODO: this lint issue should be looked into: https://eslint.org/docs/rules/no-async-promise-executor
+    // eslint-disable-next-line no-async-promise-executor
     return new Promise(async resolve => {
       await delay(50);
       await jobs.stop();
