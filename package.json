@@ -43,7 +43,7 @@
     "cron": "~1.7.2",
     "date.js": "~0.3.3",
     "debug": "~4.1.1",
-    "human-interval": "~0.1.6",
+    "human-interval": "~1.0.0",
     "moment-timezone": "~0.5.26",
     "mongodb": "~3.3.0"
   },
