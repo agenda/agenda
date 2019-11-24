@@ -2,6 +2,11 @@ Next
 ====
 
   * https://github.com/agenda/agenda/pulls
+  * Update dependencies. Most notably `mongodb` ~3.2.7 -> ~3.3.0 ([changelog](https://github.com/mongodb/node-mongodb-native/tree/v3.3.0)) — highlights:
+    - Mongo DB Server Version 4.2 feature support
+    - Merged `mongodb-core` into `node-mongodb-native`
+    - Beta support for MongoDB Client-Side Encryption
+    - SRV Polling for Sharded Clusters
 
 2.1.0 / 2019-09-09
 ==================
