@@ -100,7 +100,9 @@ describe('Job', () => {
     it('sets the nextRunAt property with skipImmediate', () => {
       const now = new Date();
       job.repeatEvery('3 minutes', {skipImmediate: true});
-      expect(job.attrs.nextRunAt).to.be(now.valueOf() + 180000);
+      const lowerBound = now.valueOf() + 180000;
+      const upperBound = now.valueOf() + 180000 + 2;
+      expect(job.attrs.nextRunAt).to.be.within(lowerBound, upperBound); // Inclusive
     });
   });
 
@@ -314,12 +316,11 @@ describe('Job', () => {
       agenda.define('failBoat', () => {
         throw new Error('Zomg fail');
       });
-      job.run().catch(err => {
-        expect(err.message).to.be('Zomg fail');
-      });
+      await job.run();
+      expect(job.attrs.failReason).to.be('Zomg fail');
     });
 
-    it('handles errors with q promises', () => {
+    it('handles errors with q promises', async() => {
       job.attrs.name = 'failBoat2';
       agenda.define('failBoat2', (job, cb) => {
         Q.delay(100)
@@ -329,9 +330,8 @@ describe('Job', () => {
           .fail(cb)
           .done();
       });
-      job.run().catch(err => {
-        expect(err).to.be.ok();
-      });
+      await job.run();
+      expect(job.attrs.failReason).to.be.ok();
     });
 
     it('allows async functions', async() => {
@@ -552,12 +552,8 @@ describe('Job', () => {
       await j.remove();
       await j.save();
 
-      agenda.jobs({name: 'another job'}, (err, res) => {
-        if (err) {
-          throw err;
-        }
-        expect(res).to.have.length(0);
-      });
+      const jobs = await agenda.jobs({name: 'another job'});
+      expect(jobs).to.have.length(0);
     });
 
     it('returns the job', async() => {
@@ -613,7 +609,7 @@ describe('Job', () => {
     });
 
     it('clears locks on stop', async() => {
-      agenda.define('longRunningJob', () => {
+      agenda.define('longRunningJob', job => { // eslint-disable-line no-unused-vars
         // Job never finishes
       });
       agenda.every('10 seconds', 'longRunningJob');
@@ -622,13 +618,8 @@ describe('Job', () => {
       await agenda.start();
       await delay(jobTimeout);
       await agenda.stop();
-
-      agenda._collection.findOne({name: 'longRunningJob'}, (err, job) => {
-        if (err) {
-          throw err;
-        }
-        expect(job.lockedAt).to.be(null);
-      });
+      const job = await agenda._collection.findOne({name: 'longRunningJob'});
+      expect(job.lockedAt).to.be(null);
     });
 
     describe('events', () => {
