@@ -253,6 +253,22 @@ describe('Agenda', () => {
           const res = await jobs.jobs({name: 'shouldBeSingleJob'});
           expect(res).to.have.length(1);
         });
+        it('should not run immediately if options.skipImmediate is true', async() => {
+          const jobName = 'send email';
+          await jobs.every('5 minutes', jobName, {}, {skipImmediate: true});
+          const job = (await jobs.jobs({name: jobName}))[0];
+          const nextRunAt = job.attrs.nextRunAt.getTime();
+          const now = new Date().getTime();
+          expect((nextRunAt - now) > 0).to.equal(true);
+        });
+        it('should run immediately if options.skipImmediate is false', async() => {
+          const jobName = 'send email';
+          await jobs.every('5 minutes', jobName, {}, {skipImmediate: false});
+          const job = (await jobs.jobs({name: jobName}))[0];
+          const nextRunAt = job.attrs.nextRunAt.getTime();
+          const now = new Date().getTime();
+          expect((nextRunAt - now) <= 0).to.equal(true);
+        });
       });
       describe('with array of names specified', () => {
         it('returns array of jobs', async() => {
