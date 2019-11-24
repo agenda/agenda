@@ -1,7 +1,12 @@
 Next
 ====
 
-  * https://github.com/agenda/agenda/pulls
+* https://github.com/agenda/agenda/pulls
+
+2.2.0 / 2019-11-24
+==================
+
+  * Fix `skipImmediate` option in `.every` ([#861](https://github.com/agenda/agenda/pull/861)) (Thanks @erics2783!)
   * Add try/catch block to agenda#now method ([#876](https://github.com/agenda/agenda/pull/876)) (Thanks @sampathBlam!)
   * Refactor job queuing mechanism. Agenda n ow guarantees priority when executing jobs scheduled the same datetime. Fixes also some tests. ([#852](https://github.com/agenda/agenda/pull/852)) (Thank you @dmbarreiro!)
   * Update dependencies (Kudos @simison!)
