@@ -65,6 +65,7 @@
   },
   "xo": {
     "space": 2,
+    "ignores": ["docs/**"],
     "rules": {
       "space-before-function-paren": [
         "error",
