@@ -2,11 +2,15 @@ Next
 ====
 
   * https://github.com/agenda/agenda/pulls
-  * Update dependencies. Most notably `mongodb` ~3.2.7 -> ~3.3.0 ([changelog](https://github.com/mongodb/node-mongodb-native/tree/v3.3.0)) — highlights:
+  * Add try/catch block to agenda#now method ([#876](https://github.com/agenda/agenda/pull/876)) (Thanks @sampathBlam!)
+  * Refactor job queuing mechanism. Agenda n ow guarantees priority when executing jobs scheduled the same datetime. Fixes also some tests. ([#852](https://github.com/agenda/agenda/pull/852)) (Thank you @dmbarreiro!)
+  * Update dependencies (Kudos @simison!)
+    Most notably `mongodb` ~3.2.7 -> ~3.3.0 ([changelog](https://github.com/mongodb/node-mongodb-native/tree/v3.3.0)) — highlights:
     - Mongo DB Server Version 4.2 feature support
     - Merged `mongodb-core` into `node-mongodb-native`
     - Beta support for MongoDB Client-Side Encryption
     - SRV Polling for Sharded Clusters
+  * Updates to documentation (Thank you @lautarobock, @sampathBlam, @indatawetrust)
 
 2.1.0 / 2019-09-09
 ==================
