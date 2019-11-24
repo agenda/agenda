@@ -45,7 +45,7 @@
     "debug": "~4.1.1",
     "human-interval": "~0.1.6",
     "moment-timezone": "~0.5.26",
-    "mongodb": "~3.2.7"
+    "mongodb": "~3.3.0"
   },
   "devDependencies": {
     "blanket": "1.2.3",
