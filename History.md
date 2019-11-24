@@ -1,13 +1,37 @@
 Next
 ====
 
-  * https://github.com/agenda/agenda/pulls
+* https://github.com/agenda/agenda/pulls
+
+2.2.0 / 2019-11-24
+==================
+
+  * Fix `skipImmediate` option in `.every` ([#861](https://github.com/agenda/agenda/pull/861)) (Thanks @erics2783!)
+  * Add try/catch block to agenda#now method ([#876](https://github.com/agenda/agenda/pull/876)) (Thanks @sampathBlam!)
+  * Refactor job queuing mechanism. Agenda n ow guarantees priority when executing jobs scheduled the same datetime. Fixes also some tests. ([#852](https://github.com/agenda/agenda/pull/852)) (Thank you @dmbarreiro!)
+  * Update dependencies (Kudos @simison!)
+    Most notably `mongodb` ~3.2.7 -> ~3.3.0 ([changelog](https://github.com/mongodb/node-mongodb-native/tree/v3.3.0)) — highlights:
+    - Mongo DB Server Version 4.2 feature support
+    - Merged `mongodb-core` into `node-mongodb-native`
+    - Beta support for MongoDB Client-Side Encryption
+    - SRV Polling for Sharded Clusters
+  * Updates to documentation (Thank you @lautarobock, @sampathBlam, @indatawetrust)
+
+2.1.0 / 2019-09-09
+==================
+  * Support async functions in job processing ([#653](https://github.com/agenda/agenda/pull/653)) (thanks @princjef!)
+  * Allow sorting and limiting jobs when searching ([#665](https://github.com/agenda/agenda/pull/665)) (thank you @edwin-jones)
+  * Update MongoClient connection settings with `useNewUrlParser: true` to remove the deprecation warning. ([#806](https://github.com/agenda/agenda/pull/806)) (thanks @dpawson905!)
+  * Allow valid date strings when scheduling ([#808](https://github.com/agenda/agenda/pull/808)) (Thanks @wingsbob!)
+  * Update dependencies ([#820](https://github.com/agenda/agenda/pull/820))
+  * Update documentation (kudos @dandv, @pedruino and many others!)
+  * Fix linting errors ([#847](https://github.com/agenda/agenda/pull/847)) (thanks @dmbarreiro!)
 
 2.0.2 / 2018-09-15
 ==================
   * Fixes a MongoDB connection string issue with Atlas ([#674](
 https://github.com/agenda/agenda/pull/674)
-  
+
 2.0.1 / 2018-08-30
 ==================
   * Fix a bug where `job.touch()` wasn't promise based, as it should've been ([#667](https://github.com/agenda/agenda/pull/667)
