@@ -2,6 +2,8 @@ Next
 ====
 
 * https://github.com/agenda/agenda/pulls
+* Improved performance in situations when there are many "expired" jobs in the  database ([#869](https://github.com/agenda/agenda/pull/869)) (Thanks @mfred488!)
+
 
 2.2.0 / 2019-11-24
 ==================
