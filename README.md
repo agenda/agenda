@@ -700,7 +700,7 @@ try {
   console.log('Successfully removed job from collection');
 } catch (e) {
   console.error('Error removing job from collection');
-});
+}
 ```
 
 ### disable()
