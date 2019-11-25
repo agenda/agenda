@@ -1,8 +1,8 @@
 /* globals describe, it, beforeEach, afterEach */
 'use strict';
 const delay = require('delay');
-const MongoClient = require('mongodb').MongoClient;
-const Agenda = require('../index');
+const {MongoClient} = require('mongodb');
+const Agenda = require('..');
 
 const mongoHost = process.env.MONGODB_HOST || 'localhost';
 const mongoPort = process.env.MONGODB_PORT || '27017';
@@ -31,7 +31,8 @@ describe('Retry', () => {
       if (err) {
         done(err);
       }
-      MongoClient.connect(mongoCfg, async (error, client) => {
+
+      MongoClient.connect(mongoCfg, async(error, client) => {
         mongoClient = client;
         mongoDb = client.db(agendaDatabase);
 
@@ -48,7 +49,7 @@ describe('Retry', () => {
     });
   });
 
-  afterEach(async () => {
+  afterEach(async() => {
     await delay(50);
     await agenda.stop();
     await clearJobs();
@@ -56,7 +57,7 @@ describe('Retry', () => {
     await agenda._db.close();
   });
 
-  it('should retry a job', async () => {
+  it('should retry a job', async() => {
     let shouldFail = true;
 
     agenda.processEvery(100); // Shave 5s off test runtime :grin:
@@ -65,6 +66,7 @@ describe('Retry', () => {
         shouldFail = false;
         return done(new Error('test failure'));
       }
+
       done();
     });
 
@@ -72,6 +74,7 @@ describe('Retry', () => {
       if (err) {
         // Do nothing as this is expected to fail.
       }
+
       job.schedule('now').save();
     });
 
