@@ -567,6 +567,24 @@ describe('Job', () => {
     });
   });
 
+  describe('pause()',()=>{
+    it('Should pause the job', ()=>{
+      const job = new Job();
+      job.pause();
+      expect(job.attrs.disabled).to.be(true);
+    })
+  });
+
+  describe('resume()',()=>{
+    it('Should resume the job', ()=>{
+      const job = new Job();
+      job.pause();
+      job.resume('2019-12-15T19:35:00-00:00');
+      expect(job.attrs.disabled).to.be(false);
+      expect(job.attrs.nextRunAt).to.be('2019-12-15T19:35:00-00:00')
+    })
+  });
+  
   describe('start/stop', () => {
     it('starts/stops the job queue', async() => {
       // @TODO: this lint issue should be looked into: https://eslint.org/docs/rules/no-async-promise-executor
