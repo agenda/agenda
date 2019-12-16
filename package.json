@@ -46,14 +46,20 @@
     "date.js": "~0.3.3",
     "debug": "~4.1.1",
     "human-interval": "~1.0.0",
-    "moment-timezone": "~0.5.26",
-    "mongodb": "~3.3.0"
+    "moment-timezone": "~0.5.27",
+    "mongodb": "~3.4.0"
   },
   "devDependencies": {
     "blanket": "1.2.3",
-    "coveralls": "3.0.8",
+    "coveralls": "3.0.9",
     "delay": "4.3.0",
-    "eslint": "6.7.0",
+    "eslint-config-xo": "0.27.2",
+    "eslint-plugin-ava": "9.0.0",
+    "eslint-plugin-eslint-comments": "3.1.2",
+    "eslint-plugin-import": "2.19.1",
+    "eslint-plugin-node": "10.0.0",
+    "eslint-plugin-unicorn": "14.0.1",
+    "eslint": "6.7.2",
     "expect.js": "0.3.1",
     "jsdoc": "3.6.3",
     "jsdoc-template": "https://github.com/braintree/jsdoc-template",
@@ -65,7 +71,9 @@
   },
   "xo": {
     "space": 2,
-    "ignores": ["docs/**"],
+    "ignores": [
+      "docs/**"
+    ],
     "rules": {
       "space-before-function-paren": [
         "error",
