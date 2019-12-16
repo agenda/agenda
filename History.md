@@ -2,8 +2,13 @@ Next
 ====
 
 * https://github.com/agenda/agenda/pulls
+
+2.3.0 / 2019-12-16
+==================
+
 * Improved performance in situations when there are many "expired" jobs in the  database ([#869](https://github.com/agenda/agenda/pull/869)) (Thanks @mfred488!)
 * Fix periodic node.js process unhandledRejection ([#887](https://github.com/agenda/agenda/pull/887)) (Thanks @koresar and @Scorpil)
+* Update dependencies
 
 2.2.0 / 2019-11-24
 ==================
