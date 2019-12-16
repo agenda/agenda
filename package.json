@@ -45,7 +45,6 @@
     "cron": "~1.7.2",
     "date.js": "~0.3.3",
     "debug": "~4.1.1",
-    "eslint-config-xo": "^0.27.2",
     "human-interval": "~1.0.0",
     "moment-timezone": "~0.5.27",
     "mongodb": "~3.4.0"
@@ -54,6 +53,7 @@
     "blanket": "1.2.3",
     "coveralls": "3.0.9",
     "delay": "4.3.0",
+    "eslint-config-xo": "^0.27.2",
     "eslint": "6.7.2",
     "expect.js": "0.3.1",
     "jsdoc": "3.6.3",
