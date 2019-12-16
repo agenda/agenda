@@ -26,7 +26,7 @@ const jobTimeout = process.env.TRAVIS ? 2500 : 500;
 const jobType = 'do work';
 const jobProcessor = () => {};
 
-describe('Agenda', () => {
+describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
   beforeEach(() => {
     // @TODO: this lint issue should be looked into: https://eslint.org/docs/rules/no-async-promise-executor
     // eslint-disable-next-line no-async-promise-executor
@@ -566,6 +566,43 @@ describe('Agenda', () => {
       expect(job1.attrs.data).to.be(3);
       expect(job2.attrs.data).to.be(2);
       expect(job3.attrs.data).to.be(1);
+    });
+  });
+
+  describe('process jobs', function() { // eslint-disable-line prefer-arrow-callback
+    it('should not cause unhandledRejection', async function() {
+      // This unit tests if for this bug [https://github.com/agenda/agenda/issues/884]
+      // which is not reproducible with default agenda config on shorter processEvery.
+      // Thus we set the test timeout to 10000, and the delay below to 6000.
+      this.timeout(10000);
+
+      const unhandledRejections = [];
+      const rejectionsHandler = error => unhandledRejections.push(error);
+      process.on('unhandledRejection', rejectionsHandler);
+
+      let j1processes = 0;
+      jobs.define('j1', (job, done) => {
+        j1processes += 1;
+        done();
+      });
+
+      let j2processes = 0;
+      jobs.define('j2', (job, done) => {
+        j2processes += 1;
+        done();
+      });
+
+      await jobs.start();
+      await jobs.every('5 seconds', 'j1');
+      await jobs.every('10 seconds', 'j2');
+
+      await delay(6000);
+      process.removeListener('unhandledRejection', rejectionsHandler);
+
+      expect(j1processes).to.equal(2);
+      expect(j2processes).to.equal(1);
+
+      expect(unhandledRejections).to.have.length(0);
     });
   });
 });
