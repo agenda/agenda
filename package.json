@@ -58,7 +58,7 @@
     "eslint-plugin-eslint-comments": "3.1.2",
     "eslint-plugin-import": "2.19.1",
     "eslint-plugin-node": "10.0.0",
-    "eslint-plugin-unicorn": "14.0.1",
+    "eslint-plugin-unicorn": "15.0.1",
     "eslint": "6.7.2",
     "expect.js": "0.3.1",
     "jsdoc": "3.6.3",
