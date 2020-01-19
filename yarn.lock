@@ -618,10 +618,10 @@ coveralls@3.0.9:
     minimist "^1.2.0"
     request "^2.88.0"
 
-cron@~1.7.2:
-  version "1.7.2"
-  resolved "https://registry.yarnpkg.com/cron/-/cron-1.7.2.tgz#2ea1f35c138a07edac2ac5af5084ed6fee5723db"
-  integrity sha512-+SaJ2OfeRvfQqwXQ2kgr0Y5pzBR/lijf5OpnnaruwWnmI799JfWr2jN2ItOV9s3A/+TFOt6mxvKzQq5F0Jp6VQ==
+cron@~1.8.0:
+  version "1.8.0"
+  resolved "https://registry.yarnpkg.com/cron/-/cron-1.8.0.tgz#064422d868c5e960dfc647180f4847e9e203d74f"
+  integrity sha512-PXjQSUCAWiPxuq0aJifucTZR4NGKJajALaWgr/tGq6OPZT9THhpSNznfC994WxO69nYbEvF9scWPbluDsJlcRA==
   dependencies:
     moment-timezone "^0.5.x"
 
