@@ -1,10 +1,7 @@
 /* globals describe, it */
 'use strict';
-/* eslint object-curly-spacing: "off" */
-/* eslint space-before-function-paren: "off" */
-/* eslint prefer-arrow-callback: "warn"  */
 
-const { MongoClient } = require('mongodb');
+const {MongoClient} = require('mongodb');
 const delay = require('delay');
 const expect = require('expect.js');
 
@@ -23,7 +20,7 @@ function clearJobs(client) {
 const JOB_NAME = 'dummyJob';
 
 describe('MongoDB connection', () => {
-  it('with useUnifiedTopology option', async function () {
+  it('with useUnifiedTopology option', async() => {
     let client;
     let agenda;
 
@@ -35,7 +32,7 @@ describe('MongoDB connection', () => {
 
       await client.connect();
 
-      agenda = new Agenda({ mongo: client.db() });
+      agenda = new Agenda({mongo: client.db()});
 
       await agenda.start();
 
@@ -43,7 +40,7 @@ describe('MongoDB connection', () => {
         done();
       });
 
-      const job = new Job({ agenda, name: JOB_NAME });
+      const job = new Job({agenda, name: JOB_NAME});
 
       const now = new Date();
       await delay(5);
