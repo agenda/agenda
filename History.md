@@ -4,8 +4,8 @@ Next
 * https://github.com/agenda/agenda/pulls
 
 * Stop testing for Node.js 8. This might still work but we're no longer actively testing for it. ([#925](https://github.com/agenda/agenda/pull/925))
-* Fix: check that the new nextRunAt is different that the previous nextRunAt ([`#863`](https://github.com/agenda/agenda/pull/863)) (Thanks @RaphaelRheault!)
-* Update dependencies. Most notably MongoDB driver 3.4→3.5 ([`#899`](https://github.com/agenda/agenda/pull/899), [`#900`](https://github.com/agenda/agenda/pull/900), [`#906`](https://github.com/agenda/agenda/pull/906), [`#908`](https://github.com/agenda/agenda/pull/908), [`#910`](https://github.com/agenda/agenda/pull/910), [`#913`](https://github.com/agenda/agenda/pull/913))
+* Fix: check that the new nextRunAt is different that the previous nextRunAt ([#863](https://github.com/agenda/agenda/pull/863)) (Thanks @RaphaelRheault!)
+* Update dependencies. Most notably MongoDB driver 3.4→3.5 ([#899](https://github.com/agenda/agenda/pull/899), [#900](https://github.com/agenda/agenda/pull/900), [#903](https://github.com/agenda/agenda/pull/903)), [#906](https://github.com/agenda/agenda/pull/906), [#908](https://github.com/agenda/agenda/pull/908), [#910](https://github.com/agenda/agenda/pull/910), [#912](https://github.com/agenda/agenda/pull/912)), [#913](https://github.com/agenda/agenda/pull/913)), [#920](https://github.com/agenda/agenda/pull/920)), [#922](https://github.com/agenda/agenda/pull/922)).
 
 2.3.0 / 2019-12-16
 ==================
