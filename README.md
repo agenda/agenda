@@ -950,7 +950,7 @@ const agenda = new Agenda(connectionOpts);
 const jobTypes = process.env.JOB_TYPES ? process.env.JOB_TYPES.split(',') : [];
 
 jobTypes.forEach(type => {
-  require('./lib/jobs/' + type)(agenda);
+  require('./jobs/' + type)(agenda);
 });
 
 if (jobTypes.length) {
