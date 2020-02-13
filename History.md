@@ -9,6 +9,7 @@ Next
 * Support MongoDB's Unified Topology Design ([#921](https://github.com/agenda/agenda/pull/921)) (Thanks @viktorzavadil!)
 * Fix: check that the new nextRunAt is different that the previous nextRunAt ([#863](https://github.com/agenda/agenda/pull/863)) (Thanks @RaphaelRheault!)
 * Update dependencies. Most notably MongoDB driver 3.4 → 3.5 ([#899](https://github.com/agenda/agenda/pull/899), [#900](https://github.com/agenda/agenda/pull/900), [#903](https://github.com/agenda/agenda/pull/903), [#906](https://github.com/agenda/agenda/pull/906), [#908](https://github.com/agenda/agenda/pull/908), [#910](https://github.com/agenda/agenda/pull/910), [#912](https://github.com/agenda/agenda/pull/912), [#913](https://github.com/agenda/agenda/pull/913), [#920](https://github.com/agenda/agenda/pull/920), [#922](https://github.com/agenda/agenda/pull/922))
+* Documentation updates, thanks @MichielDeMey and @Sunghee2. ([#923](https://github.com/agenda/agenda/pull/923) & [#907](https://github.com/agenda/agenda/pull/907))
 
 BREAKING
 --------
