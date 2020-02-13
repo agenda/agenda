@@ -1023,7 +1023,20 @@ eslint-module-utils@^2.4.1:
     debug "^2.6.9"
     pkg-dir "^2.0.0"
 
-eslint-plugin-ava@9.0.0, eslint-plugin-ava@^9.0.0:
+eslint-plugin-ava@10.0.1:
+  version "10.0.1"
+  resolved "https://registry.yarnpkg.com/eslint-plugin-ava/-/eslint-plugin-ava-10.0.1.tgz#ee779d3e6e92e5db38b9981ae298eb37544474aa"
+  integrity sha512-ywM/8q3PCAb4WEVoaEp1juTjuJMCziuwsPYcao2D6GoQVa4XdBrHnJaooHgykOsU48gZDzlkEcPflwR0/fLIvQ==
+  dependencies:
+    deep-strict-equal "^0.2.0"
+    enhance-visitors "^1.0.0"
+    espree "^6.1.2"
+    espurify "^2.0.1"
+    import-modules "^2.0.0"
+    pkg-dir "^4.2.0"
+    resolve-from "^5.0.0"
+
+eslint-plugin-ava@^9.0.0:
   version "9.0.0"
   resolved "https://registry.yarnpkg.com/eslint-plugin-ava/-/eslint-plugin-ava-9.0.0.tgz#a8d569ae7127aa640e344c46d1f288976543b1bd"
   integrity sha512-mJqQ1wQ9pxBi5Pu+grrqjfuSLxiSSgnpa5p5vMdEpBqA9n9cUzSCv0xMZ/NkTMAj5ieOB3TWF8j+7C30Yiv4RA==
@@ -1326,7 +1339,7 @@ esprima@^4.0.0:
   version "4.0.1"
   resolved "https://registry.yarnpkg.com/esprima/-/esprima-4.0.1.tgz#13b04cdb3e6c5d19df91ab6987a8695619b0aa71"
 
-espurify@^2.0.0:
+espurify@^2.0.0, espurify@^2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/espurify/-/espurify-2.0.1.tgz#c25b3bb613863daa142edcca052370a1a459f41d"
   integrity sha512-7w/dUrReI/QbJFHRwfomTlkQOXaB1NuCrBRn5Y26HXn5gvh18/19AgLbayVrNxXQfkckvgrJloWyvZDuJ7dhEA==
