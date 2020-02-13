@@ -2,6 +2,7 @@ Next
 ====
 
 * https://github.com/agenda/agenda/pulls
+* Stop testing for Node.js 8. This might still work but we're no longer actively testing for it.
 
 2.3.0 / 2019-12-16
 ==================
