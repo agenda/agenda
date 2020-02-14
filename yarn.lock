@@ -4030,10 +4030,10 @@ xmlcreate@^2.0.0:
   resolved "https://registry.yarnpkg.com/xmlcreate/-/xmlcreate-2.0.1.tgz#2ec38bd7b708d213fd1a90e2431c4af9c09f6a52"
   integrity sha512-MjGsXhKG8YjTKrDCXseFo3ClbMGvUD4en29H2Cev1dv4P/chlpw6KdYmlCWDkhosBVKRDjM836+3e3pm1cBNJA==
 
-xo@0.26.0:
-  version "0.26.0"
-  resolved "https://registry.yarnpkg.com/xo/-/xo-0.26.0.tgz#3bfc21aeeb3f81cdcd60f45da86b4a8aa8fe9f08"
-  integrity sha512-jtQRCexAWnC0sy4O8bxq7dxnH7iQbu3PNqypMLfYo/fT8fFZzvgnwUN5pn0TqS8oA/YOwimNOImSMYm4pTSQgw==
+xo@0.26.1:
+  version "0.26.1"
+  resolved "https://registry.yarnpkg.com/xo/-/xo-0.26.1.tgz#fdae82ab0ae99cbb777c974a363ccccf2bd08160"
+  integrity sha512-m2h2NrFoprrB8jsCvZFx5Wn3uLwd9k4mTo4bA+ZzXOv3fCOMMW8sA2C+qCCNTuEdRarYRtO068+cerM8ZnBiCQ==
   dependencies:
     arrify "^2.0.1"
     debug "^4.1.0"
