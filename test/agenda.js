@@ -554,6 +554,11 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
       expect(results).to.have.length(2);
     });
 
+    it('should skip jobs', async() => {
+      const results = await jobs.jobs({name: 'jobA'}, {}, 2, 2);
+      expect(results).to.have.length(1);
+    });
+
     it('should sort jobs', async() => {
       const results = await jobs.jobs({name: 'jobA'}, {data: -1});
 
