@@ -99,11 +99,23 @@ describe('Job', () => {
       expect(job.repeatEvery('one second')).to.be(job);
     });
     it('sets the nextRunAt property with skipImmediate', () => {
-      const now = new Date();
-      job.repeatEvery('3 minutes', {skipImmediate: true});
-      const lowerBound = now.valueOf() + 180000;
-      const upperBound = now.valueOf() + 180000 + 2;
-      expect(job.attrs.nextRunAt).to.be.within(lowerBound, upperBound); // Inclusive
+      const job2 = new Job();
+      const now = (new Date()).valueOf();
+      job2.repeatEvery('3 minutes', {skipImmediate: true});
+      expect(job2.attrs.nextRunAt).to.be.within(now + 180000, now + 180002); // Inclusive
+    });
+    it('repeats from the existing nextRunAt property with skipImmediate', () => {
+      const job2 = new Job();
+      const futureDate = (new Date('3000-01-01T00:00:00')).valueOf();
+      job2.attrs.nextRunAt = futureDate;
+      job2.repeatEvery('3 minutes', {skipImmediate: true});
+      expect(job2.attrs.nextRunAt).to.be(futureDate + 180000);
+    });
+    it('repeats from the existing scheduled date with skipImmediate', () => {
+      const futureDate = new Date('3000-01-01T00:00:00');
+      const job2 = new Job().schedule(futureDate);
+      job2.repeatEvery('3 minutes', {skipImmediate: true});
+      expect(job2.attrs.nextRunAt).to.be(futureDate.valueOf() + 180000);
     });
   });
 
