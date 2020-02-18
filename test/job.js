@@ -115,7 +115,7 @@ describe('Job', () => {
       const futureDate = new Date('3000-01-01T00:00:00');
       const job2 = new Job().schedule(futureDate);
       job2.repeatEvery('3 minutes', {skipImmediate: true});
-      expect(job2.attrs.nextRunAt).to.be.within(futureDate.valueOf() + 180000);
+      expect(job2.attrs.nextRunAt).to.be(futureDate.valueOf() + 180000);
     });
   });
 
