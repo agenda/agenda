@@ -1139,7 +1139,24 @@ eslint-plugin-promise@^4.2.1:
   resolved "https://registry.yarnpkg.com/eslint-plugin-promise/-/eslint-plugin-promise-4.2.1.tgz#845fd8b2260ad8f82564c1222fce44ad71d9418a"
   integrity sha512-VoM09vT7bfA7D+upt+FjeBO5eHIJQBUWki1aPvB+vbNiHS3+oGIJGIeyBtKQTME6UPXXy3vV07OL1tHd3ANuDw==
 
-eslint-plugin-unicorn@16.1.1, eslint-plugin-unicorn@^16.1.1:
+eslint-plugin-unicorn@17.2.0:
+  version "17.2.0"
+  resolved "https://registry.yarnpkg.com/eslint-plugin-unicorn/-/eslint-plugin-unicorn-17.2.0.tgz#8f147ba24d417dc5de948c7df7d006108a37a540"
+  integrity sha512-0kYjrywf0kQxevFz571KrDfYMIRZ5Kq6dDgPU1EEBFeC181r+fAaPatBScWX+/hisKJ4+eCRFebxTeVylsSYmw==
+  dependencies:
+    ci-info "^2.0.0"
+    clean-regexp "^1.0.0"
+    eslint-ast-utils "^1.1.0"
+    eslint-template-visitor "^1.1.0"
+    import-modules "^2.0.0"
+    lodash "^4.17.15"
+    read-pkg-up "^7.0.1"
+    regexp-tree "^0.1.20"
+    reserved-words "^0.1.2"
+    safe-regex "^2.1.1"
+    semver "^7.1.2"
+
+eslint-plugin-unicorn@^16.1.1:
   version "16.1.1"
   resolved "https://registry.yarnpkg.com/eslint-plugin-unicorn/-/eslint-plugin-unicorn-16.1.1.tgz#012c598d71914ef30f5d386dd85110e59f2ef999"
   integrity sha512-IMxCsntb0T8s660Irc40gtzXtxuXHcOn36G9G8OYKfiseBD/kNrA1cNJhsJ0xQteDASGrFwqdzBsYEkUvczhOA==
@@ -3213,6 +3230,11 @@ regexp-tree@^0.1.17:
   version "0.1.19"
   resolved "https://registry.yarnpkg.com/regexp-tree/-/regexp-tree-0.1.19.tgz#9326e91d8d1d23298dd33a78cf5e788f57cdc359"
   integrity sha512-mVeVLF/qg5qFbZSW0f7pXbuVX73dKIjuhOyC2JLKxzmpya75O4qLcvI9j0jp31Iz7IAkEVHa1UErDCAqaLKo5A==
+
+regexp-tree@^0.1.20:
+  version "0.1.20"
+  resolved "https://registry.yarnpkg.com/regexp-tree/-/regexp-tree-0.1.20.tgz#d4ca65e4ab9ab05262acfce674dadd02d0fb9808"
+  integrity sha512-gSiH74kc00oTbQkN7tZogZe0ttKwyxyDVLAnU20aWoarbLE9AypbJHRlZ567h4Zi19q3cPVRWDYbfECElrHgsQ==
 
 regexp-tree@~0.1.1:
   version "0.1.16"
