@@ -171,7 +171,7 @@ describe('Job', () => {
       expect(job.computeNextRunAt()).to.be(job);
     });
 
-    it('sets to undefined if no repeat at', () => {
+    it('sets to undefined if no repeat at', async() => {
       job.attrs.repeatAt = null;
       job.computeNextRunAt();
       expect(job.attrs.nextRunAt).to.be(undefined);
@@ -506,6 +506,56 @@ describe('Job', () => {
     });
   });
 
+  describe('cancel', () => {
+    let job;
+
+    it('emits cancel event', done => {
+      job = new Job();
+      job.isRunning = () => true;
+      job.once('cancel', self => {
+        expect(self).to.be(job);
+        done();
+      });
+      job.cancel();
+      expect(job.cancelled).to.be(true);
+    });
+
+    it('emits cancel only while running', done => {
+      job = new Job();
+      job.isRunning = () => false;
+      job.once('cancel', () => {
+        done(new Error('should not emit cancel'));
+      });
+      job.cancel();
+      expect(job.cancelled).to.be(false);
+      setTimeout(done, 1);
+    });
+
+    it('sends cancel signal to a running worker', done => {
+      agenda.define('testRun', (job, finish) => {
+        let t = null;
+        job.once('cancel', () => {
+          clearTimeout(t);
+          expect(job.cancelled).to.be(true);
+          finish();
+          done();
+        });
+        t = setTimeout(() => {
+          finish();
+          done(new Error('cancel event not received'));
+        }, jobTimeout);
+      });
+
+      job = new Job({agenda, name: 'testRun'});
+      job.run();
+      job.once('start', () => {
+        process.nextTick(() => {
+          job.cancel();
+        });
+      });
+    });
+  });
+
   describe('touch', () => {
     it('extends the lock lifetime', async() => {
       const lockedAt = new Date();
@@ -655,6 +705,25 @@ describe('Job', () => {
       expect(job.lockedAt).to.be(null);
     });
 
+    it('cancels and wait for running workers to finish', async() => {
+      let cancelCalled = false;
+      agenda.define('longRunningJob', (job, done) => {
+        // Job never finishes
+        // but can be cancelled
+        job.once('cancel', () => {
+          cancelCalled = true;
+          done();
+        });
+      });
+      agenda.every('10 seconds', 'longRunningJob');
+      agenda.processEvery('1 second');
+
+      await agenda.start();
+      await delay(jobTimeout);
+      await agenda.stop(jobTimeout);
+      expect(cancelCalled).to.be(true);
+    });
+
     describe('events', () => {
       beforeEach(() => {
         agenda.define('jobQueueTest', (job, cb) => {
@@ -667,12 +736,16 @@ describe('Job', () => {
 
       it('emits start event', async() => {
         const spy = sinon.spy();
+        const spy1 = sinon.spy();
         const job = new Job({agenda, name: 'jobQueueTest'});
         agenda.once('start', spy);
+        job.once('start', spy1);
 
         await job.run();
         expect(spy.called).to.be(true);
+        expect(spy1.called).to.be(true);
         expect(spy.calledWithExactly(job)).to.be(true);
+        expect(spy1.calledWithExactly(job)).to.be(true);
       });
 
       it('emits start:job name event', async() => {
@@ -687,12 +760,16 @@ describe('Job', () => {
 
       it('emits complete event', async() => {
         const spy = sinon.spy();
+        const spy1 = sinon.spy();
         const job = new Job({agenda, name: 'jobQueueTest'});
         agenda.once('complete', spy);
+        job.once('complete', spy1);
 
         await job.run();
         expect(spy.called).to.be(true);
+        expect(spy1.called).to.be(true);
         expect(spy.calledWithExactly(job)).to.be(true);
+        expect(spy1.calledWithExactly(job)).to.be(true);
       });
 
       it('emits complete:job name event', async() => {
@@ -707,12 +784,16 @@ describe('Job', () => {
 
       it('emits success event', async() => {
         const spy = sinon.spy();
+        const spy1 = sinon.spy();
         const job = new Job({agenda, name: 'jobQueueTest'});
         agenda.once('success', spy);
+        job.once('success', spy1);
 
         await job.run();
         expect(spy.called).to.be(true);
+        expect(spy1.called).to.be(true);
         expect(spy.calledWithExactly(job)).to.be(true);
+        expect(spy1.calledWithExactly(job)).to.be(true);
       });
 
       it('emits success:job name event', async() => {
@@ -727,17 +808,22 @@ describe('Job', () => {
 
       it('emits fail event', async() => {
         const spy = sinon.spy();
+        const spy1 = sinon.spy();
         const job = new Job({agenda, name: 'failBoat'});
         agenda.once('fail', spy);
+        job.once('fail', spy1);
 
         await job.run().catch(error => {
           expect(error.message).to.be('Zomg fail');
         });
 
         expect(spy.called).to.be(true);
+        expect(spy1.called).to.be(true);
 
         const err = spy.args[0][0];
+        const err1 = spy1.args[0][0];
         expect(err.message).to.be('Zomg fail');
+        expect(err1.message).to.be('Zomg fail');
         expect(job.attrs.failCount).to.be(1);
         expect(job.attrs.failedAt.valueOf()).not.to.be.below(job.attrs.lastFinishedAt.valueOf());
       });
