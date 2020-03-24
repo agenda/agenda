@@ -1,6 +1,7 @@
 'use strict';
+/* eslint-disable unicorn/no-process-exit */
 module.exports = {
-  none: agenda => {},
+  none: () => {},
   daily: agenda => {
     agenda.define('once a day test job', (job, done) => {
       process.send('ran');
@@ -21,12 +22,11 @@ module.exports = {
       done();
     });
 
-
-    agenda.every('one day', [ 'daily test 1', 'daily test 2' ]);
+    agenda.every('one day', ['daily test 1', 'daily test 2']);
   },
   'define-future-job': agenda => {
     const future = new Date();
-    future.setDate( future.getDate() + 1);
+    future.setDate(future.getDate() + 1);
 
     agenda.define('job in the future', (job, done) => {
       process.send('ran');
@@ -38,7 +38,7 @@ module.exports = {
   },
   'define-past-due-job': agenda => {
     const past = new Date();
-    past.setDate( past.getDate() - 1);
+    past.setDate(past.getDate() - 1);
 
     agenda.define('job in the past', (job, done) => {
       process.send('ran');
@@ -49,7 +49,7 @@ module.exports = {
     agenda.schedule(past, 'job in the past');
   },
   'schedule-array': agenda => {
-    var past = new Date();
+    const past = new Date();
     past.setDate(past.getDate() - 1);
 
     agenda.define('scheduled test 1', (job, done) => {
@@ -64,7 +64,7 @@ module.exports = {
 
     agenda.schedule(past, ['scheduled test 1', 'scheduled test 2']);
   },
-  now: function(agenda) {
+  now(agenda) {
     agenda.define('now run this job', (job, done) => {
       process.send('ran');
       done();
@@ -74,3 +74,4 @@ module.exports = {
     agenda.now('now run this job');
   }
 };
+/* eslint-enable unicorn/no-process-exit */

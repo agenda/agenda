@@ -1,7 +1,41 @@
 Next
 ====
 
-  * https://github.com/agenda/agenda/pulls
+* https://github.com/agenda/agenda/pulls
+
+3.0.0 / 2020-02-13
+==================
+
+* Support MongoDB's Unified Topology Design ([#921](https://github.com/agenda/agenda/pull/921)) (Thanks @viktorzavadil!)
+* Fix: check that the new nextRunAt is different that the previous nextRunAt ([#863](https://github.com/agenda/agenda/pull/863)) (Thanks @RaphaelRheault!)
+* Update dependencies. Most notably MongoDB driver 3.4 → 3.5 ([#899](https://github.com/agenda/agenda/pull/899), [#900](https://github.com/agenda/agenda/pull/900), [#903](https://github.com/agenda/agenda/pull/903), [#906](https://github.com/agenda/agenda/pull/906), [#908](https://github.com/agenda/agenda/pull/908), [#910](https://github.com/agenda/agenda/pull/910), [#912](https://github.com/agenda/agenda/pull/912), [#913](https://github.com/agenda/agenda/pull/913), [#920](https://github.com/agenda/agenda/pull/920), [#922](https://github.com/agenda/agenda/pull/922))
+* Documentation updates, thanks @MichielDeMey and @Sunghee2. ([#923](https://github.com/agenda/agenda/pull/923) & [#907](https://github.com/agenda/agenda/pull/907))
+
+BREAKING
+--------
+
+* Stop testing for Node.js 8. This might still work but we're no longer actively testing for it. ([#925](https://github.com/agenda/agenda/pull/925))
+
+2.3.0 / 2019-12-16
+==================
+
+* Improved performance in situations when there are many "expired" jobs in the  database ([#869](https://github.com/agenda/agenda/pull/869)) (Thanks @mfred488!)
+* Fix periodic node.js process unhandledRejection ([#887](https://github.com/agenda/agenda/pull/887)) (Thanks @koresar and @Scorpil)
+* Update dependencies
+
+2.2.0 / 2019-11-24
+==================
+
+  * Fix `skipImmediate` option in `.every` ([#861](https://github.com/agenda/agenda/pull/861)) (Thanks @erics2783!)
+  * Add try/catch block to agenda#now method ([#876](https://github.com/agenda/agenda/pull/876)) (Thanks @sampathBlam!)
+  * Refactor job queuing mechanism. Agenda n ow guarantees priority when executing jobs scheduled the same datetime. Fixes also some tests. ([#852](https://github.com/agenda/agenda/pull/852)) (Thank you @dmbarreiro!)
+  * Update dependencies (Kudos @simison!)
+    Most notably `mongodb` ~3.2.7 -> ~3.3.0 ([changelog](https://github.com/mongodb/node-mongodb-native/tree/v3.3.0)) — highlights:
+    - Mongo DB Server Version 4.2 feature support
+    - Merged `mongodb-core` into `node-mongodb-native`
+    - Beta support for MongoDB Client-Side Encryption
+    - SRV Polling for Sharded Clusters
+  * Updates to documentation (Thank you @lautarobock, @sampathBlam, @indatawetrust)
 
 2.1.0 / 2019-09-09
 ==================

@@ -1,18 +1,21 @@
 # Run tests in Docker `docker-compose up` on Node.js v4
 # - install node deps first `docker-compose run agenda npm install`
-agenda:
-  image: nodesource/jessie:4
-  command: npm test
-  volumes:
-    - ./:/usr/src/app
-  environment:
-    - MONGODB_HOST=mongodb
-  links:
-    - mongodb
+version: "3"
+services:
+  agenda:
+    image: node:10
+    command: npm test
+    working_dir: /usr/src/app
+    volumes:
+      - ./:/usr/src/app
+    environment:
+      - MONGODB_HOST=mongodb
+    links:
+      - mongodb
 
-mongodb:
-  image: mongo:latest
-  ports:
-    - "27017"
-  command:
-    - --storageEngine=wiredTiger
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017"
+    command:
+      - --storageEngine=wiredTiger

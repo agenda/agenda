@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://cdn.rawgit.com/agenda/agenda/master/agenda.svg" alt="Agenda" width="100" height="100">
+  <img src="https://cdn.jsdelivr.net/gh/agenda/agenda@master/agenda.svg" alt="Agenda" width="100" height="100">
 </p>
 <p align="center">
   A light-weight job scheduling library for Node.js
@@ -25,6 +25,7 @@
 - Event backed job queue that you can hook into.
 - [Agendash](https://github.com/agenda/agendash): optional standalone web-interface.
 - [Agenda-rest](https://github.com/agenda/agenda-rest): optional standalone REST API.
+- [inversify-agenda](https://github.com/lautarobock/inversify-agenda) - Some utilities for the development of agenda workers with Inversify
 
 ### Feature Comparison
 
@@ -48,7 +49,7 @@ Agenda is great if you need something that is simple and backed by MongoDB.
 | Persistence     | ✓             |  ✓  |   ✓    |
 | UI              | ✓             |     |   ✓    |
 | REST API        |               |     |   ✓    |
-| Optimized for   | Jobs / Messages | Jobs | Messages | Jobs |
+| Optimized for   | Jobs / Messages | Messages | Jobs |
 
 _Kudos for making the comparison chart goes to [Bull](https://www.npmjs.com/package/bull#feature-comparison) maintainers._
 
@@ -418,10 +419,6 @@ under `job.attrs.data`.
 `options` is an optional argument that will be passed to [`job.repeatEvery`](#repeateveryinterval-options).
 In order to use this argument, `data` must also be specified.
 
-`cb` is an optional callback function which will be called when the job has been
-persisted in the database.
-
-
 Returns the `job`.
 
 ```js
@@ -450,9 +447,6 @@ Schedules a job to run `name` once at a given time. `when` can be a `Date` or a
 
 `data` is an optional argument that will be passed to the processing function
 under `job.attrs.data`.
-
-`cb` is an optional callback function which will be called when the job has been
-persisted in the database.
 
 Returns the `job`.
 
@@ -495,37 +489,33 @@ console.log('Job successfully saved');
 ## Managing Jobs
 
 
-### jobs(mongodb-native query, mongodb-native sort, mongodb-native limit)
+### jobs(mongodb-native query, mongodb-native sort, mongodb-native limit, mongodb-native skip)
 
-Lets you query (then sort and limit the result) all of the jobs in the agenda job's database. These are full [mongodb-native](https://github.com/mongodb/node-mongodb-native) `find`, `sort` and `limit` commands. See mongodb-native's documentation for details.
+Lets you query (then sort, limit and skip the result) all of the jobs in the agenda job's database. These are full [mongodb-native](https://github.com/mongodb/node-mongodb-native) `find`, `sort`, `limit` and `skip` commands. See mongodb-native's documentation for details.
 
 ```js
-const jobs = await agenda.jobs({name: 'printAnalyticsReport'}, {data:-1}, 3);
+const jobs = await agenda.jobs({name: 'printAnalyticsReport'}, {data:-1}, 3, 1);
 // Work with jobs (see below)
 ```
 
-### cancel(mongodb-native query, cb)
+### cancel(mongodb-native query)
 
-Cancels any jobs matching the passed mongodb-native query, and removes them from the database.
+Cancels any jobs matching the passed mongodb-native query, and removes them from the database. Returns a Promise resolving to the number of cancelled jobs, or rejecting on error.
 
 ```js
-agenda.cancel({name: 'printAnalyticsReport'}, (err, numRemoved) => {
-  // ...
-});
+const numRemoved = await agenda.cancel({name: 'printAnalyticsReport'});
 ```
 
 This functionality can also be achieved by first retrieving all the jobs from the database using `agenda.jobs()`, looping through the resulting array and calling `job.remove()` on each. It is however preferable to use `agenda.cancel()` for this use case, as this ensures the operation is atomic.
 
-### purge(cb)
+### purge()
 
-Removes all jobs in the database without defined behaviors. Useful if you change a definition name and want to remove old jobs.
+Removes all jobs in the database without defined behaviors. Useful if you change a definition name and want to remove old jobs. Returns a Promise resolving to the number of removed jobs, or rejecting on error.
 
 *IMPORTANT:* Do not run this before you finish defining all of your jobs. If you do, you will nuke your database of jobs.
 
 ```js
-agenda.purge((err, numRemoved) => {
-  // ...
-});
+const numRemoved = await agenda.purge();
 ```
 
 ## Starting the job processor
@@ -748,7 +738,7 @@ try {
   console.log('Successfully removed job from collection');
 } catch (e) {
   console.error('Error removing job from collection');
-});
+}
 ```
 
 ### cancel()
@@ -1111,7 +1101,7 @@ const agenda = new Agenda(connectionOpts);
 const jobTypes = process.env.JOB_TYPES ? process.env.JOB_TYPES.split(',') : [];
 
 jobTypes.forEach(type => {
-  require('./lib/jobs/' + type)(agenda);
+  require('./jobs/' + type)(agenda);
 });
 
 if (jobTypes.length) {
