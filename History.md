@@ -3,6 +3,22 @@ Next
 
 * https://github.com/agenda/agenda/pulls
 
+3.1.0 / 2020-04-07
+==================
+
+_Stay safe!_
+
+* Fix for skipImmediate resetting nextRunAt to current date ([#860](https://github.com/agenda/agenda/pull/860)) (Thanks @AshlinDuncan!)
+* Fix deprecated reconnect options ([#948](https://github.com/agenda/agenda/pull/948)) (Thanks @ekegodigital!)
+* Add ability to set a skip when querying jobs. ([#898](https://github.com/agenda/agenda/pull/898)) (Thanks @cjolif!)
+
+Internal:
+* Fixed deprecated MongoDB functions in tests ([#928](https://github.com/agenda/agenda/pull/928)) (Thanks @MichielDeMey!)
+* Updated devDependencies
+
+Thank you @koresar, @sampathBlam, and @MichielDeMey helping to review PRs for this release! 👏
+
+
 3.0.0 / 2020-02-13
 ==================
 
