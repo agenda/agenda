@@ -491,7 +491,7 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
     });
 
     afterEach(done => {
-      jobs._collection.remove({name: {$in: ['jobA', 'jobB']}}, err => {
+      jobs._collection.deleteMany({name: {$in: ['jobA', 'jobB']}}, err => {
         if (err) {
           return done(err);
         }
@@ -540,7 +540,7 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
     });
 
     afterEach(done => {
-      jobs._collection.remove({name: 'jobA'}, err => {
+      jobs._collection.deleteMany({name: 'jobA'}, err => {
         if (err) {
           return done(err);
         }
