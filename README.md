@@ -646,7 +646,7 @@ the following:
 - `insertOnly`: `boolean` will prevent any properties from persisting if the job already exists. Defaults to false.
 
 ```js
-job.unique({'data.type': 'active', 'data.userId': '123', nextRunAt(date)});
+job.unique({'data.type': 'active', 'data.userId': '123', nextRunAt: date});
 await job.save();
 ```
 
