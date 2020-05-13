@@ -1,4 +1,4 @@
-/* globals describe, it */
+/* globals describe, it, before */
 'use strict';
 
 const {MongoClient} = require('mongodb');
@@ -10,7 +10,6 @@ const Agenda = require('..');
 const mongoServer = require('./mongo-server');
 
 let mongoCfg;
-// eslint-disable-next-line no-undef
 before(() => {
   mongoCfg = mongoServer.getConnectionString();
 });

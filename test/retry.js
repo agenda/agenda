@@ -1,4 +1,4 @@
-/* globals describe, it, beforeEach, afterEach */
+/* globals describe, it, beforeEach, afterEach, before */
 'use strict';
 const delay = require('delay');
 const {MongoClient} = require('mongodb');
@@ -6,7 +6,6 @@ const Agenda = require('..');
 const mongoServer = require('./mongo-server');
 
 let mongoCfg;
-// eslint-disable-next-line no-undef
 before(() => {
   mongoCfg = mongoServer.getConnectionString();
 });
