@@ -3,11 +3,15 @@
 const delay = require('delay');
 const {MongoClient} = require('mongodb');
 const Agenda = require('..');
+const mongoServer = require('./mongo-server');
 
-const mongoHost = process.env.MONGODB_HOST || 'localhost';
-const mongoPort = process.env.MONGODB_PORT || '27017';
+let mongoCfg;
+// eslint-disable-next-line no-undef
+before(() => {
+  mongoCfg = mongoServer.getConnectionString();
+});
+
 const agendaDatabase = 'agenda-test';
-const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/' + agendaDatabase;
 
 // Create agenda instances
 let agenda = null;

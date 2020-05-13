@@ -6,11 +6,16 @@ const delay = require('delay');
 const Job = require('../lib/job');
 const hasMongoProtocol = require('../lib/agenda/has-mongo-protocol');
 const Agenda = require('..');
+const mongoServer = require('./mongo-server');
+
+let mongoCfg;
+// eslint-disable-next-line no-undef
+before(() => {
+  mongoCfg = mongoServer.getConnectionString();
+});
 
 const mongoHost = process.env.MONGODB_HOST || 'localhost';
-const mongoPort = process.env.MONGODB_PORT || '27017';
 const agendaDatabase = 'agenda-test';
-const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/' + agendaDatabase;
 
 // Create agenda instances
 let jobs = null;

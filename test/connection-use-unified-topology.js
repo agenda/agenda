@@ -7,11 +7,13 @@ const expect = require('expect.js');
 
 const Job = require('../lib/job');
 const Agenda = require('..');
+const mongoServer = require('./mongo-server');
 
-const mongoHost = process.env.MONGODB_HOST || 'localhost';
-const mongoPort = process.env.MONGODB_PORT || '27017';
-const agendaDatabase = 'agenda-test';
-const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/' + agendaDatabase;
+let mongoCfg;
+// eslint-disable-next-line no-undef
+before(() => {
+  mongoCfg = mongoServer.getConnectionString();
+});
 
 function clearJobs(client) {
   return client.db().collection('agendaJobs').deleteMany({});
