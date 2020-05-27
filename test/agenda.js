@@ -3,9 +3,9 @@
 const expect = require('expect.js');
 const {MongoClient} = require('mongodb');
 const delay = require('delay');
-const Agenda = require('..');
 const Job = require('../lib/job');
 const hasMongoProtocol = require('../lib/agenda/has-mongo-protocol');
+const Agenda = require('..');
 
 const mongoHost = process.env.MONGODB_HOST || 'localhost';
 const mongoPort = process.env.MONGODB_PORT || '27017';
@@ -26,8 +26,10 @@ const jobTimeout = process.env.TRAVIS ? 2500 : 500;
 const jobType = 'do work';
 const jobProcessor = () => {};
 
-describe('Agenda', () => {
+describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
   beforeEach(() => {
+    // @TODO: this lint issue should be looked into: https://eslint.org/docs/rules/no-async-promise-executor
+    // eslint-disable-next-line no-async-promise-executor
     return new Promise(async resolve => {
       jobs = new Agenda({
         db: {
@@ -38,6 +40,7 @@ describe('Agenda', () => {
           if (err) {
             throw err;
           }
+
           mongoClient = client;
           mongoDb = client.db(agendaDatabase);
           await delay(50);
@@ -53,6 +56,8 @@ describe('Agenda', () => {
   });
 
   afterEach(() => {
+    // @TODO: this lint issue should be looked into: https://eslint.org/docs/rules/no-async-promise-executor
+    // eslint-disable-next-line no-async-promise-executor
     return new Promise(async resolve => {
       await delay(50);
       await jobs.stop();
@@ -248,6 +253,22 @@ describe('Agenda', () => {
           const res = await jobs.jobs({name: 'shouldBeSingleJob'});
           expect(res).to.have.length(1);
         });
+        it('should not run immediately if options.skipImmediate is true', async() => {
+          const jobName = 'send email';
+          await jobs.every('5 minutes', jobName, {}, {skipImmediate: true});
+          const job = (await jobs.jobs({name: jobName}))[0];
+          const nextRunAt = job.attrs.nextRunAt.getTime();
+          const now = new Date().getTime();
+          expect((nextRunAt - now) > 0).to.equal(true);
+        });
+        it('should run immediately if options.skipImmediate is false', async() => {
+          const jobName = 'send email';
+          await jobs.every('5 minutes', jobName, {}, {skipImmediate: false});
+          const job = (await jobs.jobs({name: jobName}))[0];
+          const nextRunAt = job.attrs.nextRunAt.getTime();
+          const now = new Date().getTime();
+          expect((nextRunAt - now) <= 0).to.equal(true);
+        });
       });
       describe('with array of names specified', () => {
         it('returns array of jobs', async() => {
@@ -339,13 +360,14 @@ describe('Agenda', () => {
             if (err) {
               throw err;
             }
+
             expect(jobs).to.have.length(1);
           });
         });
       });
 
       describe('should demonstrate non-unique contraint', () => {
-        it(`should create two jobs when unique doesn't match`, async() => {
+        it('should create two jobs when unique doesn\'t match', async() => {
           const time = new Date(Date.now() + (1000 * 60 * 3));
           const time2 = new Date(Date.now() + (1000 * 60 * 4));
 
@@ -375,6 +397,7 @@ describe('Agenda', () => {
             if (err) {
               throw err;
             }
+
             expect(jobs).to.have.length(2);
           });
         });
@@ -407,6 +430,7 @@ describe('Agenda', () => {
           if (err) {
             throw err;
           }
+
           expect(c.length).to.not.be(0);
           expect(c[0]).to.be.a(Job);
           await clearJobs();
@@ -421,18 +445,20 @@ describe('Agenda', () => {
         await job.save();
         jobs.jobs({
           name: 'no definition'
-        }, async(err, j) => { // eslint-disable-line max-nested-callbacks
+        }, async(err, j) => {
           if (err) {
             throw err;
           }
+
           expect(j).to.have.length(1);
           await jobs.purge();
           jobs.jobs({
             name: 'no definition'
-          }, (err, j) => { // eslint-disable-line max-nested-callbacks
+          }, (err, j) => {
             if (err) {
               throw err;
             }
+
             expect(j).to.have.length(0);
           });
         });
@@ -457,6 +483,7 @@ describe('Agenda', () => {
       const checkDone = () => {
         remaining--;
       };
+
       await jobs.create('jobA').save().then(checkDone);
       await jobs.create('jobA', 'someData').save().then(checkDone);
       await jobs.create('jobB').save().then(checkDone);
@@ -464,10 +491,11 @@ describe('Agenda', () => {
     });
 
     afterEach(done => {
-      jobs._collection.remove({name: {$in: ['jobA', 'jobB']}}, err => {
+      jobs._collection.deleteMany({name: {$in: ['jobA', 'jobB']}}, err => {
         if (err) {
           return done(err);
         }
+
         done();
       });
     });
@@ -501,6 +529,85 @@ describe('Agenda', () => {
 
       const jobs3 = await jobs.jobs({name: 'jobA'});
       expect(jobs3).to.have.length(1);
+    });
+  });
+
+  describe('search', () => {
+    beforeEach(async() => {
+      await jobs.create('jobA', 1).save();
+      await jobs.create('jobA', 2).save();
+      await jobs.create('jobA', 3).save();
+    });
+
+    afterEach(done => {
+      jobs._collection.deleteMany({name: 'jobA'}, err => {
+        if (err) {
+          return done(err);
+        }
+
+        done();
+      });
+    });
+
+    it('should limit jobs', async() => {
+      const results = await jobs.jobs({name: 'jobA'}, {}, 2);
+      expect(results).to.have.length(2);
+    });
+
+    it('should skip jobs', async() => {
+      const results = await jobs.jobs({name: 'jobA'}, {}, 2, 2);
+      expect(results).to.have.length(1);
+    });
+
+    it('should sort jobs', async() => {
+      const results = await jobs.jobs({name: 'jobA'}, {data: -1});
+
+      expect(results).to.have.length(3);
+
+      const job1 = results[0];
+      const job2 = results[1];
+      const job3 = results[2];
+
+      expect(job1.attrs.data).to.be(3);
+      expect(job2.attrs.data).to.be(2);
+      expect(job3.attrs.data).to.be(1);
+    });
+  });
+
+  describe('process jobs', function() { // eslint-disable-line prefer-arrow-callback
+    it('should not cause unhandledRejection', async function() {
+      // This unit tests if for this bug [https://github.com/agenda/agenda/issues/884]
+      // which is not reproducible with default agenda config on shorter processEvery.
+      // Thus we set the test timeout to 10000, and the delay below to 6000.
+      this.timeout(10000);
+
+      const unhandledRejections = [];
+      const rejectionsHandler = error => unhandledRejections.push(error);
+      process.on('unhandledRejection', rejectionsHandler);
+
+      let j1processes = 0;
+      jobs.define('j1', (job, done) => {
+        j1processes += 1;
+        done();
+      });
+
+      let j2processes = 0;
+      jobs.define('j2', (job, done) => {
+        j2processes += 1;
+        done();
+      });
+
+      await jobs.start();
+      await jobs.every('5 seconds', 'j1');
+      await jobs.every('10 seconds', 'j2');
+
+      await delay(6000);
+      process.removeListener('unhandledRejection', rejectionsHandler);
+
+      expect(j1processes).to.equal(2);
+      expect(j2processes).to.equal(1);
+
+      expect(unhandledRejections).to.have.length(0);
     });
   });
 });

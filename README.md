@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://cdn.rawgit.com/agenda/agenda/master/agenda.svg" alt="Agenda" width="100" height="100">
+  <img src="https://cdn.jsdelivr.net/gh/agenda/agenda@master/agenda.svg" alt="Agenda" width="100" height="100">
 </p>
 <p align="center">
   A light-weight job scheduling library for Node.js
@@ -25,6 +25,7 @@
 - Event backed job queue that you can hook into.
 - [Agendash](https://github.com/agenda/agendash): optional standalone web-interface.
 - [Agenda-rest](https://github.com/agenda/agenda-rest): optional standalone REST API.
+- [inversify-agenda](https://github.com/lautarobock/inversify-agenda) - Some utilities for the development of agenda workers with Inversify
 
 ### Feature Comparison
 
@@ -33,22 +34,22 @@ better suits your needs.
 
 Agenda is great if you need something that is simple and backed by MongoDB.
 
-| Feature         | Bull          | Kue   | Bee | Agenda |
-| :-------------  |:-------------:|:-----:|:---:|:------:|
-| Backend         | redis         | redis |redis| mongo  |
-| Priorities      | ✓             |  ✓    |     |   ✓    |
-| Concurrency     | ✓             |  ✓    |  ✓  |   ✓    |
-| Delayed jobs    | ✓             |  ✓    |     |   ✓    |
-| Global events   | ✓             |  ✓    |     |        |
-| Rate Limiter    | ✓             |       |     |        |
-| Pause/Resume    | ✓             |  ✓    |     |        |
-| Sandboxed worker| ✓             |       |     |        |
-| Repeatable jobs | ✓             |       |     |   ✓    |
-| Atomic ops      | ✓             |       |  ✓  |        |
-| Persistence     | ✓             |   ✓   |  ✓  |   ✓    |
-| UI              | ✓             |   ✓   |     |   ✓    |
-| REST API        |               |       |     |   ✓    |
-| Optimized for   | Jobs / Messages | Jobs | Messages | Jobs |
+| Feature         | Bull          | Bee | Agenda |
+| :-------------  |:-------------:|:---:|:------:|
+| Backend         | redis         |redis| mongo  |
+| Priorities      | ✓             |     |   ✓    |
+| Concurrency     | ✓             |  ✓  |   ✓    |
+| Delayed jobs    | ✓             |     |   ✓    |
+| Global events   | ✓             |     |        |
+| Rate Limiter    | ✓             |     |        |
+| Pause/Resume    | ✓             |     |        |
+| Sandboxed worker| ✓             |     |        |
+| Repeatable jobs | ✓             |     |   ✓    |
+| Atomic ops      | ✓             |  ✓  |        |
+| Persistence     | ✓             |  ✓  |   ✓    |
+| UI              | ✓             |     |   ✓    |
+| REST API        |               |     |   ✓    |
+| Optimized for   | Jobs / Messages | Messages | Jobs |
 
 _Kudos for making the comparison chart goes to [Bull](https://www.npmjs.com/package/bull#feature-comparison) maintainers._
 
@@ -77,8 +78,8 @@ const agenda = new Agenda({db: {address: mongoConnectionString}});
 // or pass in an existing mongodb-native MongoClient instance
 // const agenda = new Agenda({mongo: myMongoClient});
 
-agenda.define('delete old users', (job, done) => {
-  User.remove({lastLogIn: {$lt: twoDaysAgo}}, done);
+agenda.define('delete old users', async job => {
+  await User.remove({lastLogIn: {$lt: twoDaysAgo}});
 });
 
 (async function() { // IIFE to give access to async/await
@@ -92,14 +93,14 @@ agenda.define('delete old users', (job, done) => {
 ```
 
 ```js
-agenda.define('send email report', {priority: 'high', concurrency: 10}, (job, done) => {
+agenda.define('send email report', {priority: 'high', concurrency: 10}, async job => {
   const {to} = job.attrs.data;
-  emailClient.send({
+  await emailClient.send({
     to,
     from: 'example@example.com',
     subject: 'Email Report',
     body: '...'
-  }, done);
+  });
 });
 
 (async function() {
@@ -181,16 +182,17 @@ Agenda will emit a `ready` event (see [Agenda Events](#agenda-events)) when prop
 It is safe to call `agenda.start()` without waiting for this event, as this is handled internally.
 If you're using the `db` options, or call `database`, then you may still need to listen for `ready` before saving jobs.
 
-### mongo(mongoClientInstance)
+### mongo(dbInstance)
 
-Use an existing mongodb-native MongoClient instance. This can help consolidate connections to a
+Use an existing mongodb-native MongoClient/Db instance. This can help consolidate connections to a
 database. You can instead use `.database` to have agenda handle connecting for you.
 
 You can also specify it during instantiation:
 
 ```js
-const agenda = new Agenda({mongo: mongoClientInstance});
+const agenda = new Agenda({mongo: mongoClientInstance.db('agenda-test')});
 ```
+Note that MongoClient.connect() returns a mongoClientInstance since [node-mongodb-native 3.0.0](https://github.com/mongodb/node-mongodb-native/blob/master/CHANGES_3.0.0.md), while it used to return a dbInstance that could then be directly passed to agenda.
 
 ### name(name)
 
@@ -298,8 +300,9 @@ Takes a `number` which specifies the default lock lifetime in milliseconds. By
 default it is 10 minutes. This can be overridden by specifying the
 `lockLifetime` option to a defined job.
 
-A job will unlock if it is finished (ie. `done` is called) before the `lockLifetime`.
-The lock is useful if the job crashes or times out.
+A job will unlock if it is finished (ie. the returned Promise resolves/rejects
+or `done` is specified in the params and `done()` is called) before the
+`lockLifetime`. The lock is useful if the job crashes or times out.
 
 ```js
 agenda.defaultLockLifetime(10000);
@@ -337,9 +340,11 @@ Before you can use a job, you must define its processing behavior.
 ### define(jobName, [options], fn)
 
 Defines a job with the name of `jobName`. When a job of `jobName` gets run, it
-will be passed to `fn(job, done)`. To maintain asynchronous behavior, you must
-call `done()` when you are processing the job. If your function is synchronous,
-you may omit `done` from the signature.
+will be passed to `fn(job, done)`. To maintain asynchronous behavior, you may
+either provide a Promise-returning function in `fn` *or* provide `done` as a
+second parameter to `fn`. If `done` is specified in the function signature, you
+must call `done()` when you are processing the job. If your function is
+synchronous or returns a Promise, you may omit `done` from the signature.
 
 `options` is an optional argument which can overwrite the defaults. It can take
 the following:
@@ -347,7 +352,7 @@ the following:
 - `concurrency`: `number` maximum number of that job that can be running at once (per instance of agenda)
 - `lockLimit`: `number` maximum number of that job that can be locked at once (per instance of agenda)
 - `lockLifetime`: `number` interval in ms of how long the job stays locked for (see [multiple job processors](#multiple-job-processors) for more info).
-A job will automatically unlock if `done()` is called.
+A job will automatically unlock once a returned promise resolves/rejects (or if `done` is specified in the signature and `done()` is called).
 - `priority`: `(lowest|low|normal|high|highest|number)` specifies the priority
   of the job. Higher priority jobs will run first. See the priority mapping
   below
@@ -364,6 +369,15 @@ Priority mapping:
 ```
 
 Async Job:
+```js
+agenda.define('some long running job', async job => {
+  const data = await doSomelengthyTask();
+  await formatThatData(data);
+  await sendThatData(data);
+});
+```
+
+Async Job (using `done`):
 ```js
 agenda.define('some long running job', (job, done) => {
   doSomelengthyTask(data => {
@@ -387,7 +401,7 @@ agenda.define('say hello', job => {
 
 ## Creating Jobs
 
-### every(interval, name, [data], [options], [cb])
+### every(interval, name, [data], [options])
 
 Runs job `name` at the given `interval`. Optionally, data and options can be passed in.
 Every creates a job of type `single`, which means that it will only create one
@@ -403,19 +417,13 @@ under `job.attrs.data`.
 `options` is an optional argument that will be passed to [`job.repeatEvery`](#repeateveryinterval-options).
 In order to use this argument, `data` must also be specified.
 
-`cb` is an optional callback function which will be called when the job has been
-persisted in the database.
-
-
 Returns the `job`.
 
 ```js
-agenda.define('printAnalyticsReport', (job, done) => {
-  User.doSomethingReallyIntensive((err, users) => {
-    processUserData();
-    console.log('I print a report!');
-    done();
-  });
+agenda.define('printAnalyticsReport', async job => {
+  const users = await User.doSomethingReallyIntensive();
+  processUserData(users);
+  console.log('I print a report!');
 });
 
 agenda.every('15 minutes', 'printAnalyticsReport');
@@ -430,16 +438,13 @@ agenda.every('15 minutes', ['printAnalyticsReport', 'sendNotifications', 'update
 
 In this case, `every` returns array of `jobs`.
 
-### schedule(when, name, [data], [cb])
+### schedule(when, name, [data])
 
 Schedules a job to run `name` once at a given time. `when` can be a `Date` or a
 `String` such as `tomorrow at 5pm`.
 
 `data` is an optional argument that will be passed to the processing function
 under `job.attrs.data`.
-
-`cb` is an optional callback function which will be called when the job has been
-persisted in the database.
 
 Returns the `job`.
 
@@ -455,15 +460,12 @@ agenda.schedule('tomorrow at noon', ['printAnalyticsReport', 'sendNotifications'
 
 In this case, `schedule` returns array of `jobs`.
 
-### now(name, [data], [cb])
+### now(name, [data])
 
 Schedules a job to run `name` once immediately.
 
 `data` is an optional argument that will be passed to the processing function
 under `job.attrs.data`.
-
-`cb` is an optional callback function which will be called when the job has been
-persisted in the database.
 
 Returns the `job`.
 
@@ -485,38 +487,33 @@ console.log('Job successfully saved');
 ## Managing Jobs
 
 
-### jobs(mongodb-native query)
+### jobs(mongodb-native query, mongodb-native sort, mongodb-native limit, mongodb-native skip)
 
-Lets you query all of the jobs in the agenda job's database. This is a full [mongodb-native](https://github.com/mongodb/node-mongodb-native)
-`find` query. See mongodb-native's documentation for details.
+Lets you query (then sort, limit and skip the result) all of the jobs in the agenda job's database. These are full [mongodb-native](https://github.com/mongodb/node-mongodb-native) `find`, `sort`, `limit` and `skip` commands. See mongodb-native's documentation for details.
 
 ```js
-const jobs = await agenda.jobs({name: 'printAnalyticsReport'});
+const jobs = await agenda.jobs({name: 'printAnalyticsReport'}, {data:-1}, 3, 1);
 // Work with jobs (see below)
 ```
 
-### cancel(mongodb-native query, cb)
+### cancel(mongodb-native query)
 
-Cancels any jobs matching the passed mongodb-native query, and removes them from the database.
+Cancels any jobs matching the passed mongodb-native query, and removes them from the database. Returns a Promise resolving to the number of cancelled jobs, or rejecting on error.
 
 ```js
-agenda.cancel({name: 'printAnalyticsReport'}, (err, numRemoved) => {
-  // ...
-});
+const numRemoved = await agenda.cancel({name: 'printAnalyticsReport'});
 ```
 
 This functionality can also be achieved by first retrieving all the jobs from the database using `agenda.jobs()`, looping through the resulting array and calling `job.remove()` on each. It is however preferable to use `agenda.cancel()` for this use case, as this ensures the operation is atomic.
 
-### purge(cb)
+### purge()
 
-Removes all jobs in the database without defined behaviors. Useful if you change a definition name and want to remove old jobs.
+Removes all jobs in the database without defined behaviors. Useful if you change a definition name and want to remove old jobs. Returns a Promise resolving to the number of removed jobs, or rejecting on error.
 
 *IMPORTANT:* Do not run this before you finish defining all of your jobs. If you do, you will nuke your database of jobs.
 
 ```js
-agenda.purge((err, numRemoved) => {
-  // ...
-});
+const numRemoved = await agenda.purge();
 ```
 
 ## Starting the job processor
@@ -571,7 +568,8 @@ specify a longer lockLifetime.
 By default it is 10 minutes. Typically you shouldn't have a job that runs for 10 minutes,
 so this is really insurance should the job queue crash before the job is unlocked.
 
-When a job is finished (ie. `done` is called), it will automatically unlock.
+When a job is finished (i.e. the returned promise resolves/rejects or `done` is
+specified in the signature and `done()` is called), it will automatically unlock.
 
 ## Manually working with a job
 
@@ -648,7 +646,7 @@ the following:
 - `insertOnly`: `boolean` will prevent any properties from persisting if the job already exists. Defaults to false.
 
 ```js
-job.unique({'data.type': 'active', 'data.userId': '123', nextRunAt(date)});
+job.unique({'data.type': 'active', 'data.userId': '123', nextRunAt: date});
 await job.save();
 ```
 
@@ -702,7 +700,7 @@ try {
   console.log('Successfully removed job from collection');
 } catch (e) {
   console.error('Error removing job from collection');
-});
+}
 ```
 
 ### disable()
@@ -720,14 +718,12 @@ when you have very long running jobs. The call returns a promise that resolves
 when the job's lock has been renewed.
 
 ```js
-agenda.define('super long job', (job, done) => {
-  (async () => {
-    await doSomeLongTask();
-    await job.touch();
-    await doAnotherLongTask();
-    await job.touch();
-    await finishOurLongTasks();
-  })().then(done, done);
+agenda.define('super long job', async job => {
+  await doSomeLongTask();
+  await job.touch();
+  await doAnotherLongTask();
+  await job.touch();
+  await finishOurLongTasks();
 });
 ```
 
@@ -930,16 +926,12 @@ let email = require('some-email-lib'),
   User = require('../models/user-model.js');
 
 module.exports = function(agenda) {
-  agenda.define('registration email', (job, done) => {
-    User.get(job.attrs.data.userId, (err, user) => {
-      if (err) {
-        return done(err);
-      }
-      email(user.email(), 'Thanks for registering', 'Thanks for registering ' + user.name(), done);
-    });
+  agenda.define('registration email', async job => {
+    const user = await User.get(job.attrs.data.userId);
+    await email(user.email(), 'Thanks for registering', 'Thanks for registering ' + user.name());
   });
 
-  agenda.define('reset password', (job, done) => {
+  agenda.define('reset password', async job => {
     // Etc
   });
 
@@ -958,7 +950,7 @@ const agenda = new Agenda(connectionOpts);
 const jobTypes = process.env.JOB_TYPES ? process.env.JOB_TYPES.split(',') : [];
 
 jobTypes.forEach(type => {
-  require('./lib/jobs/' + type)(agenda);
+  require('./jobs/' + type)(agenda);
 });
 
 if (jobTypes.length) {
