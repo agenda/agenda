@@ -337,12 +337,12 @@ await agenda.start();
 
 Before you can use a job, you must define its processing behavior.
 
-### define(jobName, [options], fn)
+### define(jobName, [options], handler)
 
 Defines a job with the name of `jobName`. When a job of `jobName` gets run, it
-will be passed to `fn(job, done)`. To maintain asynchronous behavior, you may
-either provide a Promise-returning function in `fn` *or* provide `done` as a
-second parameter to `fn`. If `done` is specified in the function signature, you
+will be passed to `handler(job, done)`. To maintain asynchronous behavior, you may
+either provide a Promise-returning function in `handler` *or* provide `done` as a
+second parameter to `handler`. If `done` is specified in the function signature, you
 must call `done()` when you are processing the job. If your function is
 synchronous or returns a Promise, you may omit `done` from the signature.
 
