@@ -196,8 +196,8 @@ Note that MongoClient.connect() returns a mongoClientInstance since [node-mongod
 
 ### name(name)
 
-Takes a string `name` and sets `lastModifiedBy` to it in the job database.
-Useful for if you have multiple job processors (agendas) and want to see which
+Sets the `lastModifiedBy` field to `name` in the jobs collection.
+Useful if you have multiple job processors (agendas) and want to see which
 job queue last ran the job.
 
 ```js
