@@ -650,7 +650,7 @@ job.unique({'data.type': 'active', 'data.userId': '123', nextRunAt: date});
 await job.save();
 ```
 
-*IMPORTANT:* To avoid high CPU usage by MongoDB, make sure to create an index on the used fields, like `data.type` and `data.userId` for the example above.
+*IMPORTANT:* To [guarantee uniqueness](https://docs.mongodb.com/manual/reference/method/db.collection.update/#use-unique-indexes) as well as avoid high CPU usage by MongoDB make sure to create a unique index on the used fields, like `name`, `data.type` and `data.userId` for the example above.
 
 ### fail(reason)
 
