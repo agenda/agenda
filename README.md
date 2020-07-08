@@ -51,7 +51,7 @@ Agenda is great if you need something that is simple and backed by MongoDB.
 | REST API        |               |     |   ✓    |
 | Optimized for   | Jobs / Messages | Messages | Jobs |
 
-**If you need a simpler alternative to Agenda, then try out [Bree][https://jobscheduler.net].  It is made by a [past core maintainer](https://github.com/niftylettuce) of Agenda.**
+**If you need a simpler alternative to Agenda, then try out [Bree](https://jobscheduler.net).  It is made by a [past core maintainer](https://github.com/niftylettuce) of Agenda.**
 
 _Kudos for making the comparison chart goes to [Bull](https://www.npmjs.com/package/bull#feature-comparison) maintainers._
 
