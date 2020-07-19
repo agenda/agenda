@@ -24,8 +24,9 @@
 - Scheduling via cron or human readable syntax.
 - Event backed job queue that you can hook into.
 - [Agendash](https://github.com/agenda/agendash): optional standalone web-interface.
+- [Agendash2](https://github.com/Software-On-The-Road/agendash-v2): another optional standalone web-interface (not maintained by Agenda).
 - [Agenda-rest](https://github.com/agenda/agenda-rest): optional standalone REST API.
-- [inversify-agenda](https://github.com/lautarobock/inversify-agenda) - Some utilities for the development of agenda workers with Inversify
+- [Inversify-agenda](https://github.com/lautarobock/inversify-agenda) - Some utilities for the development of agenda workers with Inversify.
 
 ### Feature Comparison
 
