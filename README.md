@@ -32,7 +32,7 @@
 Since there are a few job queue solutions, here a table comparing them to help you use the one that
 better suits your needs.
 
-Agenda is great if you need something that is simple and backed by MongoDB.
+Agenda is great if you need a MongoDB job scheduler, but try **[Bree]((https://jobscheduler.net))** if you need something simpler (built by a previous maintainer).
 
 | Feature         | Bull          | Bee | Agenda |
 | :-------------  |:-------------:|:---:|:------:|
@@ -50,8 +50,6 @@ Agenda is great if you need something that is simple and backed by MongoDB.
 | UI              | ✓             |     |   ✓    |
 | REST API        |               |     |   ✓    |
 | Optimized for   | Jobs / Messages | Messages | Jobs |
-
-**If you need a simpler alternative to Agenda, then try out [Bree](https://jobscheduler.net).  It is made by a [past core maintainer](https://github.com/niftylettuce) of Agenda.**
 
 _Kudos for making the comparison chart goes to [Bull](https://www.npmjs.com/package/bull#feature-comparison) maintainers._
 
