@@ -32,7 +32,7 @@
 Since there are a few job queue solutions, here a table comparing them to help you use the one that
 better suits your needs.
 
-Agenda is great if you need a MongoDB job scheduler, but try **[Bree]((https://jobscheduler.net))** if you need something simpler (built by a previous maintainer).
+Agenda is great if you need a MongoDB job scheduler, but try **[Bree](https://jobscheduler.net)** if you need something simpler (built by a previous maintainer).
 
 | Feature         | Bull          | Bee | Agenda |
 | :-------------  |:-------------:|:---:|:------:|
