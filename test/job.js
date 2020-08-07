@@ -13,7 +13,7 @@ const Agenda = require('..');
 const mongoServer = require('./mongo-server');
 
 let mongoCfg;
-before(() => {
+beforeEach(() => {
   mongoCfg = mongoServer.getConnectionString();
 });
 
@@ -23,10 +23,6 @@ const agendaDatabase = 'agenda-test';
 let agenda = null;
 let mongoDb = null;
 let mongoClient = null;
-
-const clearJobs = () => {
-  return mongoDb.collection('agendaJobs').deleteMany({});
-};
 
 // Slow timeouts for Travis
 const jobTimeout = process.env.TRAVIS ? 2500 : 500;
@@ -50,7 +46,6 @@ describe('Job', () => {
         mongoDb = client.db(agendaDatabase);
 
         await delay(50);
-        await clearJobs();
 
         agenda.define('someJob', jobProcessor);
         agenda.define('send email', jobProcessor);
@@ -65,7 +60,6 @@ describe('Job', () => {
 
   afterEach(async() => {
     await agenda.stop();
-    await clearJobs();
     await mongoClient.close();
     await agenda._db.close();
   });
@@ -605,7 +599,6 @@ describe('Job', () => {
       return new Promise(async resolve => {
         agenda.define('jobQueueTest', async(job, cb) => {
           await agenda.stop();
-          await clearJobs();
           cb();
           agenda.define('jobQueueTest', (job, cb) => {
             cb();

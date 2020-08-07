@@ -9,7 +9,7 @@ const Agenda = require('..');
 const mongoServer = require('./mongo-server');
 
 let mongoCfg;
-before(() => {
+beforeEach(() => {
   mongoCfg = mongoServer.getConnectionString();
 });
 
@@ -20,10 +20,6 @@ const agendaDatabase = 'agenda-test';
 let jobs = null;
 let mongoDb = null;
 let mongoClient = null;
-
-const clearJobs = () => {
-  return mongoDb.collection('agendaJobs').deleteMany({});
-};
 
 // Slow timeouts for Travis
 const jobTimeout = process.env.TRAVIS ? 2500 : 500;
@@ -48,7 +44,6 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
           mongoClient = client;
           mongoDb = client.db(agendaDatabase);
           await delay(50);
-          await clearJobs();
           jobs.define('someJob', jobProcessor);
           jobs.define('send email', jobProcessor);
           jobs.define('some job', jobProcessor);
@@ -65,7 +60,6 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
     return new Promise(async resolve => {
       await delay(50);
       await jobs.stop();
-      await clearJobs();
       await mongoClient.close();
       await jobs._db.close();
       return resolve();
@@ -437,7 +431,6 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
 
           expect(c.length).to.not.be(0);
           expect(c[0]).to.be.a(Job);
-          await clearJobs();
         });
       });
     });
@@ -475,8 +468,6 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
         await job.save();
 
         expect(job.attrs._id).to.be.ok();
-
-        await clearJobs();
       });
     });
   });
@@ -492,16 +483,6 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
       await jobs.create('jobA', 'someData').save().then(checkDone);
       await jobs.create('jobB').save().then(checkDone);
       expect(remaining).to.be(0);
-    });
-
-    afterEach(done => {
-      jobs._collection.deleteMany({name: {$in: ['jobA', 'jobB']}}, err => {
-        if (err) {
-          return done(err);
-        }
-
-        done();
-      });
     });
 
     it('should cancel a job', async() => {
@@ -541,16 +522,6 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
       await jobs.create('jobA', 1).save();
       await jobs.create('jobA', 2).save();
       await jobs.create('jobA', 3).save();
-    });
-
-    afterEach(done => {
-      jobs._collection.deleteMany({name: 'jobA'}, err => {
-        if (err) {
-          return done(err);
-        }
-
-        done();
-      });
     });
 
     it('should limit jobs', async() => {

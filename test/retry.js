@@ -6,7 +6,7 @@ const Agenda = require('..');
 const mongoServer = require('./mongo-server');
 
 let mongoCfg;
-before(() => {
+beforeEach(() => {
   mongoCfg = mongoServer.getConnectionString();
 });
 
@@ -16,10 +16,6 @@ const agendaDatabase = 'agenda-test';
 let agenda = null;
 let mongoDb = null;
 let mongoClient = null;
-
-const clearJobs = () => {
-  return mongoDb.collection('agendaJobs').deleteMany({});
-};
 
 const jobType = 'do work';
 const jobProcessor = () => {};
@@ -40,7 +36,6 @@ describe('Retry', () => {
         mongoDb = client.db(agendaDatabase);
 
         await delay(50);
-        await clearJobs();
 
         agenda.define('someJob', jobProcessor);
         agenda.define('send email', jobProcessor);
@@ -55,7 +50,6 @@ describe('Retry', () => {
   afterEach(async() => {
     await delay(50);
     await agenda.stop();
-    await clearJobs();
     await mongoClient.close();
     await agenda._db.close();
   });

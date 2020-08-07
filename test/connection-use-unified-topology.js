@@ -10,13 +10,9 @@ const Agenda = require('..');
 const mongoServer = require('./mongo-server');
 
 let mongoCfg;
-before(() => {
+beforeEach(() => {
   mongoCfg = mongoServer.getConnectionString();
 });
-
-function clearJobs(client) {
-  return client.db().collection('agendaJobs').deleteMany({});
-}
 
 const JOB_NAME = 'dummyJob';
 
@@ -52,7 +48,6 @@ describe('MongoDB connection', () => {
       throw error;
     } finally {
       await agenda.stop();
-      await clearJobs(client);
       await client.close();
     }
   });

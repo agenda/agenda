@@ -5,14 +5,14 @@ let connectionString;
 
 let mongoServer;
 // eslint-disable-next-line no-undef
-before(async() => {
+beforeEach(async() => {
   mongoServer = new MongoMemoryServer({});
   connectionString = await mongoServer.getConnectionString();
   console.log(connectionString);
 });
 
 // eslint-disable-next-line no-undef
-after(async() => {
+afterEach(async() => {
   await mongoServer.stop();
 });
 
