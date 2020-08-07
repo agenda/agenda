@@ -27,43 +27,33 @@ const jobType = 'do work';
 const jobProcessor = () => {};
 
 describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
-  beforeEach(() => {
-    // @TODO: this lint issue should be looked into: https://eslint.org/docs/rules/no-async-promise-executor
-    // eslint-disable-next-line no-async-promise-executor
-    return new Promise(async resolve => {
-      jobs = new Agenda({
-        db: {
-          address: mongoCfg
+  beforeEach(async () => {
+    jobs = new Agenda({
+      db: {
+        address: mongoCfg
+      }
+    }, () => {
+      MongoClient.connect(mongoCfg, async(err, client) => {
+        if (err) {
+          throw err;
         }
-      }, () => {
-        MongoClient.connect(mongoCfg, async(err, client) => {
-          if (err) {
-            throw err;
-          }
 
-          mongoClient = client;
-          mongoDb = client.db(agendaDatabase);
-          await delay(50);
-          jobs.define('someJob', jobProcessor);
-          jobs.define('send email', jobProcessor);
-          jobs.define('some job', jobProcessor);
-          jobs.define(jobType, jobProcessor);
-          return resolve();
-        });
+        mongoClient = client;
+        mongoDb = client.db(agendaDatabase);
+        await delay(50);
+        jobs.define('someJob', jobProcessor);
+        jobs.define('send email', jobProcessor);
+        jobs.define('some job', jobProcessor);
+        jobs.define(jobType, jobProcessor);
       });
     });
   });
 
-  afterEach(() => {
-    // @TODO: this lint issue should be looked into: https://eslint.org/docs/rules/no-async-promise-executor
-    // eslint-disable-next-line no-async-promise-executor
-    return new Promise(async resolve => {
-      await delay(50);
-      await jobs.stop();
-      await mongoClient.close();
-      await jobs._db.close();
-      return resolve();
-    });
+  afterEach(async() => {
+    await delay(50);
+    await jobs.stop();
+    await mongoClient.close();
+    await jobs._db.close();
   });
 
   it('sets a default processEvery', () => {

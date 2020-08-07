@@ -591,21 +591,17 @@ describe('Job', () => {
 
   describe('start/stop', () => {
     it('starts/stops the job queue', async() => {
-      // @TODO: this lint issue should be looked into: https://eslint.org/docs/rules/no-async-promise-executor
-      // eslint-disable-next-line no-async-promise-executor
-      return new Promise(async resolve => {
-        agenda.define('jobQueueTest', async(job, cb) => {
-          await agenda.stop();
+      agenda.define('jobQueueTest', async(job, cb) => {
+        await agenda.stop();
+        cb();
+        agenda.define('jobQueueTest', (job, cb) => {
           cb();
-          agenda.define('jobQueueTest', (job, cb) => {
-            cb();
-          });
-          resolve();
         });
-        await agenda.every('1 second', 'jobQueueTest');
-        agenda.processEvery('1 second');
-        await agenda.start();
+        resolve();
       });
+      await agenda.every('1 second', 'jobQueueTest');
+      agenda.processEvery('1 second');
+      await agenda.start();
     });
 
     it('does not run disabled jobs', async() => {
@@ -758,12 +754,10 @@ describe('Job', () => {
     it('runs a recurring job after a lock has expired', async() => {
       let startCounter = 0;
 
-      // @TODO: this lint issue should be looked into: https://eslint.org/docs/rules/no-async-promise-executor
-      // eslint-disable-next-line no-async-promise-executor
-      const processorPromise = new Promise(async resolve =>
+      const processorPromise = new Promise(resolve =>
         agenda.define('lock job', {
           lockLifetime: 50
-        }, async() => {
+        }, async () => {
           startCounter++;
 
           if (startCounter !== 1) {
@@ -787,12 +781,10 @@ describe('Job', () => {
     it('runs a one-time job after its lock expires', async() => {
       let runCount = 0;
 
-      // @TODO: this lint issue should be looked into: https://eslint.org/docs/rules/no-async-promise-executor
-      // eslint-disable-next-line no-async-promise-executor
-      const processorPromise = new Promise(async resolve =>
+      const processorPromise = new Promise(resolve =>
         agenda.define('lock job', {
           lockLifetime: 50
-        }, async(job, cb) => { // eslint-disable-line no-unused-vars
+        }, async () => {
           runCount++;
 
           if (runCount !== 1) {
