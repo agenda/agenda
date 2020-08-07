@@ -8,7 +8,7 @@ const hasMongoProtocol = require('../lib/agenda/has-mongo-protocol');
 const Agenda = require('..');
 
 const mongoHost = process.env.MONGODB_HOST || 'localhost';
-const mongoPort = process.env.MONGODB_PORT || '27017';
+const mongoPort = process.env.MONGODB_PORT || '27018';
 const agendaDatabase = 'agenda-test';
 const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/' + agendaDatabase;
 
@@ -307,6 +307,10 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
             'data.userId': '123'
           }).schedule('now').save();
 
+          await new Promise(resolve => {
+            setTimeout(resolve, 500);
+          });
+
           const job2 = await jobs.create('unique job', {
             type: 'active',
             userId: '123',
@@ -529,6 +533,106 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
 
       const jobs3 = await jobs.jobs({name: 'jobA'});
       expect(jobs3).to.have.length(1);
+    });
+  });
+
+  describe('disable', () => {
+    beforeEach(async() => {
+      const js = await Promise.all([
+        jobs.create('sendEmail', {to: 'some guy'}).schedule('1 minute').save(),
+        jobs.create('sendEmail', {from: 'some guy'}).schedule('1 minute').save(),
+        jobs.create('some job').schedule('30 seconds').save()
+      ]);
+      console.error('Created Jobs:', JSON.stringify(js, null, 2));
+    });
+
+    it('disables all jobs', async() => {
+      const ct = await jobs.disable({});
+
+      expect(ct).to.be(3);
+      const disabledJobs = await jobs.jobs({});
+
+      expect(disabledJobs).to.have.length(3);
+      disabledJobs.map(x => expect(x.attrs.disabled).to.be(true));
+    });
+
+    it('disables jobs when queried by name', async() => {
+      const ct = await jobs.disable({name: 'sendEmail'});
+
+      expect(ct).to.be(2);
+      const disabledJobs = await jobs.jobs({name: 'sendEmail'});
+
+      expect(disabledJobs).to.have.length(2);
+      disabledJobs.map(x => expect(x.attrs.disabled).to.be(true));
+    });
+
+    it('disables jobs when queried by data', async() => {
+      const ct = await jobs.disable({'data.from': 'some guy'});
+
+      expect(ct).to.be(1);
+      const disabledJobs = await jobs.jobs({'data.from': 'some guy', disabled: true});
+
+      expect(disabledJobs).to.have.length(1);
+    });
+
+    it('does not modify `nextRunAt`', async() => {
+      const js = await jobs.jobs({name: 'some job'});
+      const ct = await jobs.disable({name: 'some job'});
+
+      expect(ct).to.be(1);
+      const disabledJobs = await jobs.jobs({name: 'some job', disabled: true});
+
+      expect(disabledJobs[0].attrs.nextRunAt.toString()).to.be(js[0].attrs.nextRunAt.toString());
+    });
+  });
+
+  describe('enable', () => {
+    beforeEach(async() => {
+      const js = await Promise.all([
+        jobs.create('sendEmail', {to: 'some guy'}).schedule('1 minute').save(),
+        jobs.create('sendEmail', {from: 'some guy'}).schedule('1 minute').save(),
+        jobs.create('some job').schedule('30 seconds').save()
+      ]);
+      console.error('Created Jobs:', JSON.stringify(js, null, 2));
+    });
+
+    it('enables all jobs', async() => {
+      const ct = await jobs.enable({});
+
+      expect(ct).to.be(3);
+      const enabledJobs = await jobs.jobs({});
+
+      expect(enabledJobs).to.have.length(3);
+      enabledJobs.map(x => expect(x.attrs.disabled).to.be(false));
+    });
+
+    it('enables jobs when queried by name', async() => {
+      const ct = await jobs.enable({name: 'sendEmail'});
+
+      expect(ct).to.be(2);
+      const enabledJobs = await jobs.jobs({name: 'sendEmail'});
+
+      expect(enabledJobs).to.have.length(2);
+      enabledJobs.map(x => expect(x.attrs.disabled).to.be(false));
+    });
+
+    it('enables jobs when queried by data', async() => {
+      const ct = await jobs.enable({'data.from': 'some guy'});
+
+      expect(ct).to.be(1);
+      const enabledJobs = await jobs.jobs({'data.from': 'some guy', disabled: false});
+
+      expect(enabledJobs).to.have.length(1);
+    });
+
+    it('does not modify `nextRunAt`', async() => {
+      const js = await jobs.jobs({name: 'some job'});
+      const ct = await jobs.enable({name: 'some job'});
+
+      expect(ct).to.be(1);
+      const enabledJobs = await jobs.jobs({name: 'some job', disabled: false});
+
+      expect(enabledJobs[0].attrs.nextRunAt.toString()).to.be(js[0].attrs.nextRunAt.toString());
     });
   });
 
