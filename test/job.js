@@ -288,12 +288,9 @@ describe('Job', () => {
       await job.save();
       await job.remove();
 
-      const result = await mongoDb
-        .collection('agendaJobs')
-        .find({
+      const result = await jobs.jobs({
           _id: job.attrs._id
-        })
-        .toArray();
+        });
 
       expect(result).to.have.length(0);
     });

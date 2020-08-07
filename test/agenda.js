@@ -316,15 +316,10 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
 
           expect(job1.attrs.nextRunAt.toISOString()).not.to.equal(job2.attrs.nextRunAt.toISOString());
 
-          mongoDb.collection('agendaJobs').find({
+          const uniqueJobs = await jobs.jobs({
             name: 'unique job'
-          }).toArray((err, jobs) => {
-            if (err) {
-              throw err;
-            }
-
-            expect(jobs).to.have.length(1);
-          });
+          })
+          expect(uniqueJobs).to.have.length(1);
         });
 
         it('should not modify job when unique matches and insertOnly is set to true', async() => {
@@ -352,15 +347,11 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
 
           expect(job1.attrs.nextRunAt.toISOString()).to.equal(job2.attrs.nextRunAt.toISOString());
 
-          mongoDb.collection('agendaJobs').find({
+          const uniqueJobs = await jobs.jobs({
             name: 'unique job'
-          }).toArray((err, jobs) => {
-            if (err) {
-              throw err;
-            }
+          })
 
-            expect(jobs).to.have.length(1);
-          });
+          expect(uniqueJobs).to.have.length(1);
         });
       });
 
@@ -389,15 +380,11 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
             nextRunAt: time2
           }).schedule(time).save();
 
-          mongoDb.collection('agendaJobs').find({
+          const uniqueJobs = await jobs.jobs({
             name: 'unique job'
-          }).toArray((err, jobs) => {
-            if (err) {
-              throw err;
-            }
+          })
 
-            expect(jobs).to.have.length(2);
-          });
+          expect(uniqueJobs).to.have.length(2);
         });
       });
     });
