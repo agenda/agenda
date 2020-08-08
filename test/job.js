@@ -12,6 +12,8 @@ const Job = require('../lib/job');
 const Agenda = require('..');
 const mongoServer = require('./mongo-server');
 
+const debug = require('debug')('agenda:test:job');
+
 let mongoCfg;
 beforeEach(() => {
   mongoCfg = mongoServer.getConnectionString();
@@ -745,7 +747,12 @@ describe('Job', () => {
   });
 
   describe('job lock', () => {
-    it('runs a recurring job after a lock has expired', async() => {
+    /**
+     * NOTE: These tests are fragile. I have found them to pass under the `test` script,
+     * but fail when the `mocha-debug-all` script is run. I have added `.timeout` overrides
+     * and upped delays to help make them more resilient.
+     */
+    it('re-runs a recurring job after a lock has expired', async() => {
       let startCounter = 0;
 
       const processorPromise = new Promise(resolve =>
@@ -772,22 +779,30 @@ describe('Job', () => {
       await processorPromise;
     });
 
-    it('runs a one-time job after its lock expires', async() => {
+    it('re-runs a one-time job after its lock expires', async() => {
       let runCount = 0;
 
       const processorPromise = new Promise(resolve =>
         agenda.define('lock job', {
           lockLifetime: 50
         }, async () => {
-          runCount++;
-
-          if (runCount !== 1) {
-            expect(runCount).to.be(2);
+          const c = ++runCount;
+          debug('lock job#%d Running  ...', c)
+          
+          if (c !== 1) {
+            expect(c).to.be(2);
             await agenda.stop();
-            resolve();
+            return resolve();
           }
+
+
+          debug('lock job#%d WAITING > lock  ...', c)
+          await delay(75);
+          debug('lock job#%d EXPIRING', c)
         })
       );
+
+      expect(agenda._definitions['lock job'].lockLifetime).to.be(50);
 
       agenda.processEvery(50);
       await agenda.start();
@@ -795,18 +810,24 @@ describe('Job', () => {
         i: 1
       });
       await processorPromise;
-    });
+
+      // Without this delay, the initial job execution will finish and attempt to
+      // save to a DB that doesn't exist anymore.
+      await delay(50);
+    }).timeout(10000);
 
     it('does not process locked jobs', async() => {
       const history = [];
 
       agenda.define('lock job', {
         lockLifetime: 300
-      }, (job, cb) => {
+      }, (job, done) => {
+        debug('log job #%d: Start', job.attrs.data.i);
         history.push(job.attrs.data.i);
 
         setTimeout(() => {
-          cb();
+          debug('log job #%d: Finish', job.attrs.data.i, { history });
+          done();
         }, 150);
       });
 
@@ -819,12 +840,12 @@ describe('Job', () => {
         agenda.now('lock job', {i: 3})
       ]);
 
-      await delay(500);
+      await delay(600);
       expect(history).to.have.length(3);
       expect(history).to.contain(1);
       expect(history).to.contain(2);
       expect(history).to.contain(3);
-    });
+    }).timeout(10000);
 
     it('does not on-the-fly lock more than agenda._lockLimit jobs', async() => {
       agenda.lockLimit(1);
