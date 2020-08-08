@@ -21,7 +21,7 @@ const jobType = 'do work';
 const jobProcessor = () => {};
 
 describe('Retry', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     agenda = new Agenda({
       db: {
         address: mongoCfg
