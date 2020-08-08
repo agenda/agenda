@@ -4,6 +4,7 @@ const delay = require('delay');
 const {MongoClient} = require('mongodb');
 const Agenda = require('..');
 const mongoServer = require('./mongo-server');
+const processEvery = require('../lib/agenda/process-every');
 
 let mongoCfg;
 beforeEach(() => {
@@ -20,17 +21,21 @@ let mongoClient = null;
 const jobType = 'do work';
 const jobProcessor = () => {};
 
-describe('Retry', () => {
+describe.only('Retry', () => {
   beforeEach(async () => {
     agenda = new Agenda({
       db: {
         address: mongoCfg
-      }
+      },
+      processEvery: 100,
     });
 
     await agenda.start();
 
-    mongoClient = MongoClient.connect(mongoCfg);
+    const client = await MongoClient.connect(mongoCfg);
+   
+    mongoClient = client;
+    mongoDb = client.db(agendaDatabase);
      
     mongoDb = mongoClient.db(agendaDatabase);
 
@@ -52,7 +57,6 @@ describe('Retry', () => {
   it('should retry a job', async() => {
     let shouldFail = true;
 
-    agenda.processEvery(100); // Shave 5s off test runtime :grin:
     agenda.define('a job', (job, done) => {
       if (shouldFail) {
         shouldFail = false;
