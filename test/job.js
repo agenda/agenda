@@ -30,32 +30,26 @@ const jobType = 'do work';
 const jobProcessor = () => {};
 
 describe('Job', () => {
-  beforeEach(done => {
+  beforeEach(async () => {
     agenda = new Agenda({
       db: {
         address: mongoCfg
       }
-    }, async err => {
-      if (err) {
-        done(err);
-      }
-
-      try {
-        const client = await MongoClient.connect(mongoCfg, {useNewUrlParser: true});
-        mongoClient = client;
-        mongoDb = client.db(agendaDatabase);
-
-        await delay(50);
-
-        agenda.define('someJob', jobProcessor);
-        agenda.define('send email', jobProcessor);
-        agenda.define('some job', jobProcessor);
-        agenda.define(jobType, jobProcessor);
-        done();
-      } catch (error) {
-        done(error);
-      }
     });
+
+    await agenda._ready;
+
+    const client = await MongoClient.connect(mongoCfg);
+   
+    mongoClient = client;
+    mongoDb = client.db(agendaDatabase);
+
+    await delay(50);
+
+    agenda.define('someJob', jobProcessor);
+    agenda.define('send email', jobProcessor);
+    agenda.define('some job', jobProcessor);
+    agenda.define(jobType, jobProcessor);
   });
 
   afterEach(async() => {

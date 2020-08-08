@@ -21,30 +21,25 @@ const jobType = 'do work';
 const jobProcessor = () => {};
 
 describe('Retry', () => {
-  beforeEach(done => {
+  beforeEach(() => {
     agenda = new Agenda({
       db: {
         address: mongoCfg
       }
-    }, err => {
-      if (err) {
-        done(err);
-      }
-
-      MongoClient.connect(mongoCfg, async(error, client) => {
-        mongoClient = client;
-        mongoDb = client.db(agendaDatabase);
-
-        await delay(50);
-
-        agenda.define('someJob', jobProcessor);
-        agenda.define('send email', jobProcessor);
-        agenda.define('some job', jobProcessor);
-        agenda.define(jobType, jobProcessor);
-
-        done();
-      });
     });
+
+    await agenda.start();
+
+    mongoClient = MongoClient.connect(mongoCfg);
+     
+    mongoDb = mongoClient.db(agendaDatabase);
+
+    await delay(50);
+
+    agenda.define('someJob', jobProcessor);
+    agenda.define('send email', jobProcessor);
+    agenda.define('some job', jobProcessor);
+    agenda.define(jobType, jobProcessor);
   });
 
   afterEach(async() => {

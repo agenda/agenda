@@ -32,21 +32,19 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
       db: {
         address: mongoCfg
       }
-    }, () => {
-      MongoClient.connect(mongoCfg, async(err, client) => {
-        if (err) {
-          throw err;
-        }
-
-        mongoClient = client;
-        mongoDb = client.db(agendaDatabase);
-        await delay(50);
-        jobs.define('someJob', jobProcessor);
-        jobs.define('send email', jobProcessor);
-        jobs.define('some job', jobProcessor);
-        jobs.define(jobType, jobProcessor);
-      });
     });
+
+    await jobs._ready;
+
+    const client = await MongoClient.connect(mongoCfg);
+    
+    mongoClient = client;
+    mongoDb = client.db(agendaDatabase);
+    await delay(50);
+    jobs.define('someJob', jobProcessor);
+    jobs.define('send email', jobProcessor);
+    jobs.define('some job', jobProcessor);
+    jobs.define(jobType, jobProcessor);
   });
 
   afterEach(async() => {
