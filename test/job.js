@@ -284,7 +284,7 @@ describe('Job', () => {
       await job.save();
       await job.remove();
 
-      const result = await jobs.jobs({
+      const result = await agenda.jobs({
           _id: job.attrs._id
         });
 

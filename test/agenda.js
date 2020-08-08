@@ -8,6 +8,8 @@ const hasMongoProtocol = require('../lib/agenda/has-mongo-protocol');
 const Agenda = require('..');
 const mongoServer = require('./mongo-server');
 
+const debug = require('debug')('agenda:test:agenda');
+
 let mongoCfg;
 beforeEach(() => {
   mongoCfg = mongoServer.getConnectionString();
@@ -59,8 +61,10 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
   });
 
   describe('configuration methods', () => {
-    it('sets the _db directly when passed as an option', () => {
+    it('sets the _db directly when passed as an option', async () => {
       const agenda = new Agenda({mongo: mongoDb});
+      await agenda.start();
+
       expect(agenda._mdb.databaseName).to.equal(agendaDatabase);
     });
   });
