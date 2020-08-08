@@ -8,7 +8,6 @@ let mongoServer;
 beforeEach(async() => {
   mongoServer = new MongoMemoryServer({});
   connectionString = await mongoServer.getConnectionString();
-  console.log(connectionString);
 });
 
 // eslint-disable-next-line no-undef
