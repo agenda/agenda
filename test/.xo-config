@@ -1,0 +1,9 @@
+{
+  "rules": {
+    "max-nested-callbacks": 0
+  },
+  "envs": [
+    "node",
+    "mocha"
+  ]
+}
