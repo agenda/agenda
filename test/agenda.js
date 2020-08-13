@@ -61,12 +61,17 @@ describe('Agenda', () => {
 	});
 
 	describe('configuration methods', () => {
+    let agenda;
 		it('sets the _db directly when passed as an option', async () => {
-			const agenda = new Agenda({mongo: mongoDb});
+			agenda = new Agenda({mongo: mongoDb});
 			await agenda.start();
 
 			expect(agenda._mdb.databaseName).to.equal(agendaDatabase);
-		});
+    });
+    
+    afterEach(() => {
+      agenda.stop();
+    })
 	});
 
 	describe('configuration methods', () => {
