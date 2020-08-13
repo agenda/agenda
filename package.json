@@ -12,11 +12,11 @@
   "scripts": {
     "test": "npm run lint && npm run mocha",
     "lint": "xo --verbose",
-    "mocha": "MONGODB_PORT=27018 USE_MONGODB=false mocha --reporter spec --timeout 8000 -b",
+    "mocha": "USE_MONGODB=true mocha --reporter spec --timeout 8000 -b",
     "mocha-debug": "DEBUG=agenda:**,-agenda:internal:** mocha --reporter spec --timeout 8000 -b",
     "mocha-debug-internal": "DEBUG=agenda:internal:** mocha --reporter spec --timeout 8000 -b",
     "mocha-debug-test": "DEBUG=agenda:test:** mocha --reporter spec --timeout 8000 -b",
-    "mocha-debug-all": "MONGODB_PORT=27018 USE_MONGODB=false DEBUG=agenda:** mocha --reporter spec --timeout 8000 -b",
+    "mocha-debug-all": "USE_MONGODB=true DEBUG=agenda:** mocha --reporter spec --timeout 8000 -b",
     "docs": "jsdoc --configure .jsdoc.json --verbose"
   },
   "config": {
