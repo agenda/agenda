@@ -7,7 +7,6 @@ const hasMongoProtocol = require('../lib/agenda/has-mongo-protocol');
 const Agenda = require('..');
 const getMongoCfg = require('./fixtures/mongo-connector');
 
-const debug = require('debug')('agenda:test:agenda');
 
 let mongoCfg;
 const agendaDatabase = 'agenda-test';

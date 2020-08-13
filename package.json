@@ -15,6 +15,7 @@
     "mocha": "mocha --reporter spec --timeout 8000 -b",
     "mocha-debug": "DEBUG=agenda:**,-agenda:internal:** mocha --reporter spec --timeout 8000 -b",
     "mocha-debug-internal": "DEBUG=agenda:internal:** mocha --reporter spec --timeout 8000 -b",
+    "mocha-debug-test": "DEBUG=agenda:test:** mocha --reporter spec --timeout 8000 -b",
     "mocha-debug-all": "DEBUG=agenda:** mocha --reporter spec --timeout 8000 -b",
     "docs": "jsdoc --configure .jsdoc.json --verbose"
   },

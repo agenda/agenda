@@ -1,5 +1,5 @@
 const {MongoMemoryServer} = require('mongodb-memory-server');
-const debug = require('debug')('agenda:test:connector');
+const debug = require('debug')('agenda:test:mongo-server');
 
 let connectionString;
 
