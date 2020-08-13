@@ -5,14 +5,11 @@ const delay = require('delay');
 const Job = require('../lib/job');
 const hasMongoProtocol = require('../lib/agenda/has-mongo-protocol');
 const Agenda = require('..');
-const mongoServer = require('./mongo-server');
+const getMongoCfg = require('./fixtures/mongo-connector');
+
+const debug = require('debug')('agenda:test:agenda');
 
 let mongoCfg;
-beforeEach(() => {
-	mongoCfg = mongoServer.getConnectionString();
-});
-
-const mongoHost = process.env.MONGODB_HOST || 'localhost';
 const agendaDatabase = 'agenda-test';
 
 // Create agenda instances
@@ -20,12 +17,18 @@ let jobs = null;
 let mongoDb = null;
 let mongoClient = null;
 
+const mongoHost = process.env.MONGODB_HOST || 'localhost';
+
 // Slow timeouts for Travis
 const jobTimeout = process.env.TRAVIS ? 2500 : 500;
 const jobType = 'do work';
 const jobProcessor = () => {};
 
-describe('Agenda', function () { // eslint-disable-line prefer-arrow-callback
+describe('Agenda', () => {
+  beforeEach(async () => {
+    mongoCfg = await getMongoCfg(agendaDatabase);
+  });
+
 	beforeEach(async () => {
 		jobs = new Agenda({
 			db: {
@@ -48,7 +51,8 @@ describe('Agenda', function () { // eslint-disable-line prefer-arrow-callback
 	afterEach(async () => {
 		await delay(50);
 		await jobs.stop();
-		await mongoClient.close();
+    await jobs.cancel({})
+    await mongoClient.close();
 		await jobs._db.close();
 	});
 
@@ -242,10 +246,13 @@ describe('Agenda', function () { // eslint-disable-line prefer-arrow-callback
 				it('should not run immediately if options.skipImmediate is true', async () => {
 					const jobName = 'send email';
 					await jobs.every('5 minutes', jobName, {}, {skipImmediate: true});
-					const job = (await jobs.jobs({name: jobName}))[0];
+					const matchingJobs = (await jobs.jobs({name: jobName}));
+					expect(matchingJobs).to.have.length(1);
+					const job = matchingJobs[0];
 					const nextRunAt = job.attrs.nextRunAt.getTime();
 					const now = new Date().getTime();
-					expect((nextRunAt - now) > 0).to.equal(true);
+					const diff = nextRunAt - now;
+					expect(diff).to.be.greaterThan(0);
 				});
 				it('should run immediately if options.skipImmediate is false', async () => {
 					const jobName = 'send email';
@@ -253,7 +260,8 @@ describe('Agenda', function () { // eslint-disable-line prefer-arrow-callback
 					const job = (await jobs.jobs({name: jobName}))[0];
 					const nextRunAt = job.attrs.nextRunAt.getTime();
 					const now = new Date().getTime();
-					expect((nextRunAt - now) <= 0).to.equal(true);
+					const diff = nextRunAt - now;
+					expect(diff).to.be.lessThan(1);
 				});
 			});
 			describe('with array of names specified', () => {
@@ -524,12 +532,12 @@ describe('Agenda', function () { // eslint-disable-line prefer-arrow-callback
 		});
 	});
 
-	describe('process jobs', function () { // eslint-disable-line prefer-arrow-callback
+  describe('process jobs', () => {
+    // This unit tests if for this bug [https://github.com/agenda/agenda/issues/884]
+    // which is not reproducible with default agenda config on shorter processEvery.
+    // Thus we set the test timeout to 10000, and the delay below to 6000.
 		it('should not cause unhandledRejection', async function () {
-			// This unit tests if for this bug [https://github.com/agenda/agenda/issues/884]
-			// which is not reproducible with default agenda config on shorter processEvery.
-			// Thus we set the test timeout to 10000, and the delay below to 6000.
-			this.timeout(10000);
+
 
 			const unhandledRejections = [];
 			const rejectionsHandler = error => unhandledRejections.push(error);
@@ -558,6 +566,6 @@ describe('Agenda', function () { // eslint-disable-line prefer-arrow-callback
 			expect(j2processes).to.equal(1);
 
 			expect(unhandledRejections).to.have.length(0);
-		});
+		}).timeout(10000);
 	});
 });

@@ -2,12 +2,9 @@
 const delay = require('delay');
 const {MongoClient} = require('mongodb');
 const Agenda = require('..');
-const mongoServer = require('./mongo-server');
+const getMongoCfg = require('./fixtures/mongo-connector');
 
 let mongoCfg;
-beforeEach(() => {
-	mongoCfg = mongoServer.getConnectionString();
-});
 
 // Create agenda instances
 let agenda = null;
@@ -17,6 +14,10 @@ const jobType = 'do work';
 const jobProcessor = () => {};
 
 describe('Retry', () => {
+  beforeEach(async () => {
+    mongoCfg = await getMongoCfg();
+  });
+
 	beforeEach(async () => {
 		agenda = new Agenda({
 			db: {

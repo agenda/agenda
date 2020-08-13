@@ -1,4 +1,4 @@
-# Run tests in Docker `docker-compose up` on Node.js v4
+# Run tests in Docker `docker-compose up` on Node.js ^10
 # - install node deps first `docker-compose run agenda npm install`
 version: "3"
 services:
@@ -10,6 +10,7 @@ services:
       - ./:/usr/src/app
     environment:
       - MONGODB_HOST=mongodb
+      - USE_MONGODB=true
     links:
       - mongodb
 

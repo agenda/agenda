@@ -6,16 +6,17 @@ const expect = require('expect.js');
 
 const Job = require('../lib/job');
 const Agenda = require('..');
-const mongoServer = require('./mongo-server');
+const getMongoCfg = require('./fixtures/mongo-connector');
 
 let mongoCfg;
-beforeEach(() => {
-	mongoCfg = mongoServer.getConnectionString();
-});
 
 const JOB_NAME = 'dummyJob';
 
 describe('MongoDB connection', () => {
+	beforeEach(async () => {
+		mongoCfg = await getMongoCfg();
+	});
+	
 	it('with useUnifiedTopology option', async () => {
 		let client;
 		let agenda;

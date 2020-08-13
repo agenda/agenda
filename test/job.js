@@ -9,14 +9,11 @@ const delay = require('delay');
 const sinon = require('sinon');
 const Job = require('../lib/job');
 const Agenda = require('..');
-const mongoServer = require('./mongo-server');
+const getMongoCfg = require('./fixtures/mongo-connector');
 
 const debug = require('debug')('agenda:test:job');
 
 let mongoCfg;
-beforeEach(() => {
-	mongoCfg = mongoServer.getConnectionString();
-});
 
 // Create agenda instances
 let agenda = null;
@@ -28,6 +25,10 @@ const jobType = 'do work';
 const jobProcessor = () => {};
 
 describe('Job', () => {
+  beforeEach(async () => {
+    mongoCfg = await getMongoCfg();
+  });
+
 	beforeEach(async () => {
 		agenda = new Agenda({
 			db: {
