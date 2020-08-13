@@ -7,7 +7,6 @@ const hasMongoProtocol = require('../lib/agenda/has-mongo-protocol');
 const Agenda = require('..');
 const getMongoCfg = require('./fixtures/mongo-connector');
 
-
 let mongoCfg;
 const agendaDatabase = 'agenda-test';
 
@@ -24,9 +23,9 @@ const jobType = 'do work';
 const jobProcessor = () => {};
 
 describe('Agenda', () => {
-  beforeEach(async () => {
-    mongoCfg = await getMongoCfg(agendaDatabase);
-  });
+	beforeEach(async () => {
+		mongoCfg = await getMongoCfg(agendaDatabase);
+	});
 
 	beforeEach(async () => {
 		jobs = new Agenda({
@@ -50,8 +49,8 @@ describe('Agenda', () => {
 	afterEach(async () => {
 		await delay(50);
 		await jobs.stop();
-    await jobs.cancel({})
-    await mongoClient.close();
+		await jobs.cancel({});
+		await mongoClient.close();
 		await jobs._db.close();
 	});
 
@@ -60,17 +59,17 @@ describe('Agenda', () => {
 	});
 
 	describe('configuration methods', () => {
-    let agenda;
+		let agenda;
 		it('sets the _db directly when passed as an option', async () => {
 			agenda = new Agenda({mongo: mongoDb});
 			await agenda.start();
 
 			expect(agenda._mdb.databaseName).to.equal(agendaDatabase);
-    });
-    
-    afterEach(() => {
-      agenda.stop();
-    })
+		});
+
+		afterEach(() => {
+			agenda.stop();
+		});
 	});
 
 	describe('configuration methods', () => {
@@ -536,13 +535,11 @@ describe('Agenda', () => {
 		});
 	});
 
-  describe('process jobs', () => {
-    // This unit tests if for this bug [https://github.com/agenda/agenda/issues/884]
-    // which is not reproducible with default agenda config on shorter processEvery.
-    // Thus we set the test timeout to 10000, and the delay below to 6000.
-		it('should not cause unhandledRejection', async function () {
-
-
+	describe('process jobs', () => {
+		// This unit tests if for this bug [https://github.com/agenda/agenda/issues/884]
+		// which is not reproducible with default agenda config on shorter processEvery.
+		// Thus we set the test timeout to 10000, and the delay below to 6000.
+		it('should not cause unhandledRejection', async () => {
 			const unhandledRejections = [];
 			const rejectionsHandler = error => unhandledRejections.push(error);
 			process.on('unhandledRejection', rejectionsHandler);

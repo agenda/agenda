@@ -25,9 +25,9 @@ const jobType = 'do work';
 const jobProcessor = () => {};
 
 describe('Job', () => {
-  beforeEach(async () => {
-    mongoCfg = await getMongoCfg();
-  });
+	beforeEach(async () => {
+		mongoCfg = await getMongoCfg();
+	});
 
 	beforeEach(async () => {
 		agenda = new Agenda({

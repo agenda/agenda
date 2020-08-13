@@ -16,7 +16,7 @@ describe('MongoDB connection', () => {
 	beforeEach(async () => {
 		mongoCfg = await getMongoCfg();
 	});
-	
+
 	it('with useUnifiedTopology option', async () => {
 		let client;
 		let agenda;
