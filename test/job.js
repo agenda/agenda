@@ -805,7 +805,7 @@ describe('Job', () => {
 
       // Without this delay, the initial job execution will finish and attempt to
       // save to a DB that doesn't exist anymore.
-      await delay(50);
+      await delay(100);
     }).timeout(10000);
 
     it('does not process locked jobs', async() => {
