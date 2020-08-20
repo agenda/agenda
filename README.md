@@ -506,6 +506,26 @@ const numRemoved = await agenda.cancel({name: 'printAnalyticsReport'});
 
 This functionality can also be achieved by first retrieving all the jobs from the database using `agenda.jobs()`, looping through the resulting array and calling `job.remove()` on each. It is however preferable to use `agenda.cancel()` for this use case, as this ensures the operation is atomic.
 
+### disable(mongodb-native query)
+
+Disables any jobs matching the passed mongodb-native query, preventing any matching jobs from being run by the Job Processor.
+
+```js
+const numDisabled = await agenda.disable({name: 'externalServicePoller'});
+```
+
+Similar to `agenda.cancel()`, this functionality can be acheived with a combination of `agenda.jobs()` and `job.disable()`
+
+### enable(mongodb-native query)
+
+Enables any jobs matching the passed mongodb-native query, allowing any matching jobs to be run by the Job Processor.
+
+```js
+const numEnabled = await agenda.enable({name: 'externalServicePoller'});
+```
+
+Similar to `agenda.cancel()`, this functionality can be acheived with a combination of `agenda.jobs()` and `job.enable()`
+
 ### purge()
 
 Removes all jobs in the database without defined behaviors. Useful if you change a definition name and want to remove old jobs. Returns a Promise resolving to the number of removed jobs, or rejecting on error.
