@@ -8,7 +8,7 @@ const hasMongoProtocol = require('../lib/agenda/has-mongo-protocol');
 const Agenda = require('..');
 
 const mongoHost = process.env.MONGODB_HOST || 'localhost';
-const mongoPort = process.env.MONGODB_PORT || '27018';
+const mongoPort = process.env.MONGODB_PORT || '27017';
 const agendaDatabase = 'agenda-test';
 const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/' + agendaDatabase;
 
@@ -306,10 +306,6 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
             'data.type': 'active',
             'data.userId': '123'
           }).schedule('now').save();
-
-          await new Promise(resolve => {
-            setTimeout(resolve, 500);
-          });
 
           const job2 = await jobs.create('unique job', {
             type: 'active',
