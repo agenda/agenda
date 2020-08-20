@@ -539,7 +539,6 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
         jobs.create('sendEmail', {from: 'some guy'}).schedule('1 minute').save(),
         jobs.create('some job').schedule('30 seconds').save()
       ]);
-      console.error('Created Jobs:', JSON.stringify(js, null, 2));
     });
 
     it('disables all jobs', async() => {
@@ -589,7 +588,6 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
         jobs.create('sendEmail', {from: 'some guy'}).schedule('1 minute').save(),
         jobs.create('some job').schedule('30 seconds').save()
       ]);
-      console.error('Created Jobs:', JSON.stringify(js, null, 2));
     });
 
     it('enables all jobs', async() => {
