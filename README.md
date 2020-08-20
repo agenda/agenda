@@ -511,7 +511,7 @@ This functionality can also be achieved by first retrieving all the jobs from th
 Disables any jobs matching the passed mongodb-native query, preventing any matching jobs from being run by the Job Processor.
 
 ```js
-const numDisabled = await agenda.disable({name: 'externalServicePoller'});
+const numDisabled = await agenda.disable({name: 'pollExternalService'});
 ```
 
 Similar to `agenda.cancel()`, this functionality can be acheived with a combination of `agenda.jobs()` and `job.disable()`
@@ -521,7 +521,7 @@ Similar to `agenda.cancel()`, this functionality can be acheived with a combinat
 Enables any jobs matching the passed mongodb-native query, allowing any matching jobs to be run by the Job Processor.
 
 ```js
-const numEnabled = await agenda.enable({name: 'externalServicePoller'});
+const numEnabled = await agenda.enable({name: 'pollExternalService'});
 ```
 
 Similar to `agenda.cancel()`, this functionality can be acheived with a combination of `agenda.jobs()` and `job.enable()`
