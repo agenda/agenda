@@ -534,7 +534,7 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
 
   describe('disable', () => {
     beforeEach(async() => {
-      const js = await Promise.all([
+      await Promise.all([
         jobs.create('sendEmail', {to: 'some guy'}).schedule('1 minute').save(),
         jobs.create('sendEmail', {from: 'some guy'}).schedule('1 minute').save(),
         jobs.create('some job').schedule('30 seconds').save()
@@ -583,7 +583,7 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
 
   describe('enable', () => {
     beforeEach(async() => {
-      const js = await Promise.all([
+      await Promise.all([
         jobs.create('sendEmail', {to: 'some guy'}).schedule('1 minute').save(),
         jobs.create('sendEmail', {from: 'some guy'}).schedule('1 minute').save(),
         jobs.create('some job').schedule('30 seconds').save()
