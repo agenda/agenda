@@ -1,90 +1,82 @@
-/* globals describe, it, beforeEach, afterEach */
-'use strict';
-const delay = require('delay');
-const {MongoClient} = require('mongodb');
-const Agenda = require('..');
+import { Db, MongoClient } from 'mongodb';
+import * as delay from 'delay';
+import { IMockMongo, mockMongo } from './helpers/mock-mongodb';
 
-const mongoHost = process.env.MONGODB_HOST || 'localhost';
-const mongoPort = process.env.MONGODB_PORT || '27017';
-const agendaDatabase = 'agenda-test';
-const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/' + agendaDatabase;
+import { Agenda } from '../src';
 
 // Create agenda instances
-let agenda = null;
-let mongoDb = null;
-let mongoClient = null;
+let agenda: Agenda;
+let mongoDb: Db;
+let mongoClient: IMockMongo;
 
 const clearJobs = () => {
-  return mongoDb.collection('agendaJobs').deleteMany({});
+	if (mongoDb) {
+		return mongoDb.collection('agendaJobs').deleteMany({});
+	}
 };
 
 const jobType = 'do work';
 const jobProcessor = () => {};
 
 describe('Retry', () => {
-  beforeEach(done => {
-    agenda = new Agenda({
-      db: {
-        address: mongoCfg
-      }
-    }, err => {
-      if (err) {
-        done(err);
-      }
+	beforeEach(async () => {
+		if (!mongoDb) {
+			mongoClient = await mockMongo();
+			mongoDb = mongoClient.mongo.db();
+		}
 
-      MongoClient.connect(mongoCfg, async(error, client) => {
-        mongoClient = client;
-        mongoDb = client.db(agendaDatabase);
+		return new Promise(resolve => {
+			agenda = new Agenda(
+				{
+					mongo: mongoDb
+				},
+				async () => {
+					await delay(50);
+					await clearJobs();
+					agenda.define('someJob', jobProcessor);
+					agenda.define('send email', jobProcessor);
+					agenda.define('some job', jobProcessor);
+					agenda.define(jobType, jobProcessor);
+					return resolve();
+				}
+			);
+		});
+	});
 
-        await delay(50);
-        await clearJobs();
+	afterEach(async () => {
+		await delay(50);
+		await agenda.stop();
+		await clearJobs();
+		// await mongoClient.disconnect();
+		// await jobs._db.close();
+	});
 
-        agenda.define('someJob', jobProcessor);
-        agenda.define('send email', jobProcessor);
-        agenda.define('some job', jobProcessor);
-        agenda.define(jobType, jobProcessor);
+	it('should retry a job', async () => {
+		let shouldFail = true;
 
-        done();
-      });
-    });
-  });
+		agenda.processEvery(100); // Shave 5s off test runtime :grin:
+		agenda.define('a job', (job, done) => {
+			if (shouldFail) {
+				shouldFail = false;
+				return done(new Error('test failure'));
+			}
 
-  afterEach(async() => {
-    await delay(50);
-    await agenda.stop();
-    await clearJobs();
-    await mongoClient.close();
-    await agenda._db.close();
-  });
+			done();
+		});
 
-  it('should retry a job', async() => {
-    let shouldFail = true;
+		agenda.on('fail:a job', (err, job) => {
+			if (err) {
+				// Do nothing as this is expected to fail.
+			}
 
-    agenda.processEvery(100); // Shave 5s off test runtime :grin:
-    agenda.define('a job', (job, done) => {
-      if (shouldFail) {
-        shouldFail = false;
-        return done(new Error('test failure'));
-      }
+			job.schedule('now').save();
+		});
 
-      done();
-    });
+		const successPromise = new Promise(resolve => agenda.on('success:a job', resolve));
 
-    agenda.on('fail:a job', (err, job) => {
-      if (err) {
-        // Do nothing as this is expected to fail.
-      }
+		await agenda.now('a job');
 
-      job.schedule('now').save();
-    });
-
-    const successPromise = new Promise(resolve =>
-      agenda.on('success:a job', resolve)
-    );
-
-    await agenda.now('a job');
-
-    await agenda.start();
-    await successPromise;
-  });
+		await agenda.start();
+		await successPromise;
+	});
 });

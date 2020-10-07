@@ -1,138 +1,309 @@
-'use strict';
-const debug = require('debug')('agenda:saveJob');
-const {processJobs} = require('../utils');
+import * as debug from 'debug';
+import {
+	Collection,
+	Db,
+	FilterQuery,
+	MongoClient,
+	MongoClientOptions,
+	UpdateQuery,
+	ObjectId
+} from 'mongodb';
+import { Job } from './Job';
+import { hasMongoProtocol } from './utils/mongodb';
+import type { Agenda } from './index';
+import { IDatabaseOptions, IDbConfig, IMongoOptions } from './types/DbOptions';
+import { IJobParameters } from './types/JobParameters';
 
-/**
- * Given a result for findOneAndUpdate() or insert() above, determine whether to process
- * the job immediately or to let the processJobs() interval pick it up later
- * @param {Job} job job instance
- * @param {*} result the data returned from the findOneAndUpdate() call or insertOne() call
- * @access private
- * @returns {undefined}
- */
-const processDbResult = (job, result) => {
-  debug('processDbResult() called with success, checking whether to process job immediately or not');
+const log = debug('agenda:db');
 
-  // We have a result from the above calls
-  // findOneAndUpdate() returns different results than insertOne() so check for that
-  let res = result.ops ? result.ops : result.value;
-  if (res) {
-    // If it is an array, grab the first job
-    if (Array.isArray(res)) {
-      res = res[0];
-    }
+export class JobDbRepository {
+	collection: Collection;
 
-    // Grab ID and nextRunAt from MongoDB and store it as an attribute on Job
-    job.attrs._id = res._id;
-    job.attrs.nextRunAt = res.nextRunAt;
+	constructor(
+		private agenda: Agenda,
+		private connectOptions: (IDatabaseOptions | IMongoOptions) & IDbConfig
+	) {
+		this.connectOptions.sort = this.connectOptions.sort || { nextRunAt: 1, priority: -1 };
+	}
 
-    // If the current job would have been processed in an older scan, process the job immediately
-    if (job.attrs.nextRunAt && job.attrs.nextRunAt < this._nextScanAt) {
-      debug('[%s:%s] job would have ran by nextScanAt, processing the job immediately', job.attrs.name, res._id);
-      processJobs.call(this, job);
-    }
-  }
+	private async createConnection(): Promise<Db> {
+		const { connectOptions } = this;
+		if (this.hasDatabaseConfig(connectOptions)) {
+			return this.database(connectOptions.db.address, connectOptions.db.options);
+		}
 
-  // Return the Job instance
-  return job;
-};
+		if (this.hasMongoConnection(connectOptions)) {
+			return connectOptions.mongo;
+		}
 
-/**
- * Save the properties on a job to MongoDB
- * @name Agenda#saveJob
- * @function
- * @param {Job} job job to save into MongoDB
- * @returns {Promise} resolves when job is saved or errors
- */
-module.exports = async function(job) {
-  try {
-    debug('attempting to save a job into Agenda instance');
+		throw new Error('invalid db config, or db config not found');
+	}
 
-    // Grab information needed to save job but that we don't want to persist in MongoDB
-    const id = job.attrs._id;
-    const {unique, uniqueOpts} = job.attrs;
+	private hasMongoConnection(connectOptions): connectOptions is IMongoOptions {
+		return !!connectOptions.mongo;
+	}
 
-    // Store job as JSON and remove props we don't want to store from object
-    const props = job.toJSON();
-    delete props._id;
-    delete props.unique;
-    delete props.uniqueOpts;
+	private hasDatabaseConfig(connectOptions: any): connectOptions is IDatabaseOptions {
+		return !!connectOptions.db?.address;
+	}
 
-    // Store name of agenda queue as last modifier in job data
-    props.lastModifiedBy = this._name;
-    debug('[job %s] set job props: \n%O', id, props);
+	async getJobs(query: any, sort: any = {}, limit = 0, skip = 0) {
+		return this.collection.find(query).sort(sort).limit(limit).skip(skip).toArray();
+	}
 
-    // Grab current time and set default query options for MongoDB
-    const now = new Date();
-    const protect = {};
-    let update = {$set: props};
-    debug('current time stored as %s', now.toISOString());
+	async removeJobs(query: any) {
+		return this.collection.deleteMany(query);
+	}
 
-    // If the job already had an ID, then update the properties of the job
-    // i.e, who last modified it, etc
-    if (id) {
-      // Update the job and process the resulting data'
-      debug('job already has _id, calling findOneAndUpdate() using _id as query');
-      const result = await this._collection.findOneAndUpdate(
-        {_id: id, name: props.name},
-        update,
-        {returnOriginal: false}
-      );
-      return processDbResult(job, result);
-    }
+	async unlockJobs(jobIds: ObjectId[]) {
+		await this.collection.updateMany({ _id: { $in: jobIds } }, { $set: { lockedAt: null } });
+	}
 
-    if (props.type === 'single') {
-      // Job type set to 'single' so...
-      // NOTE: Again, not sure about difference between 'single' here and 'once' in job.js
-      debug('job with type of "single" found');
+	async lockJob(job: Job): Promise<IJobParameters | undefined> {
+		// Query to run against collection to see if we need to lock it
+		const criteria = {
+			_id: job.attrs._id,
+			name: job.attrs.name,
+			lockedAt: null,
+			nextRunAt: job.attrs.nextRunAt,
+			disabled: { $ne: true }
+		};
 
-      // If the nextRunAt time is older than the current time, "protect" that property, meaning, don't change
-      // a scheduled job's next run time!
-      if (props.nextRunAt && props.nextRunAt <= now) {
-        debug('job has a scheduled nextRunAt time, protecting that field from upsert');
-        protect.nextRunAt = props.nextRunAt;
-        delete props.nextRunAt;
-      }
+		// Update / options for the MongoDB query
+		const update = { $set: { lockedAt: new Date() } };
+		const options = { returnOriginal: false };
 
-      // If we have things to protect, set them in MongoDB using $setOnInsert
-      if (Object.keys(protect).length > 0) {
-        update.$setOnInsert = protect;
-      }
+		// Lock the job in MongoDB!
+		const resp = await this.collection.findOneAndUpdate(criteria, update, options);
+		return resp?.value;
+	}
 
-      // Try an upsert
-      // NOTE: 'single' again, not exactly sure what it means
-      debug('calling findOneAndUpdate() with job name and type of "single" as query');
-      const result = await this._collection.findOneAndUpdate({
-        name: props.name,
-        type: 'single'
-      },
-      update, {
-        upsert: true,
-        returnOriginal: false
-      });
-      return processDbResult(job, result);
-    }
+	async getNextJobToRun(
+		jobName: string,
+		nextScanAt: Date,
+		lockDeadline: Date,
+		now: Date = new Date()
+	): Promise<IJobParameters | undefined> {
+		// /**
+		// * Query used to find job to run
+		// * @type {{$and: [*]}}
+		// */
+		const JOB_PROCESS_WHERE_QUERY = {
+			$and: [
+				{
+					name: jobName,
+					disabled: { $ne: true }
+				},
+				{
+					$or: [
+						{
+							lockedAt: { $eq: null },
+							nextRunAt: { $lte: nextScanAt }
+						},
+						{
+							lockedAt: { $lte: lockDeadline }
+						}
+					]
+				}
+			]
+		};
 
-    if (unique) {
-      // If we want the job to be unique, then we can upsert based on the 'unique' query object that was passed in
-      const query = job.attrs.unique;
-      query.name = props.name;
-      if (uniqueOpts && uniqueOpts.insertOnly) {
-        update = {$setOnInsert: props};
-      }
+		/**
+		 * Query used to set a job as locked
+		 * @type {{$set: {lockedAt: Date}}}
+		 */
+		const JOB_PROCESS_SET_QUERY = { $set: { lockedAt: now } };
 
-      // Use the 'unique' query object to find an existing job or create a new one
-      debug('calling findOneAndUpdate() with unique object as query: \n%O', query);
-      const result = await this._collection.findOneAndUpdate(query, update, {upsert: true, returnOriginal: false});
-      return processDbResult(job, result);
-    }
+		/**
+		 * Query used to affect what gets returned
+		 * @type {{returnOriginal: boolean, sort: object}}
+		 */
+		const JOB_RETURN_QUERY = { returnOriginal: false, sort: this.connectOptions.sort };
 
-    // If all else fails, the job does not exist yet so we just insert it into MongoDB
-    debug('using default behavior, inserting new job via insertOne() with props that were set: \n%O', props);
-    const result = await this._collection.insertOne(props);
-    return processDbResult(job, result);
-  } catch (error) {
-    debug('processDbResult() received an error, job was not updated/created');
-    throw error;
-  }
-};
+		// Find ONE and ONLY ONE job and set the 'lockedAt' time so that job begins to be processed
+		const result = await this.collection.findOneAndUpdate(
+			JOB_PROCESS_WHERE_QUERY,
+			JOB_PROCESS_SET_QUERY,
+			JOB_RETURN_QUERY
+		);
+
+		return result.value;
+	}
+
+	async connect() {
+		const db = await this.createConnection();
+		log('successful connection to MongoDB', db.options);
+
+		const collection = this.connectOptions.db?.collection || 'agendaJobs';
+
+		log('init database collection using name [%s]', collection);
+		this.collection = db.collection(collection);
+
+		if (this.connectOptions.ensureIndex) {
+			log('attempting index creation');
+			try {
+				const result = await this.collection.createIndex(
+					{
+						name: 1,
+						...this.connectOptions.sort,
+						priority: -1,
+						lockedAt: 1,
+						nextRunAt: 1,
+						disabled: 1
+					},
+					{ name: 'findAndLockNextJobIndex' }
+				);
+				log('index succesfully created', result);
+			} catch (err) {
+				console.error('db index creation failed', err);
+			}
+		}
+
+		this.agenda.emit('ready');
+	}
+
+	private async database(url: string, options?: MongoClientOptions) {
+		if (!hasMongoProtocol(url)) {
+			url = `mongodb://${url}`;
+		}
+
+		const reconnectOptions = {
+			autoReconnect: true,
+			reconnectTries: Number.MAX_SAFE_INTEGER
+		};
+
+		const client = await MongoClient.connect(url, { ...reconnectOptions, ...options });
+
+		return client.db();
+	}
+
+	private processDbResult(job: Job, res: IJobParameters) {
+		log(
+			'processDbResult() called with success, checking whether to process job immediately or not'
+		);
+
+		// We have a result from the above calls
+		// findOneAndUpdate() returns different results than insertOne() so check for that
+		if (res) {
+			// Grab ID and nextRunAt from MongoDB and store it as an attribute on Job
+			job.attrs._id = res._id;
+			job.attrs.nextRunAt = res.nextRunAt;
+
+			// check if we should process the job immediately
+			this.agenda.emit('processJob', job);
+		}
+
+		// Return the Job instance
+		return job;
+	}
+
+	/**
+	 * Save the properties on a job to MongoDB
+	 * @name Agenda#saveJob
+	 * @function
+	 * @param {Job} job job to save into MongoDB
+	 * @returns {Promise} resolves when job is saved or errors
+	 */
+	async saveJob(job: Job) {
+		try {
+			log('attempting to save a job into Agenda instance');
+
+			// Grab information needed to save job but that we don't want to persist in MongoDB
+			const id = job.attrs._id;
+			const { unique, uniqueOpts } = job.attrs;
+
+			// Store job as JSON and remove props we don't want to store from object
+			const props: Partial<IJobParameters> = job.toJson();
+			delete props._id;
+			delete props.unique;
+			delete props.uniqueOpts;
+
+			// Store name of agenda queue as last modifier in job data
+			props.lastModifiedBy = this.agenda.attrs.name;
+			log('[job %s] set job props: \n%O', id, props);
+
+			// Grab current time and set default query options for MongoDB
+			const now = new Date();
+			const protect: Partial<IJobParameters> = {};
+			let update: UpdateQuery<any> = { $set: props };
+			log('current time stored as %s', now.toISOString());
+
+			// If the job already had an ID, then update the properties of the job
+			// i.e, who last modified it, etc
+			if (id) {
+				// Update the job and process the resulting data'
+				log('job already has _id, calling findOneAndUpdate() using _id as query');
+				const result = await this.collection.findOneAndUpdate(
+					{ _id: id, name: props.name },
+					update,
+					{ returnOriginal: false }
+				);
+				return this.processDbResult(job, result.value);
+			}
+
+			if (props.type === 'single') {
+				// Job type set to 'single' so...
+				log('job with type of "single" found');
+
+				// If the nextRunAt time is older than the current time, "protect" that property, meaning, don't change
+				// a scheduled job's next run time!
+				if (props.nextRunAt && props.nextRunAt <= now) {
+					log('job has a scheduled nextRunAt time, protecting that field from upsert');
+					protect.nextRunAt = props.nextRunAt;
+					delete props.nextRunAt;
+				}
+
+				// If we have things to protect, set them in MongoDB using $setOnInsert
+				if (Object.keys(protect).length > 0) {
+					update.$setOnInsert = protect;
+				}
+
+				// Try an upsert
+				// NOTE: 'single' again, not exactly sure what it means
+				log('calling findOneAndUpdate() with job name and type of "single" as query');
+				const result = await this.collection.findOneAndUpdate(
+					{
+						name: props.name,
+						type: 'single'
+					},
+					update,
+					{
+						upsert: true,
+						returnOriginal: false
+					}
+				);
+				return this.processDbResult(job, result.value);
+			}
+
+			if (unique) {
+				// If we want the job to be unique, then we can upsert based on the 'unique' query object that was passed in
+				const query: FilterQuery<any> = job.attrs.unique;
+				query.name = props.name;
+				if (uniqueOpts?.insertOnly) {
+					update = { $setOnInsert: props };
+				}
+
+				// console.log('update', query, update, uniqueOpts);
+
+				// Use the 'unique' query object to find an existing job or create a new one
+				log('calling findOneAndUpdate() with unique object as query: \n%O', query);
+				const result = await this.collection.findOneAndUpdate(query, update, {
+					upsert: true,
+					returnOriginal: false
+				});
+				return this.processDbResult(job, result.value);
+			}
+
+			// If all else fails, the job does not exist yet so we just insert it into MongoDB
+			log(
+				'using default behavior, inserting new job via insertOne() with props that were set: \n%O',
+				props
+			);
+			const result = await this.collection.insertOne(props);
+			return this.processDbResult(job, result.ops[0]);
+		} catch (error) {
+			log('processDbResult() received an error, job was not updated/created');
+			throw error;
+		}
+	}
+}
