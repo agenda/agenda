@@ -1,0 +1,12 @@
+{
+	"diff": true,
+	"require": ["./tshook.js", "source-map-support/register"],
+	"extension": ["js", "ts"],
+	"package": "./package.json",
+	"recursive": true,
+	"reporter": "spec",
+	"slow": 75,
+	"timeout": 5000,
+	"ui": "bdd",
+	"exit": true
+}
