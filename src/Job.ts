@@ -189,7 +189,6 @@ export class Job {
 				this.attrs.nextRunAt = null;
 			}
 		} catch (err) {
-		  console.log('ERRRRROR', err.stack);
 			this.attrs.nextRunAt = null;
 			this.fail(err);
 		}
@@ -222,13 +221,20 @@ export class Job {
 			if (definition.fn.length === 2) {
 				log('[%s:%s] process function being called', this.attrs.name, this.attrs._id);
 				await new Promise((resolve, reject) => {
-					definition.fn(this, err => {
-						if (err) {
-							reject(err);
-							return;
+					try {
+						const result = definition.fn(this, err => {
+							if (err) {
+								reject(err);
+								return;
+							}
+							resolve();
+						});
+						if (this.isPromise(result)) {
+							result.catch(err => reject(err));
 						}
-						resolve();
-					});
+					} catch (err) {
+						reject(err);
+					}
 				});
 			} else {
 				log('[%s:%s] process function being called', this.attrs.name, this.attrs._id);
@@ -262,5 +268,9 @@ export class Job {
 				this.attrs.lastFinishedAt
 			);
 		}
+	}
+
+	private isPromise(value): value is Promise<void> {
+		return Boolean(value && typeof value.then === 'function');
 	}
 }
