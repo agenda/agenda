@@ -54,8 +54,10 @@ describe('Agenda', function () {
 
 	afterEach(async () => {
 		await delay(50);
-		await globalAgenda.stop();
-		await clearJobs();
+		if (globalAgenda) {
+			await globalAgenda.stop();
+			await clearJobs();
+		}
 		// await mongoClient.disconnect();
 		// await jobs._db.close();
 	});

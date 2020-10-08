@@ -58,6 +58,7 @@
     "typescript": "^4.0.3",
     "mongodb-memory-server": "^6.9.1",
     "@hokify/eslint-config": "^0.5.7",
+    "prettier": "^2.1.2",
     "@types/mongodb": "^3.5.27",
     "blanket": "1.2.3",
     "coveralls": "3.1.0",

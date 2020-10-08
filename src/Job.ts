@@ -60,7 +60,6 @@ export class Job {
 		interval: string | number,
 		options: { timezone?: string; skipImmediate?: boolean } = {}
 	) {
-		options = options || {};
 		this.attrs.repeatInterval = interval;
 		this.attrs.repeatTimezone = options.timezone;
 		if (options.skipImmediate) {
@@ -168,26 +167,31 @@ export class Job {
 	}
 
 	computeNextRunAt() {
-		// @todo: is this needed? it shouldn't ...
-		this.attrs.nextRunAt = null;
+		try {
+			if (this.attrs.repeatInterval) {
+				this.attrs.nextRunAt = computeFromInterval(this.attrs);
+				log(
+					'[%s:%s] nextRunAt set to [%s]',
+					this.attrs.name,
+					this.attrs._id,
+					new Date(this.attrs.nextRunAt).toISOString()
+				);
+			} else if (this.attrs.repeatAt) {
+				this.attrs.nextRunAt = computeFromRepeatAt(this.attrs);
 
-		if (this.attrs.repeatInterval) {
-			this.attrs.nextRunAt = computeFromInterval(this.attrs);
-			log(
-				'[%s:%s] nextRunAt set to [%s]',
-				this.attrs.name,
-				this.attrs._id,
-				new Date(this.attrs.nextRunAt).toISOString()
-			);
-		} else if (this.attrs.repeatAt) {
-			this.attrs.nextRunAt = computeFromRepeatAt(this.attrs);
-
-			log(
-				'[%s:%s] nextRunAt set to [%s]',
-				this.attrs.name,
-				this.attrs._id,
-				this.attrs.nextRunAt.toISOString()
-			);
+				log(
+					'[%s:%s] nextRunAt set to [%s]',
+					this.attrs.name,
+					this.attrs._id,
+					this.attrs.nextRunAt.toISOString()
+				);
+			} else {
+				this.attrs.nextRunAt = null;
+			}
+		} catch (err) {
+		  console.log('ERRRRROR', err.stack);
+			this.attrs.nextRunAt = null;
+			this.fail(err);
 		}
 
 		return this;

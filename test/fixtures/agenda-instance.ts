@@ -1,5 +1,5 @@
-import { Agenda } from "../../src";
-import * as addTests from "./add-tests";
+import { Agenda } from '../../src';
+import * as addTests from './add-tests';
 
 const connStr = process.argv[2];
 const tests = process.argv.slice(3);

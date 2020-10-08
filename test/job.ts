@@ -164,7 +164,7 @@ describe('Job', () => {
 	});
 
 	describe('computeNextRunAt', () => {
-		let job;
+		let job: Job;
 
 		beforeEach(() => {
 			job = new Job(agenda, { name: 'demo', type: 'normal' });
@@ -175,7 +175,7 @@ describe('Job', () => {
 		});
 
 		it('sets to undefined if no repeat at', () => {
-			job.attrs.repeatAt = null;
+			job.attrs.repeatAt = undefined;
 			job.computeNextRunAt();
 			expect(job.attrs.nextRunAt).to.be(null);
 		});
@@ -187,12 +187,12 @@ describe('Job', () => {
 			d.setSeconds(0);
 			job.attrs.repeatAt = '11:59pm';
 			job.computeNextRunAt();
-			expect(job.attrs.nextRunAt.getHours()).to.be(d.getHours());
-			expect(job.attrs.nextRunAt.getMinutes()).to.be(d.getMinutes());
+			expect(job.attrs.nextRunAt?.getHours()).to.be(d.getHours());
+			expect(job.attrs.nextRunAt?.getMinutes()).to.be(d.getMinutes());
 		});
 
 		it('sets to undefined if no repeat interval', () => {
-			job.attrs.repeatInterval = null;
+			job.attrs.repeatInterval = undefined;
 			job.computeNextRunAt();
 			expect(job.attrs.nextRunAt).to.be(null);
 		});
@@ -202,7 +202,7 @@ describe('Job', () => {
 			job.attrs.lastRunAt = now;
 			job.repeatEvery('2 minutes');
 			job.computeNextRunAt();
-			expect(job.attrs.nextRunAt.getTime()).to.be(now.valueOf() + 120000);
+			expect(job.attrs.nextRunAt?.getTime()).to.be(now.valueOf() + 120000);
 		});
 
 		it('understands cron intervals', () => {
@@ -213,7 +213,7 @@ describe('Job', () => {
 			job.attrs.lastRunAt = now;
 			job.repeatEvery('*/2 * * * *');
 			job.computeNextRunAt();
-			expect(job.attrs.nextRunAt.valueOf()).to.be(now.valueOf() + 60000);
+			expect(job.attrs.nextRunAt?.valueOf()).to.be(now.valueOf() + 60000);
 		});
 
 		it('understands cron intervals with a timezone', () => {
@@ -223,6 +223,7 @@ describe('Job', () => {
 				timezone: 'GMT'
 			});
 			job.computeNextRunAt();
+			console.log('job.attrs.nextRunAt', job.attrs.nextRunAt);
 			expect(moment(job.attrs.nextRunAt).tz('GMT').hour()).to.be(6);
 			expect(moment(job.attrs.nextRunAt).toDate().getDate()).to.be(
 				moment(job.attrs.lastRunAt).add(1, 'days').toDate().getDate()
@@ -254,7 +255,9 @@ describe('Job', () => {
 			job.repeatEvery('* * * * *', {
 				timezone: 'GMT'
 			});
-			job.computeNextRunAt();
+			// job.computeNextRunAt();
+			console.log('last', last);
+      console.log('next', next);
 			expect(job.attrs.nextRunAt.valueOf()).to.be(expectedDate.valueOf());
 		});
 
@@ -365,7 +368,6 @@ describe('Job', () => {
 			agenda.define('failBoat2', (job, cb) => {
 				Q.delay(100)
 					.then(() => {
-						// eslint-disable-line promise/prefer-await-to-then
 						throw new Error('Zomg fail');
 					})
 					.fail(cb)
@@ -1164,7 +1166,7 @@ describe('Job', () => {
 				};
 
 				const startService = () => {
-					const serverPath = path.join(__dirname, 'fixtures', 'agenda-instance.js');
+					const serverPath = path.join(__dirname, 'fixtures', 'agenda-instance.ts');
 					const n = cp.fork(serverPath, [mongoCfg, 'daily']);
 
 					n.on('message', receiveMessage);
@@ -1175,7 +1177,7 @@ describe('Job', () => {
 			});
 
 			it('Should properly run jobs when defined via an array', done => {
-				const serverPath = path.join(__dirname, 'fixtures', 'agenda-instance.js');
+				const serverPath = path.join(__dirname, 'fixtures', 'agenda-instance.ts');
 				const n = cp.fork(serverPath, [mongoCfg, 'daily-array']);
 
 				let ran1 = false;
@@ -1254,7 +1256,7 @@ describe('Job', () => {
 				};
 
 				const startService = () => {
-					const serverPath = path.join(__dirname, 'fixtures', 'agenda-instance.js');
+					const serverPath = path.join(__dirname, 'fixtures', 'agenda-instance.ts');
 					const n = cp.fork(serverPath, [mongoCfg, 'define-future-job']);
 
 					n.on('message', receiveMessage);
@@ -1278,7 +1280,7 @@ describe('Job', () => {
 				};
 
 				const startService = () => {
-					const serverPath = path.join(__dirname, 'fixtures', 'agenda-instance.js');
+					const serverPath = path.join(__dirname, 'fixtures', 'agenda-instance.ts');
 					const n = cp.fork(serverPath, [mongoCfg, 'define-past-due-job']);
 
 					n.on('message', receiveMessage);
@@ -1289,7 +1291,7 @@ describe('Job', () => {
 			});
 
 			it('Should schedule using array of names', done => {
-				const serverPath = path.join(__dirname, 'fixtures', 'agenda-instance.js');
+				const serverPath = path.join(__dirname, 'fixtures', 'agenda-instance.ts');
 				const n = cp.fork(serverPath, [mongoCfg, 'schedule-array']);
 
 				let ran1 = false;
@@ -1339,7 +1341,7 @@ describe('Job', () => {
 					return done(new Error('Job did not immediately run!'));
 				};
 
-				const serverPath = path.join(__dirname, 'fixtures', 'agenda-instance.js');
+				const serverPath = path.join(__dirname, 'fixtures', 'agenda-instance.ts');
 				const n = cp.fork(serverPath, [mongoCfg, 'now']);
 
 				n.on('message', receiveMessage);
