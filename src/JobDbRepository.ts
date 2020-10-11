@@ -140,7 +140,7 @@ export class JobDbRepository {
 
 		this.collection = db.collection(collection);
 		log(
-			`connected with collection: ${collection}, collection size: ${await this.collection.count()}`
+			`connected with collection: ${collection}, collection size: ${await this.collection.estimatedDocumentCount()}`
 		);
 
 		if (this.connectOptions.ensureIndex) {
