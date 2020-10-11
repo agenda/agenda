@@ -1,6 +1,6 @@
 {
   "name": "@hokify/agenda",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "Light weight job scheduler for Node.js",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -11,6 +11,7 @@
     "node": ">=10.0.0"
   },
   "scripts": {
+    "prepublishOnly": "npm run build",
     "build": "tsc",
     "test": "npm run lint && npm run mocha",
     "lint": "eslint",
