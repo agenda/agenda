@@ -1,5 +1,6 @@
 {
 	"diff": true,
+	"spec": "./test/*.test.ts",
 	"require": ["source-map-support/register"],
 	"extension": ["js", "ts"],
 	"package": "./package.json",

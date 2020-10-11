@@ -69,11 +69,6 @@ export class Agenda extends EventEmitter {
 	) {
 		super();
 
-		/*
-		if (!(this instanceof Agenda)) {
-			return new Agenda(config);
-		} */
-
 		this.attrs = {
 			name: config.name || '',
 			processEvery: humanInterval(config.processEvery) || humanInterval('5 seconds'),
