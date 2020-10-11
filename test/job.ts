@@ -9,21 +9,18 @@ import * as delay from 'delay';
 import * as sinon from 'sinon';
 import { Job } from '../src/Job';
 import { Agenda } from '../src';
-import { IMockMongo, mockMongo } from './helpers/mock-mongodb';
-
-const mongoHost = process.env.MONGODB_HOST || 'localhost';
-const mongoPort = process.env.MONGODB_PORT || '27017';
-const agendaDatabase = 'agenda-test';
-const mongoCfg = `mongodb://${mongoHost}:${mongoPort}/${agendaDatabase}`;
+import { mockMongo } from './helpers/mock-mongodb';
 
 // Create agenda instances
 let agenda: Agenda;
+// connection string to mongodb
+let mongoCfg: string;
+// mongo db connection db instance
 let mongoDb: Db;
-let mongoClient: IMockMongo;
 
-const clearJobs = () => {
+const clearJobs = async () => {
 	if (mongoDb) {
-		return mongoDb.collection('agendaJobs').deleteMany({});
+		await mongoDb.collection('agendaJobs').deleteMany({});
 	}
 };
 
@@ -35,8 +32,9 @@ const jobProcessor = () => {};
 describe('Job', () => {
 	beforeEach(async () => {
 		if (!mongoDb) {
-			mongoClient = await mockMongo();
-			mongoDb = mongoClient.mongo.db();
+			const mockedMongo = await mockMongo();
+			mongoCfg = mockedMongo.uri;
+			mongoDb = mockedMongo.mongo.db();
 		}
 
 		return new Promise(resolve => {
@@ -223,7 +221,6 @@ describe('Job', () => {
 				timezone: 'GMT'
 			});
 			job.computeNextRunAt();
-			console.log('job.attrs.nextRunAt', job.attrs.nextRunAt);
 			expect(moment(job.attrs.nextRunAt).tz('GMT').hour()).to.be(6);
 			expect(moment(job.attrs.nextRunAt).toDate().getDate()).to.be(
 				moment(job.attrs.lastRunAt).add(1, 'days').toDate().getDate()
@@ -255,9 +252,7 @@ describe('Job', () => {
 			job.repeatEvery('* * * * *', {
 				timezone: 'GMT'
 			});
-			// job.computeNextRunAt();
-			console.log('last', last);
-      console.log('next', next);
+			job.computeNextRunAt();
 			expect(job.attrs.nextRunAt.valueOf()).to.be(expectedDate.valueOf());
 		});
 
@@ -303,16 +298,24 @@ describe('Job', () => {
 				type: 'normal'
 			});
 			await job.save();
-			await job.remove();
-
-			const result = await mongoDb
+			const resultSaved = await mongoDb
 				.collection('agendaJobs')
 				.find({
 					_id: job.attrs._id
 				})
 				.toArray();
 
-			expect(result).to.have.length(0);
+			expect(resultSaved).to.have.length(1);
+			await job.remove();
+
+			const resultDeleted = await mongoDb
+				.collection('agendaJobs')
+				.find({
+					_id: job.attrs._id
+				})
+				.toArray();
+
+			expect(resultDeleted).to.have.length(0);
 		});
 	});
 
@@ -879,13 +882,17 @@ describe('Job', () => {
 		it('does not on-the-fly lock more than agenda._lockLimit jobs', async () => {
 			agenda.lockLimit(1);
 
-			agenda.define('lock job', (job, cb) => {}); // eslint-disable-line no-unused-vars
+			agenda.define('lock job', (job, cb) => {
+				/* this job nevers finishes */
+			}); // eslint-disable-line no-unused-vars
 
 			await agenda.start();
 
 			await Promise.all([agenda.now('lock job', { i: 1 }), agenda.now('lock job', { i: 2 })]);
 
-			await delay(500);
+			// give it some time to get picked up
+			await delay(200);
+
 			expect(agenda.getRunningStats()?.lockedJobs).to.equal(1);
 			await agenda.stop();
 		});
@@ -1167,7 +1174,9 @@ describe('Job', () => {
 
 				const startService = () => {
 					const serverPath = path.join(__dirname, 'fixtures', 'agenda-instance.ts');
-					const n = cp.fork(serverPath, [mongoCfg, 'daily']);
+					const n = cp.fork(serverPath, [mongoCfg, 'daily'], {
+						execArgv: ['-r', 'ts-node/register']
+					});
 
 					n.on('message', receiveMessage);
 					n.on('error', serviceError);
@@ -1178,7 +1187,9 @@ describe('Job', () => {
 
 			it('Should properly run jobs when defined via an array', done => {
 				const serverPath = path.join(__dirname, 'fixtures', 'agenda-instance.ts');
-				const n = cp.fork(serverPath, [mongoCfg, 'daily-array']);
+				const n = cp.fork(serverPath, [mongoCfg, 'daily-array'], {
+					execArgv: ['-r', 'ts-node/register']
+				});
 
 				let ran1 = false;
 				let ran2 = true;
@@ -1257,7 +1268,9 @@ describe('Job', () => {
 
 				const startService = () => {
 					const serverPath = path.join(__dirname, 'fixtures', 'agenda-instance.ts');
-					const n = cp.fork(serverPath, [mongoCfg, 'define-future-job']);
+					const n = cp.fork(serverPath, [mongoCfg, 'define-future-job'], {
+						execArgv: ['-r', 'ts-node/register']
+					});
 
 					n.on('message', receiveMessage);
 					n.on('error', serviceError);
@@ -1281,7 +1294,9 @@ describe('Job', () => {
 
 				const startService = () => {
 					const serverPath = path.join(__dirname, 'fixtures', 'agenda-instance.ts');
-					const n = cp.fork(serverPath, [mongoCfg, 'define-past-due-job']);
+					const n = cp.fork(serverPath, [mongoCfg, 'define-past-due-job'], {
+						execArgv: ['-r', 'ts-node/register']
+					});
 
 					n.on('message', receiveMessage);
 					n.on('error', serviceError);
@@ -1292,7 +1307,9 @@ describe('Job', () => {
 
 			it('Should schedule using array of names', done => {
 				const serverPath = path.join(__dirname, 'fixtures', 'agenda-instance.ts');
-				const n = cp.fork(serverPath, [mongoCfg, 'schedule-array']);
+				const n = cp.fork(serverPath, [mongoCfg, 'schedule-array'], {
+					execArgv: ['-r', 'ts-node/register']
+				});
 
 				let ran1 = false;
 				let ran2 = false;
@@ -1342,7 +1359,7 @@ describe('Job', () => {
 				};
 
 				const serverPath = path.join(__dirname, 'fixtures', 'agenda-instance.ts');
-				const n = cp.fork(serverPath, [mongoCfg, 'now']);
+				const n = cp.fork(serverPath, [mongoCfg, 'now'], { execArgv: ['-r', 'ts-node/register'] });
 
 				n.on('message', receiveMessage);
 				n.on('error', serviceError);

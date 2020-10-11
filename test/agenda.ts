@@ -1,20 +1,18 @@
 import * as delay from 'delay';
 import { Db } from 'mongodb';
 import * as expect from 'expect.js';
-import { IMockMongo, mockMongo } from './helpers/mock-mongodb';
+import { mockMongo } from './helpers/mock-mongodb';
 
 import { Agenda } from '../src';
 import { hasMongoProtocol } from '../src/utils/mongodb';
 import { Job } from '../src/Job';
 
-const mongoHost = process.env.MONGODB_HOST || 'localhost';
-const mongoPort = process.env.MONGODB_PORT || '27017';
-const agendaDatabase = 'agenda-test';
-const mongoCfg = `mongodb://${mongoHost}:${mongoPort}/${agendaDatabase}`;
-// Create agenda instances
+// agenda instances
 let globalAgenda: Agenda;
+// connection string to mongodb
+let mongoCfg: string;
+// mongo db connection db instance
 let mongoDb: Db;
-let mongoClient: IMockMongo;
 
 const clearJobs = () => {
 	if (mongoDb) {
@@ -30,8 +28,9 @@ const jobProcessor = () => {};
 describe('Agenda', function () {
 	beforeEach(async () => {
 		if (!mongoDb) {
-			mongoClient = await mockMongo();
-			mongoDb = mongoClient.mongo.db();
+			const mockedMongo = await mockMongo();
+			mongoCfg = mockedMongo.uri;
+			mongoDb = mockedMongo.mongo.db();
 		}
 
 		return new Promise(resolve => {
@@ -80,11 +79,11 @@ describe('Agenda', function () {
 			});
 
 			it('passing a valid multiple server connection string', () => {
-				expect(hasMongoProtocol(`mongodb+srv://${mongoHost}/agenda-test`)).to.equal(true);
+				expect(hasMongoProtocol(`mongodb+srv://localhost/agenda-test`)).to.equal(true);
 			});
 
 			it('passing an invalid connection string', () => {
-				expect(hasMongoProtocol(`${mongoHost}/agenda-test`)).to.equal(false);
+				expect(hasMongoProtocol(`localhost/agenda-test`)).to.equal(false);
 			});
 		});
 		describe('mongo', () => {

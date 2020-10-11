@@ -3,8 +3,9 @@
   "version": "4.0.0",
   "description": "Light weight job scheduler for Node.js",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "files": [
-    "lib"
+    "dist"
   ],
   "engines": {
     "node": ">=10.0.0"
@@ -13,10 +14,10 @@
     "build": "tsc",
     "test": "npm run lint && npm run mocha",
     "lint": "eslint",
-    "mocha": "mocha --reporter spec --timeout 8000 -b",
-    "mocha-debug": "DEBUG=agenda:**,-agenda:internal:** mocha --reporter spec --timeout 8000 -b",
-    "mocha-debug-internal": "DEBUG=agenda:internal:** mocha --reporter spec --timeout 8000 -b",
-    "mocha-debug-all": "DEBUG=agenda:** mocha --reporter spec --timeout 8000 -b",
+    "mocha": "mocha -r ts-node/register --reporter spec --timeout 8000 -b",
+    "mocha-debug": "DEBUG=agenda:**,-agenda:internal:** mocha -r ts-node/register --reporter spec --timeout 8000 -b",
+    "mocha-debug-internal": "DEBUG=agenda:internal:** mocha -r ts-node/register --reporter spec --timeout 8000 -b",
+    "mocha-debug-all": "DEBUG=agenda:** mocha -r ts-node/register --reporter spec --timeout 8000 -b",
     "docs": "jsdoc --configure .jsdoc.json --verbose"
   },
   "config": {

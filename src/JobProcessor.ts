@@ -101,7 +101,7 @@ export class JobProcessor {
 			);
 			// Add the job to list of jobs to lock and then lock it immediately!
 			this.jobsToLock.push(extraJob);
-			this.lockOnTheFly();
+			await this.lockOnTheFly();
 		}
 	}
 
@@ -126,7 +126,14 @@ export class JobProcessor {
 			shouldLock = false;
 		}
 
-		log('job [%s] lock status: shouldLock = %s', name, shouldLock);
+		log(
+			'job [%s] lock status: shouldLock = %s',
+			name,
+			shouldLock,
+			this.jobQueue.length,
+			this.lockedJobs.length,
+			this.totalLockLimit
+		);
 		return shouldLock;
 	}
 
@@ -170,6 +177,12 @@ export class JobProcessor {
 			// If locking limits have been hit, stop locking on the fly.
 			// Jobs that were waiting to be locked will be picked up during a
 			// future locking interval.
+			if (!this.shouldLock(job.attrs.name)) {
+				log('lock limit hit for: [%s]', job.attrs.name);
+				this.jobsToLock = [];
+				this.isLockingOnTheFly = false;
+				return;
+			}
 
 			// Lock the job in MongoDB!
 			const resp = await this.agenda.db.lockJob(job);
@@ -260,7 +273,7 @@ export class JobProcessor {
 	 * Internal method that processes any jobs in the local queue (array)
 	 * @returns {undefined}
 	 */
-	jobProcessing() {
+	private jobProcessing() {
 		// Ensure we have jobs
 		if (this.jobQueue.length === 0) {
 			return;

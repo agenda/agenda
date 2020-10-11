@@ -110,7 +110,7 @@ export class Agenda extends EventEmitter {
 	}
 
 	sort(query) {
-		debug('Agenda.sort([Object])');
+		log('Agenda.sort([Object])');
 		this.attrs.sort = query;
 		return this;
 	}
@@ -145,38 +145,38 @@ export class Agenda extends EventEmitter {
 	}
 
 	processEvery(time: string | number) {
-		debug('Agenda.processEvery(%d)', time);
+		log('Agenda.processEvery(%d)', time);
 		this.attrs.processEvery = humanInterval(time);
 		return this;
 	}
 
 	maxConcurrency(num: number) {
-		debug('Agenda.maxConcurrency(%d)', num);
+		log('Agenda.maxConcurrency(%d)', num);
 		this.attrs.maxConcurrency = num;
 		return this;
 	}
 
 	defaultConcurrency(num: number) {
-		debug('Agenda.defaultConcurrency(%d)', num);
+		log('Agenda.defaultConcurrency(%d)', num);
 		this.attrs.defaultConcurrency = num;
 		return this;
 	}
 
 	lockLimit(num: number) {
 		// @NOTE: Is this different than max concurrency?
-		debug('Agenda.lockLimit(%d)', num);
+		log('Agenda.lockLimit(%d)', num);
 		this.attrs.lockLimit = num;
 		return this;
 	}
 
 	defaultLockLimit(num: number) {
-		debug('Agenda.defaultLockLimit(%d)', num);
+		log('Agenda.defaultLockLimit(%d)', num);
 		this.attrs.defaultLockLimit = num;
 		return this;
 	}
 
 	defaultLockLifetime(ms: number) {
-		debug('Agenda.defaultLockLifetime(%d)', ms);
+		log('Agenda.defaultLockLifetime(%d)', ms);
 		this.attrs.defaultLockLifetime = ms;
 		return this;
 	}
@@ -211,7 +211,7 @@ export class Agenda extends EventEmitter {
 			priority: parsePriority(options?.priority) || 0,
 			lockLifetime: options?.lockLifetime || this.attrs.defaultLockLifetime
 		};
-		debug('job [%s] defined with following options: \n%O', name, this.definitions[name]);
+		log('job [%s] defined with following options: \n%O', name, this.definitions[name]);
 	}
 
 	/**
@@ -226,12 +226,12 @@ export class Agenda extends EventEmitter {
 		try {
 			const jobs = await Promise.all(names.map(name => createJob(name)));
 
-			debug('every() -> all jobs created successfully');
+			log('every() -> all jobs created successfully');
 
 			return jobs;
 		} catch (error) {
 			// @TODO: catch - ignore :O
-			debug('every() -> error creating one or more of the jobs', error);
+			log('every() -> error creating one or more of the jobs', error);
 			throw error;
 		}
 	}
@@ -262,7 +262,7 @@ export class Agenda extends EventEmitter {
 		 * @param {Object} options options to run job for
 		 * @returns {Job} instance of job
 		 */
-		debug('Agenda.every(%s, %O, %O)', interval, names, options);
+		log('Agenda.every(%s, %O, %O)', interval, names, options);
 
 		const createJob = async (name: string): Promise<Job> => {
 			const job = this.create(name, data);
@@ -279,7 +279,7 @@ export class Agenda extends EventEmitter {
 			return job;
 		}
 
-		debug('Agenda.every(%s, %s, %O)', interval, names, options);
+		log('Agenda.every(%s, %s, %O)', interval, names, options);
 		const jobs = await this.createJobs(names, createJob);
 
 		return jobs;
@@ -297,11 +297,11 @@ export class Agenda extends EventEmitter {
 		};
 
 		if (typeof names === 'string') {
-			debug('Agenda.schedule(%s, %O, [%O], cb)', when, names);
+			log('Agenda.schedule(%s, %O, [%O], cb)', when, names);
 			return createJob(names);
 		}
 
-		debug('Agenda.schedule(%s, %O, [%O])', when, names);
+		log('Agenda.schedule(%s, %O, [%O])', when, names);
 		return this.createJobs(names, createJob);
 	}
 
@@ -315,7 +315,7 @@ export class Agenda extends EventEmitter {
 
 			return job;
 		} catch (error) {
-			debug('error trying to create a job for this exact moment');
+			log('error trying to create a job for this exact moment');
 			throw error;
 		}
 	}
@@ -352,24 +352,24 @@ export class Agenda extends EventEmitter {
 		 */
 
 		if (!this.jobProcessor) {
-			debug('Agenda.stop called, but agenda has never started!');
+			log('Agenda.stop called, but agenda has never started!');
 			return;
 		}
 
-		debug('Agenda.stop called, clearing interval for processJobs()');
+		log('Agenda.stop called, clearing interval for processJobs()');
 
 		const lockedJobs = this.jobProcessor?.stop();
 
-		debug('Agenda._unlockJobs()');
+		log('Agenda._unlockJobs()');
 		const jobIds = filterUndef(lockedJobs?.map(job => job.attrs._id) || []);
 
 		if (jobIds.length === 0) {
-			debug('no jobs to unlock');
+			log('no jobs to unlock');
 			return;
 		}
 		this.off('processJob', this.jobProcessor.process);
 
-		debug('about to unlock jobs with ids: %O', jobIds);
+		log('about to unlock jobs with ids: %O', jobIds);
 		await this.db.unlockJobs(jobIds);
 
 		this.jobProcessor = undefined;

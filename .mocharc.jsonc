@@ -1,6 +1,6 @@
 {
 	"diff": true,
-	"require": ["./tshook.js", "source-map-support/register"],
+	"require": ["source-map-support/register"],
 	"extension": ["js", "ts"],
 	"package": "./package.json",
 	"recursive": true,

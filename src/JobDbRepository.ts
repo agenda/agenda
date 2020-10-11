@@ -29,10 +29,12 @@ export class JobDbRepository {
 	private async createConnection(): Promise<Db> {
 		const { connectOptions } = this;
 		if (this.hasDatabaseConfig(connectOptions)) {
+			log('using database config', connectOptions);
 			return this.database(connectOptions.db.address, connectOptions.db.options);
 		}
 
 		if (this.hasMongoConnection(connectOptions)) {
+			log('using passed in mongo connection');
 			return connectOptions.mongo;
 		}
 
@@ -136,8 +138,10 @@ export class JobDbRepository {
 
 		const collection = this.connectOptions.db?.collection || 'agendaJobs';
 
-		log('init database collection using name [%s]', collection);
 		this.collection = db.collection(collection);
+		log(
+			`connected with collection: ${collection}, collection size: ${await this.collection.count()}`
+		);
 
 		if (this.connectOptions.ensureIndex) {
 			log('attempting index creation');
@@ -183,7 +187,6 @@ export class JobDbRepository {
 		);
 
 		// We have a result from the above calls
-		// findOneAndUpdate() returns different results than insertOne() so check for that
 		if (res) {
 			// Grab ID and nextRunAt from MongoDB and store it as an attribute on Job
 			job.attrs._id = res._id;
@@ -259,8 +262,14 @@ export class JobDbRepository {
 				}
 
 				// Try an upsert
-				// NOTE: 'single' again, not exactly sure what it means
-				log('calling findOneAndUpdate() with job name and type of "single" as query');
+				log(
+					`calling findOneAndUpdate(${props.name}) with job name and type of "single" as query`,
+					await this.collection.findOne({
+						name: props.name,
+						type: 'single'
+					})
+				);
+				// this call ensure a job of this name can only exists once
 				const result = await this.collection.findOneAndUpdate(
 					{
 						name: props.name,
@@ -269,8 +278,15 @@ export class JobDbRepository {
 					update,
 					{
 						upsert: true,
-						returnOriginal: false
+						returnOriginal: false // same as new: true -> returns the final document
 					}
+				);
+				log(
+					`findOneAndUpdate(${props.name}) with type "single" ${
+						result.lastErrorObject?.updatedExisting
+							? 'updated existing entry'
+							: 'inserted new entry'
+					}`
 				);
 				return this.processDbResult(job, result.value);
 			}

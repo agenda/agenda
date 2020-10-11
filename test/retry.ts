@@ -1,13 +1,13 @@
-import { Db, MongoClient } from 'mongodb';
+import { Db } from 'mongodb';
 import * as delay from 'delay';
-import { IMockMongo, mockMongo } from './helpers/mock-mongodb';
+import { mockMongo } from './helpers/mock-mongodb';
 
 import { Agenda } from '../src';
 
-// Create agenda instances
+// agenda instances
 let agenda: Agenda;
+// mongo db connection db instance
 let mongoDb: Db;
-let mongoClient: IMockMongo;
 
 const clearJobs = () => {
 	if (mongoDb) {
@@ -21,8 +21,8 @@ const jobProcessor = () => {};
 describe('Retry', () => {
 	beforeEach(async () => {
 		if (!mongoDb) {
-			mongoClient = await mockMongo();
-			mongoDb = mongoClient.mongo.db();
+			const mockedMongo = await mockMongo();
+			mongoDb = mockedMongo.mongo.db();
 		}
 
 		return new Promise(resolve => {
