@@ -375,3 +375,11 @@ export class Agenda extends EventEmitter {
 
 	// Agenda.prototype._findAndLockNextJob = find_and_lock_next_job; -> moved to JobProcessor
 }
+
+export * from './types/AgendaConfig';
+
+export * from './types/JobDefinition';
+
+export * from './types/JobParameters';
+
+export * from './types/DbOptions';
