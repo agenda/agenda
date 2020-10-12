@@ -3,6 +3,8 @@ Next
 
 * https://github.com/agenda/agenda/pulls
 
+* Upgrade `mongodb` dependency ~3.5.0 -> ~3.6.2 (security) ([#1122](https://github.com/agenda/agenda/pull/1122)) thanks @Elisa23
+
 3.1.0 / 2020-04-07
 ==================
 
