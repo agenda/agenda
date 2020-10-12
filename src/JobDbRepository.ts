@@ -147,7 +147,11 @@ export class JobDbRepository {
 
 		this.collection = db.collection(collection);
 		log(
-			`connected with collection: ${collection}, collection size: ${await this.collection.estimatedDocumentCount()}`
+			`connected with collection: ${collection}, collection size: ${
+				typeof this.collection.estimatedDocumentCount === 'function'
+					? await this.collection.estimatedDocumentCount()
+					: '?'
+			}`
 		);
 
 		if (this.connectOptions.ensureIndex) {
@@ -183,7 +187,12 @@ export class JobDbRepository {
 			reconnectTries: Number.MAX_SAFE_INTEGER
 		};
 
-		const client = await MongoClient.connect(url, { ...reconnectOptions, ...options });
+		const client = await MongoClient.connect(url, {
+			...reconnectOptions,
+			...options,
+			useNewUrlParser: true,
+			useUnifiedTopology: true
+		});
 
 		return client.db();
 	}

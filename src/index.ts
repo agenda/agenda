@@ -47,7 +47,7 @@ export class Agenda extends EventEmitter {
 
 	private jobProcessor?: JobProcessor;
 
-	private ready: Promise<unknown>;
+	private ready: Promise<void>;
 
 	getRunningStats() {
 		if (!this.jobProcessor) {
