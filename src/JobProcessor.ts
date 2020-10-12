@@ -23,6 +23,7 @@ export class JobProcessor {
 
 	async getStatus() {
 		return {
+			queueSize: await this.agenda.db.getQueueSize(),
 			jobStatus: this.jobStatus,
 			runningJobs: this.runningJobs.length,
 			lockedJobs: this.lockedJobs.length,

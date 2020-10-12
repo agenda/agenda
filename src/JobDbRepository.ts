@@ -57,6 +57,13 @@ export class JobDbRepository {
 		return this.collection.deleteMany(query);
 	}
 
+	async getQueueSize(): Promise<number> {
+		return this.collection.countDocuments({ nextRunAt: { $lt: new Date() } });
+	}
+
+	/**
+	 * Internal method to unlock jobs so that they can be re-run
+	 */
 	async unlockJobs(jobIds: ObjectId[]) {
 		await this.collection.updateMany({ _id: { $in: jobIds } }, { $set: { lockedAt: null } });
 	}

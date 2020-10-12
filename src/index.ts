@@ -50,7 +50,10 @@ export class Agenda extends EventEmitter {
 	private ready: Promise<unknown>;
 
 	getRunningStats() {
-		return this.jobProcessor?.getStatus();
+		if (!this.jobProcessor) {
+			throw new Error('agenda not running!');
+		}
+		return this.jobProcessor.getStatus();
 	}
 
 	constructor(
