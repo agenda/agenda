@@ -8,7 +8,7 @@ import {
 	UpdateQuery,
 	ObjectId
 } from 'mongodb';
-import { Job } from './Job';
+import type { Job } from './Job';
 import { hasMongoProtocol } from './utils/mongodb';
 import type { Agenda } from './index';
 import { IDatabaseOptions, IDbConfig, IMongoOptions } from './types/DbOptions';
@@ -207,22 +207,23 @@ export class JobDbRepository {
 	 * @param {Job} job job to save into MongoDB
 	 * @returns {Promise} resolves when job is saved or errors
 	 */
-	async saveJob(job: Job) {
+	async saveJob<T = any>(job: Job<T>): Promise<Job<T>> {
 		try {
 			log('attempting to save a job into Agenda instance');
 
 			// Grab information needed to save job but that we don't want to persist in MongoDB
 			const id = job.attrs._id;
-			const { unique, uniqueOpts } = job.attrs;
+			// const { unique, uniqueOpts } = job.attrs;
 
 			// Store job as JSON and remove props we don't want to store from object
-			const props: Partial<IJobParameters> = job.toJson();
-			delete props._id;
-			delete props.unique;
-			delete props.uniqueOpts;
+			// _id, unique, uniqueOpts
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			const { _id, unique, uniqueOpts, ...props } = {
+				...job.toJson(),
+				// Store name of agenda queue as last modifier in job data
+				lastModifiedBy: this.agenda.attrs.name
+			};
 
-			// Store name of agenda queue as last modifier in job data
-			props.lastModifiedBy = this.agenda.attrs.name;
 			log('[job %s] set job props: \n%O', id, props);
 
 			// Grab current time and set default query options for MongoDB
@@ -291,11 +292,11 @@ export class JobDbRepository {
 				return this.processDbResult(job, result.value);
 			}
 
-			if (unique) {
+			if (job.attrs.unique) {
 				// If we want the job to be unique, then we can upsert based on the 'unique' query object that was passed in
 				const query: FilterQuery<any> = job.attrs.unique;
 				query.name = props.name;
-				if (uniqueOpts?.insertOnly) {
+				if (job.attrs.uniqueOpts?.insertOnly) {
 					update = { $setOnInsert: props };
 				}
 

@@ -169,12 +169,14 @@ describe('Job', () => {
 		});
 
 		it('returns the job', () => {
-			expect(job.computeNextRunAt()).to.be(job);
+			const jobProto = Object.getPrototypeOf(job);
+			expect(jobProto.computeNextRunAt.call(job)).to.be(job);
 		});
 
 		it('sets to undefined if no repeat at', () => {
 			job.attrs.repeatAt = undefined;
-			job.computeNextRunAt();
+			const jobProto = Object.getPrototypeOf(job);
+			jobProto.computeNextRunAt.call(job);
 			expect(job.attrs.nextRunAt).to.be(null);
 		});
 
@@ -184,14 +186,16 @@ describe('Job', () => {
 			d.setMinutes(59);
 			d.setSeconds(0);
 			job.attrs.repeatAt = '11:59pm';
-			job.computeNextRunAt();
+			const jobProto = Object.getPrototypeOf(job);
+			jobProto.computeNextRunAt.call(job);
 			expect(job.attrs.nextRunAt?.getHours()).to.be(d.getHours());
 			expect(job.attrs.nextRunAt?.getMinutes()).to.be(d.getMinutes());
 		});
 
 		it('sets to undefined if no repeat interval', () => {
 			job.attrs.repeatInterval = undefined;
-			job.computeNextRunAt();
+			const jobProto = Object.getPrototypeOf(job);
+			jobProto.computeNextRunAt.call(job);
 			expect(job.attrs.nextRunAt).to.be(null);
 		});
 
@@ -199,7 +203,8 @@ describe('Job', () => {
 			const now = new Date();
 			job.attrs.lastRunAt = now;
 			job.repeatEvery('2 minutes');
-			job.computeNextRunAt();
+			const jobProto = Object.getPrototypeOf(job);
+			jobProto.computeNextRunAt.call(job);
 			expect(job.attrs.nextRunAt?.getTime()).to.be(now.valueOf() + 120000);
 		});
 
@@ -210,7 +215,8 @@ describe('Job', () => {
 			now.setSeconds(0);
 			job.attrs.lastRunAt = now;
 			job.repeatEvery('*/2 * * * *');
-			job.computeNextRunAt();
+			const jobProto = Object.getPrototypeOf(job);
+			jobProto.computeNextRunAt.call(job);
 			expect(job.attrs.nextRunAt?.valueOf()).to.be(now.valueOf() + 60000);
 		});
 
@@ -220,7 +226,8 @@ describe('Job', () => {
 			job.repeatEvery('0 6 * * *', {
 				timezone: 'GMT'
 			});
-			job.computeNextRunAt();
+			const jobProto = Object.getPrototypeOf(job);
+			jobProto.computeNextRunAt.call(job);
 			expect(moment(job.attrs.nextRunAt).tz('GMT').hour()).to.be(6);
 			expect(moment(job.attrs.nextRunAt).toDate().getDate()).to.be(
 				moment(job.attrs.lastRunAt).add(1, 'days').toDate().getDate()
@@ -233,7 +240,8 @@ describe('Job', () => {
 			job.repeatEvery('0 6 * * *', {
 				timezone: 'GMT'
 			});
-			job.computeNextRunAt();
+			const jobProto = Object.getPrototypeOf(job);
+			jobProto.computeNextRunAt.call(job);
 			expect(moment(job.attrs.nextRunAt).tz('GMT').hour()).to.be(6);
 			expect(moment(job.attrs.nextRunAt).toDate().getDate()).to.be(
 				moment(job.attrs.lastRunAt).add(1, 'days').toDate().getDate()
@@ -252,14 +260,16 @@ describe('Job', () => {
 			job.repeatEvery('* * * * *', {
 				timezone: 'GMT'
 			});
-			job.computeNextRunAt();
+			const jobProto = Object.getPrototypeOf(job);
+			jobProto.computeNextRunAt.call(job);
 			expect(job.attrs.nextRunAt.valueOf()).to.be(expectedDate.valueOf());
 		});
 
 		describe('when repeat at time is invalid', () => {
 			beforeEach(() => {
 				job.attrs.repeatAt = 'foo';
-				job.computeNextRunAt();
+				const jobProto = Object.getPrototypeOf(job);
+				jobProto.computeNextRunAt.call(job);
 			});
 
 			it('sets nextRunAt to null', () => {
@@ -276,7 +286,8 @@ describe('Job', () => {
 		describe('when repeat interval is invalid', () => {
 			beforeEach(() => {
 				job.attrs.repeatInterval = 'asd';
-				job.computeNextRunAt();
+				const jobProto = Object.getPrototypeOf(job);
+				jobProto.computeNextRunAt.call(job);
 			});
 
 			it('sets nextRunAt to null', () => {
@@ -893,7 +904,7 @@ describe('Job', () => {
 			// give it some time to get picked up
 			await delay(200);
 
-			expect(agenda.getRunningStats()?.lockedJobs).to.equal(1);
+			expect((await agenda.getRunningStats()).lockedJobs).to.equal(1);
 			await agenda.stop();
 		});
 
@@ -905,7 +916,7 @@ describe('Job', () => {
 			await Promise.all([agenda.now('lock job', { i: 1 }), agenda.now('lock job', { i: 2 })]);
 
 			await delay(500);
-			expect(agenda.getRunningStats()?.lockedJobs).to.equal(1);
+			expect((await agenda.getRunningStats()).lockedJobs).to.equal(1);
 			await agenda.stop();
 		});
 
@@ -925,7 +936,7 @@ describe('Job', () => {
 			]);
 
 			await delay(500);
-			expect(agenda.getRunningStats()?.lockedJobs).to.equal(1);
+			expect((await agenda.getRunningStats()).lockedJobs).to.equal(1);
 			await agenda.stop();
 		});
 
@@ -944,7 +955,7 @@ describe('Job', () => {
 			]);
 
 			await delay(500);
-			expect(agenda.getRunningStats()?.lockedJobs).to.equal(1);
+			expect((await agenda.getRunningStats()).lockedJobs).to.equal(1);
 			await agenda.stop();
 		});
 	});

@@ -21,7 +21,7 @@ export class JobProcessor {
 			| undefined;
 	} = {};
 
-	getStatus() {
+	async getStatus() {
 		return {
 			jobStatus: this.jobStatus,
 			runningJobs: this.runningJobs.length,

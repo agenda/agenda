@@ -4,6 +4,7 @@ import { parsePriority } from './utils/priority';
 import type { Agenda } from './index';
 import { computeFromInterval, computeFromRepeatAt } from './utils/nextRunAt';
 import { IJobParameters } from './types/JobParameters';
+import type { DefinitionProcessor } from './types/JobDefinition';
 
 const log = debug('agenda:job');
 
@@ -13,12 +14,31 @@ const log = debug('agenda:job');
  * @property {Object} agenda - The Agenda instance
  * @property {Object} attrs
  */
-export class Job {
-	readonly attrs: IJobParameters;
+export class Job<DATA = any | void> {
+	readonly attrs: IJobParameters<DATA>;
 
 	constructor(
+		agenda: Agenda,
+		args: Partial<IJobParameters<void>> & {
+			name: string;
+			type: 'normal' | 'single';
+		}
+	);
+	constructor(
+		agenda: Agenda,
+		args: Partial<IJobParameters<DATA>> & {
+			name: string;
+			type: 'normal' | 'single';
+			data: DATA;
+		}
+	);
+	constructor(
 		readonly agenda: Agenda,
-		args: Partial<IJobParameters> & { name: string; type: 'normal' | 'single' }
+		args: Partial<IJobParameters<DATA>> & {
+			name: string;
+			type: 'normal' | 'single';
+			data: any;
+		}
 	) {
 		// Remove special args
 
@@ -35,10 +55,11 @@ export class Job {
 		};
 	}
 
-	toJson() {
+	toJson(): Partial<IJobParameters> {
 		const attrs = this.attrs || {};
 		const result = {};
 
+		// eslint-disable-next-line no-restricted-syntax
 		for (const prop in attrs) {
 			if ({}.hasOwnProperty.call(attrs, prop)) {
 				result[prop] = attrs[prop];
@@ -155,18 +176,17 @@ export class Job {
 		return this.agenda.db.saveJob(this);
 	}
 
-	remove() {
+	remove(): Promise<number> {
 		return this.agenda.cancel({ _id: this.attrs._id });
 	}
 
-	async touch(progress?: number) {
-		// eslint-disable-next-line prefer-rest-params
+	async touch(progress?: number): Promise<void> {
 		this.attrs.lockedAt = new Date();
 		this.attrs.progress = progress;
-		return this.save();
+		await this.save();
 	}
 
-	computeNextRunAt() {
+	private computeNextRunAt() {
 		try {
 			if (this.attrs.repeatInterval) {
 				this.attrs.nextRunAt = computeFromInterval(this.attrs);
@@ -222,15 +242,18 @@ export class Job {
 				log('[%s:%s] process function being called', this.attrs.name, this.attrs._id);
 				await new Promise((resolve, reject) => {
 					try {
-						const result = definition.fn(this, err => {
-							if (err) {
-								reject(err);
-								return;
+						const result = (definition.fn as DefinitionProcessor<DATA, (err?) => void>)(
+							this,
+							err => {
+								if (err) {
+									reject(err);
+									return;
+								}
+								resolve();
 							}
-							resolve();
-						});
+						);
 						if (this.isPromise(result)) {
-							result.catch(err => reject(err));
+							(result as any).catch(err => reject(err));
 						}
 					} catch (err) {
 						reject(err);
@@ -238,7 +261,7 @@ export class Job {
 				});
 			} else {
 				log('[%s:%s] process function being called', this.attrs.name, this.attrs._id);
-				await definition.fn(this);
+				await (definition.fn as DefinitionProcessor<DATA, void>)(this);
 			}
 
 			this.attrs.lastFinishedAt = new Date();
@@ -271,6 +294,6 @@ export class Job {
 	}
 
 	private isPromise(value): value is Promise<void> {
-		return Boolean(value && typeof value.then === 'function');
+		return !!(value && typeof value.then === 'function');
 	}
 }
