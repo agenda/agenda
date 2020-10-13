@@ -21,13 +21,13 @@ export class JobProcessor {
 			| undefined;
 	} = {};
 
-	async getStatus() {
+	async getStatus(fullDetails = false) {
 		return {
 			queueSize: await this.agenda.db.getQueueSize(),
 			jobStatus: this.jobStatus,
-			runningJobs: this.runningJobs.length,
-			lockedJobs: this.lockedJobs.length,
-			jobsToLock: this.jobsToLock.length,
+			runningJobs: !fullDetails ? this.runningJobs.length : this.runningJobs,
+			lockedJobs: !fullDetails ? this.lockedJobs.length : this.lockedJobs,
+			jobsToLock: !fullDetails ? this.jobsToLock.length : this.jobsToLock,
 			isLockingOnTheFly: this.isLockingOnTheFly
 		};
 	}
