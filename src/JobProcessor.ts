@@ -22,9 +22,16 @@ export class JobProcessor {
 	} = {};
 
 	async getStatus(fullDetails = false) {
+		// eslint-disable-next-line @typescript-eslint/no-var-requires,global-require
+		const { version } = require('../package.json');
+
 		return {
+			version,
 			queueSize: await this.agenda.db.getQueueSize(),
-			jobStatus: this.jobStatus,
+			jobStatus: Object.keys(this.jobStatus).map(job => ({
+				...this.jobStatus[job],
+				config: this.agenda.definitions[job]
+			})),
 			runningJobs: !fullDetails ? this.runningJobs.length : this.runningJobs,
 			lockedJobs: !fullDetails ? this.lockedJobs.length : this.lockedJobs,
 			jobsToLock: !fullDetails ? this.jobsToLock.length : this.jobsToLock,
@@ -117,13 +124,13 @@ export class JobProcessor {
 		const jobDefinition = this.agenda.definitions[name];
 		let shouldLock = true;
 		// global lock limit
-		if (this.totalLockLimit && this.totalLockLimit <= this.lockedJobs.length) {
+		if (this.totalLockLimit && this.lockedJobs.length >= this.totalLockLimit) {
 			shouldLock = false;
 		}
 
 		// job specific lock limit
 		const status = this.jobStatus[name];
-		if (jobDefinition.lockLimit && status && jobDefinition.lockLimit <= status.locked) {
+		if (jobDefinition.lockLimit && status && status.locked >= jobDefinition.lockLimit) {
 			shouldLock = false;
 		}
 
@@ -188,22 +195,30 @@ export class JobProcessor {
 				const resp = await this.agenda.db.lockJob(job);
 
 				if (resp) {
+					if (job.attrs.name !== resp.name) {
+						throw new Error(
+							`got different job name: ${resp.name} (actual) !== ${job.attrs.name} (expected)`
+						);
+					}
+
+					const jobToEnqueue = new Job(this.agenda, resp);
+
 					// Before en-queing job make sure we haven't exceed our lock limits
-					if (!this.shouldLock(resp.name)) {
+					if (!this.shouldLock(jobToEnqueue.attrs.name)) {
 						log(
 							'lock limit reached while job was locked in database. Releasing lock on [%s]',
-							resp.name
+							jobToEnqueue.attrs.name
 						);
-						job.attrs.lockedAt = undefined;
-						await job.save();
+						jobToEnqueue.attrs.lockedAt = undefined;
+						await jobToEnqueue.save();
 
 						this.jobsToLock = [];
 						return;
 					}
-					const jobToEnqueue = new Job(this.agenda, resp);
+
 					log('found job [%s] that can be locked on the fly', jobToEnqueue.attrs.name);
-					this.lockedJobs.push(jobToEnqueue);
 					this.updateStatus(jobToEnqueue.attrs.name, 'locked', +1);
+					this.lockedJobs.push(jobToEnqueue);
 					this.enqueueJob(jobToEnqueue);
 					this.jobProcessing();
 				}
@@ -227,13 +242,12 @@ export class JobProcessor {
 		// Find ONE and ONLY ONE job and set the 'lockedAt' time so that job begins to be processed
 		const result = await this.agenda.db.getNextJobToRun(jobName, this.nextScanAt, lockDeadline);
 
-		let job;
 		if (result) {
 			log('found a job available to lock, creating a new job on Agenda with id [%s]', result._id);
-			job = new Job(this.agenda, result);
+			return new Job(this.agenda, result);
 		}
 
-		return job;
+		return undefined;
 	}
 
 	/**
@@ -255,12 +269,19 @@ export class JobProcessor {
 		// For this job name, find the next job to run and lock it!
 		try {
 			const job = await this.findAndLockNextJob(name, this.agenda.definitions[name]);
+
 			// Still have the job?
 			// 1. Add it to lock list
 			// 2. Add count of locked jobs
 			// 3. Queue the job to actually be run now that it is locked
 			// 4. Recursively run this same method we are in to check for more available jobs of same type!
 			if (job) {
+				if (job.attrs.name !== name) {
+					throw new Error(
+						`got different job name: ${job.attrs.name} (acutal) !== ${name} (expected)`
+					);
+				}
+
 				// Before en-queing job make sure we haven't exceed our lock limits
 				if (!this.shouldLock(name)) {
 					log('lock limit reached before job was returned. Releasing lock on [%s]', name);
@@ -270,8 +291,8 @@ export class JobProcessor {
 				}
 
 				log('[%s:%s] job locked while filling queue', name, job.attrs._id);
+				this.updateStatus(name, 'locked', +1);
 				this.lockedJobs.push(job);
-				this.updateStatus(job.attrs.name, 'locked', +1);
 
 				this.enqueueJob(job);
 				await this.jobQueueFilling(name);
@@ -447,8 +468,8 @@ export class JobProcessor {
 				running: 0
 			};
 		}
-		if ((this.jobStatus[name]![key] > 0 && number === -1) || number === 1) {
-			this.jobStatus[name]![key] += number;
-		}
+		// if ((this.jobStatus[name]![key] > 0 && number === -1) || number === 1) {
+		this.jobStatus[name]![key] += number;
+		// }
 	}
 }
