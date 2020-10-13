@@ -32,7 +32,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/agenda/agenda"
+    "url": "git://github.com/@hokify/agenda"
   },
   "keywords": [
     "job",
@@ -45,7 +45,7 @@
   "author": "Ryan Schmukler <ryan@slingingcode.com> (http://slingingcode.com/)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/agenda/agenda/issues"
+    "url": "https://github.com/@hokify/agenda/issues"
   },
   "dependencies": {
     "cron": "~1.8.2",
