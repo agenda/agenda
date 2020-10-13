@@ -40,6 +40,20 @@ export class Agenda extends EventEmitter {
 	db: JobDbRepository;
 	// eslint-disable-next-line default-param-last
 	// private jobQueue: JobProcessingQueue;
+	// internally used
+	on(event: 'processJob', listener: (job: Job) => void): this;
+
+	on(event: 'fail', listener: (err: Error, job: Job) => void): this;
+	on(event: 'success', listener: (job: Job) => void): this;
+	on(event: 'start', listener: (job: Job) => void): this;
+	on(event: 'complete', listener: (job: Job) => void): this;
+	on(event: string, listener: (job: Job) => void): this;
+	on(event: string, listener: (err: Error, job: Job) => void): this;
+	on(event: 'ready', listener: () => void): this;
+	on(event: 'error', listener: (err: Error) => void): this;
+	on(event, listener) {
+		return super.on(event, listener);
+	}
 
 	readonly definitions: {
 		[name: string]: IJobDefinition;

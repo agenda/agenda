@@ -1014,7 +1014,7 @@ describe('Job', () => {
 
 			const checkResultsPromise = new Promise(resolve =>
 				agenda.on('start:fifo', job => {
-					results.push(new Date(job.attrs.nextRunAt).getTime());
+					results.push(new Date(job.attrs.nextRunAt!).getTime());
 					if (results.length !== 3) {
 						return;
 					}
@@ -1045,7 +1045,7 @@ describe('Job', () => {
 			const checkResultsPromise = new Promise(resolve =>
 				agenda.on('start:fifo-priority', job => {
 					priorities.push(job.attrs.priority);
-					times.push(new Date(job.attrs.lastRunAt).getTime());
+					times.push(new Date(job.attrs.lastRunAt!).getTime());
 					if (priorities.length !== 3 || times.length !== 3) {
 						return;
 					}

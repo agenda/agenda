@@ -29,6 +29,11 @@ export class JobProcessor {
 			version,
 			queueName: this.agenda.name,
 			queueSize: await this.agenda.db.getQueueSize(),
+			config: {
+				totalLockLimit: this.totalLockLimit,
+				maxConcurrency: this.maxConcurrency,
+				processEvery: this.processEvery
+			},
 			jobStatus: Object.keys(this.jobStatus).map(job => ({
 				...this.jobStatus[job],
 				config: this.agenda.definitions[job]
@@ -139,6 +144,7 @@ export class JobProcessor {
 			'job [%s] lock status: shouldLock = %s',
 			name,
 			shouldLock,
+			status?.locked,
 			this.jobQueue.length,
 			this.lockedJobs.length,
 			this.totalLockLimit
