@@ -182,13 +182,7 @@ export class JobDbRepository {
 			url = `mongodb://${url}`;
 		}
 
-		const reconnectOptions = {
-			autoReconnect: true,
-			reconnectTries: Number.MAX_SAFE_INTEGER
-		};
-
 		const client = await MongoClient.connect(url, {
-			...reconnectOptions,
 			...options,
 			useNewUrlParser: true,
 			useUnifiedTopology: true

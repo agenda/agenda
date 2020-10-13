@@ -164,42 +164,54 @@ export class JobProcessor {
 		// Don't have any jobs to run? Return
 		if (this.jobsToLock.length === 0) {
 			log('no jobs to current lock on the fly, returning');
-			this.isLockingOnTheFly = false;
 			return;
 		}
 
 		// Set that we are running this
-		this.isLockingOnTheFly = true;
+		try {
+			this.isLockingOnTheFly = true;
 
-		// Grab a job that needs to be locked
-		const job = this.jobsToLock.pop();
+			// Grab a job that needs to be locked
+			const job = this.jobsToLock.pop();
 
-		if (job) {
-			// If locking limits have been hit, stop locking on the fly.
-			// Jobs that were waiting to be locked will be picked up during a
-			// future locking interval.
-			if (!this.shouldLock(job.attrs.name)) {
-				log('lock limit hit for: [%s]', job.attrs.name);
-				this.jobsToLock = [];
-				this.isLockingOnTheFly = false;
-				return;
+			if (job) {
+				// If locking limits have been hit, stop locking on the fly.
+				// Jobs that were waiting to be locked will be picked up during a
+				// future locking interval.
+				if (!this.shouldLock(job.attrs.name)) {
+					log('lock limit hit for: [%s]', job.attrs.name);
+					this.jobsToLock = [];
+					return;
+				}
+
+				// Lock the job in MongoDB!
+				const resp = await this.agenda.db.lockJob(job);
+
+				if (resp) {
+					// Before en-queing job make sure we haven't exceed our lock limits
+					if (!this.shouldLock(resp.name)) {
+						log(
+							'lock limit reached while job was locked in database. Releasing lock on [%s]',
+							resp.name
+						);
+						job.attrs.lockedAt = undefined;
+						await job.save();
+
+						this.jobsToLock = [];
+						return;
+					}
+					const jobToEnqueue = new Job(this.agenda, resp);
+					log('found job [%s] that can be locked on the fly', jobToEnqueue.attrs.name);
+					this.lockedJobs.push(jobToEnqueue);
+					this.updateStatus(jobToEnqueue.attrs.name, 'locked', +1);
+					this.enqueueJob(jobToEnqueue);
+					this.jobProcessing();
+				}
 			}
-
-			// Lock the job in MongoDB!
-			const resp = await this.agenda.db.lockJob(job);
-
-			if (resp) {
-				const jobToEnqueue = new Job(this.agenda, resp);
-				log('found job [%s] that can be locked on the fly', jobToEnqueue.attrs.name);
-				this.lockedJobs.push(jobToEnqueue);
-				this.updateStatus(jobToEnqueue.attrs.name, 'locked', +1);
-				this.enqueueJob(jobToEnqueue);
-				this.jobProcessing();
-			}
+		} finally {
+			// Mark lock on fly is done for now
+			this.isLockingOnTheFly = false;
 		}
-
-		// Mark lock on fly is done for now
-		this.isLockingOnTheFly = false;
 
 		// Re-run in case anything is in the queue
 		await this.lockOnTheFly();
@@ -318,8 +330,8 @@ export class JobProcessor {
 	 */
 	private async runOrRetry() {
 		if (!this.isRunning) {
-			const a = new Error();
-			console.log('STACK', a.stack);
+			// const a = new Error();
+			// console.log('STACK', a.stack);
 			log('JobProcessor got stopped already while calling runOrRetry, returning!', this);
 			return;
 		}
@@ -345,7 +357,18 @@ export class JobProcessor {
 			// NOTE: Shouldn't we update the 'lockedAt' value in MongoDB so it can be picked up on restart?
 			if (job.attrs.lockedAt && job.attrs.lockedAt < lockDeadline) {
 				log('[%s:%s] job lock has expired, freeing it up', job.attrs.name, job.attrs._id);
-				this.lockedJobs.splice(this.lockedJobs.indexOf(job), 1);
+				let lockedJobIndex = this.lockedJobs.indexOf(job);
+				if (lockedJobIndex === -1) {
+					// lookup by id
+					lockedJobIndex = this.lockedJobs.findIndex(
+						j => j.attrs._id?.toString() === job.attrs._id?.toString()
+					);
+				}
+				if (lockedJobIndex === -1) {
+					throw new Error(`cannot find job ${job.attrs._id} in locked jobs queue?`);
+				}
+
+				this.lockedJobs.splice(lockedJobIndex, 1);
 				this.updateStatus(job.attrs.name, 'locked', -1);
 				this.jobProcessing();
 				return;
@@ -370,16 +393,38 @@ export class JobProcessor {
 						`callback already called - job ${job.attrs.name} already marked complete`
 					);
 				}
-
+			} catch (err) {
+				job.agenda.emit('error', err);
+			} finally {
 				// Remove the job from the running queue
-				this.runningJobs.splice(this.runningJobs.indexOf(job), 1);
+				let runningJobIndex = this.runningJobs.indexOf(job);
+				if (runningJobIndex === -1) {
+					// lookup by id
+					runningJobIndex = this.runningJobs.findIndex(
+						j => j.attrs._id?.toString() === job.attrs._id?.toString()
+					);
+				}
+				if (runningJobIndex === -1) {
+					// eslint-disable-next-line no-unsafe-finally
+					throw new Error(`cannot find job ${job.attrs._id} in running jobs queue?`);
+				}
+				this.runningJobs.splice(runningJobIndex, 1);
 				this.updateStatus(job.attrs.name, 'running', -1);
 
 				// Remove the job from the locked queue
-				this.lockedJobs.splice(this.lockedJobs.indexOf(job), 1);
+				let lockedJobIndex = this.lockedJobs.indexOf(job);
+				if (lockedJobIndex === -1) {
+					// lookup by id
+					lockedJobIndex = this.lockedJobs.findIndex(
+						j => j.attrs._id?.toString() === job.attrs._id?.toString()
+					);
+				}
+				if (lockedJobIndex === -1) {
+					// eslint-disable-next-line no-unsafe-finally
+					throw new Error(`cannot find job ${job.attrs._id} in locked jobs queue?`);
+				}
+				this.lockedJobs.splice(lockedJobIndex, 1);
 				this.updateStatus(job.attrs.name, 'locked', -1);
-			} catch (err) {
-				job.agenda.emit('error', err);
 			}
 
 			// Re-process jobs now that one has finished
