@@ -27,6 +27,7 @@ export class JobProcessor {
 
 		return {
 			version,
+			queueName: this.agenda.name,
 			queueSize: await this.agenda.db.getQueueSize(),
 			jobStatus: Object.keys(this.jobStatus).map(job => ({
 				...this.jobStatus[job],
