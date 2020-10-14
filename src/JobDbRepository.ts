@@ -61,11 +61,15 @@ export class JobDbRepository {
 		return this.collection.countDocuments({ nextRunAt: { $lt: new Date() } });
 	}
 
+	async unlockJob(job) {
+		await this.collection.updateOne({ _id: job._id }, { $unset: { lockedAt: true } });
+	}
+
 	/**
 	 * Internal method to unlock jobs so that they can be re-run
 	 */
 	async unlockJobs(jobIds: ObjectId[]) {
-		await this.collection.updateMany({ _id: { $in: jobIds } }, { $set: { lockedAt: null } });
+		await this.collection.updateMany({ _id: { $in: jobIds } }, { $unset: { lockedAt: true } });
 	}
 
 	async lockJob(job: Job): Promise<IJobParameters | undefined> {
@@ -146,13 +150,15 @@ export class JobDbRepository {
 		const collection = this.connectOptions.db?.collection || 'agendaJobs';
 
 		this.collection = db.collection(collection);
-		log(
-			`connected with collection: ${collection}, collection size: ${
-				typeof this.collection.estimatedDocumentCount === 'function'
-					? await this.collection.estimatedDocumentCount()
-					: '?'
-			}`
-		);
+		if (log.enabled) {
+			log(
+				`connected with collection: ${collection}, collection size: ${
+					typeof this.collection.estimatedDocumentCount === 'function'
+						? await this.collection.estimatedDocumentCount()
+						: '?'
+				}`
+			);
+		}
 
 		if (this.connectOptions.ensureIndex) {
 			log('attempting index creation');

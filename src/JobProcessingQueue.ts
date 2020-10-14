@@ -1,7 +1,7 @@
 // eslint-disable-next-line prettier/prettier
 import type { Job } from './Job';
-import { IJobDefinition } from './types/JobDefinition';
 import { IJobParameters } from './types/JobParameters';
+import type { Agenda } from './index';
 /**
  * @class
  * @param {Object} args - Job Options
@@ -11,11 +11,7 @@ import { IJobParameters } from './types/JobParameters';
 export class JobProcessingQueue {
 	private _queue: Job[];
 
-	constructor(
-		private definitions: {
-			[name: string]: IJobDefinition;
-		}
-	) {
+	constructor(private agenda: Agenda) {
 		this._queue = [];
 	}
 
@@ -36,8 +32,23 @@ export class JobProcessingQueue {
 	 * @param {Job} job job to add to queue
 	 * @returns {undefined}
 	 */
-	push(job) {
+	push(job: Job) {
 		this._queue.push(job);
+	}
+
+	remove(job: Job) {
+		let removeJobIndex = this._queue.indexOf(job);
+		if (removeJobIndex === -1) {
+			// lookup by id
+			removeJobIndex = this._queue.findIndex(
+				j => j.attrs._id?.toString() === job.attrs._id?.toString()
+			);
+		}
+		if (removeJobIndex === -1) {
+			throw new Error(`cannot find job ${job.attrs._id} in processing queue?`);
+		}
+
+		this._queue.splice(removeJobIndex, 1);
 	}
 
 	/**
@@ -47,10 +58,11 @@ export class JobProcessingQueue {
 	 * @param {Job} job job to add to queue
 	 * @returns {undefined}
 	 */
-	insert(job) {
+	insert(job: Job) {
 		const matchIndex = this._queue.findIndex(element => {
 			if (
 				element.attrs.nextRunAt &&
+				job.attrs.nextRunAt &&
 				element.attrs.nextRunAt.getTime() <= job.attrs.nextRunAt.getTime()
 			) {
 				if (element.attrs.nextRunAt.getTime() === job.attrs.nextRunAt.getTime()) {
@@ -86,7 +98,7 @@ export class JobProcessingQueue {
 			| undefined;
 	}): (Job & { attrs: IJobParameters & { nextRunAt: Date } }) | undefined {
 		const next = ((Object.keys(this._queue) as unknown) as number[]).reverse().find(i => {
-			const def = this.definitions[this._queue[i].attrs.name];
+			const def = this.agenda.definitions[this._queue[i].attrs.name];
 			const status = jobStatus[this._queue[i].attrs.name];
 
 			// check if we have a definition

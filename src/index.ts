@@ -74,7 +74,7 @@ export class Agenda extends EventEmitter {
 		config: {
 			name?: string;
 			defaultConcurrency?: number;
-			processEvery?: string;
+			processEvery?: string | number;
 			maxConcurrency?: number;
 			defaultLockLimit?: number;
 			lockLimit?: number;
@@ -393,7 +393,7 @@ export class Agenda extends EventEmitter {
 
 		await this.jobProcessor.process();
 
-		this.on('processJob', this.jobProcessor.process.bind(this.jobProcessor));
+		this.on('processJob', job => this.jobProcessor?.process(job));
 	}
 
 	async stop(): Promise<void> {
