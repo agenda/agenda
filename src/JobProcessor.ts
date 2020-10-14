@@ -360,7 +360,7 @@ export class JobProcessor {
 					job.attrs.name,
 					job.attrs._id
 				);
-				this.runOrRetry();
+				this.runOrRetry(job);
 			} else {
 				const runIn = job.attrs.nextRunAt.getTime() - now.getTime();
 				log.extend('jobProcessing')(
@@ -380,7 +380,7 @@ export class JobProcessor {
 	 * Internal method that tries to run a job and if it fails, retries again!
 	 * @returns {undefined}
 	 */
-	private async runOrRetry() {
+	private async runOrRetry(job: Job) {
 		if (!this.isRunning) {
 			// const a = new Error();
 			// console.log('STACK', a.stack);
@@ -391,11 +391,7 @@ export class JobProcessor {
 			return;
 		}
 
-		const job = this.jobQueue.pop();
-		if (!job) {
-			console.info('empty queue');
-			return;
-		}
+		this.jobQueue.remove(job);
 
 		const jobDefinition = this.agenda.definitions[job.attrs.name];
 		const status = this.jobStatus[job.attrs.name];
