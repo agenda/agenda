@@ -34,10 +34,15 @@ export class JobProcessor {
 				maxConcurrency: this.maxConcurrency,
 				processEvery: this.processEvery
 			},
-			jobStatus: Object.keys(this.jobStatus).map(job => ({
-				...this.jobStatus[job],
-				config: this.agenda.definitions[job]
-			})),
+			jobStatus: Object.fromEntries(
+				Object.keys(this.jobStatus).map(job => [
+					job,
+					{
+						...this.jobStatus[job],
+						config: this.agenda.definitions[job]
+					}
+				])
+			),
 			runningJobs: !fullDetails ? this.runningJobs.length : this.runningJobs,
 			lockedJobs: !fullDetails ? this.lockedJobs.length : this.lockedJobs,
 			jobsToLock: !fullDetails ? this.jobsToLock.length : this.jobsToLock,

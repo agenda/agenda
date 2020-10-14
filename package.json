@@ -1,6 +1,6 @@
 {
   "name": "@hokify/agenda",
-  "version": "4.0.13",
+  "version": "4.0.16",
   "description": "Light weight job scheduler for Node.js",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -32,7 +32,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/@hokify/agenda"
+    "url": "git://github.com/hokify/agenda"
   },
   "keywords": [
     "job",
@@ -45,7 +45,7 @@
   "author": "Ryan Schmukler <ryan@slingingcode.com> (http://slingingcode.com/)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/@hokify/agenda/issues"
+    "url": "https://github.com/hokify/agenda/issues"
   },
   "dependencies": {
     "cron": "~1.8.2",
