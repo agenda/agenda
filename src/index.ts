@@ -88,7 +88,8 @@ export class Agenda extends EventEmitter {
 
 		this.attrs = {
 			name: config.name || '',
-			processEvery: humanInterval(config.processEvery) || humanInterval('5 seconds'),
+			processEvery:
+				(config.processEvery && humanInterval(config.processEvery)) || humanInterval('5 seconds'),
 			defaultConcurrency: config.defaultConcurrency || 5,
 			maxConcurrency: config.maxConcurrency || 20,
 			defaultLockLimit: config.defaultLockLimit || 0,

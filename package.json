@@ -18,10 +18,10 @@
     "build": "tsc",
     "test": "npm run lint && npm run mocha",
     "lint": "eslint",
-    "mocha": "mocha -r ts-node/register --reporter spec --timeout 8000 -b",
-    "mocha-debug": "DEBUG=agenda:**,-agenda:internal:** mocha -r ts-node/register --reporter spec --timeout 8000 -b",
-    "mocha-debug-internal": "DEBUG=agenda:internal:** mocha -r ts-node/register --reporter spec --timeout 8000 -b",
-    "mocha-debug-all": "DEBUG=agenda:** mocha -r ts-node/register --reporter spec --timeout 8000 -b",
+    "mocha": "mocha -r ts-node/register --reporter spec -b",
+    "mocha-debug": "DEBUG=agenda:**,-agenda:internal:** mocha -r ts-node/register --reporter spec -b",
+    "mocha-debug-internal": "DEBUG=agenda:internal:** mocha -r ts-node/register --reporter spec -b",
+    "mocha-debug-all": "DEBUG=agenda:** mocha -r ts-node/register --reporter spec -b",
     "docs": "jsdoc --configure .jsdoc.json --verbose"
   },
   "config": {

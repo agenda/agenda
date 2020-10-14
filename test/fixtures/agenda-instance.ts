@@ -8,7 +8,8 @@ const agenda = new Agenda(
 	{
 		db: {
 			address: connStr
-		}
+		},
+		processEvery: 100
 	},
 	async () => {
 		tests.forEach(test => {

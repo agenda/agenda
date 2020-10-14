@@ -77,6 +77,7 @@ export class JobProcessor {
 	) {
 		log('creating interval to call processJobs every [%dms]', processEvery);
 		this.processInterval = setInterval(() => this.process(), processEvery);
+		this.process();
 	}
 
 	stop(): Job[] {
@@ -345,34 +346,33 @@ export class JobProcessor {
 		// Check if there is any job that is not blocked by concurrency
 		const job = this.jobQueue.returnNextConcurrencyFreeJob(this.jobStatus);
 
-		if (job) {
+		if (!job) {
+			log.extend('jobProcessing')('[%s:%s] there is no job to process');
+			return;
+		}
+
+		log.extend('jobProcessing')('[%s:%s] there is a job to process', job.attrs.name, job.attrs._id);
+
+		// If the 'nextRunAt' time is older than the current time, run the job
+		// Otherwise, setTimeout that gets called at the time of 'nextRunAt'
+		if (job.attrs.nextRunAt <= now) {
 			log.extend('jobProcessing')(
-				'[%s:%s] there is a job to process',
+				'[%s:%s] nextRunAt is in the past, run the job immediately',
 				job.attrs.name,
 				job.attrs._id
 			);
-
-			// If the 'nextRunAt' time is older than the current time, run the job
-			// Otherwise, setTimeout that gets called at the time of 'nextRunAt'
-			if (job.attrs.nextRunAt <= now) {
-				log.extend('jobProcessing')(
-					'[%s:%s] nextRunAt is in the past, run the job immediately',
-					job.attrs.name,
-					job.attrs._id
-				);
-				this.runOrRetry(job);
-			} else {
-				const runIn = job.attrs.nextRunAt.getTime() - now.getTime();
-				log.extend('jobProcessing')(
-					'[%s:%s] nextRunAt is in the future, calling setTimeout(%d)',
-					job.attrs.name,
-					job.attrs._id,
-					runIn
-				);
-				setTimeout(() => {
-					this.jobProcessing();
-				}, runIn);
-			}
+			this.runOrRetry(job);
+		} else {
+			const runIn = job.attrs.nextRunAt.getTime() - now.getTime();
+			log.extend('jobProcessing')(
+				'[%s:%s] nextRunAt is in the future, calling setTimeout(%d)',
+				job.attrs.name,
+				job.attrs._id,
+				runIn
+			);
+			setTimeout(() => {
+				this.jobProcessing();
+			}, runIn);
 		}
 	}
 
@@ -437,6 +437,11 @@ export class JobProcessor {
 				log.extend('runOrRetry')('[%s:%s] processing job', job.attrs.name, job.attrs._id);
 				// CALL THE ACTUAL METHOD TO PROCESS THE JOB!!!
 				await job.run();
+				log.extend('runOrRetry')(
+					'[%s:%s] processing job successfull',
+					job.attrs.name,
+					job.attrs._id
+				);
 
 				// Job isn't in running jobs so throw an error
 				if (!this.runningJobs.includes(job)) {
@@ -449,6 +454,12 @@ export class JobProcessor {
 					);
 				}
 			} catch (err) {
+				log.extend('runOrRetry')(
+					'[%s:%s] processing job failed',
+					job.attrs.name,
+					job.attrs._id,
+					err
+				);
 				job.agenda.emit('error', err);
 			} finally {
 				// Remove the job from the running queue
