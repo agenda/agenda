@@ -7,7 +7,8 @@ const tests = process.argv.slice(3);
 const agenda = new Agenda({
   db: {
     address: connStr
-  }
+  },
+  processEvery: 100
 }, async() => {
   tests.forEach(test => {
     addTests[test](agenda);
