@@ -1,15 +1,13 @@
-'use strict';
+import { Job } from './index';
 
 /**
  * Sets a job to repeat every X amount of time
  * @name Job#repeatEvery
  * @function
- * @param {String} interval repeat every X
- * @param {Object} options options to use for job
- * @returns {Job} instance of Job
+ * @param interval repeat every X
+ * @param options options to use for job
  */
-module.exports = function(interval, options) {
-  options = options || {};
+export const repeatEvery = function(this: Job, interval: string | number, options: any = {}): Job {
   this.attrs.repeatInterval = interval;
   this.attrs.repeatTimezone = options.timezone ? options.timezone : null;
   if (options.skipImmediate) {

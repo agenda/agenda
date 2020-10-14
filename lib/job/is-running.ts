@@ -1,4 +1,4 @@
-'use strict';
+import { Job } from './index';
 
 /**
  * A job is running if:
@@ -7,9 +7,9 @@
  * (lastRunAt exists AND lastFinishedAt exists but the lastRunAt is newer [in time] than lastFinishedAt)
  * @name Job#isRunning
  * @function
- * @returns {Boolean} Whether or not job is running at the moment (true for running)
+ * @returns Whether or not job is running at the moment (true for running)
  */
-module.exports = function() {
+export const isRunning = function(this: Job): Boolean {
   if (!this.attrs.lastRunAt) {
     return false;
   }

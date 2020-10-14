@@ -1,17 +1,18 @@
-'use strict';
-const {MongoClient} = require('mongodb');
-const debug = require('debug')('agenda:database');
-const hasMongoProtocol = require('./has-mongo-protocol');
+import { MongoClient } from 'mongodb';
+import createDebugger from 'debug';
+import { hasMongoProtocol } from './has-mongo-protocol';
+import { Agenda } from './index';
+
+const debug = createDebugger('agenda:database');
 
 /**
  * Connect to the spec'd MongoDB server and database.
  * @name Agenda#database
  * @function
- * @param {String} url MongoDB server URI
- * @param {String} collection name of collection to use. Defaults to `agendaJobs`
- * @param {Object} options options for connecting
- * @param {Function} cb callback of MongoDB connection
- * @returns {exports}
+ * @param url MongoDB server URI
+ * @param collection name of collection to use. Defaults to `agendaJobs`
+ * @param options options for connecting
+ * @param cb callback of MongoDB connection
  * NOTE:
  * If `url` includes auth details then `options` must specify: { 'uri_decode_auth': true }. This does Auth on
  * the specified database, not the Admin database. If you are using Auth on the Admin DB and not on the Agenda DB,
@@ -19,16 +20,17 @@ const hasMongoProtocol = require('./has-mongo-protocol');
  * or use Agenda.mongo(). If your app already has a MongoDB connection then use that. ie. specify config.mongo in
  * the constructor or use Agenda.mongo().
  */
-module.exports = function(url, collection, options, cb) {
+export const database = function(this: Agenda, url: string, collection: string, options: any, cb?: Function) {
   const self = this;
   if (!hasMongoProtocol(url)) {
     url = 'mongodb://' + url;
   }
 
-  let reconnectOptions = {autoReconnect: true, reconnectTries: Number.MAX_SAFE_INTEGER, reconnectInterval: this._processEvery};
-  if (options && options.useUnifiedTopology && options.useUnifiedTopology === true) {
-    reconnectOptions = {};
-  }
+  const reconnectOptions = options?.useUnifiedTopology === true ? {} : {
+    autoReconnect: true,
+    reconnectTries: Number.MAX_SAFE_INTEGER,
+    reconnectInterval: this._processEvery
+  };
 
   collection = collection || 'agendaJobs';
   options = {...reconnectOptions, ...options};

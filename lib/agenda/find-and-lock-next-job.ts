@@ -1,18 +1,19 @@
-'use strict';
-const debug = require('debug')('agenda:internal:_findAndLockNextJob');
-const {createJob} = require('../utils');
+import createDebugger from 'debug';
+import { createJob } from '../utils';
+import { Agenda } from './index';
+
+const debug = createDebugger('agenda:internal:_findAndLockNextJob');
 
 /**
  * Find and lock jobs
  * @name Agenda#findAndLockNextJob
  * @function
- * @param {String} jobName name of job to try to lock
- * @param {Object} definition definition used to tell how job is run
+ * @param jobName name of job to try to lock
+ * @param definition definition used to tell how job is run
  * @access protected
  * @caller jobQueueFilling() only
- * @returns Promise
  */
-module.exports = async function(jobName, definition) {
+export const findAndLockNextJob = async function(this: Agenda, jobName: string, definition: any) {
   const self = this;
   const now = new Date();
   const lockDeadline = new Date(Date.now().valueOf() - definition.lockLifetime);
@@ -20,6 +21,7 @@ module.exports = async function(jobName, definition) {
 
   // Don't try and access MongoDB if we've lost connection to it.
   // Trying to resolve crash on Dev PC when it resumes from sleep. NOTE: Does this still happen?
+  // @ts-expect-error
   const s = this._mdb.s || this._mdb.db.s;
   if (s.topology.connections && s.topology.connections().length === 0 && !this._mongoUseUnifiedTopology) {
     if (s.topology.autoReconnect && !s.topology.isDestroyed()) {

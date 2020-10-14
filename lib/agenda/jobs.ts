@@ -1,17 +1,17 @@
-'use strict';
-const {createJob} = require('../utils');
+import { Agenda } from './index';
+import { createJob } from '../utils';
 
 /**
  * Finds all jobs matching 'query'
  * @name Agenda#jobs
  * @function
- * @param {Object} query object for MongoDB
- * @param {Object} sort object for MongoDB
- * @param {Number} limit number of documents to return from MongoDB
- * @param {Number} number of documents to skip in MongoDB
- * @returns {Promise} resolves when fails or passes
+ * @param query object for MongoDB
+ * @param sort object for MongoDB
+ * @param limit number of documents to return from MongoDB
+ * @param number of documents to skip in MongoDB
+ * @returns resolves when fails or passes
  */
-module.exports = async function(query = {}, sort = {}, limit = 0, skip = 0) {
+export const jobs = async function(this: Agenda, query = {}, sort = {}, limit = 0, skip = 0) {
   const result = await this._collection
     .find(query)
     .sort(sort)
@@ -19,5 +19,5 @@ module.exports = async function(query = {}, sort = {}, limit = 0, skip = 0) {
     .skip(skip)
     .toArray();
 
-  return result.map(job => createJob(this, job));
+  return result.map((job: any) => createJob(this, job));
 };

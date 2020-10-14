@@ -1,14 +1,15 @@
-'use strict';
-const debug = require('debug')('agenda:job');
+import createDebugger from 'debug';
+import { Job } from './index';
+
+const debug = createDebugger('agenda:job');
 
 /**
  * Fails the job with a reason (error) specified
  * @name Job#fail
  * @function
- * @param {Error|String} reason reason job failed
- * @returns {exports} instance of Job
+ * @param reason reason job failed
  */
-module.exports = function(reason) {
+export const fail = function(this: Job, reason: string | Error): Job {
   if (reason instanceof Error) {
     reason = reason.message;
   }

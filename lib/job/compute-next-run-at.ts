@@ -1,24 +1,26 @@
-'use strict';
-const humanInterval = require('human-interval');
-const {CronTime} = require('cron');
-const moment = require('moment-timezone');
-const date = require('date.js');
-const debug = require('debug')('agenda:job');
+import { Job } from './index';
+import { CronTime } from 'cron';
+import humanInterval from 'human-interval';
+import createDebugger from 'debug';
+import moment from 'moment-timezone';
+// @ts-expect-error
+import date from 'date.js';
+
+const debug = createDebugger('agenda:job');
 
 /**
  * Internal method used to compute next time a job should run and sets the proper values
  * @name Job#computeNextRunAt
  * @function
- * @returns {exports} instance of Job instance
  */
-module.exports = function() {
+export const computeNextRunAt = function(this: Job) {
   const interval = this.attrs.repeatInterval;
   const timezone = this.attrs.repeatTimezone;
   const {repeatAt} = this.attrs;
   const previousNextRunAt = this.attrs.nextRunAt || new Date();
   this.attrs.nextRunAt = undefined;
 
-  const dateForTimezone = date => {
+  const dateForTimezone = (date: any) => {
     date = moment(date);
     if (timezone !== null) {
       date.tz(timezone);
@@ -29,7 +31,6 @@ module.exports = function() {
 
   /**
    * Internal method that computes the interval
-   * @returns {undefined}
    */
   const computeFromInterval = () => {
     debug('[%s:%s] computing next run via interval [%s]', this.attrs.name, this.attrs._id, interval);
@@ -37,9 +38,11 @@ module.exports = function() {
     lastRun = dateForTimezone(lastRun);
     try {
       const cronTime = new CronTime(interval);
+      // @ts-expect-error
       let nextDate = cronTime._getNextDateFrom(lastRun);
       if (nextDate.valueOf() === lastRun.valueOf() || nextDate.valueOf() <= previousNextRunAt.valueOf()) {
         // Handle cronTime giving back the same date for the next run time
+        // @ts-expect-error
         nextDate = cronTime._getNextDateFrom(dateForTimezone(new Date(lastRun.valueOf() + 1000)));
       }
 
@@ -69,9 +72,8 @@ module.exports = function() {
 
   /**
    * Internal method to compute next run time from the repeat string
-   * @returns {undefined}
    */
-  function computeFromRepeatAt() {
+  const computeFromRepeatAt = () => {
     const lastRun = this.attrs.lastRunAt || new Date();
     const nextDate = date(repeatAt).valueOf();
 
@@ -88,12 +90,12 @@ module.exports = function() {
       this.attrs.nextRunAt = date(repeatAt);
       debug('[%s:%s] nextRunAt set to [%s]', this.attrs.name, this.attrs._id, this.attrs.nextRunAt.toISOString());
     }
-  }
+  };
 
   if (interval) {
-    computeFromInterval.call(this);
+    computeFromInterval();
   } else if (repeatAt) {
-    computeFromRepeatAt.call(this);
+    computeFromRepeatAt();
   }
 
   return this;

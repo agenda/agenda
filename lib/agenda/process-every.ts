@@ -1,16 +1,19 @@
-'use strict';
-const humanInterval = require('human-interval');
-const debug = require('debug')('agenda:processEvery');
+import createDebugger from 'debug';
+import humanInterval from 'human-interval';
+import { Agenda } from './index';
+
+
+const debug = createDebugger('agenda:processEvery');
 
 /**
  * Set the default process interval
  * @name Agenda#processEvery
  * @function
- * @param {Number|String} time - time to process, expressed in human interval
- * @returns {exports} agenda instance
+ * @param time - time to process, expressed in human interval
  */
-module.exports = function(time) {
+export const processEvery = function(this: Agenda, time: string): Agenda {
   debug('Agenda.processEvery(%d)', time);
+  // @ts-expect-error
   this._processEvery = humanInterval(time);
   return this;
 };

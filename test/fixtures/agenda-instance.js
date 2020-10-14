@@ -1,4 +1,4 @@
-const Agenda = require('../..');
+const { Agenda } = require('../../dist');
 const addTests = require('./add-tests');
 
 const connStr = process.argv[2];

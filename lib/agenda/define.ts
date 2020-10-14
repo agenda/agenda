@@ -1,17 +1,18 @@
-'use strict';
-const debug = require('debug')('agenda:define');
+import { Agenda } from './index';
+import createDebugger from 'debug';
+
+const debug = createDebugger('agenda:define');
 
 /**
  * Setup definition for job
  * Method is used by consumers of lib to setup their functions
  * @name Agenda#define
  * @function
- * @param {String} name name of job
- * @param {Object} options options for job to run
- * @param {Function} processor function to be called to run actual job
- * @returns {undefined}
+ * @param name name of job
+ * @param options options for job to run
+ * @param processor function to be called to run actual job
  */
-module.exports = function(name, options, processor) {
+export const define = function(this: Agenda, name: string, options: any, processor: Function) {
   if (!processor) {
     processor = options;
     options = {};

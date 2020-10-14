@@ -1,15 +1,16 @@
-'use strict';
-const debug = require('debug')('agenda:job');
+import createDebugger from 'debug';
+import { Job } from './index';
+
+const debug = createDebugger('agenda:job');
 
 /**
  * Internal method (RUN)
  * @name Job#run
  * @function
- * @returns {Promise} Resolves when job persistence in MongoDB fails or passes
  */
-module.exports = function() {
+export const run = function(this: Job): Promise<Job> {
   const self = this;
-  const {agenda} = self;
+  const { agenda } = self;
   const definition = agenda._definitions[self.attrs.name];
 
   // @TODO: this lint issue should be looked into: https://eslint.org/docs/rules/no-async-promise-executor
@@ -21,7 +22,7 @@ module.exports = function() {
     await self.save();
 
     let finished = false;
-    const jobCallback = async err => {
+    const jobCallback = async (error?: Error) => {
       // We don't want to complete the job multiple times
       if (finished) {
         return;
@@ -29,24 +30,24 @@ module.exports = function() {
 
       finished = true;
 
-      if (err) {
-        self.fail(err);
+      if (error) {
+        self.fail(error);
       } else {
         self.attrs.lastFinishedAt = new Date();
       }
 
       self.attrs.lockedAt = null;
 
-      await self.save().catch(error => {
+      await self.save().catch((error: Error) => {
         debug('[%s:%s] failed to be saved to MongoDB', self.attrs.name, self.attrs._id);
         reject(error);
       });
       debug('[%s:%s] was saved successfully to MongoDB', self.attrs.name, self.attrs._id);
 
-      if (err) {
-        agenda.emit('fail', err, self);
-        agenda.emit('fail:' + self.attrs.name, err, self);
-        debug('[%s:%s] has failed [%s]', self.attrs.name, self.attrs._id, err.message);
+      if (error) {
+        agenda.emit('fail', error, self);
+        agenda.emit('fail:' + self.attrs.name, error, self);
+        debug('[%s:%s] has failed [%s]', self.attrs.name, self.attrs._id, error.message);
       } else {
         agenda.emit('success', self);
         agenda.emit('success:' + self.attrs.name, self);
