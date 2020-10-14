@@ -1,12 +1,11 @@
-'use strict';
+import { Job } from './index';
 
 /**
  * Prevents the job type from running
  * @name Job#disable
  * @function
- * @returns {exports} instance of Job
  */
-module.exports = function() {
+export const disable = function(this: Job): Job {
   this.attrs.disabled = true;
   return this;
 };

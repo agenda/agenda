@@ -1,19 +1,21 @@
-'use strict';
-const debug = require('debug')('agenda:stop');
+import createDebugger from 'debug';
+import { Agenda } from './index';
+
+const debug = createDebugger('agenda:stop');
 
 /**
  * Clear the interval that processes the jobs
  * @name Agenda#stop
  * @function
- * @returns {Promise} resolves when job unlocking fails or passes
+ * @returns resolves when job unlocking fails or passes
  */
-module.exports = function() {
+export const stop = function(this: Agenda): Promise<any> {
   const self = this;
   /**
    * Internal method to unlock jobs so that they can be re-run
    * NOTE: May need to update what properties get set here, since job unlocking seems to fail
    * @access private
-   * @returns {Promise} resolves when job unlocking fails or passes
+   * @returns resolves when job unlocking fails or passes
    */
   const _unlockJobs = function() {
     return new Promise((resolve, reject) => {
@@ -26,9 +28,9 @@ module.exports = function() {
       }
 
       debug('about to unlock jobs with ids: %O', jobIds);
-      self._collection.updateMany({_id: {$in: jobIds}}, {$set: {lockedAt: null}}, err => {
-        if (err) {
-          return reject(err);
+      self._collection.updateMany({_id: {$in: jobIds}}, {$set: {lockedAt: null}}, (error: Error) => {
+        if (error) {
+          return reject(error);
         }
 
         self._lockedJobs = [];

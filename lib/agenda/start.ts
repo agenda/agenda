@@ -1,15 +1,17 @@
-'use strict';
-const debug = require('debug')('agenda:start');
-const {processJobs} = require('../utils');
+import createDebugger from 'debug';
+import { Agenda } from './index';
+import { processJobs } from '../utils';
+
+const debug = createDebugger('agenda:start');
 
 /**
  * Starts processing jobs using processJobs() methods, storing an interval ID
  * This method will only resolve if a db has been set up beforehand.
  * @name Agenda#start
  * @function
- * @returns {Promise} resolves if db set beforehand, returns undefined otherwise
+ * @returns resolves if db set beforehand, returns undefined otherwise
  */
-module.exports = async function() {
+export const start = async function(this: Agenda) {
   if (this._processInterval) {
     debug('Agenda.start was already called, ignoring');
     return this._ready;

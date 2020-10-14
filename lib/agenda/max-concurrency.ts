@@ -1,15 +1,17 @@
-'use strict';
-const debug = require('debug')('agenda:maxConcurrency');
+import createDebugger from 'debug';
+import { Agenda } from './index';
+
+const debug = createDebugger('agenda:maxConcurrency');
 
 /**
  * Set the concurrency for jobs (globally), type does not matter
  * @name Agenda#maxConcurrency
  * @function
- * @param {Number} num max concurrency value
- * @returns {exports} agenda instance
+ * @param concurrency max concurrency value
+ * @returns agenda instance
  */
-module.exports = function(num) {
-  debug('Agenda.maxConcurrency(%d)', num);
-  this._maxConcurrency = num;
+export const maxConcurrency = function(this: Agenda, concurrency: number) {
+  debug('Agenda.maxConcurrency(%d)', concurrency);
+  this._maxConcurrency = concurrency;
   return this;
 };

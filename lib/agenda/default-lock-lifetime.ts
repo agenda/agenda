@@ -1,5 +1,7 @@
-'use strict';
-const debug = require('debug')('agenda:defaultLockLifetime');
+import { Agenda } from './index';
+import createDebugger from 'debug';
+
+const debug = createDebugger('agenda:defaultLockLifetime');
 
 /**
  * Set the default lock time (in ms)
@@ -7,9 +9,8 @@ const debug = require('debug')('agenda:defaultLockLifetime');
  * @name Agenda#defaultLockLifetime
  * @function
  * @param {Number} ms time in ms to set default lock
- * @returns {Agenda} agenda instance
  */
-module.exports = function(ms) {
+export const defaultLockLifetime = function(this: Agenda, ms: number): Agenda {
   debug('Agenda.defaultLockLifetime(%d)', ms);
   this._defaultLockLifetime = ms;
   return this;

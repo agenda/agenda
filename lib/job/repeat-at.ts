@@ -1,13 +1,12 @@
-'use strict';
+import { Job } from './index';
 
 /**
  * Sets a job to repeat at a specific time
  * @name Job#repeatAt
  * @function
- * @param {String} time time to repeat job at (human readable or number)
- * @returns {exports} instance of Job
+ * @param time time to repeat job at (human readable or number)
  */
-module.exports = function(time) {
+export const repeatAt = function(this: Job, time: string): Job {
   this.attrs.repeatAt = time;
   return this;
 };

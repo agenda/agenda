@@ -1,14 +1,15 @@
-'use strict';
-const debug = require('debug')('agenda:name');
+import createDebugger from 'debug';
+import { Agenda } from './index';
+
+const debug = createDebugger('agenda:name');
 
 /**
  * Set name of queue
  * @name Agenda#name
  * @function
- * @param {String} name name of agenda instance
- * @returns {exports} agenda instance
+ * @param name name of agenda instance
  */
-module.exports = function(name) {
+export const name = function(this: Agenda, name: string) {
   debug('Agenda.name(%s)', name);
   this._name = name;
   return this;

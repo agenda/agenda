@@ -1,20 +1,20 @@
-'use strict';
-const debug = require('debug')('agenda:now');
-const noCallback = require('../no-callback');
+import createDebugger from 'debug';
+import { Agenda } from './index';
+import { Job } from '../job';
+
+const debug = createDebugger('agenda:now');
 
 /**
  * Create a job for this exact moment
  * @name Agenda#now
  * @function
- * @param {String} name name of job to schedule
- * @param {Object} data data to pass to job
- * @returns {Promise} resolves with the new job instance created
+ * @param name name of job to schedule
+ * @param data data to pass to job
  */
-module.exports = async function(name, data) {
+export const now = async function(this: Agenda, name: string, data: any): Promise<Job> {
   debug('Agenda.now(%s, [Object])', name);
   try {
     // eslint-disable-next-line prefer-rest-params
-    noCallback(arguments, 2);
     const job = this.create(name, data);
 
     job.schedule(new Date());

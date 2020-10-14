@@ -1,13 +1,15 @@
-'use strict';
-const debug = require('debug')('agenda:purge');
+import createDebugger from 'debug';
+import { Agenda } from './index';
+
+const debug = createDebugger('agenda:purge');
 
 /**
  * Removes all jobs from queue
  * @name Agenda#purge
  * @function
- * @returns {Promise} resolved when job cancelling fails or passes
+ * @returns resolved when job cancelling fails or passes
  */
-module.exports = async function() {
+export const purge = async function(this: Agenda) {
   // @NOTE: Only use after defining your jobs
   const definedNames = Object.keys(this._definitions);
   debug('Agenda.purge(%o)', definedNames);

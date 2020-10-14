@@ -1,7 +1,3 @@
-const createJob = require('./create-job');
-const processJobs = require('./process-jobs');
-
-module.exports = {
-  createJob,
-  processJobs
-};
+export * from './create-job';
+export * from './parse-priority';
+export * from './process-jobs';

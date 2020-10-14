@@ -2,7 +2,7 @@
 'use strict';
 const delay = require('delay');
 const {MongoClient} = require('mongodb');
-const Agenda = require('..');
+const { Agenda } = require('../dist');
 
 const mongoHost = process.env.MONGODB_HOST || 'localhost';
 const mongoPort = process.env.MONGODB_PORT || '27017';

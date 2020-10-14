@@ -1,5 +1,5 @@
-'use strict';
-const Job = require('../job');
+import { Agenda } from '../agenda';
+import { Job } from '../job';
 
 /**
  * Create Job object from data
@@ -7,7 +7,7 @@ const Job = require('../job');
  * @param {Object} jobData job data
  * @returns {Job} returns created job
  */
-module.exports = (agenda, jobData) => {
+export const createJob = (agenda: Agenda, jobData: any) => {
   jobData.agenda = agenda;
   return new Job(jobData);
 };

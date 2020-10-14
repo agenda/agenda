@@ -1,16 +1,18 @@
-'use strict';
-const debug = require('debug')('agenda:saveJob');
-const {processJobs} = require('../utils');
+import createDebugger from 'debug';
+import { Agenda } from './index';
+import { Job } from '../job';
+import { processJobs } from '../utils';
+
+const debug = createDebugger('agenda:saveJob');
 
 /**
  * Given a result for findOneAndUpdate() or insert() above, determine whether to process
  * the job immediately or to let the processJobs() interval pick it up later
- * @param {Job} job job instance
- * @param {*} result the data returned from the findOneAndUpdate() call or insertOne() call
+ * @param job job instance
+ * @param result the data returned from the findOneAndUpdate() call or insertOne() call
  * @access private
- * @returns {undefined}
  */
-const processDbResult = (job, result) => {
+const processDbResult = function(this: Agenda, job: Job, result: any) {
   debug('processDbResult() called with success, checking whether to process job immediately or not');
 
   // We have a result from the above calls
@@ -41,10 +43,10 @@ const processDbResult = (job, result) => {
  * Save the properties on a job to MongoDB
  * @name Agenda#saveJob
  * @function
- * @param {Job} job job to save into MongoDB
- * @returns {Promise} resolves when job is saved or errors
+ * @param job job to save into MongoDB
+ * @returns resolves when job is saved or errors
  */
-module.exports = async function(job) {
+export const saveJob = async function(this: Agenda, job: Job): Promise<any> {
   try {
     debug('attempting to save a job into Agenda instance');
 
@@ -78,7 +80,7 @@ module.exports = async function(job) {
         update,
         {returnOriginal: false}
       );
-      return processDbResult(job, result);
+      return processDbResult.call(this, job, result);
     }
 
     if (props.type === 'single') {
@@ -90,12 +92,14 @@ module.exports = async function(job) {
       // a scheduled job's next run time!
       if (props.nextRunAt && props.nextRunAt <= now) {
         debug('job has a scheduled nextRunAt time, protecting that field from upsert');
+        // @ts-expect-error
         protect.nextRunAt = props.nextRunAt;
         delete props.nextRunAt;
       }
 
       // If we have things to protect, set them in MongoDB using $setOnInsert
       if (Object.keys(protect).length > 0) {
+        // @ts-expect-error
         update.$setOnInsert = protect;
       }
 
@@ -110,7 +114,7 @@ module.exports = async function(job) {
         upsert: true,
         returnOriginal: false
       });
-      return processDbResult(job, result);
+      return processDbResult.call(this, job, result);
     }
 
     if (unique) {
@@ -118,19 +122,20 @@ module.exports = async function(job) {
       const query = job.attrs.unique;
       query.name = props.name;
       if (uniqueOpts && uniqueOpts.insertOnly) {
+        // @ts-expect-error
         update = {$setOnInsert: props};
       }
 
       // Use the 'unique' query object to find an existing job or create a new one
       debug('calling findOneAndUpdate() with unique object as query: \n%O', query);
       const result = await this._collection.findOneAndUpdate(query, update, {upsert: true, returnOriginal: false});
-      return processDbResult(job, result);
+      return processDbResult.call(this, job, result);
     }
 
     // If all else fails, the job does not exist yet so we just insert it into MongoDB
     debug('using default behavior, inserting new job via insertOne() with props that were set: \n%O', props);
     const result = await this._collection.insertOne(props);
-    return processDbResult(job, result);
+    return processDbResult.call(this, job, result);
   } catch (error) {
     debug('processDbResult() received an error, job was not updated/created');
     throw error;

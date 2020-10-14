@@ -1,17 +1,15 @@
-'use strict';
-const date = require('date.js');
+// @ts-expect-error
+import date from 'date.js';
+import { Job } from './index';
 
 /**
  * Schedules a job to run at specified time
  * @name Job#schedule
  * @function
- * @param {String} time schedule a job to run "then"
- * @returns {exports} instance of Job
+ * @param time schedule a job to run "then"
  */
-module.exports = function(time) {
+export const schedule = function(this: Job, time: string | Date): Job {
   const d = new Date(time);
-
   this.attrs.nextRunAt = Number.isNaN(d.getTime()) ? date(time) : d;
-
   return this;
 };

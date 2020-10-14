@@ -1,9 +1,9 @@
-# Run tests in Docker `docker-compose up` on Node.js v4
+# Run tests in Docker `docker-compose up` on Node.js v14
 # - install node deps first `docker-compose run agenda npm install`
 version: "3"
 services:
   agenda:
-    image: node:10
+    image: node:14
     command: npm test
     working_dir: /usr/src/app
     volumes:

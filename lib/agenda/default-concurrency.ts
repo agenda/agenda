@@ -1,15 +1,16 @@
-'use strict';
-const debug = require('debug')('agenda:defaultConcurrency');
+import { Agenda } from './index';
+import createDebugger from 'debug';
+
+const debug = createDebugger('agenda:defaultConcurrency');
 
 /**
  * Set the default concurrency for each job
  * @name Agenda#defaultConcurrency
  * @function
- * @param {Number} num default concurrency
- * @returns {exports} agenda instance
+ * @param concurrency default concurrency
  */
-module.exports = function(num) {
-  debug('Agenda.defaultConcurrency(%d)', num);
-  this._defaultConcurrency = num;
+export const defaultConcurrency = function(this: Agenda, concurrency: number): Agenda {
+  debug('Agenda.defaultConcurrency(%d)', concurrency);
+  this._defaultConcurrency = concurrency;
   return this;
 };

@@ -1,26 +1,29 @@
-'use strict';
-const debug = require('debug')('agenda:schedule');
+import createDebugger from 'debug';
+import { Agenda } from './index';
+import { Job } from '../job';
+
+const debug = createDebugger('agenda:schedule');
 
 /**
  * Schedule a job or jobs at a specific time
  * @name Agenda#schedule
  * @function
- * @param {String} when when the job gets run
- * @param {Array<String>} names array of job names to run
- * @param {Object} data data to send to job
- * @returns {Promise<Job|Job[]>} job or jobs created
+ * @param when when the job gets run
+ * @param names array of job names to run
+ * @param data data to send to job
+ * @returns job or jobs created
  */
-module.exports = function(when, names, data) {
+export const schedule = function(this: Agenda, when: string, names: string[], data: object) {
   const self = this;
 
   /**
    * Internal method that creates a job with given date
-   * @param {String} when when the job gets run
-   * @param {String} name of job to run
-   * @param {Object} data data to send to job
-   * @returns {Job} instance of new job
+   * @param when when the job gets run
+   * @param name of job to run
+   * @param data data to send to job
+   * @returns instance of new job
    */
-  const createJob = async(when, name, data) => {
+  const createJob = async(when: string, name: string, data: object): Promise<Job> => {
     const job = self.create(name, data);
 
     await job.schedule(when).save();
@@ -30,12 +33,12 @@ module.exports = function(when, names, data) {
 
   /**
    * Internal helper method that calls createJob on a names array
-   * @param {String} when when the job gets run
-   * @param {*} names of jobs to run
-   * @param {Object} data data to send to job
-   * @returns {Array<Job>} jobs that were created
+   * @param when when the job gets run
+   * @param of jobs to run
+   * @param data data to send to job
+   * @returns jobs that were created
    */
-  const createJobs = async(when, names, data) => {
+  const createJobs = async(when: string, names: string[], data: object): Promise<Job[]> => {
     try {
       const jobs = await Promise.all(names.map(name => createJob(when, name, data)));
       debug('Agenda.schedule()::createJobs() -> all jobs created successfully');
@@ -46,7 +49,7 @@ module.exports = function(when, names, data) {
     }
   };
 
-  if (typeof names === 'string' || names instanceof String) {
+  if (typeof names === 'string') {
     debug('Agenda.schedule(%s, %O, [%O], cb)', when, names);
     return createJob(when, names, data);
   }

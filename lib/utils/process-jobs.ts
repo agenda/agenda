@@ -1,15 +1,15 @@
-'use strict';
-// @TODO: What should we use for internal util functions?
-//        Maybe we should use agenda:util:processJobs which would move agenda:* to agenda:agenda;*
-const debug = require('debug')('agenda:internal:processJobs');
-const createJob = require('./create-job');
+import createDebugger from 'debug';
+import { createJob } from './create-job';
+import { Job } from '../job';
+import { Agenda } from '../agenda';
+
+const debug = createDebugger('agenda:internal:processJobs');
 
 /**
  * Process methods for jobs
  * @param {Job} extraJob job to run immediately
- * @returns {undefined}
  */
-module.exports = function(extraJob) {
+export const processJobs = function(this: Agenda, extraJob: Job) {
   debug('starting to process jobs');
   // Make sure an interval has actually been set
   // Prevents race condition with 'Agenda.stop' and already scheduled run
@@ -43,10 +43,10 @@ module.exports = function(extraJob) {
    * Returns true if a job of the specified name can be locked.
    * Considers maximum locked jobs at any time if self._lockLimit is > 0
    * Considers maximum locked jobs of the specified name at any time if jobDefinition.lockLimit is > 0
-   * @param {String} name name of job to check if we should lock or not
-   * @returns {boolean} whether or not you should lock job
+   * @param name name of job to check if we should lock or not
+   * @returns whether or not you should lock job
    */
-  function shouldLock(name) {
+  function shouldLock(name: string): boolean {
     const jobDefinition = definitions[name];
     let shouldLock = true;
     if (self._lockLimit && self._lockLimit <= self._lockedJobs.length) {
@@ -63,16 +63,14 @@ module.exports = function(extraJob) {
 
   /**
    * Internal method that adds jobs to be processed to the local queue
-   * @param {*} jobs Jobs to queue
-   * @param {boolean} inFront puts the job in front of queue if true
-   * @returns {undefined}
+   * @param jobs Jobs to queue
    */
-  function enqueueJobs(jobs) {
+  function enqueueJobs(jobs: any[] | any) {
     if (!Array.isArray(jobs)) {
       jobs = [jobs];
     }
 
-    jobs.forEach(job => {
+    jobs.forEach((job: any) => {
       jobQueue.insert(job);
     });
   }
@@ -81,7 +79,6 @@ module.exports = function(extraJob) {
    * Internal method that will lock a job and store it on MongoDB
    * This method is called when we immediately start to process a job without using the process interval
    * We do this because sometimes jobs are scheduled but will be run before the next process time
-   * @returns {undefined}
    */
   async function lockOnTheFly() {
     // Already running this? Return
@@ -102,7 +99,8 @@ module.exports = function(extraJob) {
 
     // Grab a job that needs to be locked
     const now = new Date();
-    const job = self._jobsToLock.pop();
+    // @todo: We should check if job exists
+    const job = self._jobsToLock.pop()!;
 
     // If locking limits have been hit, stop locking on the fly.
     // Jobs that were waiting to be locked will be picked up during a
@@ -150,7 +148,7 @@ module.exports = function(extraJob) {
    * @param {String} name fill a queue with specific job name
    * @returns {undefined}
    */
-  async function jobQueueFilling(name) {
+  async function jobQueueFilling(name: string) {
     // Don't lock because of a limit we have set (lockLimit, etc)
     if (!shouldLock(name)) {
       debug('lock limit reached in queue filling for [%s]', name);
@@ -206,6 +204,7 @@ module.exports = function(extraJob) {
       debug('[%s:%s] nextRunAt is in the past, run the job immediately', job.attrs.name, job.attrs._id);
       runOrRetry();
     } else {
+      // @ts-expect-error
       const runIn = job.attrs.nextRunAt - now;
       debug('[%s:%s] nextRunAt is in the future, calling setTimeout(%d)', job.attrs.name, job.attrs._id, runIn);
       setTimeout(jobProcessing, runIn);
@@ -217,7 +216,8 @@ module.exports = function(extraJob) {
      */
     async function runOrRetry() {
       if (self._processInterval) {
-        const job = jobQueue.pop();
+        // @todo: We should check if job exists
+        const job = jobQueue.pop()!;
         const jobDefinition = definitions[job.attrs.name];
         if (jobDefinition.concurrency > jobDefinition.running && self._runningJobs.length < self._maxConcurrency) {
           // Get the deadline of when the job is not supposed to go past for locking
@@ -242,8 +242,9 @@ module.exports = function(extraJob) {
           debug('[%s:%s] processing job', job.attrs.name, job.attrs._id);
 
           job.run()
-            .catch(error => [error, job])
-            .then(job => processJobResult(...Array.isArray(job) ? job : [null, job])); // eslint-disable-line promise/prefer-await-to-then
+            .catch((error: Error) => [error, job])
+            // @ts-expect-error
+            .then((job: any) => processJobResult(...Array.isArray(job) ? job : [null, job])); // eslint-disable-line promise/prefer-await-to-then
         } else {
           // Run the job immediately by putting it on the top of the queue
           debug('[%s:%s] concurrency preventing immediate run, pushing job to top of queue', job.attrs.name, job.attrs._id);
@@ -256,12 +257,11 @@ module.exports = function(extraJob) {
   /**
    * Internal method used to run the job definition
    * @param {Error} err thrown if can't process job
-   * @param {module.Job} job job to process
-   * @returns {undefined}
+   * @param {Job} job job to process
    */
-  function processJobResult(err, job) {
-    if (err) {
-      return job.agenda.emit('error', err);
+  function processJobResult(error: Error, job: Job) {
+    if (error) {
+      return job.agenda.emit('error', error);
     }
 
     const {name} = job.attrs;

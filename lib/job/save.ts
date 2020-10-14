@@ -1,14 +1,11 @@
-'use strict';
-const noCallback = require('../no-callback');
+import { Job } from './index';
 
 /**
  * Saves a job into the MongoDB
  * @name Job#
  * @function
- * @returns {Promise} instance of Job resolved after job is saved or errors
+ * @returns instance of Job resolved after job is saved or errors
  */
-module.exports = function() {
-  // eslint-disable-next-line prefer-rest-params
-  noCallback(arguments);
+export const save = function(this: Job) {
   return this.agenda.saveJob(this);
 };
