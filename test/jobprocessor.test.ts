@@ -134,4 +134,43 @@ describe('JobProcessor', function () {
 
 		expect(promiseResult).to.not.be.an('error');
 	});
+
+	it('ensure concurrency is filled up', async () => {
+		agenda.maxConcurrency(300);
+		agenda.lockLimit(150);
+		agenda.defaultLockLimit(20);
+		agenda.defaultConcurrency(10);
+
+		for (let jobI = 0; jobI < 10; jobI++) {
+			agenda.define(
+				`test job ${jobI}`,
+				async job => {
+					await new Promise(resolve => setTimeout(resolve, 5000));
+				},
+				{ lockLifetime: 10000 }
+			);
+		}
+
+		// queue up jobs
+		for (let jobI = 0; jobI < 10; jobI++) {
+			for (let jobJ = 0; jobJ < 25; jobJ++) {
+				agenda.now(`test job ${jobI}`);
+			}
+		}
+
+		await agenda.start();
+
+		const allJobsStarted = new Promise(async resolve => {
+			let runningJobs = 0;
+			do {
+				runningJobs = (await agenda.getRunningStats()).runningJobs as number;
+				await new Promise(wait => setTimeout(wait, 50));
+			} while (runningJobs < 100);
+			resolve('all started');
+		});
+
+		expect(
+			await Promise.race([allJobsStarted, new Promise(resolve => setTimeout(resolve, 1500))])
+		).to.equal('all started');
+	});
 });

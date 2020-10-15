@@ -154,10 +154,8 @@ export class JobProcessor {
 			'job [%s] lock status: shouldLock = %s',
 			name,
 			shouldLock,
-			status?.locked,
-			this.jobQueue.length,
-			this.lockedJobs.length,
-			this.totalLockLimit
+			`${status?.locked} >= ${jobDefinition?.lockLimit}`,
+			`${this.lockedJobs.length} >= ${this.totalLockLimit}`
 		);
 		return shouldLock;
 	}
@@ -240,6 +238,8 @@ export class JobProcessor {
 					this.lockedJobs.push(jobToEnqueue);
 					this.enqueueJob(jobToEnqueue);
 					this.jobProcessing();
+				} else {
+					log.extend('lockOnTheFly')('cannot lock job [%s] on the fly', job.attrs.name);
 				}
 			}
 		} finally {
@@ -378,6 +378,9 @@ export class JobProcessor {
 				this.jobProcessing();
 			}, runIn);
 		}
+
+		// additionally run again and check if there are more jobs that we can process right now (as long concurrency not reached)
+		setImmediate(() => this.jobProcessing());
 	}
 
 	/**
@@ -437,8 +440,8 @@ export class JobProcessor {
 				log.extend('runOrRetry')('[%s:%s] processing job', job.attrs.name, job.attrs._id);
 
 				// check if the job is still alive
-				const checkIfJobIsDead = () => {
-					// check every processInterval
+				const checkIfJobIsStillAlive = () => {
+					// check every "this.agenda.definitions[job.attrs.name].lockLifetime"" (or at mininum every processEvery)
 					return new Promise((resolve, reject) =>
 						setTimeout(() => {
 							if (job.isDead()) {
@@ -456,13 +459,13 @@ export class JobProcessor {
 								resolve();
 								return;
 							}
-							resolve(checkIfJobIsDead());
-						}, this.processEvery)
+							resolve(checkIfJobIsStillAlive());
+						}, Math.max(this.processEvery, this.agenda.definitions[job.attrs.name].lockLifetime))
 					);
 				};
 
 				// CALL THE ACTUAL METHOD TO PROCESS THE JOB!!!
-				await Promise.race([job.run(), checkIfJobIsDead()]);
+				await Promise.race([job.run(), checkIfJobIsStillAlive()]);
 
 				log.extend('runOrRetry')(
 					'[%s:%s] processing job successfull',
