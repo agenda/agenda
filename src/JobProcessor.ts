@@ -451,6 +451,11 @@ export class JobProcessor {
 								);
 								return;
 							}
+							// when job is not running anymore, just finish
+							if (!job.isRunning()) {
+								resolve();
+								return;
+							}
 							resolve(checkIfJobIsDead());
 						}, this.processEvery)
 					);
