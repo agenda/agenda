@@ -185,6 +185,124 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
     });
   });
 
+  describe('config events', () => {
+    it('can provide onReady on setup', done => {
+      const agenda = new Agenda({
+        mongo,
+        events: {
+          ready: () => {
+            done();
+          }
+        }
+      });
+      expect(agenda._createIndex).to.equal(true);
+    });
+
+    it('can provide onIndexCreated on setup', done => {
+      const agenda = new Agenda({
+        mongo,
+        events: {
+          'index:created': () => {
+            done();
+          }
+        }
+      });
+      expect(agenda._createIndex).to.equal(true);
+    });
+  });
+
+  describe('create index', () => {
+    it('defaults should create index', done => {
+      let indexCreated = false;
+
+      const agenda = new Agenda({mongo});
+      expect(agenda._createIndex).to.equal(true);
+
+      agenda.on('index:created', result => {
+        expect(result).to.not.be.empty();
+        indexCreated = true;
+      });
+
+      agenda.on('ready', () => {
+        expect(indexCreated).to.be.equal(true);
+        done();
+      });
+    });
+
+    describe('when disabled on startup', () => {
+      it('does not create index', async () => {
+        let indexCreated = false;
+        let readyCalled = false;
+
+        const agenda = new Agenda({
+          mongo,
+          index: false,
+          events: {
+            ready: () => {
+              readyCalled = true;
+              expect(indexCreated).to.equal(false);
+            }
+          }
+        });
+        expect(agenda._createIndex).to.equal(false);
+
+        agenda.on('index:created', () => {
+          indexCreated = true;
+        });
+
+        await delay(jobTimeout);
+
+        expect(indexCreated).to.equal(false);
+        expect(readyCalled).to.equal(true);
+      });
+
+      it('returns if called directly', async () => {
+        const agenda = new Agenda({
+          mongo,
+          index: false
+        });
+
+        await agenda.createIndex();
+      });
+
+      it('sends index:created if called directly', async () => {
+        let indexCreated = false;
+
+        const agenda = new Agenda({
+          mongo,
+          index: false
+        });
+
+        agenda.on('index:created', result => {
+          expect(result).to.not.be.empty();
+          indexCreated = true;
+        });
+
+        await agenda.createIndex();
+
+        expect(indexCreated).to.equal(true);
+      });
+    });
+
+    it('can be called even if already called', done => {
+      const agenda = new Agenda({mongo});
+
+      let indexCreated = 0;
+
+      agenda.on('index:created', result => {
+        expect(result).to.not.be.empty();
+
+        if (++indexCreated > 1) {
+          done();
+        }
+      });
+
+      agenda.on('ready', () => {
+        agenda.createIndex();
+      });
+    });
+  });
+
   describe('job methods', () => {
     describe('create', () => {
       let job;
