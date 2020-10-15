@@ -256,7 +256,9 @@ export class JobProcessor {
 		definition: IJobDefinition
 	): Promise<Job | undefined> {
 		const lockDeadline = new Date(Date.now().valueOf() - definition.lockLifetime);
-		log.extend('findAndLockNextJob')('findAndLockNextJob(%s, [Function])', jobName);
+		log.extend('findAndLockNextJob')(
+			`looking for lockable jobs for ${jobName} (lock dead line = ${lockDeadline})`
+		);
 
 		// Find ONE and ONLY ONE job and set the 'lockedAt' time so that job begins to be processed
 		const result = await this.agenda.db.getNextJobToRun(jobName, this.nextScanAt, lockDeadline);
@@ -325,6 +327,8 @@ export class JobProcessor {
 				this.enqueueJob(job);
 				await this.jobQueueFilling(name);
 				// this.jobProcessing();
+			} else {
+				log.extend('jobQueueFilling')('Cannot lock job [%s]', name);
 			}
 		} catch (error) {
 			log.extend('jobQueueFilling')('[%s] job lock failed while filling queue', name, error);
@@ -400,13 +404,9 @@ export class JobProcessor {
 			(!jobDefinition.concurrency || !status || status.running < jobDefinition.concurrency) &&
 			this.runningJobs.length < this.maxConcurrency
 		) {
-			// Get the deadline of when the job is not supposed to go past for locking
-			const lockDeadline = new Date(Date.now() - jobDefinition.lockLifetime);
-
-			// This means a job has "expired", as in it has not been "touched" within the lockoutTime
-			// Remove from local lock
 			// NOTE: Shouldn't we update the 'lockedAt' value in MongoDB so it can be picked up on restart?
-			if (job.attrs.lockedAt && job.attrs.lockedAt < lockDeadline) {
+			// -> not needed, as the timeout has been reached, and it will be picked up anyways again
+			if (job.isDead()) {
 				log.extend('runOrRetry')(
 					'[%s:%s] job lock has expired, freeing it up',
 					job.attrs.name,
@@ -435,8 +435,30 @@ export class JobProcessor {
 
 			try {
 				log.extend('runOrRetry')('[%s:%s] processing job', job.attrs.name, job.attrs._id);
+
+				// check if the job is still alive
+				const checkIfJobIsDead = () => {
+					// check every processInterval
+					return new Promise((resolve, reject) =>
+						setTimeout(() => {
+							if (job.isDead()) {
+								reject(
+									new Error(
+										`execution of '${job.attrs.name}' canceled, execution took more than ${
+											this.agenda.definitions[job.attrs.name].lockLifetime
+										}ms. Call touch() for long running jobs to keep them alive.`
+									)
+								);
+								return;
+							}
+							resolve(checkIfJobIsDead());
+						}, this.processEvery)
+					);
+				};
+
 				// CALL THE ACTUAL METHOD TO PROCESS THE JOB!!!
-				await job.run();
+				await Promise.race([job.run(), checkIfJobIsDead()]);
+
 				log.extend('runOrRetry')(
 					'[%s:%s] processing job successfull',
 					job.attrs.name,
