@@ -479,7 +479,7 @@ describe('Agenda', function () {
 						throw err;
 					}
 
-					expect(c.length).to.not.be(0);
+					expect(c.length).to.not.equals(0);
 					expect(c[0]).to.to.be.an.instanceof(Job);
 					await clearJobs();
 				});
