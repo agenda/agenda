@@ -571,6 +571,11 @@ so this is really insurance should the job queue crash before the job is unlocke
 When a job is finished (i.e. the returned promise resolves/rejects or `done` is
 specified in the signature and `done()` is called), it will automatically unlock.
 
+If the lock on a job expires (taking into account lock renewals with
+`job.touch()`), the job will be released by the client and will no longer be
+available to finish/fail. You can detect this by listening for the `expire` and
+`expire:job name` events.
+
 ## Manually working with a job
 
 A job instance has many instance methods. All mutating methods must be followed
@@ -740,8 +745,8 @@ agenda.on('start', job => {
 });
 ```
 
-- `complete` - called when a job finishes, regardless of if it succeeds or fails
-- `complete:job name` - called when a job finishes, regardless of if it succeeds or fails
+- `complete` - called when a job finishes, regardless of if it succeeds, fails, or expires
+- `complete:job name` - called when a job finishes, regardless of if it succeeds, fails, or expires
 
 ```js
 agenda.on('complete', job => {
@@ -764,6 +769,15 @@ agenda.on('success:send email', job => {
 ```js
 agenda.on('fail:send email', (err, job) => {
   console.log(`Job failed with error: ${err.message}`);
+});
+```
+
+- `expire` - called when a job's lock expires before it is finished
+- `expire:job name` - called when a job's lock expires before it is finished
+
+```js
+agenda.on('expire:send email', function(job) {
+  console.log('Job lock expired while processing');
 });
 ```
 
