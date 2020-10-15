@@ -1,19 +1,19 @@
 MOCHA_PATH=node_modules/mocha/bin/mocha
 
 test:
-	NODE_ENV=test $(MOCHA_PATH) -w --reporter spec
+	NODE_ENV=test $(MOCHA_PATH) -r ts-node/register -w --reporter spec
 
 test-debug:
-	NODE_ENV=test $(MOCHA_PATH) -w --reporter spec debug
+	NODE_ENV=test $(MOCHA_PATH) -r ts-node/register -w --reporter spec debug
 
 test-once:
-	NODE_ENV=test $(MOCHA_PATH) --reporter spec --timeout 8000 -b
+	NODE_ENV=test $(MOCHA_PATH) -r ts-node/register --reporter spec --timeout 8000 -b
 
 test-coverage:
-	NODE_ENV=test AGENDA_COVERAGE=1 $(MOCHA_PATH) test --require blanket --reporter html-cov > coverage.html
+	NODE_ENV=test AGENDA_COVERAGE=1 $(MOCHA_PATH) -r ts-node/register test --require blanket --reporter html-cov > coverage.html
 
 test-coveralls:
-	NODE_ENV=test AGENDA_COVERAGE=1 $(MOCHA_PATH) test --require blanket --reporter mocha-lcov-reporter | ./node_modules/coveralls/bin/coveralls.js
+	NODE_ENV=test AGENDA_COVERAGE=1 $(MOCHA_PATH) -r ts-node/register test --require blanket --reporter mocha-lcov-reporter | ./node_modules/coveralls/bin/coveralls.js
 
 install:
 	@npm i

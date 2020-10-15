@@ -1,7 +1,9 @@
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import * as mongo from 'mongodb';
-import * as path from 'path';
 import { MongoClient } from 'mongodb';
+import * as debug from 'debug';
+
+const log = debug('agenda:mock-mongodb');
 
 export interface IMockMongo {
 	disconnect: () => void;
@@ -12,20 +14,13 @@ export interface IMockMongo {
 
 export async function mockMongo(): Promise<IMockMongo> {
 	const self: IMockMongo = {} as any;
-	self.mongod = new MongoMemoryServer({
-		binary: {
-			version: '4.2.9',
-			// set to package directory, so it can be reused
-			downloadDir: path.resolve(__dirname, '../../.cache/mongodb-binaries')
-		}
-	});
+	self.mongod = new MongoMemoryServer();
 	const uri = await self.mongod.getUri();
-	console.log('mongod started');
-	console.log('mongdb mock connect', uri);
-	self.mongo = await mongo.connect(uri);
+	log('mongod started', uri);
+	self.mongo = await mongo.connect(uri, { useUnifiedTopology: true });
 	self.disconnect = function () {
 		self.mongod.stop();
-		console.log('mongod stopped');
+		log('mongod stopped');
 		self.mongo.close();
 	};
 	self.uri = uri;

@@ -1,3 +1,4 @@
+# Typescript rewrite of agendaJS
 <p align="center">
   <img src="https://cdn.jsdelivr.net/gh/agenda/agenda@master/agenda.svg" alt="Agenda" width="100" height="100">
 </p>
@@ -14,6 +15,15 @@
 	<br>
 	<br>
 </p>
+
+# Fork
+This is a fork of agenda js, it differs from the original version in following points:
+- Complete rewrite in Typescript (fully typed!)
+- Supports mongoDB sharding by name
+- touch() can have an optional progress parameter (0-100)
+- Bugfixes and improvements for locking
+- Breaking change: define() config paramter moved from 2nd position to 3rd
+- getRunningStats()
 
 # Agenda offers
 
@@ -93,7 +103,7 @@ agenda.define('delete old users', async job => {
 ```
 
 ```js
-agenda.define('send email report', {priority: 'high', concurrency: 10}, async job => {
+agenda.define('send email report', async job => {
   const {to} = job.attrs.data;
   await emailClient.send({
     to,
@@ -101,7 +111,7 @@ agenda.define('send email report', {priority: 'high', concurrency: 10}, async jo
     subject: 'Email Report',
     body: '...'
   });
-});
+}, {priority: 'high', concurrency: 10}, );
 
 (async function() {
   await agenda.start();
@@ -337,7 +347,7 @@ await agenda.start();
 
 Before you can use a job, you must define its processing behavior.
 
-### define(jobName, [options], fn)
+### define(jobName, fn, [options])
 
 Defines a job with the name of `jobName`. When a job of `jobName` gets run, it
 will be passed to `fn(job, done)`. To maintain asynchronous behavior, you may
@@ -556,9 +566,9 @@ You can configure the locking mechanism by specifying `lockLifetime` as an
 interval when defining the job.
 
 ```js
-agenda.define('someJob', {lockLifetime: 10000}, (job, cb) => {
+agenda.define('someJob', (job, cb) => {
   // Do something in 10 seconds or less...
-});
+}, {lockLifetime: 10000});
 ```
 
 This will ensure that no other job processor (this one included) attempts to run the job again

@@ -1,29 +1,22 @@
 language: node_js
-services: mongodb
 sudo: required
 node_js:
   - 10
   - 12
+  - 14
 addons:
   apt:
     sources:
       # gcc 4.8+ requires ubuntu-toolchain-r-test
       - ubuntu-toolchain-r-test
-      - mongodb-upstart
-      - mongodb-3.4-precise
     packages:
       # NodeJS v4+ requires gcc 4.8+
       - g++-4.9
       - gcc-4.9
-      - mongodb-org-server
-      - mongodb-org-shell
 env:
   global:
     # NodeJS v4+ requires gcc 4.8+
     - CXX=g++-4.9 CC=gcc-4.9
     - TRAVIS=true
 script: npm test
-before_script:
-  - mongo --version
-  - mongod --version
 after_script: make test-coveralls

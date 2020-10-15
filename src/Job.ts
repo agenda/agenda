@@ -4,6 +4,7 @@ import { parsePriority } from './utils/priority';
 import type { Agenda } from './index';
 import { computeFromInterval, computeFromRepeatAt } from './utils/nextRunAt';
 import { IJobParameters } from './types/JobParameters';
+import type { DefinitionProcessor } from './types/JobDefinition';
 
 const log = debug('agenda:job');
 
@@ -13,12 +14,31 @@ const log = debug('agenda:job');
  * @property {Object} agenda - The Agenda instance
  * @property {Object} attrs
  */
-export class Job {
-	readonly attrs: IJobParameters;
+export class Job<DATA = any | void> {
+	readonly attrs: IJobParameters<DATA>;
 
 	constructor(
+		agenda: Agenda,
+		args: Partial<IJobParameters<void>> & {
+			name: string;
+			type: 'normal' | 'single';
+		}
+	);
+	constructor(
+		agenda: Agenda,
+		args: Partial<IJobParameters<DATA>> & {
+			name: string;
+			type: 'normal' | 'single';
+			data: DATA;
+		}
+	);
+	constructor(
 		readonly agenda: Agenda,
-		args: Partial<IJobParameters> & { name: string; type: 'normal' | 'single' }
+		args: Partial<IJobParameters<DATA>> & {
+			name: string;
+			type: 'normal' | 'single';
+			data: any;
+		}
 	) {
 		// Remove special args
 
@@ -35,10 +55,11 @@ export class Job {
 		};
 	}
 
-	toJson() {
+	toJson(): Partial<IJobParameters> {
 		const attrs = this.attrs || {};
 		const result = {};
 
+		// eslint-disable-next-line no-restricted-syntax
 		for (const prop in attrs) {
 			if ({}.hasOwnProperty.call(attrs, prop)) {
 				result[prop] = attrs[prop];
@@ -60,7 +81,6 @@ export class Job {
 		interval: string | number,
 		options: { timezone?: string; skipImmediate?: boolean } = {}
 	) {
-		options = options || {};
 		this.attrs.repeatInterval = interval;
 		this.attrs.repeatTimezone = options.timezone;
 		if (options.skipImmediate) {
@@ -156,38 +176,41 @@ export class Job {
 		return this.agenda.db.saveJob(this);
 	}
 
-	remove() {
+	remove(): Promise<number> {
 		return this.agenda.cancel({ _id: this.attrs._id });
 	}
 
-	async touch(progress?: number) {
-		// eslint-disable-next-line prefer-rest-params
+	async touch(progress?: number): Promise<void> {
 		this.attrs.lockedAt = new Date();
 		this.attrs.progress = progress;
-		return this.save();
+		await this.save();
 	}
 
-	computeNextRunAt() {
-		// @todo: is this needed? it shouldn't ...
-		this.attrs.nextRunAt = null;
+	private computeNextRunAt() {
+		try {
+			if (this.attrs.repeatInterval) {
+				this.attrs.nextRunAt = computeFromInterval(this.attrs);
+				log(
+					'[%s:%s] nextRunAt set to [%s]',
+					this.attrs.name,
+					this.attrs._id,
+					new Date(this.attrs.nextRunAt).toISOString()
+				);
+			} else if (this.attrs.repeatAt) {
+				this.attrs.nextRunAt = computeFromRepeatAt(this.attrs);
 
-		if (this.attrs.repeatInterval) {
-			this.attrs.nextRunAt = computeFromInterval(this.attrs);
-			log(
-				'[%s:%s] nextRunAt set to [%s]',
-				this.attrs.name,
-				this.attrs._id,
-				new Date(this.attrs.nextRunAt).toISOString()
-			);
-		} else if (this.attrs.repeatAt) {
-			this.attrs.nextRunAt = computeFromRepeatAt(this.attrs);
-
-			log(
-				'[%s:%s] nextRunAt set to [%s]',
-				this.attrs.name,
-				this.attrs._id,
-				this.attrs.nextRunAt.toISOString()
-			);
+				log(
+					'[%s:%s] nextRunAt set to [%s]',
+					this.attrs.name,
+					this.attrs._id,
+					this.attrs.nextRunAt.toISOString()
+				);
+			} else {
+				this.attrs.nextRunAt = null;
+			}
+		} catch (err) {
+			this.attrs.nextRunAt = null;
+			this.fail(err);
 		}
 
 		return this;
@@ -218,17 +241,27 @@ export class Job {
 			if (definition.fn.length === 2) {
 				log('[%s:%s] process function being called', this.attrs.name, this.attrs._id);
 				await new Promise((resolve, reject) => {
-					definition.fn(this, err => {
-						if (err) {
-							reject(err);
-							return;
+					try {
+						const result = (definition.fn as DefinitionProcessor<DATA, (err?) => void>)(
+							this,
+							err => {
+								if (err) {
+									reject(err);
+									return;
+								}
+								resolve();
+							}
+						);
+						if (this.isPromise(result)) {
+							(result as any).catch(err => reject(err));
 						}
-						resolve();
-					});
+					} catch (err) {
+						reject(err);
+					}
 				});
 			} else {
 				log('[%s:%s] process function being called', this.attrs.name, this.attrs._id);
-				await definition.fn(this);
+				await (definition.fn as DefinitionProcessor<DATA, void>)(this);
 			}
 
 			this.attrs.lastFinishedAt = new Date();
@@ -258,5 +291,9 @@ export class Job {
 				this.attrs.lastFinishedAt
 			);
 		}
+	}
+
+	private isPromise(value): value is Promise<void> {
+		return !!(value && typeof value.then === 'function');
 	}
 }

@@ -5,16 +5,17 @@ import * as humanInterval from 'human-interval';
 import * as date from 'date.js';
 import * as debug from 'debug';
 import { IJobParameters } from '../types/JobParameters';
+import { isValidDate } from './date';
 
 const log = debug('agenda:nextRunAt');
 
-const dateForTimezone = (timezoneDate: Date, timezone): Date => {
+const dateForTimezone = (timezoneDate: Date, timezone?: string): moment.Moment => {
 	const momentDate = moment(timezoneDate);
-	if (timezone !== null) {
+	if (timezone) {
 		momentDate.tz(timezone);
 	}
 
-	return momentDate.toDate();
+	return momentDate; // .utc(false).toDate();
 };
 
 /**
@@ -24,8 +25,8 @@ const dateForTimezone = (timezoneDate: Date, timezone): Date => {
 export const computeFromInterval = (attrs: IJobParameters): Date => {
 	const previousNextRunAt = attrs.nextRunAt || new Date();
 	log('[%s:%s] computing next run via interval [%s]', attrs.name, attrs._id, attrs.repeatInterval);
-	let lastRun = attrs.lastRunAt || new Date();
-	lastRun = dateForTimezone(lastRun, attrs.repeatTimezone);
+	const lastRun = dateForTimezone(attrs.lastRunAt || new Date(), attrs.repeatTimezone);
+	let result: Date;
 	try {
 		const cronTime = new CronTime(attrs.repeatInterval);
 		let nextDate = cronTime._getNextDateFrom(lastRun);
@@ -39,16 +40,19 @@ export const computeFromInterval = (attrs: IJobParameters): Date => {
 			);
 		}
 
-		return nextDate;
+		result = nextDate;
 		// Either `xo` linter or Node.js 8 stumble on this line if it isn't just ignored
 	} catch (error) {
 		// eslint-disable-line no-unused-vars
 		// Nope, humanInterval then!
 		if (!attrs.lastRunAt && humanInterval(attrs.repeatInterval)) {
-			return new Date(lastRun.valueOf());
+			result = new Date(lastRun.valueOf());
+		} else {
+			result = new Date(lastRun.valueOf() + humanInterval(attrs.repeatInterval));
 		}
-		return new Date(lastRun.valueOf() + humanInterval(attrs.repeatInterval));
+	}
 
+	if (!isValidDate(result)) {
 		log(
 			'[%s:%s] failed to calculate nextRunAt due to invalid repeat interval',
 			attrs.name,
@@ -56,6 +60,8 @@ export const computeFromInterval = (attrs: IJobParameters): Date => {
 		);
 		throw new Error('failed to calculate nextRunAt due to invalid repeat interval');
 	}
+
+	return result;
 };
 
 /**

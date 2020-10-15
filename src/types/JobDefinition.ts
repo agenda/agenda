@@ -1,6 +1,6 @@
 import { Job } from '../Job';
 
-export interface IJobDefinition {
+export interface IJobDefinition<DATA = any> {
 	/** max number of locked jobs of this kind */
 	lockLimit: number;
 	/** lock lifetime in milliseconds */
@@ -13,5 +13,10 @@ export interface IJobDefinition {
 	// running: number;
 	// locked: number;
 
-	fn: (agendaJob: Job, done?: (err?) => void) => Promise<void> | void;
+	fn: DefinitionProcessor<DATA, void | ((err?) => void)>;
 }
+
+export type DefinitionProcessor<DATA, CB> = (
+	agendaJob: Job<DATA>,
+	done: CB
+) => CB extends void ? Promise<void> : void;

@@ -1,6 +1,6 @@
 import { ObjectId } from 'mongodb';
 
-export interface IJobParameters {
+export interface IJobParameters<DATA = any | void> {
 	_id?: ObjectId;
 
 	name: string;
@@ -21,7 +21,7 @@ export interface IJobParameters {
 	repeatTimezone?: string;
 	lastRunAt?: Date;
 	repeatInterval?: string | number;
-	data?: any;
+	data: DATA;
 	repeatAt?: string;
 	disabled?: boolean;
 	progress?: number;

@@ -1,22 +1,27 @@
 {
   "name": "@hokify/agenda",
-  "version": "4.0.0",
+  "version": "4.0.18",
   "description": "Light weight job scheduler for Node.js",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
   "files": [
-    "lib"
+    "dist"
   ],
   "engines": {
     "node": ">=10.0.0"
   },
   "scripts": {
+    "prepublishOnly": "npm run build",
     "build": "tsc",
     "test": "npm run lint && npm run mocha",
     "lint": "eslint",
-    "mocha": "mocha --reporter spec --timeout 8000 -b",
-    "mocha-debug": "DEBUG=agenda:**,-agenda:internal:** mocha --reporter spec --timeout 8000 -b",
-    "mocha-debug-internal": "DEBUG=agenda:internal:** mocha --reporter spec --timeout 8000 -b",
-    "mocha-debug-all": "DEBUG=agenda:** mocha --reporter spec --timeout 8000 -b",
+    "mocha": "mocha -r ts-node/register --reporter spec -b",
+    "mocha-debug": "DEBUG=agenda:**,-agenda:internal:** mocha -r ts-node/register --reporter spec -b",
+    "mocha-debug-internal": "DEBUG=agenda:internal:** mocha -r ts-node/register --reporter spec -b",
+    "mocha-debug-all": "DEBUG=agenda:** mocha -r ts-node/register --reporter spec -b",
     "docs": "jsdoc --configure .jsdoc.json --verbose"
   },
   "config": {
@@ -27,7 +32,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/agenda/agenda"
+    "url": "git://github.com/hokify/agenda"
   },
   "keywords": [
     "job",
@@ -40,7 +45,7 @@
   "author": "Ryan Schmukler <ryan@slingingcode.com> (http://slingingcode.com/)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/agenda/agenda/issues"
+    "url": "https://github.com/hokify/agenda/issues"
   },
   "dependencies": {
     "cron": "~1.8.2",
@@ -58,6 +63,7 @@
     "typescript": "^4.0.3",
     "mongodb-memory-server": "^6.9.1",
     "@hokify/eslint-config": "^0.5.7",
+    "prettier": "^2.1.2",
     "@types/mongodb": "^3.5.27",
     "blanket": "1.2.3",
     "coveralls": "3.1.0",

@@ -5,8 +5,8 @@
 
 		// target settings for node 10
 		"module": "commonjs",
-		"target": "es2018",
-		"lib": ["es2018"],
+		"target": "es2019",
+		"lib": ["es2019"],
     // "lib": ["esnext", "esnext.asynciterable", "dom"],
 
 		// other best practice configs

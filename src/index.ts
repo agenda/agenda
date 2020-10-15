@@ -5,7 +5,7 @@ import * as humanInterval from 'human-interval';
 import { Db, MongoClientOptions } from 'mongodb';
 import { Job } from './Job';
 import { JobProcessor } from './JobProcessor';
-import { IJobDefinition } from './types/JobDefinition';
+import type { IJobDefinition } from './types/JobDefinition';
 import { IAgendaConfig } from './types/AgendaConfig';
 import { JobDbRepository } from './JobDbRepository';
 import { IDatabaseOptions, IDbConfig, IMongoOptions } from './types/DbOptions';
@@ -40,6 +40,20 @@ export class Agenda extends EventEmitter {
 	db: JobDbRepository;
 	// eslint-disable-next-line default-param-last
 	// private jobQueue: JobProcessingQueue;
+	// internally used
+	on(event: 'processJob', listener: (job: Job) => void): this;
+
+	on(event: 'fail', listener: (err: Error, job: Job) => void): this;
+	on(event: 'success', listener: (job: Job) => void): this;
+	on(event: 'start', listener: (job: Job) => void): this;
+	on(event: 'complete', listener: (job: Job) => void): this;
+	on(event: string, listener: (job: Job) => void): this;
+	on(event: string, listener: (err: Error, job: Job) => void): this;
+	on(event: 'ready', listener: () => void): this;
+	on(event: 'error', listener: (err: Error) => void): this;
+	on(event, listener) {
+		return super.on(event, listener);
+	}
 
 	readonly definitions: {
 		[name: string]: IJobDefinition;
@@ -47,17 +61,20 @@ export class Agenda extends EventEmitter {
 
 	private jobProcessor?: JobProcessor;
 
-	private ready: Promise<unknown>;
+	private ready: Promise<void>;
 
-	getRunningStats() {
-		return this.jobProcessor?.getStatus();
+	getRunningStats(fullDetails = false) {
+		if (!this.jobProcessor) {
+			throw new Error('agenda not running!');
+		}
+		return this.jobProcessor.getStatus(fullDetails);
 	}
 
 	constructor(
 		config: {
 			name?: string;
 			defaultConcurrency?: number;
-			processEvery?: string;
+			processEvery?: string | number;
 			maxConcurrency?: number;
 			defaultLockLimit?: number;
 			lockLimit?: number;
@@ -69,14 +86,10 @@ export class Agenda extends EventEmitter {
 	) {
 		super();
 
-		/*
-		if (!(this instanceof Agenda)) {
-			return new Agenda(config);
-		} */
-
 		this.attrs = {
 			name: config.name || '',
-			processEvery: humanInterval(config.processEvery) || humanInterval('5 seconds'),
+			processEvery:
+				(config.processEvery && humanInterval(config.processEvery)) || humanInterval('5 seconds'),
 			defaultConcurrency: config.defaultConcurrency || 5,
 			maxConcurrency: config.maxConcurrency || 20,
 			defaultLockLimit: config.defaultLockLimit || 0,
@@ -97,20 +110,24 @@ export class Agenda extends EventEmitter {
 		}
 	}
 
-	async database(address: string, collection?: string, options?: MongoClientOptions) {
+	async database(
+		address: string,
+		collection?: string,
+		options?: MongoClientOptions
+	): Promise<Agenda> {
 		this.db = new JobDbRepository(this, { db: { address, collection, options } });
 		await this.db.connect();
 		return this;
 	}
 
-	async mongo(mongo: Db, options?: IMongoOptions['db']) {
+	async mongo(mongo: Db, options?: IMongoOptions['db']): Promise<Agenda> {
 		this.db = new JobDbRepository(this, { mongo, db: options });
 		await this.db.connect();
 		return this;
 	}
 
-	sort(query) {
-		debug('Agenda.sort([Object])');
+	sort(query): Agenda {
+		log('Agenda.sort([Object])');
 		this.attrs.sort = query;
 		return this;
 	}
@@ -119,99 +136,105 @@ export class Agenda extends EventEmitter {
 		return !!(config.db?.address || config.mongo);
 	}
 
-	async cancel(query: any) {
+	async cancel(query: any): Promise<number> {
 		log('attempting to cancel all Agenda jobs', query);
 		try {
 			const { result } = await this.db.removeJobs(query);
 			log('%s jobs cancelled', result.n);
-			return result.n;
+			return result.n || 0;
 		} catch (error) {
 			log('error trying to delete jobs from MongoDB');
 			throw error;
 		}
 	}
 
-	create(name: string, data?: any) {
-		log('Agenda.create(%s, [Object])', name);
-		const priority = this.definitions[name] ? this.definitions[name].priority : 0;
-		const job = new Job(this, { name, data, type: 'normal', priority });
-		return job;
-	}
-
-	name(name) {
+	name(name): Agenda {
 		log('Agenda.name(%s)', name);
 		this.attrs.name = name;
 		return this;
 	}
 
-	processEvery(time: string | number) {
-		debug('Agenda.processEvery(%d)', time);
+	processEvery(time: string | number): Agenda {
+		log('Agenda.processEvery(%d)', time);
 		this.attrs.processEvery = humanInterval(time);
 		return this;
 	}
 
-	maxConcurrency(num: number) {
-		debug('Agenda.maxConcurrency(%d)', num);
+	maxConcurrency(num: number): Agenda {
+		log('Agenda.maxConcurrency(%d)', num);
 		this.attrs.maxConcurrency = num;
 		return this;
 	}
 
-	defaultConcurrency(num: number) {
-		debug('Agenda.defaultConcurrency(%d)', num);
+	defaultConcurrency(num: number): Agenda {
+		log('Agenda.defaultConcurrency(%d)', num);
 		this.attrs.defaultConcurrency = num;
 		return this;
 	}
 
-	lockLimit(num: number) {
-		// @NOTE: Is this different than max concurrency?
-		debug('Agenda.lockLimit(%d)', num);
+	lockLimit(num: number): Agenda {
+		log('Agenda.lockLimit(%d)', num);
 		this.attrs.lockLimit = num;
 		return this;
 	}
 
-	defaultLockLimit(num: number) {
-		debug('Agenda.defaultLockLimit(%d)', num);
+	defaultLockLimit(num: number): Agenda {
+		log('Agenda.defaultLockLimit(%d)', num);
 		this.attrs.defaultLockLimit = num;
 		return this;
 	}
 
-	defaultLockLifetime(ms: number) {
-		debug('Agenda.defaultLockLifetime(%d)', ms);
+	defaultLockLifetime(ms: number): Agenda {
+		log('Agenda.defaultLockLifetime(%d)', ms);
 		this.attrs.defaultLockLifetime = ms;
 		return this;
 	}
 
-	async jobs(query: any = {}, sort: any = {}, limit = 0, skip = 0) {
+	async jobs(query: any = {}, sort: any = {}, limit = 0, skip = 0): Promise<Job[]> {
 		const result = await this.db.getJobs(query, sort, limit, skip);
 
 		return result.map(job => new Job(this, job));
 	}
 
-	async purge() {
-		// @NOTE: Only use after defining your jobs
+	/**
+	 * @note: Only use after defining your jobs
+	 */
+	async purge(): Promise<number> {
 		const definedNames = Object.keys(this.definitions);
 		log('Agenda.purge(%o)', definedNames);
 		return this.cancel({ name: { $not: { $in: definedNames } } });
 	}
 
 	/** BREAKING CHANGE: options moved from 2nd to 3rd parameter! */
+	define<DATA = any>(
+		name: string,
+		processor: (agendaJob: Job<DATA>, done: (err?) => void) => void,
+		options?: Partial<Pick<IJobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency'>> & {
+			priority?: 'lowest' | 'low' | 'normal' | 'high' | 'highest' | number;
+		}
+	);
+	define<DATA = any>(
+		name: string,
+		processor: (agendaJob: Job<DATA>) => Promise<void>,
+		options?: Partial<Pick<IJobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency'>> & {
+			priority?: 'lowest' | 'low' | 'normal' | 'high' | 'highest' | number;
+		}
+	);
 	define(
 		name: string,
-		processor:
-			| ((agendaJob: Job, done: (err?) => void) => void)
-			| ((agendaJob: Job) => Promise<void>),
-		options?: Partial<Omit<IJobDefinition, 'priority'>> & {
+		processor,
+		options?: Partial<Pick<IJobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency'>> & {
 			priority?: 'lowest' | 'low' | 'normal' | 'high' | 'highest' | number;
 		}
 	): void {
 		this.definitions[name] = {
-			fn: processor as any,
+			fn: processor,
 			concurrency: options?.concurrency || this.attrs.defaultConcurrency,
 			lockLimit: options?.lockLimit || this.attrs.defaultLockLimit,
 			priority: parsePriority(options?.priority) || 0,
 			lockLifetime: options?.lockLifetime || this.attrs.defaultLockLifetime
 		};
-		debug('job [%s] defined with following options: \n%O', name, this.definitions[name]);
+		log('job [%s] defined with following options: \n%O', name, this.definitions[name]);
 	}
 
 	/**
@@ -222,32 +245,55 @@ export class Agenda extends EventEmitter {
 	 * @param {Object} options options to run job for
 	 * @returns {Array<Job>} array of jobs created
 	 */
-	private async createJobs(names: string[], createJob: (name) => Promise<Job>): Promise<Job[]> {
+	private async createJobs<DATA = any>(
+		names: string[],
+		createJob: (name) => Promise<Job<DATA>>
+	): Promise<Job<DATA>[]> {
 		try {
 			const jobs = await Promise.all(names.map(name => createJob(name)));
 
-			debug('every() -> all jobs created successfully');
+			log('createJobs() -> all jobs created successfully');
 
 			return jobs;
 		} catch (error) {
-			// @TODO: catch - ignore :O
-			debug('every() -> error creating one or more of the jobs', error);
+			log('createJobs() -> error creating one or more of the jobs', error);
 			throw error;
 		}
+	}
+
+	create(name: string): Job<void>;
+	create<DATA = any>(name: string, data: DATA): Job<DATA>;
+	create(name: string, data?: any) {
+		log('Agenda.create(%s, [Object])', name);
+		const priority = this.definitions[name] ? this.definitions[name].priority : 0;
+		const job = new Job(this, { name, data, type: 'normal', priority });
+		return job;
 	}
 
 	async every(
 		interval: string | number,
 		names: string[],
-		data?: any,
+		data?: undefined,
 		options?: { timezone?: string; skipImmediate?: boolean }
-	): Promise<Job[]>;
+	): Promise<Job<void>[]>;
 	async every(
 		interval: string | number,
 		names: string,
-		data?: any,
+		data?: undefined,
 		options?: { timezone?: string; skipImmediate?: boolean }
-	): Promise<Job>;
+	): Promise<Job<void>>;
+	async every<DATA = any>(
+		interval: string | number,
+		names: string[],
+		data: DATA,
+		options?: { timezone?: string; skipImmediate?: boolean }
+	): Promise<Job<DATA>[]>;
+	async every<DATA = any>(
+		interval: string | number,
+		names: string,
+		data: DATA,
+		options?: { timezone?: string; skipImmediate?: boolean }
+	): Promise<Job<DATA>>;
 	async every(
 		interval: string | number,
 		names: string | string[],
@@ -262,7 +308,7 @@ export class Agenda extends EventEmitter {
 		 * @param {Object} options options to run job for
 		 * @returns {Job} instance of job
 		 */
-		debug('Agenda.every(%s, %O, %O)', interval, names, options);
+		log('Agenda.every(%s, %O, %O)', interval, names, options);
 
 		const createJob = async (name: string): Promise<Job> => {
 			const job = this.create(name, data);
@@ -279,14 +325,20 @@ export class Agenda extends EventEmitter {
 			return job;
 		}
 
-		debug('Agenda.every(%s, %s, %O)', interval, names, options);
+		log('Agenda.every(%s, %s, %O)', interval, names, options);
 		const jobs = await this.createJobs(names, createJob);
 
 		return jobs;
 	}
 
-	async schedule(when: string | Date, names: string[], data?: any): Promise<Job[]>;
-	async schedule(when: string | Date, names: string, data?: any): Promise<Job>;
+	async schedule<DATA = void>(when: string | Date, names: string[]): Promise<Job<DATA>[]>;
+	async schedule<DATA = void>(when: string | Date, names: string): Promise<Job<DATA>>;
+	async schedule<DATA = any>(
+		when: string | Date,
+		names: string[],
+		data: DATA
+	): Promise<Job<DATA>[]>;
+	async schedule<DATA = any>(when: string | Date, names: string, data: DATA): Promise<Job<DATA>>;
 	async schedule(when: string | Date, names: string | string[], data?: any) {
 		const createJob = async name => {
 			const job = this.create(name, data);
@@ -297,15 +349,17 @@ export class Agenda extends EventEmitter {
 		};
 
 		if (typeof names === 'string') {
-			debug('Agenda.schedule(%s, %O, [%O], cb)', when, names);
+			log('Agenda.schedule(%s, %O, [%O], cb)', when, names);
 			return createJob(names);
 		}
 
-		debug('Agenda.schedule(%s, %O, [%O])', when, names);
+		log('Agenda.schedule(%s, %O, [%O])', when, names);
 		return this.createJobs(names, createJob);
 	}
 
-	async now(name: string, data?: any) {
+	async now<DATA = void>(name: string): Promise<Job<DATA>>;
+	async now<DATA = any>(name: string, data: DATA): Promise<Job<DATA>>;
+	async now<DATA>(name: string, data?: DATA): Promise<Job<DATA | void>> {
 		log('Agenda.now(%s, [Object])', name);
 		try {
 			const job = this.create(name, data);
@@ -315,12 +369,12 @@ export class Agenda extends EventEmitter {
 
 			return job;
 		} catch (error) {
-			debug('error trying to create a job for this exact moment');
+			log('error trying to create a job for this exact moment');
 			throw error;
 		}
 	}
 
-	async start() {
+	async start(): Promise<void> {
 		log(
 			'Agenda.start called, waiting for agenda to be initialized (db connection)',
 			this.attrs.processEvery
@@ -340,37 +394,28 @@ export class Agenda extends EventEmitter {
 
 		await this.jobProcessor.process();
 
-		this.on('processJob', this.jobProcessor.process.bind(this.jobProcessor));
+		this.on('processJob', job => this.jobProcessor?.process(job));
 	}
 
-	async stop() {
-		/**
-		 * Internal method to unlock jobs so that they can be re-run
-		 * NOTE: May need to update what properties get set here, since job unlocking seems to fail
-		 * @access private
-		 * @returns {Promise} resolves when job unlocking fails or passes
-		 */
-
+	async stop(): Promise<void> {
 		if (!this.jobProcessor) {
-			debug('Agenda.stop called, but agenda has never started!');
+			log('Agenda.stop called, but agenda has never started!');
 			return;
 		}
 
-		debug('Agenda.stop called, clearing interval for processJobs()');
+		log('Agenda.stop called, clearing interval for processJobs()');
 
 		const lockedJobs = this.jobProcessor?.stop();
 
-		debug('Agenda._unlockJobs()');
+		log('Agenda._unlockJobs()');
 		const jobIds = filterUndef(lockedJobs?.map(job => job.attrs._id) || []);
 
-		if (jobIds.length === 0) {
-			debug('no jobs to unlock');
-			return;
+		if (jobIds.length > 0) {
+			log('about to unlock jobs with ids: %O', jobIds);
+			await this.db.unlockJobs(jobIds);
 		}
-		this.off('processJob', this.jobProcessor.process);
 
-		debug('about to unlock jobs with ids: %O', jobIds);
-		await this.db.unlockJobs(jobIds);
+		this.off('processJob', this.jobProcessor.process);
 
 		this.jobProcessor = undefined;
 	}
@@ -380,3 +425,13 @@ export class Agenda extends EventEmitter {
 
 	// Agenda.prototype._findAndLockNextJob = find_and_lock_next_job; -> moved to JobProcessor
 }
+
+export * from './types/AgendaConfig';
+
+export * from './types/JobDefinition';
+
+export * from './types/JobParameters';
+
+export * from './types/DbOptions';
+
+export * from './Job';
