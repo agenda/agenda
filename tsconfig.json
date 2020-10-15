@@ -1,0 +1,28 @@
+{
+	"compilerOptions": {
+		"outDir": "./dist",
+		"rootDir": "./src",
+
+		// target settings for node 10
+		"module": "commonjs",
+		"target": "es2019",
+		"lib": ["es2019"],
+    // "lib": ["esnext", "esnext.asynciterable", "dom"],
+
+		// other best practice configs
+		"moduleResolution": "node",
+		"strict": true,
+		"noImplicitAny": false, // <-- get rid of this!
+		"removeComments": false, // <-- do not remove comments (needed for @deprecated notices etc)
+		"emitDecoratorMetadata": true,
+		"composite": true,
+		"experimentalDecorators": true,
+		"strictPropertyInitialization": false,
+		"resolveJsonModule": true,
+		"sourceMap": true,
+		"isolatedModules": false,
+		"declaration": true
+	},
+	"exclude": ["node_modules", "**/__tests__"],
+	"include": ["./src"]
+}
