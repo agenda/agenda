@@ -1,6 +1,6 @@
 import * as delay from 'delay';
 import { Db } from 'mongodb';
-import * as expect from 'expect.js';
+import { expect } from 'chai';
 import { mockMongo } from './helpers/mock-mongodb';
 
 import { Agenda } from '../src';
@@ -62,7 +62,7 @@ describe('Agenda', function () {
 	});
 
 	it('sets a default processEvery', () => {
-		expect(globalAgenda.attrs.processEvery).to.be(5000);
+		expect(globalAgenda.attrs.processEvery).to.equal(5000);
 	});
 
 	describe('configuration methods', () => {
@@ -95,81 +95,81 @@ describe('Agenda', function () {
 
 			it('returns itself', async () => {
 				const agenda = new Agenda();
-				expect(await agenda.mongo(mongoDb)).to.be(agenda);
+				expect(await agenda.mongo(mongoDb)).to.equal(agenda);
 			});
 		});
 
 		describe('name', () => {
 			it('sets the agenda name', () => {
 				globalAgenda.name('test queue');
-				expect(globalAgenda.attrs.name).to.be('test queue');
+				expect(globalAgenda.attrs.name).to.equal('test queue');
 			});
 			it('returns itself', () => {
-				expect(globalAgenda.name('test queue')).to.be(globalAgenda);
+				expect(globalAgenda.name('test queue')).to.equal(globalAgenda);
 			});
 		});
 		describe('processEvery', () => {
 			it('sets the processEvery time', () => {
 				globalAgenda.processEvery('3 minutes');
-				expect(globalAgenda.attrs.processEvery).to.be(180000);
+				expect(globalAgenda.attrs.processEvery).to.equal(180000);
 			});
 			it('returns itself', () => {
-				expect(globalAgenda.processEvery('3 minutes')).to.be(globalAgenda);
+				expect(globalAgenda.processEvery('3 minutes')).to.equal(globalAgenda);
 			});
 		});
 		describe('maxConcurrency', () => {
 			it('sets the maxConcurrency', () => {
 				globalAgenda.maxConcurrency(10);
-				expect(globalAgenda.attrs.maxConcurrency).to.be(10);
+				expect(globalAgenda.attrs.maxConcurrency).to.equal(10);
 			});
 			it('returns itself', () => {
-				expect(globalAgenda.maxConcurrency(10)).to.be(globalAgenda);
+				expect(globalAgenda.maxConcurrency(10)).to.equal(globalAgenda);
 			});
 		});
 		describe('defaultConcurrency', () => {
 			it('sets the defaultConcurrency', () => {
 				globalAgenda.defaultConcurrency(1);
-				expect(globalAgenda.attrs.defaultConcurrency).to.be(1);
+				expect(globalAgenda.attrs.defaultConcurrency).to.equal(1);
 			});
 			it('returns itself', () => {
-				expect(globalAgenda.defaultConcurrency(5)).to.be(globalAgenda);
+				expect(globalAgenda.defaultConcurrency(5)).to.equal(globalAgenda);
 			});
 		});
 		describe('lockLimit', () => {
 			it('sets the lockLimit', () => {
 				globalAgenda.lockLimit(10);
-				expect(globalAgenda.attrs.lockLimit).to.be(10);
+				expect(globalAgenda.attrs.lockLimit).to.equal(10);
 			});
 			it('returns itself', () => {
-				expect(globalAgenda.lockLimit(10)).to.be(globalAgenda);
+				expect(globalAgenda.lockLimit(10)).to.equal(globalAgenda);
 			});
 		});
 		describe('defaultLockLimit', () => {
 			it('sets the defaultLockLimit', () => {
 				globalAgenda.defaultLockLimit(1);
-				expect(globalAgenda.attrs.defaultLockLimit).to.be(1);
+				expect(globalAgenda.attrs.defaultLockLimit).to.equal(1);
 			});
 			it('returns itself', () => {
-				expect(globalAgenda.defaultLockLimit(5)).to.be(globalAgenda);
+				expect(globalAgenda.defaultLockLimit(5)).to.equal(globalAgenda);
 			});
 		});
 		describe('defaultLockLifetime', () => {
 			it('returns itself', () => {
-				expect(globalAgenda.defaultLockLifetime(1000)).to.be(globalAgenda);
+				expect(globalAgenda.defaultLockLifetime(1000)).to.equal(globalAgenda);
 			});
 			it('sets the default lock lifetime', () => {
 				globalAgenda.defaultLockLifetime(9999);
-				expect(globalAgenda.attrs.defaultLockLifetime).to.be(9999);
+				expect(globalAgenda.attrs.defaultLockLifetime).to.equal(9999);
 			});
 			it('is inherited by jobs', () => {
 				globalAgenda.defaultLockLifetime(7777);
 				globalAgenda.define('testDefaultLockLifetime', () => {});
-				expect(globalAgenda.definitions.testDefaultLockLifetime.lockLifetime).to.be(7777);
+				expect(globalAgenda.definitions.testDefaultLockLifetime.lockLifetime).to.equal(7777);
 			});
 		});
 		describe('sort', () => {
 			it('returns itself', () => {
-				expect(globalAgenda.sort({ nextRunAt: 1, priority: -1 })).to.be(globalAgenda);
+				expect(globalAgenda.sort({ nextRunAt: 1, priority: -1 })).to.equal(globalAgenda);
 			});
 			it('sets the default sort option', () => {
 				globalAgenda.sort({ nextRunAt: -1 });
@@ -186,16 +186,16 @@ describe('Agenda', function () {
 			});
 
 			it('returns a job', () => {
-				expect(job).to.be.a(Job);
+				expect(job).to.to.be.an.instanceof(Job);
 			});
 			it('sets the name', () => {
-				expect(job.attrs.name).to.be('sendEmail');
+				expect(job.attrs.name).to.equal('sendEmail');
 			});
 			it('sets the type', () => {
-				expect(job.attrs.type).to.be('normal');
+				expect(job.attrs.type).to.equal('normal');
 			});
 			it('sets the agenda', () => {
-				expect(job.agenda).to.be(globalAgenda);
+				expect(job.agenda).to.equal(globalAgenda);
 			});
 			it('sets the data', () => {
 				expect(job.attrs.data).to.have.property('to', 'some guy');
@@ -227,19 +227,19 @@ describe('Agenda', function () {
 		describe('every', () => {
 			describe('with a job name specified', () => {
 				it('returns a job', async () => {
-					expect(await globalAgenda.every('5 minutes', 'send email')).to.be.a(Job);
+					expect(await globalAgenda.every('5 minutes', 'send email')).to.be.an.instanceof(Job);
 				});
 				it('sets the repeatEvery', async () => {
 					expect(
 						await globalAgenda
 							.every('5 seconds', 'send email')
 							.then(({ attrs }) => attrs.repeatInterval)
-					).to.be('5 seconds');
+					).to.equal('5 seconds');
 				});
 				it('sets the agenda', async () => {
 					expect(
 						await globalAgenda.every('5 seconds', 'send email').then(({ agenda }) => agenda)
-					).to.be(globalAgenda);
+					).to.equal(globalAgenda);
 				});
 				it('should update a job that was previously scheduled with `every`', async () => {
 					await globalAgenda.every(10, 'shouldBeSingleJob');
@@ -281,7 +281,9 @@ describe('Agenda', function () {
 		describe('schedule', () => {
 			describe('with a job name specified', () => {
 				it('returns a job', async () => {
-					expect(await globalAgenda.schedule('in 5 minutes', 'send email')).to.be.a(Job);
+					expect(await globalAgenda.schedule('in 5 minutes', 'send email')).to.be.an.instanceof(
+						Job
+					);
 				});
 				it('sets the schedule', async () => {
 					const fiveish = new Date().valueOf() + 250000;
@@ -450,18 +452,18 @@ describe('Agenda', function () {
 
 		describe('now', () => {
 			it('returns a job', async () => {
-				expect(await globalAgenda.now('send email')).to.be.a(Job);
+				expect(await globalAgenda.now('send email')).to.to.be.an.instanceof(Job);
 			});
 			it('sets the schedule', async () => {
 				const now = new Date();
 				expect(
 					await globalAgenda.now('send email').then(({ attrs }) => attrs.nextRunAt!.valueOf())
-				).to.be.greaterThan(now.valueOf() - 1);
+				).to.greaterThan(now.valueOf() - 1);
 			});
 
 			it('runs the job immediately', async () => {
 				globalAgenda.define('immediateJob', async job => {
-					expect(job.isRunning()).to.be(true);
+					expect(job.isRunning()).to.be.true;
 					await globalAgenda.stop();
 				});
 				await globalAgenda.now('immediateJob');
@@ -478,7 +480,7 @@ describe('Agenda', function () {
 					}
 
 					expect(c.length).to.not.be(0);
-					expect(c[0]).to.be.a(Job);
+					expect(c[0]).to.to.be.an.instanceof(Job);
 					await clearJobs();
 				});
 			});
@@ -515,7 +517,7 @@ describe('Agenda', function () {
 				const job = globalAgenda.create('someJob', {});
 				await job.save();
 
-				expect(job.attrs._id).to.be.ok();
+				expect(job.attrs._id).to.not.be.undefined;
 
 				await clearJobs();
 			});
@@ -532,7 +534,7 @@ describe('Agenda', function () {
 			await globalAgenda.create('jobA').save().then(checkDone);
 			await globalAgenda.create('jobA', 'someData').save().then(checkDone);
 			await globalAgenda.create('jobB').save().then(checkDone);
-			expect(remaining).to.be(0);
+			expect(remaining).to.equal(0);
 		});
 
 		afterEach(async () => {
@@ -601,9 +603,9 @@ describe('Agenda', function () {
 			const job2 = results[1];
 			const job3 = results[2];
 
-			expect(job1.attrs.data).to.be(3);
-			expect(job2.attrs.data).to.be(2);
-			expect(job3.attrs.data).to.be(1);
+			expect(job1.attrs.data).to.equal(3);
+			expect(job2.attrs.data).to.equal(2);
+			expect(job3.attrs.data).to.equal(1);
 		});
 	});
 
