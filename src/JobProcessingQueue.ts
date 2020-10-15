@@ -78,7 +78,8 @@ export class JobProcessingQueue {
 		});
 
 		if (matchIndex === -1) {
-			this._queue.push(job);
+			// put on left side of the queue
+			this._queue.unshift(job);
 		} else {
 			this._queue.splice(matchIndex, 0, job);
 		}

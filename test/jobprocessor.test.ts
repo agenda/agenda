@@ -1,4 +1,4 @@
-import * as expect from 'expect.js';
+import { expect } from 'chai';
 
 import { Db } from 'mongodb';
 import { Agenda } from '../src';
@@ -15,7 +15,7 @@ const clearJobs = async () => {
 	}
 };
 
-describe('Agenda', function () {
+describe('JobProcessor', function () {
 	// this.timeout(1000000);
 
 	beforeEach(async () => {
@@ -48,35 +48,90 @@ describe('Agenda', function () {
 		await clearJobs();
 	});
 
-	describe('configuration methods', () => {
-		it('ensure new jobs are always filling up running queue', async () => {
-			let shortOneFinished = false;
+	it('ensure new jobs are always filling up running queue', async () => {
+		let shortOneFinished = false;
 
-			agenda.define('test long', async () => {
-				await new Promise(resolve => setTimeout(resolve, 1000));
-			});
-			agenda.define('test short', async () => {
-				shortOneFinished = true;
-				await new Promise(resolve => setTimeout(resolve, 5));
-			});
-
-			await agenda.start();
-
-			// queue up long ones
-			for (let i = 0; i < 100; i++) {
-				agenda.now('test long');
-			}
-
+		agenda.define('test long', async () => {
 			await new Promise(resolve => setTimeout(resolve, 1000));
-
-			// queue more short ones (they should complete first!)
-			for (let j = 0; j < 100; j++) {
-				agenda.now('test short');
-			}
-
-			await new Promise(resolve => setTimeout(resolve, 1000));
-
-			expect(shortOneFinished).to.be(true);
 		});
+		agenda.define('test short', async () => {
+			shortOneFinished = true;
+			await new Promise(resolve => setTimeout(resolve, 5));
+		});
+
+		await agenda.start();
+
+		// queue up long ones
+		for (let i = 0; i < 100; i++) {
+			agenda.now('test long');
+		}
+
+		await new Promise(resolve => setTimeout(resolve, 1000));
+
+		// queue more short ones (they should complete first!)
+		for (let j = 0; j < 100; j++) {
+			agenda.now('test short');
+		}
+
+		await new Promise(resolve => setTimeout(resolve, 1000));
+
+		expect(shortOneFinished).to.be.true;
+	});
+
+	it('ensure slow jobs time out', async () => {
+		agenda.define(
+			'test long',
+			async () => {
+				await new Promise(resolve => setTimeout(resolve, 1000));
+			},
+			{ lockLifetime: 500 }
+		);
+
+		await agenda.start();
+
+		// queue up long ones
+		agenda.now('test long');
+
+		const promiseResult = await new Promise(resolve => {
+			agenda.on('error', err => {
+				resolve(err);
+			});
+
+			agenda.on('success', () => {
+				resolve();
+			});
+		});
+
+		expect(promiseResult).to.be.an('error');
+	});
+
+	it('ensure slow jobs do not time out when calling touch', async () => {
+		agenda.define(
+			'test long',
+			async job => {
+				for (let i = 0; i < 10; i++) {
+					await new Promise(resolve => setTimeout(resolve, 100));
+					await job.touch();
+				}
+			},
+			{ lockLifetime: 500 }
+		);
+
+		await agenda.start();
+
+		// queue up long ones
+		agenda.now('test long');
+
+		const promiseResult = await new Promise(resolve => {
+			agenda.on('error', err => {
+				resolve(err);
+			});
+
+			agenda.on('success', () => {
+				resolve();
+			});
+		});
+
+		expect(promiseResult).to.not.be.an('error');
 	});
 });

@@ -180,6 +180,18 @@ export class Job<DATA = any | void> {
 		return this.agenda.cancel({ _id: this.attrs._id });
 	}
 
+	isDead(): boolean {
+		const definition = this.agenda.definitions[this.attrs.name];
+		const lockDeadline = new Date(Date.now() - definition.lockLifetime);
+
+		// This means a job has "expired", as in it has not been "touched" within the lockoutTime
+		// Remove from local lock
+		if (this.attrs.lockedAt && this.attrs.lockedAt < lockDeadline) {
+			return true;
+		}
+		return false;
+	}
+
 	async touch(progress?: number): Promise<void> {
 		this.attrs.lockedAt = new Date();
 		this.attrs.progress = progress;
