@@ -441,9 +441,15 @@ export class JobProcessor {
 
 				// check if the job is still alive
 				const checkIfJobIsStillAlive = () => {
-					// check every "this.agenda.definitions[job.attrs.name].lockLifetime"" (or at mininum every processEvery)
+					// check every "this.agenda.definitions[job.attrs.name].lockLifetime / 2"" (or at mininum every processEvery)
 					return new Promise((resolve, reject) =>
 						setTimeout(() => {
+							// when job is not running anymore, just finish
+							if (!job.isRunning()) {
+								resolve();
+								return;
+							}
+
 							if (job.isDead()) {
 								reject(
 									new Error(
@@ -454,13 +460,9 @@ export class JobProcessor {
 								);
 								return;
 							}
-							// when job is not running anymore, just finish
-							if (!job.isRunning()) {
-								resolve();
-								return;
-							}
+
 							resolve(checkIfJobIsStillAlive());
-						}, Math.max(this.processEvery, this.agenda.definitions[job.attrs.name].lockLifetime))
+						}, Math.max(this.processEvery, this.agenda.definitions[job.attrs.name].lockLifetime / 2))
 					);
 				};
 
