@@ -484,6 +484,7 @@ export class JobProcessor {
 					);
 				}
 			} catch (err) {
+				job.canceled = err;
 				log.extend('runOrRetry')(
 					'[%s:%s] processing job failed',
 					job.attrs.name,

@@ -17,6 +17,12 @@ const log = debug('agenda:job');
 export class Job<DATA = any | void> {
 	readonly attrs: IJobParameters<DATA>;
 
+	/** this flag is set to true, if a job got canceled (e.g. due to a timeout or other exception),
+	 * you can use it for long running tasks to periodically check if canceled is true,
+	 * also touch will check if and throws that the job got canceled
+	 */
+	canceled: Error | undefined;
+
 	constructor(
 		agenda: Agenda,
 		args: Partial<IJobParameters<void>> & {
@@ -193,6 +199,9 @@ export class Job<DATA = any | void> {
 	}
 
 	async touch(progress?: number): Promise<void> {
+		if (this.canceled) {
+			throw new Error(`job ${this.attrs.name} got canceled already: ${this.canceled}!`);
+		}
 		this.attrs.lockedAt = new Date();
 		this.attrs.progress = progress;
 		await this.save();
