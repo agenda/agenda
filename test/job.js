@@ -1144,7 +1144,7 @@ describe('Job', () => {
         const n = cp.fork(serverPath, [mongoCfg, 'daily-array']);
 
         let ran1 = false;
-        let ran2 = true;
+        let ran2 = false;
         let doneCalled = false;
 
         const serviceError = function(e) {
