@@ -1089,11 +1089,12 @@ describe('Job', () => {
 			const now = new Date();
 			const results: number[] = [];
 
-			agenda.define('priority', (job, cb) => cb(), { concurrency: 1 });
+			agenda.define('priority', (job, cb) => setTimeout(cb, 10), { concurrency: 1 });
 
 			const checkResultsPromise = new Promise(resolve =>
 				agenda.on('start:priority', job => {
 					results.push(job.attrs.priority);
+					console.log('RESULTS',results);
 					if (results.length !== 3) {
 						return;
 					}
