@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.0.27](https://github.com/hokify/agenda/compare/v4.0.26...v4.0.27) (2020-10-20)
+
+
+### Bug Fixes
+
+* **define:** warning if job definition exists already ([3fe9a6d](https://github.com/hokify/agenda/commit/3fe9a6d69e5dd177d513e54f1386980280201369))
+* **job:** ensure agenda is ready before calling save job ([be4c026](https://github.com/hokify/agenda/commit/be4c0268c829676e61a9ad45fcf66d714d8923ca))
+* **test:** cleanup tests ([c5d081a](https://github.com/hokify/agenda/commit/c5d081a5c4be45b44ffc4aba56c0be4b9dcdd714))
+* **test:** debug failed lock expire test ([7d69680](https://github.com/hokify/agenda/commit/7d69680f4d69663037ee238480d96e2788e1f572))
+* **test:** debug failed priority test ([924287c](https://github.com/hokify/agenda/commit/924287c4419a19dfc16ba756e3e064e163b1b048))
+* **test:** fix timeout check ([e92cd85](https://github.com/hokify/agenda/commit/e92cd85c80a1e092405f00066359d595be03ad2f))
+* **typings:** names -> name ([c2ca928](https://github.com/hokify/agenda/commit/c2ca9286abdc46b7aa22024170bf9e73f142a9e9))
+
 ### [4.0.26](https://github.com/hokify/agenda/compare/v4.0.25...v4.0.26) (2020-10-20)
 
 
