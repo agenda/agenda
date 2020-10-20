@@ -170,6 +170,8 @@ export class Job<DATA = any | void> {
 	}
 
 	async save(): Promise<Job> {
+		// ensure db connection is ready
+		await this.agenda.ready;
 		return this.agenda.db.saveJob(this);
 	}
 
