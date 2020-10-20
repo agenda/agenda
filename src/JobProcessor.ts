@@ -392,6 +392,7 @@ export class JobProcessor {
 				setTimeout(() => {
 					this.jobProcessing();
 				}, runIn);
+				jobEnqueued = true;
 			}
 			if (this.localQueueProcessing < this.maxConcurrency && jobEnqueued) {
 				// additionally run again and check if there are more jobs that we can process right now (as long concurrency not reached)
