@@ -671,7 +671,7 @@ describe('Job', () => {
 		});
 
 		it('clears locks on stop', async () => {
-			agenda.define('longRunningJob', job => {
+			agenda.define('longRunningJob', (_job, _cb) => {
 				// eslint-disable-line no-unused-vars
 				// Job never finishes
 			});
@@ -680,14 +680,16 @@ describe('Job', () => {
 
 			await agenda.start();
 			await delay(jobTimeout);
+			const jobStarted = await agenda.db.getJobs({ name: 'longRunningJob' });
+			expect(jobStarted[0].lockedAt).to.not.equal(null);
 			await agenda.stop();
 			const job = await agenda.db.getJobs({ name: 'longRunningJob' });
-			expect(job[0].lockedAt).to.equal(null);
+			expect(job[0].lockedAt).to.equal(undefined);
 		});
 
 		describe('events', () => {
 			beforeEach(() => {
-				agenda.define('jobQueueTest', (job, cb) => {
+				agenda.define('jobQueueTest', (_job, cb) => {
 					cb();
 				});
 				agenda.define('failBoat', () => {
