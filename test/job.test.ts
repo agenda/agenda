@@ -1233,7 +1233,7 @@ describe('Job', () => {
 							done();
 							return n.send('exit');
 						}
-					} else {
+					} else if (!doneCalled) {
 						return done(new Error('Jobs did not run!'));
 					}
 				};
@@ -1353,7 +1353,7 @@ describe('Job', () => {
 							done();
 							return n.send('exit');
 						}
-					} else {
+					} else if (!doneCalled) {
 						return done(new Error('Jobs did not run!'));
 					}
 				};
