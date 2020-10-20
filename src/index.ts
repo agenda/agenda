@@ -234,6 +234,9 @@ export class Agenda extends EventEmitter {
 			priority?: JobPriority;
 		}
 	): void {
+		if (this.definitions[name]) {
+			console.warn('overwriting already defined agenda job', name);
+		}
 		this.definitions[name] = {
 			fn: processor,
 			concurrency: options?.concurrency || this.attrs.defaultConcurrency,
