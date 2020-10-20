@@ -91,13 +91,16 @@ export class JobProcessingQueue {
 	 * @param {Object} jobStatus current status of jobs
 	 * @returns {Job} Next Job to be processed
 	 */
-	returnNextConcurrencyFreeJob(jobStatus: {
-		[jobName: string]:
-			| {
-					running: number;
-			  }
-			| undefined;
-	}): (Job & { attrs: IJobParameters & { nextRunAt: Date } }) | undefined {
+	returnNextConcurrencyFreeJob(
+		jobStatus: {
+			[jobName: string]:
+				| {
+						running: number;
+				  }
+				| undefined;
+		},
+		handledJobs: IJobParameters['_id'][]
+	): (Job & { attrs: IJobParameters & { nextRunAt: Date } }) | undefined {
 		const next = ((Object.keys(this._queue) as unknown) as number[]).reverse().find(i => {
 			const def = this.agenda.definitions[this._queue[i].attrs.name];
 			const status = jobStatus[this._queue[i].attrs.name];
@@ -109,6 +112,7 @@ export class JobProcessingQueue {
 			if (
 				def &&
 				this._queue[i].attrs.nextRunAt &&
+				!handledJobs.includes(this._queue[i].attrs._id) &&
 				(!status || !def.concurrency || status.running < def.concurrency)
 			) {
 				return true;
