@@ -844,15 +844,18 @@ describe('Job', () => {
 					'lock job',
 					async _job => {
 						runCount++;
+						console.log('runCount', runCount);
 						if (runCount === 1) {
 							// this should time out
 							await new Promise(longResolve => setTimeout(longResolve, 1000));
 						} else {
+							await new Promise(longResolve => setTimeout(longResolve, 10));
 							resolve(runCount);
 						}
 					},
 					{
-						lockLifetime: 50
+						lockLifetime: 50,
+						concurrency: 1
 					}
 				);
 			});
@@ -1094,7 +1097,6 @@ describe('Job', () => {
 			const checkResultsPromise = new Promise(resolve =>
 				agenda.on('start:priority', job => {
 					results.push(job.attrs.priority);
-					console.log('RESULTS',results);
 					if (results.length !== 3) {
 						return;
 					}
