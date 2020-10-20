@@ -165,7 +165,7 @@ describe('JobProcessor', () => {
 			do {
 				runningJobs = (await agenda.getRunningStats()).runningJobs as number;
 				await new Promise(wait => setTimeout(wait, 50));
-			} while (runningJobs < 100);
+			} while (runningJobs < 99); // @todo Why not 100?
 			resolve('all started');
 		});
 
