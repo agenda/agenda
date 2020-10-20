@@ -25,6 +25,23 @@ export class JobProcessor {
 		// eslint-disable-next-line @typescript-eslint/no-var-requires,global-require
 		const { version } = require('../package.json');
 
+		const jobStatus =
+			(typeof Object.fromEntries === 'function' &&
+				Object.fromEntries(
+					Object.keys(this.jobStatus).map(job => [
+						job,
+						{
+							...this.jobStatus[job]!,
+							config: this.agenda.definitions[job]
+						}
+					])
+				)) ||
+			undefined;
+
+		if (typeof Object.fromEntries !== 'function') {
+			console.warn('job status not available due to too old node version');
+		}
+
 		return {
 			version,
 			queueName: this.agenda.attrs.name,
@@ -34,15 +51,7 @@ export class JobProcessor {
 				maxConcurrency: this.maxConcurrency,
 				processEvery: this.processEvery
 			},
-			jobStatus: Object.fromEntries(
-				Object.keys(this.jobStatus).map(job => [
-					job,
-					{
-						...this.jobStatus[job]!,
-						config: this.agenda.definitions[job]
-					}
-				])
-			),
+			jobStatus,
 			queuedJobs: this.jobQueue.length,
 			runningJobs: !fullDetails ? this.runningJobs.length : this.runningJobs,
 			lockedJobs: !fullDetails ? this.lockedJobs.length : this.lockedJobs,
@@ -384,17 +393,10 @@ export class JobProcessor {
 					this.jobProcessing();
 				}, runIn);
 			}
-			// console.log('this.localQueueProcessing', this.localQueueProcessing);
 			if (this.localQueueProcessing < this.maxConcurrency && jobEnqueued) {
 				// additionally run again and check if there are more jobs that we can process right now (as long concurrency not reached)
 				setImmediate(() => this.jobProcessing());
-			} /* else {
-				console.log(
-					'NOT CALLING JOB PROCESSING AGAIN DUE TO',
-					this.localQueueProcessing,
-					this.maxConcurrency
-				);
-			} */
+			}
 		} finally {
 			this.localQueueProcessing -= 1;
 		}
@@ -424,9 +426,9 @@ export class JobProcessor {
 			(!jobDefinition.concurrency || !status || status.running < jobDefinition.concurrency) &&
 			this.runningJobs.length < this.maxConcurrency
 		) {
-			// NOTE: Shouldn't we update the 'lockedAt' value in MongoDB so it can be picked up on restart?
-			// -> not needed, as the timeout has been reached, and it will be picked up anyways again
 			if (job.isDead()) {
+				// not needed to update lockedAt in databsase, as the timeout has been reached,
+				// and it will be picked up anyways again
 				log.extend('runOrRetry')(
 					'[%s:%s] job lock has expired, freeing it up',
 					job.attrs.name,
@@ -445,8 +447,7 @@ export class JobProcessor {
 
 				this.lockedJobs.splice(lockedJobIndex, 1);
 				this.updateStatus(job.attrs.name, 'locked', -1);
-				this.jobProcessing();
-				return false;
+				return true;
 			}
 
 			const runJob = async () => {
