@@ -1,5 +1,9 @@
 import { Job } from '../Job';
 
+export interface IAgendaJobStatus {
+	[name: string]: { running: number; locked: number };
+}
+
 export interface IAgendaStatus {
 	version: string;
 	queueName: string | undefined;
@@ -9,7 +13,7 @@ export interface IAgendaStatus {
 		maxConcurrency: number;
 		processEvery: string | number;
 	};
-	jobStatus?: { [name: string]: { running: number; locked: number } };
+	jobStatus?: IAgendaJobStatus;
 	queuedJobs: number;
 	runningJobs: number | Job[];
 	lockedJobs: number | Job[];

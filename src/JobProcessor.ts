@@ -1,6 +1,6 @@
 import * as debug from 'debug';
 import { Job } from './Job';
-import { IAgendaStatus } from './types/AgendaStatus';
+import { IAgendaJobStatus, IAgendaStatus } from './types/AgendaStatus';
 import { IJobDefinition } from './types/JobDefinition';
 import { JobProcessingQueue } from './JobProcessingQueue';
 import type { Agenda } from './index';
@@ -28,15 +28,15 @@ export class JobProcessor {
 
 		const jobStatus =
 			(typeof Object.fromEntries === 'function' &&
-				Object.fromEntries(
+				(Object.fromEntries(
 					Object.keys(this.jobStatus).map(job => [
 						job,
 						{
-							...this.jobStatus[job]!,
+							...this.jobStatus[job],
 							config: this.agenda.definitions[job]
 						}
 					])
-				)) ||
+				) as IAgendaJobStatus)) ||
 			undefined;
 
 		if (typeof Object.fromEntries !== 'function') {
@@ -347,7 +347,7 @@ export class JobProcessor {
 	 * handledJobs keeps list of already processed jobs
 	 * @returns {undefined}
 	 */
-	private async jobProcessing(handledJobs: IJobParameters['_id'][] = []) {
+	private jobProcessing(handledJobs: IJobParameters['_id'][] = []) {
 		// Ensure we have jobs
 		if (this.jobQueue.length === 0) {
 			return;
@@ -355,52 +355,47 @@ export class JobProcessor {
 
 		this.localQueueProcessing += 1;
 
-		try {
-			const now = new Date();
+		const now = new Date();
 
-			// Check if there is any job that is not blocked by concurrency
-			const job = this.jobQueue.returnNextConcurrencyFreeJob(this.jobStatus, handledJobs);
+		// Check if there is any job that is not blocked by concurrency
+		const job = this.jobQueue.returnNextConcurrencyFreeJob(this.jobStatus, handledJobs);
 
-			if (!job) {
-				log.extend('jobProcessing')('[%s:%s] there is no job to process');
-				return;
-			}
+		if (!job) {
+			log.extend('jobProcessing')('[%s:%s] there is no job to process');
+			return;
+		}
 
+		log.extend('jobProcessing')('[%s:%s] there is a job to process', job.attrs.name, job.attrs._id);
+
+		// If the 'nextRunAt' time is older than the current time, run the job
+		// Otherwise, setTimeout that gets called at the time of 'nextRunAt'
+		if (job.attrs.nextRunAt <= now) {
 			log.extend('jobProcessing')(
-				'[%s:%s] there is a job to process',
+				'[%s:%s] nextRunAt is in the past, run the job immediately',
 				job.attrs.name,
 				job.attrs._id
 			);
+			this.runOrRetry(job);
+		} else {
+			const runIn = job.attrs.nextRunAt.getTime() - now.getTime();
+			log.extend('jobProcessing')(
+				'[%s:%s] nextRunAt is in the future, calling setTimeout(%d)',
+				job.attrs.name,
+				job.attrs._id,
+				runIn
+			);
+			setTimeout(() => {
+				this.jobProcessing();
+			}, runIn);
+		}
 
-			// If the 'nextRunAt' time is older than the current time, run the job
-			// Otherwise, setTimeout that gets called at the time of 'nextRunAt'
-			if (job.attrs.nextRunAt <= now) {
-				log.extend('jobProcessing')(
-					'[%s:%s] nextRunAt is in the past, run the job immediately',
-					job.attrs.name,
-					job.attrs._id
-				);
-				this.runOrRetry(job);
-			} else {
-				const runIn = job.attrs.nextRunAt.getTime() - now.getTime();
-				log.extend('jobProcessing')(
-					'[%s:%s] nextRunAt is in the future, calling setTimeout(%d)',
-					job.attrs.name,
-					job.attrs._id,
-					runIn
-				);
-				setTimeout(() => {
-					this.jobProcessing();
-				}, runIn);
-			}
+		handledJobs.push(job.attrs._id);
 
-			if (this.localQueueProcessing < this.maxConcurrency) {
-				// additionally run again and check if there are more jobs that we can process right now (as long concurrency not reached)
-				handledJobs.push(job.attrs._id);
-				setImmediate(() => this.jobProcessing(handledJobs));
-			}
-		} finally {
-			this.localQueueProcessing -= 1;
+		this.localQueueProcessing -= 1;
+
+		if (job && this.localQueueProcessing < this.maxConcurrency) {
+			// additionally run again and check if there are more jobs that we can process right now (as long concurrency not reached)
+			setImmediate(() => this.jobProcessing(handledJobs));
 		}
 	}
 
@@ -506,6 +501,7 @@ export class JobProcessor {
 					);
 				}
 			} catch (err) {
+				// eslint-disable-next-line no-param-reassign
 				job.canceled = err;
 				log.extend('runOrRetry')(
 					'[%s:%s] processing job failed',
@@ -567,8 +563,7 @@ export class JobProcessor {
 				running: 0
 			};
 		}
-		// if ((this.jobStatus[name]![key] > 0 && number === -1) || number === 1) {
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		this.jobStatus[name]![key] += number;
-		// }
 	}
 }

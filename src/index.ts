@@ -53,7 +53,7 @@ export class Agenda extends EventEmitter {
 	on(event: string, listener: (err: Error, job: Job) => void): this;
 	on(event: 'ready', listener: () => void): this;
 	on(event: 'error', listener: (err: Error) => void): this;
-	on(event: string, listener: (...args: any[]) => void): this {
+	on(event: string, listener: (...args) => void): this {
 		return super.on(event, listener);
 	}
 
@@ -84,7 +84,7 @@ export class Agenda extends EventEmitter {
 			// eslint-disable-next-line @typescript-eslint/ban-types
 		} & (IDatabaseOptions | IMongoOptions | {}) &
 			IDbConfig = {},
-		cb?
+		cb?: (err?: Error) => void
 	) {
 		super();
 
@@ -108,7 +108,7 @@ export class Agenda extends EventEmitter {
 		}
 
 		if (cb) {
-			this.ready.then(cb);
+			this.ready.then(() => cb());
 		}
 	}
 
@@ -134,7 +134,7 @@ export class Agenda extends EventEmitter {
 		return this;
 	}
 
-	private hasDatabaseConfig(config: any): config is (IDatabaseOptions | IMongoOptions) & IDbConfig {
+	private hasDatabaseConfig(config): config is (IDatabaseOptions | IMongoOptions) & IDbConfig {
 		return !!(config.db?.address || config.mongo);
 	}
 
@@ -213,6 +213,7 @@ export class Agenda extends EventEmitter {
 	}
 
 	/** BREAKING CHANGE: options moved from 2nd to 3rd parameter! */
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	define<DATA = any>(
 		name: string,
 		processor: (agendaJob: Job<DATA>, done: (err?: Error) => void) => void,
@@ -220,6 +221,7 @@ export class Agenda extends EventEmitter {
 			priority?: JobPriority;
 		}
 	): void;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	define<DATA = any>(
 		name: string,
 		processor: (agendaJob: Job<DATA>) => Promise<void>,
@@ -229,7 +231,7 @@ export class Agenda extends EventEmitter {
 	): void;
 	define(
 		name: string,
-		processor,
+		processor: ((job) => Promise<void>) | ((job, done) => void),
 		options?: Partial<Pick<IJobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency'>> & {
 			priority?: JobPriority;
 		}
@@ -255,7 +257,7 @@ export class Agenda extends EventEmitter {
 	 * @param {Object} options options to run job for
 	 * @returns {Array<Job>} array of jobs created
 	 */
-	private async createJobs<DATA = any>(
+	private async createJobs<DATA = unknown>(
 		names: string[],
 		createJob: (name: string) => Promise<Job<DATA>>
 	): Promise<Job<DATA>[]> {
@@ -272,8 +274,8 @@ export class Agenda extends EventEmitter {
 	}
 
 	create(name: string): Job<void>;
-	create<DATA = any>(name: string, data: DATA): Job<DATA>;
-	create(name: string, data?: any): Job {
+	create<DATA = unknown>(name: string, data: DATA): Job<DATA>;
+	create(name: string, data?: unknown): Job {
 		log('Agenda.create(%s, [Object])', name);
 		const priority = this.definitions[name] ? this.definitions[name].priority : 0;
 		const job = new Job(this, { name, data, type: 'normal', priority });
@@ -292,13 +294,13 @@ export class Agenda extends EventEmitter {
 		data?: undefined,
 		options?: { timezone?: string; skipImmediate?: boolean }
 	): Promise<Job<void>>;
-	async every<DATA = any>(
+	async every<DATA = unknown>(
 		interval: string | number,
 		names: string[],
 		data: DATA,
 		options?: { timezone?: string; skipImmediate?: boolean }
 	): Promise<Job<DATA>[]>;
-	async every<DATA = any>(
+	async every<DATA = unknown>(
 		interval: string | number,
 		name: string,
 		data: DATA,
@@ -307,9 +309,9 @@ export class Agenda extends EventEmitter {
 	async every(
 		interval: string | number,
 		names: string | string[],
-		data?: any,
+		data?: unknown,
 		options?: { timezone?: string; skipImmediate?: boolean }
-	) {
+	): Promise<Job | Job[]> {
 		/**
 		 * Internal method to setup job that gets run every interval
 		 * @param {Number} interval run every X interval
@@ -343,13 +345,17 @@ export class Agenda extends EventEmitter {
 
 	async schedule<DATA = void>(when: string | Date, names: string[]): Promise<Job<DATA>[]>;
 	async schedule<DATA = void>(when: string | Date, names: string): Promise<Job<DATA>>;
-	async schedule<DATA = any>(
+	async schedule<DATA = unknown>(
 		when: string | Date,
 		names: string[],
 		data: DATA
 	): Promise<Job<DATA>[]>;
-	async schedule<DATA = any>(when: string | Date, name: string, data: DATA): Promise<Job<DATA>>;
-	async schedule(when: string | Date, names: string | string[], data?: any) {
+	async schedule<DATA = unknown>(when: string | Date, name: string, data: DATA): Promise<Job<DATA>>;
+	async schedule(
+		when: string | Date,
+		names: string | string[],
+		data?: unknown
+	): Promise<Job | Job[]> {
 		const createJob = async name => {
 			const job = this.create(name, data);
 
@@ -368,7 +374,7 @@ export class Agenda extends EventEmitter {
 	}
 
 	async now<DATA = void>(name: string): Promise<Job<DATA>>;
-	async now<DATA = any>(name: string, data: DATA): Promise<Job<DATA>>;
+	async now<DATA = unknown>(name: string, data: DATA): Promise<Job<DATA>>;
 	async now<DATA>(name: string, data?: DATA): Promise<Job<DATA | void>> {
 		log('Agenda.now(%s, [Object])', name);
 		try {

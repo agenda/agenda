@@ -14,7 +14,7 @@ const log = debug('agenda:job');
  * @property {Object} agenda - The Agenda instance
  * @property {Object} attrs
  */
-export class Job<DATA = any | void> {
+export class Job<DATA = unknown | void> {
 	readonly attrs: IJobParameters<DATA>;
 
 	/** this flag is set to true, if a job got canceled (e.g. due to a timeout or other exception),
@@ -43,7 +43,7 @@ export class Job<DATA = any | void> {
 		args: Partial<IJobParameters<DATA>> & {
 			name: string;
 			type: 'normal' | 'single';
-			data: any;
+			data: DATA;
 		}
 	) {
 		// Set attrs to args
@@ -111,7 +111,10 @@ export class Job<DATA = any | void> {
 		return this;
 	}
 
-	unique(unique: IJobParameters['unique'], opts?: IJobParameters['uniqueOpts']): this {
+	unique(
+		unique: Required<IJobParameters<DATA>>['unique'],
+		opts?: IJobParameters['uniqueOpts']
+	): this {
 		this.attrs.unique = unique;
 		this.attrs.uniqueOpts = opts;
 		return this;
@@ -267,6 +270,7 @@ export class Job<DATA = any | void> {
 							}
 						);
 						if (this.isPromise(result)) {
+							// eslint-disable-next-line @typescript-eslint/no-explicit-any
 							(result as any).catch(err => reject(err));
 						}
 					} catch (err) {

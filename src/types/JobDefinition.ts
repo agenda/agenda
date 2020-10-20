@@ -1,6 +1,6 @@
 import { Job } from '../Job';
 
-export interface IJobDefinition<DATA = any> {
+export interface IJobDefinition<DATA = unknown> {
 	/** max number of locked jobs of this kind */
 	lockLimit: number;
 	/** lock lifetime in milliseconds */

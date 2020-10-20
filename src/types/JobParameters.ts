@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { FilterQuery, ObjectId } from 'mongodb';
 
-export interface IJobParameters<DATA = any | void> {
+export interface IJobParameters<DATA = unknown | void> {
 	_id?: ObjectId;
 
 	name: string;

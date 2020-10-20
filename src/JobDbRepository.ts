@@ -46,7 +46,7 @@ export class JobDbRepository {
 		return !!connectOptions.mongo;
 	}
 
-	private hasDatabaseConfig(connectOptions: any): connectOptions is IDatabaseOptions {
+	private hasDatabaseConfig(connectOptions): connectOptions is IDatabaseOptions {
 		return !!connectOptions.db?.address;
 	}
 
@@ -206,7 +206,10 @@ export class JobDbRepository {
 		return client.db();
 	}
 
-	private processDbResult(job: Job, res: IJobParameters): Job {
+	private processDbResult<DATA = unknown | void>(
+		job: Job<DATA>,
+		res: IJobParameters<DATA>
+	): Job<DATA> {
 		log(
 			'processDbResult() called with success, checking whether to process job immediately or not'
 		);
@@ -214,7 +217,9 @@ export class JobDbRepository {
 		// We have a result from the above calls
 		if (res) {
 			// Grab ID and nextRunAt from MongoDB and store it as an attribute on Job
+			// eslint-disable-next-line no-param-reassign
 			job.attrs._id = res._id;
+			// eslint-disable-next-line no-param-reassign
 			job.attrs.nextRunAt = res.nextRunAt;
 
 			// check if we should process the job immediately
@@ -232,7 +237,7 @@ export class JobDbRepository {
 	 * @param {Job} job job to save into MongoDB
 	 * @returns {Promise} resolves when job is saved or errors
 	 */
-	async saveJob<T = any>(job: Job<T>): Promise<Job<T>> {
+	async saveJob<DATA = unknown | void>(job: Job<DATA>): Promise<Job<DATA>> {
 		try {
 			log('attempting to save a job into Agenda instance');
 
