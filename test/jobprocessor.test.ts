@@ -160,8 +160,8 @@ describe('JobProcessor', () => {
 
 		await agenda.start();
 
+		let runningJobs = 0;
 		const allJobsStarted = new Promise(async resolve => {
-			let runningJobs = 0;
 			do {
 				runningJobs = (await agenda.getRunningStats()).runningJobs as number;
 				await new Promise(wait => setTimeout(wait, 50));
@@ -170,7 +170,12 @@ describe('JobProcessor', () => {
 		});
 
 		expect(
-			await Promise.race([allJobsStarted, new Promise(resolve => setTimeout(resolve, 1500))])
+			await Promise.race([
+				allJobsStarted,
+				new Promise(resolve =>
+					setTimeout(() => resolve(`not all jobs started, currently running: ${runningJobs}`), 1500)
+				)
+			])
 		).to.equal('all started');
 	});
 });

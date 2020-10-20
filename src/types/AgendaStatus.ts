@@ -9,7 +9,7 @@ export interface IAgendaStatus {
 		maxConcurrency: number;
 		processEvery: string | number;
 	};
-	jobStatus: { [name: string]: { running: number; locked: number } | undefined };
+	jobStatus?: { [name: string]: { running: number; locked: number } };
 	queuedJobs: number;
 	runningJobs: number | Job[];
 	lockedJobs: number | Job[];
