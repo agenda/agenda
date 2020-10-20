@@ -23,6 +23,7 @@ This is a fork of agenda js, it differs from the original version in following p
 - Bugfixes and improvements for locking & job processing (concurrency, lockLimit,..)
 - Breaking change: define() config paramter moved from 2nd position to 3rd
 - getRunningStats()
+- automatically waits for agenda is connected before calling any database operations
 
 # Agenda offers
 
