@@ -626,22 +626,35 @@ describe('Job', () => {
 
 	describe('start/stop', () => {
 		it('starts/stops the job queue', async () => {
-			// @TODO: this lint issue should be looked into: https://eslint.org/docs/rules/no-async-promise-executor
-			// eslint-disable-next-line no-async-promise-executor
-			return new Promise(async resolve => {
-				agenda.define('jobQueueTest', async (job, cb) => {
-					await agenda.stop();
-					await clearJobs();
-					cb();
-					agenda.define('jobQueueTest', (job, cb) => {
-						cb();
-					});
+			const processed = new Promise(resolve => {
+				agenda.define('jobQueueTest', async _job => {
+					resolve('processed');
+				});
+			});
+			await agenda.every('1 second', 'jobQueueTest');
+			agenda.processEvery('1 second');
+			await agenda.start();
+
+			expect(
+				await Promise.race([
+					processed,
+					new Promise(resolve => setTimeout(() => resolve(`not processed`), 1100))
+				])
+			).to.eq('processed');
+
+			await agenda.stop();
+			const processedStopped = new Promise(resolve => {
+				agenda.define('jobQueueTest', async _job => {
 					resolve();
 				});
-				await agenda.every('1 second', 'jobQueueTest');
-				agenda.processEvery('1 second');
-				await agenda.start();
 			});
+
+			expect(
+				await Promise.race([
+					processedStopped,
+					new Promise(resolve => setTimeout(() => resolve(`not processed`), 1100))
+				])
+			).to.eq('not processed');
 		});
 
 		it('does not run disabled jobs', async () => {
@@ -795,27 +808,23 @@ describe('Job', () => {
 
 	describe('job lock', () => {
 		it('runs a recurring job after a lock has expired', async () => {
-			let startCounter = 0;
-
-			// @TODO: this lint issue should be looked into: https://eslint.org/docs/rules/no-async-promise-executor
-			// eslint-disable-next-line no-async-promise-executor
-			const processorPromise = new Promise(async resolve =>
+			const processorPromise = new Promise(resolve => {
+				let startCounter = 0;
 				agenda.define(
 					'lock job',
 					async () => {
 						startCounter++;
 
 						if (startCounter !== 1) {
-							expect(startCounter).to.equal(2);
 							await agenda.stop();
-							resolve();
+							resolve(startCounter);
 						}
 					},
 					{
 						lockLifetime: 50
 					}
-				)
-			);
+				);
+			});
 
 			expect(agenda.definitions['lock job'].lockLifetime).to.equal(50);
 
@@ -824,24 +833,21 @@ describe('Job', () => {
 			agenda.every('0.02 seconds', 'lock job');
 			await agenda.stop();
 			await agenda.start();
-			await processorPromise;
+			expect(await processorPromise).to.equal(2);
 		});
 
 		it('runs a one-time job after its lock expires', async () => {
 			let runCount = 0;
 
-			const processorPromise = new Promise(async resolve =>
+			const processorPromise = new Promise(resolve =>
 				agenda.define(
 					'lock job',
-					async job => {
-						// eslint-disable-line no-unused-vars
+					async _job => {
 						runCount++;
-
-						if (runCount !== 1) {
-							await agenda.stop();
-							resolve(runCount);
-						} else {
+						if (runCount === 1) {
 							await new Promise(longResolve => setTimeout(longResolve, 1000));
+						} else {
+							resolve(runCount);
 						}
 					},
 					{
@@ -850,13 +856,9 @@ describe('Job', () => {
 				)
 			);
 
-			let errorHasBeenThrown = false;
+			let errorHasBeenThrown;
 			agenda.on('error', err => {
-				if (err.message.includes("execution of 'lock job' canceled")) {
-					errorHasBeenThrown = true;
-				} else {
-					console.error(err);
-				}
+				errorHasBeenThrown = err;
 			});
 			agenda.processEvery(50);
 			await agenda.start();
@@ -864,7 +866,7 @@ describe('Job', () => {
 				i: 1
 			});
 			expect(await processorPromise).to.equal(2);
-			expect(errorHasBeenThrown).to.be.true;
+			expect(errorHasBeenThrown?.message).to.includes("execution of 'lock job' canceled");
 		});
 
 		it('does not process locked jobs', async () => {
@@ -915,7 +917,6 @@ describe('Job', () => {
 			await delay(200);
 
 			expect((await agenda.getRunningStats()).lockedJobs).to.equal(1);
-			await agenda.stop();
 		});
 
 		it('does not on-the-fly lock more than definition.lockLimit jobs', async () => {
@@ -927,7 +928,6 @@ describe('Job', () => {
 
 			await delay(500);
 			expect((await agenda.getRunningStats()).lockedJobs).to.equal(1);
-			await agenda.stop();
 		});
 
 		it('does not lock more than agenda._lockLimit jobs during processing interval', async () => {
@@ -947,7 +947,6 @@ describe('Job', () => {
 
 			await delay(500);
 			expect((await agenda.getRunningStats()).lockedJobs).to.equal(1);
-			await agenda.stop();
 		});
 
 		it('does not lock more than definition.lockLimit jobs during processing interval', async () => {
