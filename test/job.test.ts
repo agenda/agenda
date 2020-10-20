@@ -837,14 +837,15 @@ describe('Job', () => {
 		});
 
 		it('runs a one-time job after its lock expires', async () => {
-			let runCount = 0;
+			const processorPromise = new Promise(resolve => {
+				let runCount = 0;
 
-			const processorPromise = new Promise(resolve =>
 				agenda.define(
 					'lock job',
 					async _job => {
 						runCount++;
 						if (runCount === 1) {
+							// this should time out
 							await new Promise(longResolve => setTimeout(longResolve, 1000));
 						} else {
 							resolve(runCount);
@@ -853,14 +854,14 @@ describe('Job', () => {
 					{
 						lockLifetime: 50
 					}
-				)
-			);
+				);
+			});
 
 			let errorHasBeenThrown;
 			agenda.on('error', err => {
 				errorHasBeenThrown = err;
 			});
-			agenda.processEvery(50);
+			agenda.processEvery(25);
 			await agenda.start();
 			agenda.now('lock job', {
 				i: 1
