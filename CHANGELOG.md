@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.0.24](https://github.com/hokify/agenda/compare/v4.0.22...v4.0.24) (2020-10-20)
+
+
+### Bug Fixes
+
+* **jobprocessor:** improve checkIfJobIsStillAlive ([2919083](https://github.com/hokify/agenda/commit/29190836cdc917eea6dd1f58d650c1d29c29514f))
+* **jobprocessor:** prevent overloading of job queue processing ([9854007](https://github.com/hokify/agenda/commit/98540074fc76c1f8cbed269e239bd2e615629421))
+
 ### [4.0.22](https://github.com/hokify/agenda/compare/v4.0.21...v4.0.22) (2020-10-16)
 
 
