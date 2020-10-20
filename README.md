@@ -6,11 +6,10 @@
   A light-weight job scheduling library for Node.js
 </p>
 <p align="center">
-  <a href="https://slackin-ekwifvcwbr.now.sh/"><img src="https://slackin-ekwifvcwbr.now.sh/badge.svg" alt="Slack Status"></a>
-  <a href="http://travis-ci.org/agenda/agenda"><img src="https://api.travis-ci.org/agenda/agenda.svg?branch=master" alt="Build Status"></a>
-  <a href="https://david-dm.org/agenda/agenda"><img src="https://david-dm.org/agenda/agenda/status.svg" alt="dependencies Status"></a>
-  <a href="https://david-dm.org/agenda/agenda?type=dev"><img src="https://david-dm.org/agenda/agenda/dev-status.svg" alt="devDependencies Status"></a>
-  <a href="https://coveralls.io/github/agenda/agenda?branch=master"><img src="https://coveralls.io/repos/github/agenda/agenda/badge.svg?branch=master" alt="Coverage Status"></a>
+  <a href="http://travis-ci.org/hokify/agenda"><img src="https://api.travis-ci.org/hokify/agenda.svg?branch=master" alt="Build Status"></a>
+  <a href="https://david-dm.org/hokify/agenda"><img src="https://david-dm.org/hokify/agenda/status.svg" alt="dependencies Status"></a>
+  <a href="https://david-dm.org/hokify/agenda?type=dev"><img src="https://david-dm.org/hokify/agenda/dev-status.svg" alt="devDependencies Status"></a>
+  <a href="https://coveralls.io/github/hokify/agenda?branch=master"><img src="https://coveralls.io/repos/github/hokify/agenda/badge.svg?branch=master" alt="Coverage Status"></a>
 	<br>
 	<br>
 	<br>
@@ -21,7 +20,7 @@ This is a fork of agenda js, it differs from the original version in following p
 - Complete rewrite in Typescript (fully typed!)
 - Supports mongoDB sharding by name
 - touch() can have an optional progress parameter (0-100)
-- Bugfixes and improvements for locking
+- Bugfixes and improvements for locking & job processing (concurrency, lockLimit,..)
 - Breaking change: define() config paramter moved from 2nd position to 3rd
 - getRunningStats()
 
