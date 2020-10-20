@@ -1,4 +1,4 @@
-import { ObjectId } from 'mongodb';
+import { FilterQuery, ObjectId } from 'mongodb';
 
 export interface IJobParameters<DATA = any | void> {
 	_id?: ObjectId;
@@ -27,7 +27,7 @@ export interface IJobParameters<DATA = any | void> {
 	progress?: number;
 
 	// unique query object
-	unique?: any;
+	unique?: FilterQuery<IJobParameters<DATA>>;
 	uniqueOpts?: {
 		insertOnly: boolean;
 	};

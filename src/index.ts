@@ -2,15 +2,17 @@ import { EventEmitter } from 'events';
 import * as debug from 'debug';
 
 import * as humanInterval from 'human-interval';
-import { Db, MongoClientOptions } from 'mongodb';
+import { Db, FilterQuery, MongoClientOptions, SortOptionObject } from 'mongodb';
 import { Job } from './Job';
 import { JobProcessor } from './JobProcessor';
 import type { IJobDefinition } from './types/JobDefinition';
 import { IAgendaConfig } from './types/AgendaConfig';
 import { JobDbRepository } from './JobDbRepository';
 import { IDatabaseOptions, IDbConfig, IMongoOptions } from './types/DbOptions';
-import { filterUndef } from './utils/helpers';
-import { parsePriority } from './utils/priority';
+import { filterUndefined } from './utils/filterUndefined';
+import { JobPriority, parsePriority } from './utils/priority';
+import { IAgendaStatus } from './types/AgendaStatus';
+import { IJobParameters } from './types/JobParameters';
 
 const log = debug('agenda');
 
@@ -51,7 +53,7 @@ export class Agenda extends EventEmitter {
 	on(event: string, listener: (err: Error, job: Job) => void): this;
 	on(event: 'ready', listener: () => void): this;
 	on(event: 'error', listener: (err: Error) => void): this;
-	on(event, listener) {
+	on(event: string, listener: (...args: any[]) => void): this {
 		return super.on(event, listener);
 	}
 
@@ -63,7 +65,7 @@ export class Agenda extends EventEmitter {
 
 	private ready: Promise<void>;
 
-	getRunningStats(fullDetails = false) {
+	async getRunningStats(fullDetails = false): Promise<IAgendaStatus> {
 		if (!this.jobProcessor) {
 			throw new Error('agenda not running!');
 		}
@@ -126,7 +128,7 @@ export class Agenda extends EventEmitter {
 		return this;
 	}
 
-	sort(query): Agenda {
+	sort(query: SortOptionObject<IJobParameters>): Agenda {
 		log('Agenda.sort([Object])');
 		this.attrs.sort = query;
 		return this;
@@ -136,19 +138,19 @@ export class Agenda extends EventEmitter {
 		return !!(config.db?.address || config.mongo);
 	}
 
-	async cancel(query: any): Promise<number> {
+	async cancel(query: FilterQuery<IJobParameters>): Promise<number> {
 		log('attempting to cancel all Agenda jobs', query);
 		try {
-			const { result } = await this.db.removeJobs(query);
-			log('%s jobs cancelled', result.n);
-			return result.n || 0;
+			const amountOfRemovedJobs = await this.db.removeJobs(query);
+			log('%s jobs cancelled', amountOfRemovedJobs);
+			return amountOfRemovedJobs;
 		} catch (error) {
 			log('error trying to delete jobs from MongoDB');
 			throw error;
 		}
 	}
 
-	name(name): Agenda {
+	name(name: string): Agenda {
 		log('Agenda.name(%s)', name);
 		this.attrs.name = name;
 		return this;
@@ -190,7 +192,12 @@ export class Agenda extends EventEmitter {
 		return this;
 	}
 
-	async jobs(query: any = {}, sort: any = {}, limit = 0, skip = 0): Promise<Job[]> {
+	async jobs(
+		query: FilterQuery<IJobParameters> = {},
+		sort: FilterQuery<IJobParameters> = {},
+		limit = 0,
+		skip = 0
+	): Promise<Job[]> {
 		const result = await this.db.getJobs(query, sort, limit, skip);
 
 		return result.map(job => new Job(this, job));
@@ -208,30 +215,30 @@ export class Agenda extends EventEmitter {
 	/** BREAKING CHANGE: options moved from 2nd to 3rd parameter! */
 	define<DATA = any>(
 		name: string,
-		processor: (agendaJob: Job<DATA>, done: (err?) => void) => void,
+		processor: (agendaJob: Job<DATA>, done: (err?: Error) => void) => void,
 		options?: Partial<Pick<IJobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency'>> & {
-			priority?: 'lowest' | 'low' | 'normal' | 'high' | 'highest' | number;
+			priority?: JobPriority;
 		}
-	);
+	): void;
 	define<DATA = any>(
 		name: string,
 		processor: (agendaJob: Job<DATA>) => Promise<void>,
 		options?: Partial<Pick<IJobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency'>> & {
-			priority?: 'lowest' | 'low' | 'normal' | 'high' | 'highest' | number;
+			priority?: JobPriority;
 		}
-	);
+	): void;
 	define(
 		name: string,
 		processor,
 		options?: Partial<Pick<IJobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency'>> & {
-			priority?: 'lowest' | 'low' | 'normal' | 'high' | 'highest' | number;
+			priority?: JobPriority;
 		}
 	): void {
 		this.definitions[name] = {
 			fn: processor,
 			concurrency: options?.concurrency || this.attrs.defaultConcurrency,
 			lockLimit: options?.lockLimit || this.attrs.defaultLockLimit,
-			priority: parsePriority(options?.priority) || 0,
+			priority: parsePriority(options?.priority),
 			lockLifetime: options?.lockLifetime || this.attrs.defaultLockLifetime
 		};
 		log('job [%s] defined with following options: \n%O', name, this.definitions[name]);
@@ -247,7 +254,7 @@ export class Agenda extends EventEmitter {
 	 */
 	private async createJobs<DATA = any>(
 		names: string[],
-		createJob: (name) => Promise<Job<DATA>>
+		createJob: (name: string) => Promise<Job<DATA>>
 	): Promise<Job<DATA>[]> {
 		try {
 			const jobs = await Promise.all(names.map(name => createJob(name)));
@@ -263,7 +270,7 @@ export class Agenda extends EventEmitter {
 
 	create(name: string): Job<void>;
 	create<DATA = any>(name: string, data: DATA): Job<DATA>;
-	create(name: string, data?: any) {
+	create(name: string, data?: any): Job {
 		log('Agenda.create(%s, [Object])', name);
 		const priority = this.definitions[name] ? this.definitions[name].priority : 0;
 		const job = new Job(this, { name, data, type: 'normal', priority });
@@ -408,7 +415,7 @@ export class Agenda extends EventEmitter {
 		const lockedJobs = this.jobProcessor?.stop();
 
 		log('Agenda._unlockJobs()');
-		const jobIds = filterUndef(lockedJobs?.map(job => job.attrs._id) || []);
+		const jobIds = filterUndefined(lockedJobs?.map(job => job.attrs._id) || []);
 
 		if (jobIds.length > 0) {
 			log('about to unlock jobs with ids: %O', jobIds);

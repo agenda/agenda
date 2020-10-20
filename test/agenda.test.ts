@@ -4,7 +4,7 @@ import { expect } from 'chai';
 import { mockMongo } from './helpers/mock-mongodb';
 
 import { Agenda } from '../src';
-import { hasMongoProtocol } from '../src/utils/mongodb';
+import { hasMongoProtocol } from '../src/utils/hasMongoProtocol';
 import { Job } from '../src/Job';
 
 // agenda instances
@@ -14,9 +14,9 @@ let mongoCfg: string;
 // mongo db connection db instance
 let mongoDb: Db;
 
-const clearJobs = () => {
+const clearJobs = async (): Promise<void> => {
 	if (mongoDb) {
-		return mongoDb.collection('agendaJobs').deleteMany({});
+		await mongoDb.collection('agendaJobs').deleteMany({});
 	}
 };
 
@@ -25,7 +25,7 @@ const jobTimeout = 500;
 const jobType = 'do work';
 const jobProcessor = () => {};
 
-describe('Agenda', function () {
+describe('Agenda', () => {
 	beforeEach(async () => {
 		if (!mongoDb) {
 			const mockedMongo = await mockMongo();
@@ -463,7 +463,7 @@ describe('Agenda', function () {
 
 			it('runs the job immediately', async () => {
 				globalAgenda.define('immediateJob', async job => {
-					expect(job.isRunning()).to.be.true;
+					expect(job.isRunning()).to.be.equal(true);
 					await globalAgenda.stop();
 				});
 				await globalAgenda.now('immediateJob');
@@ -517,7 +517,7 @@ describe('Agenda', function () {
 				const job = globalAgenda.create('someJob', {});
 				await job.save();
 
-				expect(job.attrs._id).to.not.be.undefined;
+				expect(job.attrs._id).to.not.be.equal(undefined);
 
 				await clearJobs();
 			});
@@ -528,7 +528,7 @@ describe('Agenda', function () {
 		beforeEach(async () => {
 			let remaining = 3;
 			const checkDone = () => {
-				remaining--;
+				remaining -= 1;
 			};
 
 			await globalAgenda.create('jobA').save().then(checkDone);
@@ -609,13 +609,12 @@ describe('Agenda', function () {
 		});
 	});
 
-	describe('process jobs', function () {
+	describe('process jobs', () => {
 		// eslint-disable-line prefer-arrow-callback
-		it('should not cause unhandledRejection', async function () {
+		it('should not cause unhandledRejection', async () => {
 			// This unit tests if for this bug [https://github.com/agenda/agenda/issues/884]
 			// which is not reproducible with default agenda config on shorter processEvery.
 			// Thus we set the test timeout to 10000, and the delay below to 6000.
-			this.timeout(10000);
 
 			const unhandledRejections: any[] = [];
 			const rejectionsHandler = error => unhandledRejections.push(error);
@@ -651,6 +650,6 @@ describe('Agenda', function () {
 			expect(j3processes).to.equal(1);
 
 			expect(unhandledRejections).to.have.length(0);
-		});
+		}).timeout(10000);
 	});
 });

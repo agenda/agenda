@@ -9,9 +9,9 @@ let agenda: Agenda;
 // mongo db connection db instance
 let mongoDb: Db;
 
-const clearJobs = () => {
+const clearJobs = async (): Promise<void> => {
 	if (mongoDb) {
-		return mongoDb.collection('agendaJobs').deleteMany({});
+		await mongoDb.collection('agendaJobs').deleteMany({});
 	}
 };
 
@@ -62,6 +62,7 @@ describe('Retry', () => {
 			}
 
 			done();
+			return undefined;
 		});
 
 		agenda.on('fail:a job', (err, job) => {

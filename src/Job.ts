@@ -1,6 +1,6 @@
 import * as date from 'date.js';
 import * as debug from 'debug';
-import { parsePriority } from './utils/priority';
+import { JobPriority, parsePriority } from './utils/priority';
 import type { Agenda } from './index';
 import { computeFromInterval, computeFromRepeatAt } from './utils/nextRunAt';
 import { IJobParameters } from './types/JobParameters';
@@ -46,18 +46,13 @@ export class Job<DATA = any | void> {
 			data: any;
 		}
 	) {
-		// Remove special args
-
-		// Process args
-		args.priority = parsePriority(args.priority) || 0;
-
 		// Set attrs to args
 		this.attrs = {
 			...args,
 			// Set defaults if undefined
-			priority: args.priority || 0,
+			priority: parsePriority(args.priority),
 			nextRunAt: args.nextRunAt || new Date(),
-			type: args.type // || 'once'
+			type: args.type
 		};
 	}
 
@@ -86,7 +81,7 @@ export class Job<DATA = any | void> {
 	repeatEvery(
 		interval: string | number,
 		options: { timezone?: string; skipImmediate?: boolean } = {}
-	) {
+	): this {
 		this.attrs.repeatInterval = interval;
 		this.attrs.repeatTimezone = options.timezone;
 		if (options.skipImmediate) {
@@ -101,28 +96,28 @@ export class Job<DATA = any | void> {
 		return this;
 	}
 
-	repeatAt(time) {
+	repeatAt(time: string): this {
 		this.attrs.repeatAt = time;
 		return this;
 	}
 
-	disable() {
+	disable(): this {
 		this.attrs.disabled = true;
 		return this;
 	}
 
-	enable() {
+	enable(): this {
 		this.attrs.disabled = false;
 		return this;
 	}
 
-	unique(unique: IJobParameters['unique'], opts?: IJobParameters['uniqueOpts']) {
+	unique(unique: IJobParameters['unique'], opts?: IJobParameters['uniqueOpts']): this {
 		this.attrs.unique = unique;
 		this.attrs.uniqueOpts = opts;
 		return this;
 	}
 
-	schedule(time) {
+	schedule(time: string | Date): this {
 		const d = new Date(time);
 
 		this.attrs.nextRunAt = Number.isNaN(d.getTime()) ? date(time) : d;
@@ -135,17 +130,13 @@ export class Job<DATA = any | void> {
 	 * @param {String} priority priority of when job should be queued
 	 * @returns {exports} instance of Job
 	 */
-	priority(priority: 'lowest' | 'low' | 'normal' | 'high' | 'highest' | number) {
+	priority(priority: JobPriority): this {
 		this.attrs.priority = parsePriority(priority);
 		return this;
 	}
 
-	fail(reason: Error | string) {
-		if (reason instanceof Error) {
-			reason = reason.message;
-		}
-
-		this.attrs.failReason = reason;
+	fail(reason: Error | string): this {
+		this.attrs.failReason = reason instanceof Error ? reason.message : reason;
 		this.attrs.failCount = (this.attrs.failCount || 0) + 1;
 		const now = new Date();
 		this.attrs.failedAt = now;
@@ -159,7 +150,7 @@ export class Job<DATA = any | void> {
 		return this;
 	}
 
-	isRunning() {
+	isRunning(): boolean {
 		if (!this.attrs.lastRunAt) {
 			return false;
 		}
@@ -178,7 +169,7 @@ export class Job<DATA = any | void> {
 		return false;
 	}
 
-	save() {
+	async save(): Promise<Job> {
 		return this.agenda.db.saveJob(this);
 	}
 
@@ -237,7 +228,7 @@ export class Job<DATA = any | void> {
 		return this;
 	}
 
-	async run() {
+	async run(): Promise<void> {
 		const definition = this.agenda.definitions[this.attrs.name];
 
 		this.attrs.lastRunAt = new Date();

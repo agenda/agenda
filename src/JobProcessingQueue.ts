@@ -15,7 +15,7 @@ export class JobProcessingQueue {
 		this._queue = [];
 	}
 
-	get length() {
+	get length(): number {
 		return this._queue.length;
 	}
 
@@ -23,7 +23,7 @@ export class JobProcessingQueue {
 	 * Pops and returns last queue element (next job to be processed) without checking concurrency.
 	 * @returns {Job} Next Job to be processed
 	 */
-	pop() {
+	pop(): Job | undefined {
 		return this._queue.pop();
 	}
 
@@ -32,11 +32,11 @@ export class JobProcessingQueue {
 	 * @param {Job} job job to add to queue
 	 * @returns {undefined}
 	 */
-	push(job: Job) {
+	push(job: Job): void {
 		this._queue.push(job);
 	}
 
-	remove(job: Job) {
+	remove(job: Job): void {
 		let removeJobIndex = this._queue.indexOf(job);
 		if (removeJobIndex === -1) {
 			// lookup by id
@@ -58,7 +58,7 @@ export class JobProcessingQueue {
 	 * @param {Job} job job to add to queue
 	 * @returns {undefined}
 	 */
-	insert(job: Job) {
+	insert(job: Job): void {
 		const matchIndex = this._queue.findIndex(element => {
 			if (
 				element.attrs.nextRunAt &&

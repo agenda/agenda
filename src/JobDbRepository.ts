@@ -6,10 +6,11 @@ import {
 	MongoClient,
 	MongoClientOptions,
 	UpdateQuery,
-	ObjectId
+	ObjectId,
+	SortOptionObject
 } from 'mongodb';
 import type { Job } from './Job';
-import { hasMongoProtocol } from './utils/mongodb';
+import { hasMongoProtocol } from './utils/hasMongoProtocol';
 import type { Agenda } from './index';
 import { IDatabaseOptions, IDbConfig, IMongoOptions } from './types/DbOptions';
 import { IJobParameters } from './types/JobParameters';
@@ -49,26 +50,32 @@ export class JobDbRepository {
 		return !!connectOptions.db?.address;
 	}
 
-	async getJobs(query: any, sort: any = {}, limit = 0, skip = 0) {
+	async getJobs(
+		query: FilterQuery<IJobParameters>,
+		sort: SortOptionObject<IJobParameters> = {},
+		limit = 0,
+		skip = 0
+	): Promise<IJobParameters[]> {
 		return this.collection.find(query).sort(sort).limit(limit).skip(skip).toArray();
 	}
 
-	async removeJobs(query: any) {
-		return this.collection.deleteMany(query);
+	async removeJobs(query: FilterQuery<IJobParameters>): Promise<number> {
+		const result = await this.collection.deleteMany(query);
+		return result.result.n || 0;
 	}
 
 	async getQueueSize(): Promise<number> {
 		return this.collection.countDocuments({ nextRunAt: { $lt: new Date() } });
 	}
 
-	async unlockJob(job) {
-		await this.collection.updateOne({ _id: job._id }, { $unset: { lockedAt: true } });
+	async unlockJob(job: Job): Promise<void> {
+		await this.collection.updateOne({ _id: job.attrs._id }, { $unset: { lockedAt: true } });
 	}
 
 	/**
 	 * Internal method to unlock jobs so that they can be re-run
 	 */
-	async unlockJobs(jobIds: ObjectId[]) {
+	async unlockJobs(jobIds: ObjectId[]): Promise<void> {
 		await this.collection.updateMany({ _id: { $in: jobIds } }, { $unset: { lockedAt: true } });
 	}
 
@@ -143,7 +150,7 @@ export class JobDbRepository {
 		return result.value;
 	}
 
-	async connect() {
+	async connect(): Promise<void> {
 		const db = await this.createConnection();
 		log('successful connection to MongoDB', db.options);
 
@@ -184,8 +191,10 @@ export class JobDbRepository {
 	}
 
 	private async database(url: string, options?: MongoClientOptions) {
-		if (!hasMongoProtocol(url)) {
-			url = `mongodb://${url}`;
+		let connectionString = url;
+
+		if (!hasMongoProtocol(connectionString)) {
+			connectionString = `mongodb://${connectionString}`;
 		}
 
 		const client = await MongoClient.connect(url, {
@@ -197,7 +206,7 @@ export class JobDbRepository {
 		return client.db();
 	}
 
-	private processDbResult(job: Job, res: IJobParameters) {
+	private processDbResult(job: Job, res: IJobParameters): Job {
 		log(
 			'processDbResult() called with success, checking whether to process job immediately or not'
 		);
@@ -245,7 +254,7 @@ export class JobDbRepository {
 			// Grab current time and set default query options for MongoDB
 			const now = new Date();
 			const protect: Partial<IJobParameters> = {};
-			let update: UpdateQuery<any> = { $set: props };
+			let update: UpdateQuery<IJobParameters> = { $set: props };
 			log('current time stored as %s', now.toISOString());
 
 			// If the job already had an ID, then update the properties of the job
@@ -310,7 +319,7 @@ export class JobDbRepository {
 
 			if (job.attrs.unique) {
 				// If we want the job to be unique, then we can upsert based on the 'unique' query object that was passed in
-				const query: FilterQuery<any> = job.attrs.unique;
+				const query = job.attrs.unique;
 				query.name = props.name;
 				if (job.attrs.uniqueOpts?.insertOnly) {
 					update = { $setOnInsert: props };

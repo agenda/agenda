@@ -1,5 +1,6 @@
 import * as debug from 'debug';
 import { Job } from './Job';
+import { IAgendaStatus } from './types/AgendaStatus';
 import { IJobDefinition } from './types/JobDefinition';
 import { JobProcessingQueue } from './JobProcessingQueue';
 import type { Agenda } from './index';
@@ -15,23 +16,18 @@ const log = debug('agenda:jobProcessor');
  */
 export class JobProcessor {
 	private jobStatus: {
-		[name: string]:
-			| {
-					running: number;
-					locked: number;
-			  }
-			| undefined;
+		[name: string]: { running: number; locked: number } | undefined;
 	} = {};
 
 	private localQueueProcessing = 0;
 
-	async getStatus(fullDetails = false) {
+	async getStatus(fullDetails = false): Promise<IAgendaStatus> {
 		// eslint-disable-next-line @typescript-eslint/no-var-requires,global-require
 		const { version } = require('../package.json');
 
 		return {
 			version,
-			queueName: this.agenda.name,
+			queueName: this.agenda.attrs.name,
 			totalQueueSizeDB: await this.agenda.db.getQueueSize(),
 			config: {
 				totalLockLimit: this.totalLockLimit,
@@ -42,7 +38,7 @@ export class JobProcessor {
 				Object.keys(this.jobStatus).map(job => [
 					job,
 					{
-						...this.jobStatus[job],
+						...this.jobStatus[job]!,
 						config: this.agenda.definitions[job]
 					}
 				])
@@ -95,7 +91,7 @@ export class JobProcessor {
 	}
 
 	// processJobs
-	async process(extraJob?: Job) {
+	async process(extraJob?: Job): Promise<void> {
 		// Make sure an interval has actually been set
 		// Prevents race condition with 'Agenda.stop' and already scheduled run
 		if (!this.isRunning) {
@@ -138,7 +134,7 @@ export class JobProcessor {
 	 * @param {String} name name of job to check if we should lock or not
 	 * @returns {boolean} whether or not you should lock job
 	 */
-	shouldLock(name) {
+	shouldLock(name: string): boolean {
 		const jobDefinition = this.agenda.definitions[name];
 		let shouldLock = true;
 		// global lock limit
@@ -168,7 +164,7 @@ export class JobProcessor {
 	 * @param {boolean} inFront puts the job in front of queue if true
 	 * @returns {undefined}
 	 */
-	private enqueueJob(job: Job) {
+	private enqueueJob(job: Job): void {
 		this.jobQueue.insert(job);
 	}
 
@@ -178,7 +174,7 @@ export class JobProcessor {
 	 * We do this because sometimes jobs are scheduled but will be run before the next process time
 	 * @returns {undefined}
 	 */
-	async lockOnTheFly() {
+	async lockOnTheFly(): Promise<void> {
 		// Already running this? Return
 		if (this.isLockingOnTheFly) {
 			log.extend('lockOnTheFly')('already running, returning');
@@ -347,7 +343,7 @@ export class JobProcessor {
 			return;
 		}
 
-		this.localQueueProcessing++;
+		this.localQueueProcessing += 1;
 
 		let jobEnqueued = false;
 		try {
@@ -400,7 +396,7 @@ export class JobProcessor {
 				);
 			} */
 		} finally {
-			this.localQueueProcessing--;
+			this.localQueueProcessing -= 1;
 		}
 	}
 

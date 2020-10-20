@@ -5,17 +5,25 @@
  * @param {String|Number} priority string to parse into number
  * @returns {Number} priority that was parsed
  */
-export const parsePriority = priority => {
-	const priorityMap = {
-		lowest: -20,
-		low: -10,
-		normal: 0,
-		high: 10,
-		highest: 20
-	};
-	if (typeof priority === 'number' || priority instanceof Number) {
+
+export type JobPriority = number | keyof typeof priorityMap;
+
+const priorityMap = {
+	lowest: -20,
+	low: -10,
+	normal: 0,
+	high: 10,
+	highest: 20
+};
+
+export function parsePriority(priority?: JobPriority): number {
+	if (typeof priority === 'number') {
 		return priority;
 	}
 
-	return priorityMap[priority];
-};
+	if (typeof priority === 'string' && priorityMap[priority]) {
+		return priorityMap[priority];
+	}
+
+	return priorityMap.normal;
+}

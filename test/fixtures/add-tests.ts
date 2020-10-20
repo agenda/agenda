@@ -1,6 +1,6 @@
 /* eslint-disable unicorn/no-process-exit */
 export default {
-	none: () => {},
+	none: (): void => {},
 	daily: agenda => {
 		agenda.define('once a day test job', (job, done) => {
 			process.send!('ran');

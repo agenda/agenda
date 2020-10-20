@@ -68,7 +68,7 @@ export const computeFromInterval = (attrs: IJobParameters): Date => {
  * Internal method to compute next run time from the repeat string
  * @returns {undefined}
  */
-export const computeFromRepeatAt = (attrs: IJobParameters): Date => {
+export function computeFromRepeatAt(attrs: IJobParameters): Date {
 	const lastRun = attrs.lastRunAt || new Date();
 	const nextDate = date(attrs.repeatAt).valueOf();
 
@@ -84,4 +84,4 @@ export const computeFromRepeatAt = (attrs: IJobParameters): Date => {
 	} else {
 		return date(attrs.repeatAt);
 	}
-};
+}
