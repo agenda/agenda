@@ -285,7 +285,7 @@ export class Agenda extends EventEmitter {
 	): Promise<Job<void>[]>;
 	async every(
 		interval: string | number,
-		names: string,
+		name: string,
 		data?: undefined,
 		options?: { timezone?: string; skipImmediate?: boolean }
 	): Promise<Job<void>>;
@@ -297,7 +297,7 @@ export class Agenda extends EventEmitter {
 	): Promise<Job<DATA>[]>;
 	async every<DATA = any>(
 		interval: string | number,
-		names: string,
+		name: string,
 		data: DATA,
 		options?: { timezone?: string; skipImmediate?: boolean }
 	): Promise<Job<DATA>>;
@@ -345,7 +345,7 @@ export class Agenda extends EventEmitter {
 		names: string[],
 		data: DATA
 	): Promise<Job<DATA>[]>;
-	async schedule<DATA = any>(when: string | Date, names: string, data: DATA): Promise<Job<DATA>>;
+	async schedule<DATA = any>(when: string | Date, name: string, data: DATA): Promise<Job<DATA>>;
 	async schedule(when: string | Date, names: string | string[], data?: any) {
 		const createJob = async name => {
 			const job = this.create(name, data);
