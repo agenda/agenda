@@ -976,7 +976,7 @@ describe('Job', () => {
 		it('should not block a job for concurrency of another job', async () => {
 			agenda.processEvery(50);
 
-			const processed: any[] = [];
+			const processed: number[] = [];
 			const now = Date.now();
 
 			agenda.define(
@@ -990,17 +990,19 @@ describe('Job', () => {
 				}
 			);
 
-			agenda.define(
-				'non-blocking',
-				job => {
-					processed.push(job.attrs.data.i);
-					expect(processed).not.to.contain(2);
-				},
-				{
-					// Lower priority to keep it at the back in the queue
-					priority: 'lowest'
-				}
-			);
+			const checkResultsPromise = new Promise<number[]>(resolve => {
+				agenda.define(
+					'non-blocking',
+					job => {
+						processed.push(job.attrs.data.i);
+						resolve(processed);
+					},
+					{
+						// Lower priority to keep it at the back in the queue
+						priority: 'lowest'
+					}
+				);
+			});
 
 			let finished = false;
 			agenda.on('complete', () => {
@@ -1011,30 +1013,40 @@ describe('Job', () => {
 
 			agenda.start();
 
-			return Promise.all([
+			await Promise.all([
 				agenda.schedule(new Date(now + 100), 'blocking', { i: 1 }),
 				agenda.schedule(new Date(now + 100), 'blocking', { i: 2 }),
 				agenda.schedule(new Date(now + 100), 'non-blocking', { i: 3 })
 			]);
+
+			try {
+				const results: number[] = await Promise.race([
+					checkResultsPromise,
+					// eslint-disable-next-line prefer-promise-reject-errors
+					new Promise<number[]>((_, reject) => setTimeout(() => reject(`not processed`), 2000))
+				]);
+				expect(results).not.to.contain(2);
+			} catch (err) {
+				console.log('stats', JSON.stringify(await agenda.getRunningStats(), undefined, 3));
+			}
 		});
 
 		it('should run jobs as first in first out (FIFO)', async () => {
-			const results: number[] = [];
-
 			agenda.processEvery(100);
 			agenda.define('fifo', (job, cb) => cb(), { concurrency: 1 });
 
-			const checkResultsPromise = new Promise(resolve =>
+			const checkResultsPromise = new Promise<number[]>(resolve => {
+				const results: number[] = [];
+
 				agenda.on('start:fifo', job => {
 					results.push(new Date(job.attrs.nextRunAt!).getTime());
 					if (results.length !== 3) {
 						return;
 					}
 
-					expect(results.join('')).to.eql(results.sort().join(''));
-					resolve();
-				})
-			);
+					resolve(results);
+				});
+			});
 
 			await agenda.start();
 
@@ -1044,17 +1056,27 @@ describe('Job', () => {
 			await delay(50);
 			await agenda.now('fifo');
 			await delay(50);
-			await checkResultsPromise;
+			try {
+				const results: number[] = await Promise.race([
+					checkResultsPromise,
+					// eslint-disable-next-line prefer-promise-reject-errors
+					new Promise<number[]>((_, reject) => setTimeout(() => reject(`not processed`), 2000))
+				]);
+				expect(results.join('')).to.eql(results.sort().join(''));
+			} catch (err) {
+				console.log('stats', JSON.stringify(await agenda.getRunningStats(), undefined, 3));
+			}
 		});
 
 		it('should run jobs as first in first out (FIFO) with respect to priority', async () => {
-			const times: number[] = [];
-			const priorities: number[] = [];
 			const now = Date.now();
 
 			agenda.define('fifo-priority', (job, cb) => cb(), { concurrency: 1 });
 
-			const checkResultsPromise = new Promise(resolve =>
+			const checkResultsPromise = new Promise(resolve => {
+				const times: number[] = [];
+				const priorities: number[] = [];
+
 				agenda.on('start:fifo-priority', job => {
 					priorities.push(job.attrs.priority);
 					times.push(new Date(job.attrs.lastRunAt!).getTime());
@@ -1062,11 +1084,9 @@ describe('Job', () => {
 						return;
 					}
 
-					expect(times.join('')).to.eql(times.sort().join(''));
-					expect(priorities).to.eql([10, 10, -10]);
-					resolve();
-				})
-			);
+					resolve({ times, priorities });
+				});
+			});
 
 			await Promise.all([
 				agenda.create('fifo-priority', { i: 1 }).schedule(new Date(now)).priority('high').save(),
@@ -1082,7 +1102,18 @@ describe('Job', () => {
 					.save()
 			]);
 			await agenda.start();
-			await checkResultsPromise;
+			try {
+				const { times, priorities } = await Promise.race<any>([
+					checkResultsPromise,
+					// eslint-disable-next-line prefer-promise-reject-errors
+					new Promise<any>((_, reject) => setTimeout(() => reject(`not processed`), 2000))
+				]);
+
+				expect(times.join('')).to.eql(times.sort().join(''));
+				expect(priorities).to.eql([10, 10, -10]);
+			} catch (err) {
+				console.log('stats', JSON.stringify(await agenda.getRunningStats(), undefined, 3));
+			}
 		});
 
 		it('should run higher priority jobs first', async () => {
@@ -1105,15 +1136,12 @@ describe('Job', () => {
 				});
 			});
 
-			console.log('1');
 			await Promise.all([
 				agenda.create('priority').schedule(now).save(),
 				agenda.create('priority').schedule(now).priority('low').save(),
 				agenda.create('priority').schedule(now).priority('high').save()
 			]);
-			console.log('2');
 			await agenda.start();
-			console.log('3');
 			try {
 				const results = await Promise.race([
 					checkResultsPromise,
@@ -1121,8 +1149,6 @@ describe('Job', () => {
 					new Promise((_, reject) => setTimeout(() => reject(`not processed`), 2000))
 				]);
 				expect(results).to.eql([10, 0, -10]);
-
-				console.log('4');
 			} catch (err) {
 				console.log('stats', JSON.stringify(await agenda.getRunningStats(), undefined, 3));
 			}
