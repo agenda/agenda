@@ -1091,7 +1091,7 @@ describe('Job', () => {
 			const now = new Date();
 			const results: number[] = [];
 
-			agenda.define('priority', (job, cb) => setTimeout(cb, 10), { concurrency: 1 });
+			agenda.define('priority', (_job, cb) => setTimeout(cb, 10), { concurrency: 1 });
 
 			const checkResultsPromise = new Promise(resolve =>
 				agenda.on('start:priority', job => {
@@ -1105,13 +1105,24 @@ describe('Job', () => {
 				})
 			);
 
+			console.log('1');
 			await Promise.all([
 				agenda.create('priority').schedule(now).save(),
 				agenda.create('priority').schedule(now).priority('low').save(),
 				agenda.create('priority').schedule(now).priority('high').save()
 			]);
+			console.log('2');
 			await agenda.start();
-			await checkResultsPromise;
+			console.log('3');
+			try {
+				await Promise.race([
+					checkResultsPromise,
+					new Promise((_, reject) => setTimeout(() => reject(`not processed`), 2000))
+				]);
+				console.log('4');
+			} catch (err) {
+				console.log('stats', JSON.stringify(await agenda.getRunningStats(), undefined, 3));
+			}
 		});
 
 		it('should support custom sort option', () => {
