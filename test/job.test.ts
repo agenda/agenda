@@ -1089,21 +1089,21 @@ describe('Job', () => {
 			// Inspired by tests added by @lushc here:
 			// <https://github.com/agenda/agenda/pull/451/commits/336ff6445803606a6dc468a6f26c637145790adc>
 			const now = new Date();
-			const results: number[] = [];
 
 			agenda.define('priority', (_job, cb) => setTimeout(cb, 10), { concurrency: 1 });
 
-			const checkResultsPromise = new Promise(resolve =>
+			const checkResultsPromise = new Promise(resolve => {
+				const results: number[] = [];
+
 				agenda.on('start:priority', job => {
 					results.push(job.attrs.priority);
 					if (results.length !== 3) {
 						return;
 					}
 
-					expect(results).to.eql([10, 0, -10]);
-					resolve();
-				})
-			);
+					resolve(results);
+				});
+			});
 
 			console.log('1');
 			await Promise.all([
@@ -1115,10 +1115,13 @@ describe('Job', () => {
 			await agenda.start();
 			console.log('3');
 			try {
-				await Promise.race([
+				const results = await Promise.race([
 					checkResultsPromise,
+					// eslint-disable-next-line prefer-promise-reject-errors
 					new Promise((_, reject) => setTimeout(() => reject(`not processed`), 2000))
 				]);
+				expect(results).to.eql([10, 0, -10]);
+
 				console.log('4');
 			} catch (err) {
 				console.log('stats', JSON.stringify(await agenda.getRunningStats(), undefined, 3));
