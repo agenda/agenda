@@ -1,18 +1,18 @@
 import { EventEmitter } from 'events';
 import * as debug from 'debug';
 
-import { Db, FilterQuery, MongoClientOptions, SortOptionObject } from 'mongodb';
-import { Job } from './Job';
-import { JobProcessor } from './JobProcessor';
+import type { Db, FilterQuery, MongoClientOptions, SortOptionObject } from 'mongodb';
 import type { IJobDefinition } from './types/JobDefinition';
-import { IAgendaConfig } from './types/AgendaConfig';
+import type { IAgendaConfig } from './types/AgendaConfig';
+import type { IDatabaseOptions, IDbConfig, IMongoOptions } from './types/DbOptions';
+import type { IAgendaStatus } from './types/AgendaStatus';
+import type { IJobParameters } from './types/JobParameters';
+import { Job } from './Job';
 import { JobDbRepository } from './JobDbRepository';
-import { IDatabaseOptions, IDbConfig, IMongoOptions } from './types/DbOptions';
-import { filterUndefined } from './utils/filterUndefined';
 import { JobPriority, parsePriority } from './utils/priority';
-import { IAgendaStatus } from './types/AgendaStatus';
-import { IJobParameters } from './types/JobParameters';
+import { JobProcessor } from './JobProcessor';
 import { calculateProcessEvery } from './utils/processEvery';
+import { filterUndefined } from './utils/filterUndefined';
 
 const log = debug('agenda');
 

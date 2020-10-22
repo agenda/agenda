@@ -16,7 +16,7 @@ const clearJobs = async (): Promise<void> => {
 };
 
 const jobType = 'do work';
-const jobProcessor = () => {};
+const jobProcessor = () => { };
 
 describe('Retry', () => {
 	beforeEach(async () => {
@@ -79,5 +79,5 @@ describe('Retry', () => {
 
 		await agenda.start();
 		await successPromise;
-	});
+	}).timeout(100000);
 });

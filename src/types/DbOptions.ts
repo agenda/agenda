@@ -1,5 +1,5 @@
-import { Db, MongoClientOptions, SortOptionObject } from 'mongodb';
-import { IJobParameters } from './JobParameters';
+import type { Db, MongoClientOptions, SortOptionObject } from 'mongodb';
+import type { IJobParameters } from './JobParameters';
 
 export interface IDatabaseOptions {
 	db: {

@@ -1150,7 +1150,7 @@ describe('Job', () => {
 				]);
 				expect(results).to.eql([10, 0, -10]);
 			} catch (err) {
-				console.log('stats', JSON.stringify(await agenda.getRunningStats(), undefined, 3));
+				// console.log('stats', JSON.stringify(await agenda.getRunningStats(), undefined, 3));
 			}
 		});
 

@@ -1,4 +1,4 @@
-import { Job } from '../Job';
+import type { Job } from '../Job';
 
 export interface IAgendaJobStatus {
 	[name: string]: { running: number; locked: number };

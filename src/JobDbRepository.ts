@@ -7,13 +7,14 @@ import {
 	MongoClientOptions,
 	UpdateQuery,
 	ObjectId,
-	SortOptionObject
+	SortOptionObject,
+	FindOneAndUpdateOption
 } from 'mongodb';
 import type { Job } from './Job';
-import { hasMongoProtocol } from './utils/hasMongoProtocol';
 import type { Agenda } from './index';
-import { IDatabaseOptions, IDbConfig, IMongoOptions } from './types/DbOptions';
-import { IJobParameters } from './types/JobParameters';
+import type { IDatabaseOptions, IDbConfig, IMongoOptions } from './types/DbOptions';
+import type { IJobParameters } from './types/JobParameters';
+import { hasMongoProtocol } from './utils/hasMongoProtocol';
 
 const log = debug('agenda:db');
 
@@ -81,7 +82,7 @@ export class JobDbRepository {
 
 	async lockJob(job: Job): Promise<IJobParameters | undefined> {
 		// Query to run against collection to see if we need to lock it
-		const criteria = {
+		const criteria: FilterQuery<Omit<IJobParameters, 'lockedAt'> & { lockedAt?: Date | null }> = {
 			_id: job.attrs._id,
 			name: job.attrs.name,
 			lockedAt: null,
@@ -90,11 +91,16 @@ export class JobDbRepository {
 		};
 
 		// Update / options for the MongoDB query
-		const update = { $set: { lockedAt: new Date() } };
-		const options = { returnOriginal: false };
+		const update: UpdateQuery<IJobParameters> = { $set: { lockedAt: new Date() } };
+		const options: FindOneAndUpdateOption<IJobParameters> = { returnOriginal: false };
 
 		// Lock the job in MongoDB!
-		const resp = await this.collection.findOneAndUpdate(criteria, update, options);
+		const resp = await this.collection.findOneAndUpdate(
+			criteria as FilterQuery<IJobParameters>,
+			update,
+			options
+		);
+
 		return resp?.value;
 	}
 
@@ -104,11 +110,13 @@ export class JobDbRepository {
 		lockDeadline: Date,
 		now: Date = new Date()
 	): Promise<IJobParameters | undefined> {
-		// /**
-		// * Query used to find job to run
-		// * @type {{$and: [*]}}
-		// */
-		const JOB_PROCESS_WHERE_QUERY = {
+		/**
+		 * Query used to find job to run
+		 * @type {{$and: [*]}}
+		 */
+		const JOB_PROCESS_WHERE_QUERY: FilterQuery<
+			Omit<IJobParameters, 'lockedAt'> & { lockedAt?: Date | null }
+		> = {
 			$and: [
 				{
 					name: jobName,
@@ -132,13 +140,16 @@ export class JobDbRepository {
 		 * Query used to set a job as locked
 		 * @type {{$set: {lockedAt: Date}}}
 		 */
-		const JOB_PROCESS_SET_QUERY = { $set: { lockedAt: now } };
+		const JOB_PROCESS_SET_QUERY: UpdateQuery<IJobParameters> = { $set: { lockedAt: now } };
 
 		/**
 		 * Query used to affect what gets returned
 		 * @type {{returnOriginal: boolean, sort: object}}
 		 */
-		const JOB_RETURN_QUERY = { returnOriginal: false, sort: this.connectOptions.sort };
+		const JOB_RETURN_QUERY: FindOneAndUpdateOption<IJobParameters> = {
+			returnOriginal: false,
+			sort: this.connectOptions.sort
+		};
 
 		// Find ONE and ONLY ONE job and set the 'lockedAt' time so that job begins to be processed
 		const result = await this.collection.findOneAndUpdate(
@@ -208,7 +219,7 @@ export class JobDbRepository {
 
 	private processDbResult<DATA = unknown | void>(
 		job: Job<DATA>,
-		res: IJobParameters<DATA>
+		res?: IJobParameters<DATA>
 	): Job<DATA> {
 		log(
 			'processDbResult() called with success, checking whether to process job immediately or not'
@@ -243,7 +254,6 @@ export class JobDbRepository {
 
 			// Grab information needed to save job but that we don't want to persist in MongoDB
 			const id = job.attrs._id;
-			// const { unique, uniqueOpts } = job.attrs;
 
 			// Store job as JSON and remove props we don't want to store from object
 			// _id, unique, uniqueOpts
@@ -284,7 +294,7 @@ export class JobDbRepository {
 				if (props.nextRunAt && props.nextRunAt <= now) {
 					log('job has a scheduled nextRunAt time, protecting that field from upsert');
 					protect.nextRunAt = props.nextRunAt;
-					delete props.nextRunAt;
+					delete (props as Partial<IJobParameters>).nextRunAt;
 				}
 
 				// If we have things to protect, set them in MongoDB using $setOnInsert
@@ -309,7 +319,7 @@ export class JobDbRepository {
 					update,
 					{
 						upsert: true,
-						returnOriginal: false // same as new: true -> returns the final document
+						returnOriginal: false
 					}
 				);
 				log(
@@ -329,8 +339,6 @@ export class JobDbRepository {
 				if (job.attrs.uniqueOpts?.insertOnly) {
 					update = { $setOnInsert: props };
 				}
-
-				// console.log('update', query, update, uniqueOpts);
 
 				// Use the 'unique' query object to find an existing job or create a new one
 				log('calling findOneAndUpdate() with unique object as query: \n%O', query);

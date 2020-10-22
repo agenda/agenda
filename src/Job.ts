@@ -1,10 +1,10 @@
 import * as date from 'date.js';
 import * as debug from 'debug';
-import { JobPriority, parsePriority } from './utils/priority';
 import type { Agenda } from './index';
-import { computeFromInterval, computeFromRepeatAt } from './utils/nextRunAt';
-import { IJobParameters } from './types/JobParameters';
+import type { IJobParameters } from './types/JobParameters';
 import type { DefinitionProcessor } from './types/JobDefinition';
+import { JobPriority, parsePriority } from './utils/priority';
+import { computeFromInterval, computeFromRepeatAt } from './utils/nextRunAt';
 
 const log = debug('agenda:job');
 
@@ -56,7 +56,7 @@ export class Job<DATA = unknown | void> {
 		};
 	}
 
-	toJson(): Partial<IJobParameters> {
+	toJson(): IJobParameters {
 		const attrs = this.attrs || {};
 		const result = {};
 
@@ -74,8 +74,7 @@ export class Job<DATA = unknown | void> {
 			}
 		});
 
-		// console.log('toJson', this.attrs, result);
-		return result;
+		return result as IJobParameters;
 	}
 
 	repeatEvery(
