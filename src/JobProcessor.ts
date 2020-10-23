@@ -510,7 +510,7 @@ export class JobProcessor {
 					job.attrs._id,
 					err
 				);
-				job.agenda.emit('error', err);
+				this.agenda.emit('error', err);
 			} finally {
 				// Remove the job from the running queue
 				let runningJobIndex = this.runningJobs.indexOf(job);
