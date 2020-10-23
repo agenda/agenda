@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.0.31](https://github.com/hokify/agenda/compare/v4.0.30...v4.0.31) (2020-10-23)
+
+
+### Bug Fixes
+
+* **job-processor:** emit error when db query fails ([9bfabd3](https://github.com/hokify/agenda/commit/9bfabd3359051d04d4664b7821248cab7708b82a))
+
 ### [4.0.30](https://github.com/hokify/agenda/compare/v4.0.29...v4.0.30) (2020-10-23)
 
 
