@@ -339,6 +339,7 @@ export class JobProcessor {
 			}
 		} catch (error) {
 			log.extend('jobQueueFilling')('[%s] job lock failed while filling queue', name, error);
+			this.agenda.emit('error', error);
 		}
 	}
 
