@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.0.32](https://github.com/hokify/agenda/compare/v4.0.31...v4.0.32) (2020-10-24)
+
+
+### Bug Fixes
+
+* logic for datbase connection ([7ee64c1](https://github.com/hokify/agenda/commit/7ee64c1ea6fd2b1f157917a0bdaed2b286510092))
+
 ### [4.0.31](https://github.com/hokify/agenda/compare/v4.0.30...v4.0.31) (2020-10-23)
 
 
