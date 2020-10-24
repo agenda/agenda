@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.0.33](https://github.com/hokify/agenda/compare/v4.0.32...v4.0.33) (2020-10-24)
+
+
+### Bug Fixes
+
+* fix outpout of agenda job status details ([82ab1a8](https://github.com/hokify/agenda/commit/82ab1a8bd41eee6e4050c852f05c3fcb0b2d0c4f))
+* fix outpout of agenda job status details ([7b24f88](https://github.com/hokify/agenda/commit/7b24f8872bcbf9179c9905508defffdc01d95373))
+* fix outpout of agenda job status details ([3dc0709](https://github.com/hokify/agenda/commit/3dc0709a9c320175f8f455ef6f00dfb51ae6328a))
+
 ### [4.0.32](https://github.com/hokify/agenda/compare/v4.0.31...v4.0.32) (2020-10-24)
 
 
