@@ -208,10 +208,10 @@ export class JobDbRepository {
 			connectionString = `mongodb://${connectionString}`;
 		}
 
-		const client = await MongoClient.connect(url, {
-			...options,
+		const client = await MongoClient.connect(connectionString, {
 			useNewUrlParser: true,
-			useUnifiedTopology: true
+			useUnifiedTopology: true,
+			...options
 		});
 
 		return client.db();

@@ -211,6 +211,8 @@ agenda.processEvery('3 days, 4 hours and 36 seconds');
 Specifies the database at the `url` specified. If no collection name is given,
 `agendaJobs` is used.
 
+By default `useNewUrlParser` and `useUnifiedTopology` is set to `true`,
+
 ```js
 agenda.database('localhost:27017/agenda-test', 'agendaJobs');
 ```
