@@ -1,4 +1,4 @@
-import type { Job } from '../Job';
+import { IJobParameters } from './JobParameters';
 
 export interface IAgendaJobStatus {
 	[name: string]: { running: number; locked: number };
@@ -15,8 +15,8 @@ export interface IAgendaStatus {
 	};
 	jobStatus?: IAgendaJobStatus;
 	queuedJobs: number;
-	runningJobs: number | Job[];
-	lockedJobs: number | Job[];
-	jobsToLock: number | Job[];
+	runningJobs: number | IJobParameters[];
+	lockedJobs: number | IJobParameters[];
+	jobsToLock: number | IJobParameters[];
 	isLockingOnTheFly: boolean;
 }

@@ -54,9 +54,11 @@ export class JobProcessor {
 			},
 			jobStatus,
 			queuedJobs: this.jobQueue.length,
-			runningJobs: !fullDetails ? this.runningJobs.length : this.runningJobs,
-			lockedJobs: !fullDetails ? this.lockedJobs.length : this.lockedJobs,
-			jobsToLock: !fullDetails ? this.jobsToLock.length : this.jobsToLock,
+			runningJobs: !fullDetails
+				? this.runningJobs.length
+				: this.runningJobs.map(job => job.toJson()),
+			lockedJobs: !fullDetails ? this.lockedJobs.length : this.lockedJobs.map(job => job.toJson()),
+			jobsToLock: !fullDetails ? this.jobsToLock.length : this.jobsToLock.map(job => job.toJson()),
 			isLockingOnTheFly: this.isLockingOnTheFly
 		};
 	}
