@@ -35,7 +35,7 @@ db.agendaJogs.ensureIndex({
     "disabled" : 1
 })
 ```
- manually or set ensureIndex when initializing Agenda
+ manually or set `ensureIndex: true` when initializing Agenda
 
 # Agenda offers
 
@@ -169,6 +169,27 @@ agenda
   .database(...)
   .processEvery('3 minutes')
   ...;
+```
+
+Possible agenda config options:
+```ts
+{
+	name: string;
+	defaultConcurrency: number;
+	processEvery: number;
+	maxConcurrency: number;
+	defaultLockLimit: number;
+	lockLimit: number;
+	defaultLockLifetime: number;
+	ensureIndex: boolean;
+	sort: SortOptionObject<IJobParameters>;
+	db: {
+		collection: string;
+		address: string;
+		options: MongoClientOptions;
+	};
+	mongo: Db;
+}
 ```
 
 Agenda uses [Human Interval](http://github.com/rschmukler/human-interval) for specifying the intervals. It supports the following units:
