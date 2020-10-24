@@ -206,7 +206,7 @@ agenda.processEvery('3 days and 4 hours');
 agenda.processEvery('3 days, 4 hours and 36 seconds');
 ```
 
-### database(url, [collectionName])
+### database(url, [collectionName], [MongoClientOptions])
 
 Specifies the database at the `url` specified. If no collection name is given,
 `agendaJobs` is used.
@@ -225,7 +225,7 @@ Agenda will emit a `ready` event (see [Agenda Events](#agenda-events)) when prop
 It is safe to call `agenda.start()` without waiting for this event, as this is handled internally.
 If you're using the `db` options, or call `database`, then you may still need to listen for `ready` before saving jobs.
 
-### mongo(dbInstance)
+### mongo(dbInstance, [collectionName])
 
 Use an existing mongodb-native MongoClient/Db instance. This can help consolidate connections to a
 database. You can instead use `.database` to have agenda handle connecting for you.

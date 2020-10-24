@@ -121,8 +121,8 @@ export class Agenda extends EventEmitter {
 		return this;
 	}
 
-	async mongo(mongo: Db, options?: IMongoOptions['db']): Promise<Agenda> {
-		this.db = new JobDbRepository(this, { mongo, db: options });
+	async mongo(mongo: Db, collection?: string): Promise<Agenda> {
+		this.db = new JobDbRepository(this, { mongo, db: { collection } });
 		await this.db.connect();
 		return this;
 	}
