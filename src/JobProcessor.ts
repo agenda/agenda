@@ -58,19 +58,19 @@ export class JobProcessor {
 				? this.runningJobs.length
 				: this.runningJobs.map(job => ({
 						...job.toJson(),
-						canceled: !!job.canceled
+						canceled: job.canceled?.message || job.canceled
 				  })),
 			lockedJobs: !fullDetails
 				? this.lockedJobs.length
 				: this.lockedJobs.map(job => ({
 						...job.toJson(),
-						canceled: !!job.canceled
+						canceled: job.canceled?.message || job.canceled
 				  })),
 			jobsToLock: !fullDetails
 				? this.jobsToLock.length
 				: this.jobsToLock.map(job => ({
 						...job.toJson(),
-						canceled: !!job.canceled
+						canceled: job.canceled?.message || job.canceled
 				  })),
 			isLockingOnTheFly: this.isLockingOnTheFly
 		};
