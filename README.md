@@ -25,6 +25,17 @@ This is a fork of agenda js, it differs from the original version in following p
 - getRunningStats()
 - automatically waits for agenda to be connected before calling any database operations
 - uses a database abstraction layer behind the scene
+- does not create a database index by default, either run
+```
+db.agendaJogs.ensureIndex({
+    "name" : 1,
+    "nextRunAt" : 1,
+    "priority" : -1,
+    "lockedAt" : 1,
+    "disabled" : 1
+})
+```
+ manually or set ensureIndex when initializing Agenda
 
 # Agenda offers
 
