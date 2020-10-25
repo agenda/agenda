@@ -1,8 +1,8 @@
 import * as date from 'date.js';
 import * as debug from 'debug';
 import type { Agenda } from './index';
-import type { IJobParameters } from './types/JobParameters';
 import type { DefinitionProcessor } from './types/JobDefinition';
+import { IJobParameters, datefields, TJobDatefield } from './types/JobParameters';
 import { JobPriority, parsePriority } from './utils/priority';
 import { computeFromInterval, computeFromRepeatAt } from './utils/nextRunAt';
 
@@ -57,24 +57,18 @@ export class Job<DATA = unknown | void> {
 	}
 
 	toJson(): IJobParameters {
-		const attrs = this.attrs || {};
-		const result = {};
+		const result = {} as IJobParameters;
 
-		// eslint-disable-next-line no-restricted-syntax
-		for (const prop in attrs) {
-			if ({}.hasOwnProperty.call(attrs, prop)) {
-				result[prop] = attrs[prop];
+		for (const key of Object.keys(this.attrs)) {
+			if (Object.hasOwnProperty.call(this.attrs, key)) {
+				result[key] =
+					datefields.includes(key as TJobDatefield) && this.attrs[key]
+						? new Date(this.attrs[key])
+						: this.attrs[key];
 			}
 		}
 
-		const dates = ['lastRunAt', 'lastFinishedAt', 'nextRunAt', 'failedAt', 'lockedAt'];
-		dates.forEach(d => {
-			if (result[d]) {
-				result[d] = new Date(result[d]);
-			}
-		});
-
-		return result as IJobParameters;
+		return result;
 	}
 
 	repeatEvery(

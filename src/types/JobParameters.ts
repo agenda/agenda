@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { FilterQuery, ObjectId } from 'mongodb';
 
 export interface IJobParameters<DATA = unknown | void> {
@@ -34,3 +33,16 @@ export interface IJobParameters<DATA = unknown | void> {
 
 	lastModifiedBy?: string;
 }
+
+export type TJobDatefield = keyof Pick<
+	IJobParameters,
+	'lastRunAt' | 'lastFinishedAt' | 'nextRunAt' | 'failedAt' | 'lockedAt'
+>;
+
+export const datefields: Array<TJobDatefield> = [
+	'lastRunAt',
+	'lastFinishedAt',
+	'nextRunAt',
+	'failedAt',
+	'lockedAt'
+];
