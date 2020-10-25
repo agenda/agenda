@@ -363,7 +363,7 @@ export class JobProcessor {
 	 * handledJobs keeps list of already processed jobs
 	 * @returns {undefined}
 	 */
-	private async jobProcessing(handledJobs: IJobParameters['_id'][] = []) {
+	private jobProcessing(handledJobs: IJobParameters['_id'][] = []) {
 		// Ensure we have jobs
 		if (this.jobQueue.length === 0) {
 			return;
@@ -371,78 +371,80 @@ export class JobProcessor {
 
 		this.localQueueProcessing += 1;
 
-		const now = new Date();
+		try {
+			const now = new Date();
 
-		// Check if there is any job that is not blocked by concurrency
-		const job = this.jobQueue.returnNextConcurrencyFreeJob(this.jobStatus, handledJobs);
+			// Check if there is any job that is not blocked by concurrency
+			const job = this.jobQueue.returnNextConcurrencyFreeJob(this.jobStatus, handledJobs);
 
-		if (!job) {
-			log.extend('jobProcessing')('[%s:%s] there is no job to process');
-			return;
-		}
+			if (!job) {
+				log.extend('jobProcessing')('[%s:%s] there is no job to process');
+				return;
+			}
 
-		log.extend('jobProcessing')(
-			'[%s:%s] there is a job to process (priority = %d)',
-			job.attrs.name,
-			job.attrs._id,
-			job.attrs.priority
-		);
-
-		this.jobQueue.remove(job);
-
-		// If the 'nextRunAt' time is older than the current time, run the job
-		// Otherwise, setTimeout that gets called at the time of 'nextRunAt'
-		if (job.attrs.nextRunAt <= now) {
 			log.extend('jobProcessing')(
-				'[%s:%s] nextRunAt is in the past, run the job immediately',
+				'[%s:%s] there is a job to process (priority = %d)',
 				job.attrs.name,
-				job.attrs._id
+				job.attrs._id,
+				job.attrs.priority
 			);
-			this.runOrRetry(job);
-		} else {
-			const runIn = job.attrs.nextRunAt.getTime() - now.getTime();
-			if (runIn > this.processEvery) {
-				// this job is not in the near future, remove it (it will be picked up later)
-				log.extend('runOrRetry')(
-					'[%s:%s] job is too far away, freeing it up',
+
+			this.jobQueue.remove(job);
+
+			// If the 'nextRunAt' time is older than the current time, run the job
+			// Otherwise, setTimeout that gets called at the time of 'nextRunAt'
+			if (job.attrs.nextRunAt <= now) {
+				log.extend('jobProcessing')(
+					'[%s:%s] nextRunAt is in the past, run the job immediately',
 					job.attrs.name,
 					job.attrs._id
 				);
-				let lockedJobIndex = this.lockedJobs.indexOf(job);
-				if (lockedJobIndex === -1) {
-					// lookup by id
-					lockedJobIndex = this.lockedJobs.findIndex(
-						j => j.attrs._id?.toString() === job.attrs._id?.toString()
-					);
-				}
-				if (lockedJobIndex === -1) {
-					throw new Error(`cannot find job ${job.attrs._id} in locked jobs queue?`);
-				}
-
-				this.lockedJobs.splice(lockedJobIndex, 1);
-				this.updateStatus(job.attrs.name, 'locked', -1);
+				this.runOrRetry(job);
 			} else {
-				log.extend('jobProcessing')(
-					'[%s:%s] nextRunAt is in the future, calling setTimeout(%d)',
-					job.attrs.name,
-					job.attrs._id,
-					runIn
-				);
-				// re add to queue (puts it at the ned of the queue)
-				this.jobQueue.push(job);
-				setTimeout(() => {
-					this.jobProcessing();
-				}, runIn);
+				const runIn = job.attrs.nextRunAt.getTime() - now.getTime();
+				if (runIn > this.processEvery) {
+					// this job is not in the near future, remove it (it will be picked up later)
+					log.extend('runOrRetry')(
+						'[%s:%s] job is too far away, freeing it up',
+						job.attrs.name,
+						job.attrs._id
+					);
+					let lockedJobIndex = this.lockedJobs.indexOf(job);
+					if (lockedJobIndex === -1) {
+						// lookup by id
+						lockedJobIndex = this.lockedJobs.findIndex(
+							j => j.attrs._id?.toString() === job.attrs._id?.toString()
+						);
+					}
+					if (lockedJobIndex === -1) {
+						throw new Error(`cannot find job ${job.attrs._id} in locked jobs queue?`);
+					}
+
+					this.lockedJobs.splice(lockedJobIndex, 1);
+					this.updateStatus(job.attrs.name, 'locked', -1);
+				} else {
+					log.extend('jobProcessing')(
+						'[%s:%s] nextRunAt is in the future, calling setTimeout(%d)',
+						job.attrs.name,
+						job.attrs._id,
+						runIn
+					);
+					// re add to queue (puts it at the right position in the queue)
+					this.jobQueue.insert(job);
+					setTimeout(() => {
+						this.jobProcessing();
+					}, runIn);
+				}
 			}
-		}
 
-		handledJobs.push(job.attrs._id);
+			handledJobs.push(job.attrs._id);
 
-		this.localQueueProcessing -= 1;
-
-		if (job && this.localQueueProcessing < this.maxConcurrency) {
-			// additionally run again and check if there are more jobs that we can process right now (as long concurrency not reached)
-			setImmediate(() => this.jobProcessing(handledJobs));
+			if (job && this.localQueueProcessing < this.maxConcurrency) {
+				// additionally run again and check if there are more jobs that we can process right now (as long concurrency not reached)
+				setImmediate(() => this.jobProcessing(handledJobs));
+			}
+		} finally {
+			this.localQueueProcessing -= 1;
 		}
 	}
 

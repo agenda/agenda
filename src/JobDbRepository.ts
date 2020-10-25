@@ -251,7 +251,7 @@ export class JobDbRepository {
 	 */
 	async saveJob<DATA = unknown | void>(job: Job<DATA>): Promise<Job<DATA>> {
 		try {
-			log('attempting to save a job into Agenda instance');
+			log('attempting to save a job');
 
 			// Grab information needed to save job but that we don't want to persist in MongoDB
 			const id = job.attrs._id;

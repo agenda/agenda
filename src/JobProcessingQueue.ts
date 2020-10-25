@@ -36,9 +36,10 @@ export class JobProcessingQueue {
 	 * @param {Job} job job to add to queue
 	 * @returns {undefined}
 	 */
+	/*
 	push(job: Job): void {
 		this._queue.push(job);
-	}
+	} */
 
 	remove(job: Job): void {
 		let removeJobIndex = this._queue.indexOf(job);
