@@ -162,7 +162,7 @@ export class Job<DATA = unknown | void> {
 
 	async isRunning(): Promise<boolean> {
 		const definition = this.agenda.definitions[this.attrs.name];
-		if (!definition) {
+		if (!definition || !this.agenda.isActiveJobProcessor()) {
 			// we have no job definition, therfore we are not the job processor, but a client call
 			// so we get the real state from database
 			await this.fetchStatus();
@@ -198,7 +198,7 @@ export class Job<DATA = unknown | void> {
 
 	async isDead(): Promise<boolean> {
 		const definition = this.agenda.definitions[this.attrs.name];
-		if (!definition) {
+		if (!definition || !this.agenda.isActiveJobProcessor()) {
 			// we have no job definition, therfore we are not the job processor, but a client call
 			// so we get the real state from database
 			await this.fetchStatus();

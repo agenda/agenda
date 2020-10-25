@@ -64,6 +64,10 @@ export class Agenda extends EventEmitter {
 
 	readonly ready: Promise<void>;
 
+	isActiveJobProcessor(): boolean {
+		return !!this.jobProcessor;
+	}
+
 	async getRunningStats(fullDetails = false): Promise<IAgendaStatus> {
 		if (!this.jobProcessor) {
 			throw new Error('agenda not running!');
@@ -407,8 +411,6 @@ export class Agenda extends EventEmitter {
 			this.attrs.lockLimit,
 			this.attrs.processEvery
 		);
-
-		await this.jobProcessor.process();
 
 		this.on('processJob', job => this.jobProcessor?.process(job));
 	}

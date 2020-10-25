@@ -77,6 +77,8 @@ describe('JobProcessor', () => {
 			agenda.now('test');
 			await agenda.start();
 
+			await new Promise(resolve => agenda.on('start:test', resolve));
+
 			const status = await agenda.getRunningStats();
 			expect(status).to.have.property('jobStatus');
 			if (status.jobStatus) {
@@ -155,7 +157,7 @@ describe('JobProcessor', () => {
 			'test long',
 			async () => {
 				jobStarted = true;
-				await new Promise(resolve => setTimeout(resolve, 1000));
+				await new Promise(resolve => setTimeout(resolve, 2500));
 			},
 			{ lockLifetime: 500 }
 		);

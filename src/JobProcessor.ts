@@ -500,7 +500,7 @@ export class JobProcessor {
 							}
 
 							resolve(checkIfJobIsStillAlive());
-						}, Math.max(this.processEvery, this.agenda.definitions[job.attrs.name].lockLifetime / 2))
+						}, Math.max(this.processEvery / 2, this.agenda.definitions[job.attrs.name].lockLifetime / 2))
 					);
 				};
 
