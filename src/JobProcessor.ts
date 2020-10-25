@@ -47,13 +47,21 @@ export class JobProcessor {
 			version,
 			queueName: this.agenda.attrs.name,
 			totalQueueSizeDB: await this.agenda.db.getQueueSize(),
+			internal: {
+				localQueueProcessing: this.localQueueProcessing
+			},
 			config: {
 				totalLockLimit: this.totalLockLimit,
 				maxConcurrency: this.maxConcurrency,
 				processEvery: this.processEvery
 			},
 			jobStatus,
-			queuedJobs: this.jobQueue.length,
+			queuedJobs: !fullDetails
+				? this.jobQueue.length
+				: this.jobQueue.getQueue().map(job => ({
+						...job.toJson(),
+						canceled: job.canceled?.message || job.canceled
+				  })),
 			runningJobs: !fullDetails
 				? this.runningJobs.length
 				: this.runningJobs.map(job => ({
@@ -363,7 +371,7 @@ export class JobProcessor {
 	 * handledJobs keeps list of already processed jobs
 	 * @returns {undefined}
 	 */
-	private jobProcessing(handledJobs: IJobParameters['_id'][] = []) {
+	private async jobProcessing(handledJobs: IJobParameters['_id'][] = []) {
 		// Ensure we have jobs
 		if (this.jobQueue.length === 0) {
 			return;
@@ -381,7 +389,14 @@ export class JobProcessor {
 			return;
 		}
 
-		log.extend('jobProcessing')('[%s:%s] there is a job to process', job.attrs.name, job.attrs._id);
+		log.extend('jobProcessing')(
+			'[%s:%s] there is a job to process (priority = %d)',
+			job.attrs.name,
+			job.attrs._id,
+			job.attrs.priority
+		);
+
+		this.jobQueue.remove(job);
 
 		// If the 'nextRunAt' time is older than the current time, run the job
 		// Otherwise, setTimeout that gets called at the time of 'nextRunAt'
@@ -394,15 +409,39 @@ export class JobProcessor {
 			this.runOrRetry(job);
 		} else {
 			const runIn = job.attrs.nextRunAt.getTime() - now.getTime();
-			log.extend('jobProcessing')(
-				'[%s:%s] nextRunAt is in the future, calling setTimeout(%d)',
-				job.attrs.name,
-				job.attrs._id,
-				runIn
-			);
-			setTimeout(() => {
-				this.jobProcessing();
-			}, runIn);
+			if (runIn > this.processEvery) {
+				// this job is not in the near future, remove it (it will be picked up later)
+				log.extend('runOrRetry')(
+					'[%s:%s] job is too far away, freeing it up',
+					job.attrs.name,
+					job.attrs._id
+				);
+				let lockedJobIndex = this.lockedJobs.indexOf(job);
+				if (lockedJobIndex === -1) {
+					// lookup by id
+					lockedJobIndex = this.lockedJobs.findIndex(
+						j => j.attrs._id?.toString() === job.attrs._id?.toString()
+					);
+				}
+				if (lockedJobIndex === -1) {
+					throw new Error(`cannot find job ${job.attrs._id} in locked jobs queue?`);
+				}
+
+				this.lockedJobs.splice(lockedJobIndex, 1);
+				this.updateStatus(job.attrs.name, 'locked', -1);
+			} else {
+				log.extend('jobProcessing')(
+					'[%s:%s] nextRunAt is in the future, calling setTimeout(%d)',
+					job.attrs.name,
+					job.attrs._id,
+					runIn
+				);
+				// re add to queue (puts it at the ned of the queue)
+				this.jobQueue.push(job);
+				setTimeout(() => {
+					this.jobProcessing();
+				}, runIn);
+			}
 		}
 
 		handledJobs.push(job.attrs._id);
@@ -430,8 +469,6 @@ export class JobProcessor {
 			return;
 		}
 
-		this.jobQueue.remove(job);
-
 		const jobDefinition = this.agenda.definitions[job.attrs.name];
 		const status = this.jobStatus[job.attrs.name];
 
@@ -439,30 +476,6 @@ export class JobProcessor {
 			(!jobDefinition.concurrency || !status || status.running < jobDefinition.concurrency) &&
 			this.runningJobs.length < this.maxConcurrency
 		) {
-			if (job.isDead()) {
-				// not needed to update lockedAt in databsase, as the timeout has been reached,
-				// and it will be picked up anyways again
-				log.extend('runOrRetry')(
-					'[%s:%s] job lock has expired, freeing it up',
-					job.attrs.name,
-					job.attrs._id
-				);
-				let lockedJobIndex = this.lockedJobs.indexOf(job);
-				if (lockedJobIndex === -1) {
-					// lookup by id
-					lockedJobIndex = this.lockedJobs.findIndex(
-						j => j.attrs._id?.toString() === job.attrs._id?.toString()
-					);
-				}
-				if (lockedJobIndex === -1) {
-					throw new Error(`cannot find job ${job.attrs._id} in locked jobs queue?`);
-				}
-
-				this.lockedJobs.splice(lockedJobIndex, 1);
-				this.updateStatus(job.attrs.name, 'locked', -1);
-				return;
-			}
-
 			// Add to local "running" queue
 			this.runningJobs.push(job);
 			this.updateStatus(job.attrs.name, 'running', 1);
@@ -474,9 +487,9 @@ export class JobProcessor {
 				const checkIfJobIsStillAlive = () => {
 					// check every "this.agenda.definitions[job.attrs.name].lockLifetime / 2"" (or at mininum every processEvery)
 					return new Promise((resolve, reject) =>
-						setTimeout(() => {
+						setTimeout(async () => {
 							// when job is not running anymore, just finish
-							if (!job.isRunning()) {
+							if (!(await job.isRunning())) {
 								resolve();
 								return;
 							}

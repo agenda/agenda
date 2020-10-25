@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import * as delay from 'delay';
 import { Db } from 'mongodb';
 import { expect } from 'chai';
@@ -463,7 +464,7 @@ describe('Agenda', () => {
 
 			it('runs the job immediately', async () => {
 				globalAgenda.define('immediateJob', async job => {
-					expect(job.isRunning()).to.be.equal(true);
+					expect(await job.isRunning()).to.be.equal(true);
 					await globalAgenda.stop();
 				});
 				await globalAgenda.now('immediateJob');

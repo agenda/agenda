@@ -19,6 +19,10 @@ export class JobProcessingQueue {
 		return this._queue.length;
 	}
 
+	getQueue(): Job[] {
+		return this._queue;
+	}
+
 	/**
 	 * Pops and returns last queue element (next job to be processed) without checking concurrency.
 	 * @returns {Job} Next Job to be processed
@@ -111,10 +115,13 @@ export class JobProcessingQueue {
 			// and if concurrency limit is not reached yet (actual running jobs is lower than max concurrency)
 			if (
 				def &&
-				this._queue[i].attrs.nextRunAt &&
 				!handledJobs.includes(this._queue[i].attrs._id) &&
 				(!status || !def.concurrency || status.running < def.concurrency)
 			) {
+				if (!this._queue[i].attrs.nextRunAt) {
+					console.log('this._queue[i]', this._queue[i].attrs);
+					throw new Error('no nextRunAt date');
+				}
 				return true;
 			}
 			return false;

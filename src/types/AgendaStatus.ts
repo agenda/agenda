@@ -13,8 +13,11 @@ export interface IAgendaStatus {
 		maxConcurrency: number;
 		processEvery: string | number;
 	};
+	internal: {
+		localQueueProcessing: number;
+	};
 	jobStatus?: IAgendaJobStatus;
-	queuedJobs: number;
+	queuedJobs: number | IJobParameters[];
 	runningJobs: number | IJobParameters[];
 	lockedJobs: number | IJobParameters[];
 	jobsToLock: number | IJobParameters[];
