@@ -8,6 +8,9 @@ import { JobProcessingQueue } from './JobProcessingQueue';
 
 const log = debug('agenda:jobProcessor');
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires,global-require
+const { version: agendaVersion } = require('../package.json');
+
 /**
  * Process methods for jobs
  *
@@ -23,28 +26,17 @@ export class JobProcessor {
 	private localQueueProcessing = 0;
 
 	async getStatus(fullDetails = false): Promise<IAgendaStatus> {
-		// eslint-disable-next-line @typescript-eslint/no-var-requires,global-require
-		const { version } = require('../package.json');
-
-		const jobStatus =
-			(typeof Object.fromEntries === 'function' &&
-				(Object.fromEntries(
-					Object.keys(this.jobStatus).map(job => [
-						job,
-						{
-							...this.jobStatus[job],
-							config: this.agenda.definitions[job]
-						}
-					])
-				) as IAgendaJobStatus)) ||
-			undefined;
-
-		if (typeof Object.fromEntries !== 'function') {
-			console.warn('job status not available due to too old node version');
-		}
+		const jobStatus = Object.keys(this.jobStatus).reduce((obj, key) => {
+			// eslint-disable-next-line no-param-reassign
+			obj[key] = {
+				...this.jobStatus[key],
+				config: this.agenda.definitions[key]
+			};
+			return obj;
+		}, {}) as IAgendaJobStatus;
 
 		return {
-			version,
+			version: agendaVersion,
 			queueName: this.agenda.attrs.name,
 			totalQueueSizeDB: await this.agenda.db.getQueueSize(),
 			internal: {

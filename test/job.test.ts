@@ -75,6 +75,26 @@ describe('Job', () => {
 		});
 	});
 
+	describe('toJSON', () => {
+		it('failedAt', () => {
+			let job = new Job(agenda, {
+				name: 'demo',
+				type: 'normal',
+				nextRunAt: null,
+				failedAt: null as any
+			});
+			expect(job.toJson().failedAt).to.be.not.a('Date');
+
+			job = new Job(agenda, {
+				name: 'demo',
+				type: 'normal',
+				nextRunAt: null,
+				failedAt: new Date()
+			});
+			expect(job.toJson().failedAt).to.be.a('Date');
+		});
+	});
+
 	describe('unique', () => {
 		const job = new Job(agenda, { name: 'demo', type: 'normal' });
 		it('sets the unique property', () => {

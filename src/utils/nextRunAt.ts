@@ -19,8 +19,7 @@ const dateForTimezone = (timezoneDate: Date, timezone?: string): moment.Moment =
 
 export function isValidHumanInterval(value: unknown): value is string {
 	const transformedValue = humanInterval(value as string);
-	// eslint-disable-next-line no-restricted-globals
-	return typeof transformedValue === 'number' && isNaN(transformedValue) === false;
+	return typeof transformedValue === 'number' && Number.isNaN(transformedValue) === false;
 }
 
 /**
