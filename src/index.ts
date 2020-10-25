@@ -7,12 +7,11 @@ import type { IAgendaConfig } from './types/AgendaConfig';
 import type { IDatabaseOptions, IDbConfig, IMongoOptions } from './types/DbOptions';
 import type { IAgendaStatus } from './types/AgendaStatus';
 import type { IJobParameters } from './types/JobParameters';
-import { Job } from './Job';
+import { Job, JobWithId } from './Job';
 import { JobDbRepository } from './JobDbRepository';
 import { JobPriority, parsePriority } from './utils/priority';
 import { JobProcessor } from './JobProcessor';
 import { calculateProcessEvery } from './utils/processEvery';
-import { filterUndefined } from './utils/filterUndefined';
 
 const log = debug('agenda');
 
@@ -43,14 +42,14 @@ export class Agenda extends EventEmitter {
 	// eslint-disable-next-line default-param-last
 	// private jobQueue: JobProcessingQueue;
 	// internally used
-	on(event: 'processJob', listener: (job: Job) => void): this;
+	on(event: 'processJob', listener: (job: JobWithId) => void): this;
 
-	on(event: 'fail', listener: (err: Error, job: Job) => void): this;
-	on(event: 'success', listener: (job: Job) => void): this;
-	on(event: 'start', listener: (job: Job) => void): this;
-	on(event: 'complete', listener: (job: Job) => void): this;
-	on(event: string, listener: (job: Job) => void): this;
-	on(event: string, listener: (err: Error, job: Job) => void): this;
+	on(event: 'fail', listener: (err: Error, job: JobWithId) => void): this;
+	on(event: 'success', listener: (job: JobWithId) => void): this;
+	on(event: 'start', listener: (job: JobWithId) => void): this;
+	on(event: 'complete', listener: (job: JobWithId) => void): this;
+	on(event: string, listener: (job: JobWithId) => void): this;
+	on(event: string, listener: (err: Error, job: JobWithId) => void): this;
 	on(event: 'ready', listener: () => void): this;
 	on(event: 'error', listener: (err: Error) => void): this;
 	on(event: string, listener: (...args) => void): this {
@@ -423,7 +422,7 @@ export class Agenda extends EventEmitter {
 		const lockedJobs = this.jobProcessor?.stop();
 
 		log('Agenda._unlockJobs()');
-		const jobIds = filterUndefined(lockedJobs?.map(job => job.attrs._id) || []);
+		const jobIds = lockedJobs?.map(job => job.attrs._id) || [];
 
 		if (jobIds.length > 0) {
 			log('about to unlock jobs with ids: %O', jobIds);

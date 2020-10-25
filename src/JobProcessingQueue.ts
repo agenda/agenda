@@ -1,5 +1,5 @@
 // eslint-disable-next-line prettier/prettier
-import type { Job } from './Job';
+import type {Job, JobWithId} from './Job';
 import type { IJobParameters } from './types/JobParameters';
 import type { Agenda } from './index';
 /**
@@ -104,7 +104,7 @@ export class JobProcessingQueue {
 				| undefined;
 		},
 		handledJobs: IJobParameters['_id'][]
-	): (Job & { attrs: IJobParameters & { nextRunAt: Date } }) | undefined {
+	): (JobWithId & { attrs: IJobParameters & { nextRunAt: Date } }) | undefined {
 		const next = ((Object.keys(this._queue) as unknown) as number[]).reverse().find(i => {
 			const def = this.agenda.definitions[this._queue[i].attrs.name];
 			const status = jobStatus[this._queue[i].attrs.name];
@@ -128,7 +128,7 @@ export class JobProcessingQueue {
 		});
 
 		return next !== undefined
-			? (this._queue[next] as Job & { attrs: IJobParameters & { nextRunAt: Date } })
+			? (this._queue[next] as JobWithId & { attrs: IJobParameters & { nextRunAt: Date } })
 			: undefined;
 	}
 }

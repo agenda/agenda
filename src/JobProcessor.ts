@@ -1,7 +1,7 @@
 import * as debug from 'debug';
 import type { IAgendaJobStatus, IAgendaStatus } from './types/AgendaStatus';
 import type { IJobDefinition } from './types/JobDefinition';
-import type { Agenda } from './index';
+import type { Agenda, JobWithId } from './index';
 import type { IJobParameters } from './types/JobParameters';
 import { Job } from './Job';
 import { JobProcessingQueue } from './JobProcessingQueue';
@@ -88,11 +88,11 @@ export class JobProcessor {
 
 	private jobQueue: JobProcessingQueue = new JobProcessingQueue(this.agenda);
 
-	private runningJobs: Job[] = [];
+	private runningJobs: JobWithId[] = [];
 
-	private lockedJobs: Job[] = [];
+	private lockedJobs: JobWithId[] = [];
 
-	private jobsToLock: Job[] = [];
+	private jobsToLock: JobWithId[] = [];
 
 	private isLockingOnTheFly = false;
 
@@ -111,7 +111,7 @@ export class JobProcessor {
 		this.process();
 	}
 
-	stop(): Job[] {
+	stop(): JobWithId[] {
 		log.extend('stop')('stop job processor', this.isRunning);
 		this.isRunning = false;
 
@@ -124,7 +124,7 @@ export class JobProcessor {
 	}
 
 	// processJobs
-	async process(extraJob?: Job): Promise<void> {
+	async process(extraJob?: JobWithId): Promise<void> {
 		// Make sure an interval has actually been set
 		// Prevents race condition with 'Agenda.stop' and already scheduled run
 		if (!this.isRunning) {
@@ -247,7 +247,7 @@ export class JobProcessor {
 						);
 					}
 
-					const jobToEnqueue = new Job(this.agenda, resp);
+					const jobToEnqueue = new Job(this.agenda, resp) as JobWithId;
 
 					// Before en-queing job make sure we haven't exceed our lock limits
 					if (!this.shouldLock(jobToEnqueue.attrs.name)) {
@@ -285,7 +285,7 @@ export class JobProcessor {
 	private async findAndLockNextJob(
 		jobName: string,
 		definition: IJobDefinition
-	): Promise<Job | undefined> {
+	): Promise<JobWithId | undefined> {
 		const lockDeadline = new Date(Date.now().valueOf() - definition.lockLifetime);
 		log.extend('findAndLockNextJob')(
 			`looking for lockable jobs for ${jobName} (lock dead line = ${lockDeadline})`
@@ -299,7 +299,7 @@ export class JobProcessor {
 				'found a job available to lock, creating a new job on Agenda with id [%s]',
 				result._id
 			);
-			return new Job(this.agenda, result);
+			return new Job(this.agenda, result) as JobWithId;
 		}
 
 		return undefined;
@@ -458,7 +458,7 @@ export class JobProcessor {
 	 * Internal method that tries to run a job and if it fails, retries again!
 	 * @returns {boolean} processed a job or not
 	 */
-	private async runOrRetry(job: Job): Promise<void> {
+	private async runOrRetry(job: JobWithId): Promise<void> {
 		if (!this.isRunning) {
 			// const a = new Error();
 			// console.log('STACK', a.stack);

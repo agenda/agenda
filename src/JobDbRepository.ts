@@ -10,7 +10,7 @@ import {
 	SortOptionObject,
 	FindOneAndUpdateOption
 } from 'mongodb';
-import type { Job } from './Job';
+import type { Job, JobWithId } from './Job';
 import type { Agenda } from './index';
 import type { IDatabaseOptions, IDbConfig, IMongoOptions } from './types/DbOptions';
 import type { IJobParameters } from './types/JobParameters';
@@ -80,7 +80,7 @@ export class JobDbRepository {
 		await this.collection.updateMany({ _id: { $in: jobIds } }, { $unset: { lockedAt: true } });
 	}
 
-	async lockJob(job: Job): Promise<IJobParameters | undefined> {
+	async lockJob(job: JobWithId): Promise<IJobParameters | undefined> {
 		// Query to run against collection to see if we need to lock it
 		const criteria: FilterQuery<Omit<IJobParameters, 'lockedAt'> & { lockedAt?: Date | null }> = {
 			_id: job.attrs._id,

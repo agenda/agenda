@@ -1,5 +1,6 @@
 import * as date from 'date.js';
 import * as debug from 'debug';
+import { ObjectId } from 'mongodb';
 import type { Agenda } from './index';
 import type { IJobParameters } from './types/JobParameters';
 import type { DefinitionProcessor } from './types/JobDefinition';
@@ -327,3 +328,5 @@ export class Job<DATA = unknown | void> {
 		return !!(value && typeof value.then === 'function');
 	}
 }
+
+export type JobWithId = Job & { attrs: IJobParameters & { _id: ObjectId } };
