@@ -45,14 +45,14 @@ export class Agenda extends EventEmitter {
 	// internally used
 	on(event: 'processJob', listener: (job: Job) => void): this;
 
-	on(event: 'fail', listener: (err: Error, job: Job) => void): this;
+	on(event: 'fail', listener: (error: Error, job: Job) => void): this;
 	on(event: 'success', listener: (job: Job) => void): this;
 	on(event: 'start', listener: (job: Job) => void): this;
 	on(event: 'complete', listener: (job: Job) => void): this;
 	on(event: string, listener: (job: Job) => void): this;
-	on(event: string, listener: (err: Error, job: Job) => void): this;
+	on(event: string, listener: (error: Error, job: Job) => void): this;
 	on(event: 'ready', listener: () => void): this;
-	on(event: 'error', listener: (err: Error) => void): this;
+	on(event: 'error', listener: (error: Error) => void): this;
 	on(event: string, listener: (...args) => void): this {
 		return super.on(event, listener);
 	}
@@ -84,7 +84,7 @@ export class Agenda extends EventEmitter {
 			// eslint-disable-next-line @typescript-eslint/ban-types
 		} & (IDatabaseOptions | IMongoOptions | {}) &
 			IDbConfig = {},
-		cb?: (err?: Error) => void
+		cb?: (error?: Error) => void
 	) {
 		super();
 
@@ -133,8 +133,10 @@ export class Agenda extends EventEmitter {
 		return this;
 	}
 
-	private hasDatabaseConfig(config): config is (IDatabaseOptions | IMongoOptions) & IDbConfig {
-		return !!(config.db?.address || config.mongo);
+	private hasDatabaseConfig(
+		config: unknown
+	): config is (IDatabaseOptions | IMongoOptions) & IDbConfig {
+		return !!((config as IDatabaseOptions)?.db?.address || (config as IMongoOptions)?.mongo);
 	}
 
 	async cancel(query: FilterQuery<IJobParameters>): Promise<number> {
@@ -215,7 +217,7 @@ export class Agenda extends EventEmitter {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	define<DATA = any>(
 		name: string,
-		processor: (agendaJob: Job<DATA>, done: (err?: Error) => void) => void,
+		processor: (agendaJob: Job<DATA>, done: (error?: Error) => void) => void,
 		options?: Partial<Pick<IJobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency'>> & {
 			priority?: JobPriority;
 		}
@@ -230,13 +232,13 @@ export class Agenda extends EventEmitter {
 	): void;
 	define(
 		name: string,
-		processor: ((job) => Promise<void>) | ((job, done) => void),
+		processor: ((job: Job) => Promise<void>) | ((job: Job, done) => void),
 		options?: Partial<Pick<IJobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency'>> & {
 			priority?: JobPriority;
 		}
 	): void {
 		if (this.definitions[name]) {
-			console.warn('overwriting already defined agenda job', name);
+			log('overwriting already defined agenda job', name);
 		}
 		this.definitions[name] = {
 			fn: processor,
@@ -355,7 +357,7 @@ export class Agenda extends EventEmitter {
 		names: string | string[],
 		data?: unknown
 	): Promise<Job | Job[]> {
-		const createJob = async name => {
+		const createJob = async (name: string) => {
 			const job = this.create(name, data);
 
 			await job.schedule(when).save();
