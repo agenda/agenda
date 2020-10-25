@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.1.2](https://github.com/hokify/agenda/compare/v4.1.1...v4.1.2) (2020-10-25)
+
+
+### Bug Fixes
+
+* isRunning for non job processor calls ([a5bb965](https://github.com/hokify/agenda/commit/a5bb965a57ffe28db8eae40311e0c102210509fa))
+* wait for start of test job ([413f797](https://github.com/hokify/agenda/commit/413f79753a63f74b6c7a5bb3acf5e2e54e934fab))
+
 ### [4.1.1](https://github.com/hokify/agenda/compare/v4.1.0...v4.1.1) (2020-10-25)
 
 
