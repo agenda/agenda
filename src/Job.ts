@@ -153,6 +153,11 @@ export class Job<DATA = unknown | void> {
 			// we have no job definition, therfore we are not the job processor, but a client call
 			// so we get the real state from database
 			const dbJob = await this.agenda.db.getJobs({ _id: this.attrs._id });
+			if (!dbJob || dbJob.length === 0) {
+				// @todo: should we just return false instead? a finished job could have been removed from database,
+				// and then this would throw...
+				throw new Error(`job with id ${this.attrs._id} not found in database`);
+			}
 			this.attrs.lastRunAt = dbJob[0].lastRunAt;
 			this.attrs.lastFinishedAt = dbJob[0].lastFinishedAt;
 		}
