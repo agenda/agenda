@@ -152,7 +152,16 @@ export class Job<DATA = unknown | void> {
 		return this;
 	}
 
-	isRunning(): boolean {
+	async isRunning(): Promise<boolean> {
+		const definition = this.agenda.definitions[this.attrs.name];
+		if (!definition) {
+			// we have no job definition, therfore we are not the job processor, but a client call
+			// so we get the real state from database
+			const dbJob = await this.agenda.db.getJobs({ _id: this.attrs._id });
+			this.attrs.lastRunAt = dbJob[0].lastRunAt;
+			this.attrs.lastFinishedAt = dbJob[0].lastFinishedAt;
+		}
+
 		if (!this.attrs.lastRunAt) {
 			return false;
 		}
@@ -183,6 +192,10 @@ export class Job<DATA = unknown | void> {
 
 	isDead(): boolean {
 		const definition = this.agenda.definitions[this.attrs.name];
+		if (!definition) {
+			console.warn('this method is only callable from an agenda job processor');
+			return false;
+		}
 		const lockDeadline = new Date(Date.now() - definition.lockLifetime);
 
 		// This means a job has "expired", as in it has not been "touched" within the lockoutTime
