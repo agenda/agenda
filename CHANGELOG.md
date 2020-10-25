@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.1.0](https://github.com/hokify/agenda/compare/v4.0.33...v4.1.0) (2020-10-25)
+
+
+### Features
+
+* isRunning querys database again if called by client ([1aaaa61](https://github.com/hokify/agenda/commit/1aaaa61f0a009563a84cb81036427c187076f190))
+
+
+### Bug Fixes
+
+* job processor handling for recurring jobs could fill up queue and block processing ([54bc53c](https://github.com/hokify/agenda/commit/54bc53c5ab995671e1b38e78f3afb06c82f9a830))
+* job processor localQueueProcessing flag ([413f673](https://github.com/hokify/agenda/commit/413f673ce0cd8a73132853f14feb8ed9f300c4e4))
+* rename err to error, fix typing of DefinitionProcessor, use debug ins… ([#9](https://github.com/hokify/agenda/issues/9)) ([39b598e](https://github.com/hokify/agenda/commit/39b598e24784da6cf640a29c2ce02732786e62fa))
+* use isNaN check in isValidDate ([#10](https://github.com/hokify/agenda/issues/10)) ([3bc2e30](https://github.com/hokify/agenda/commit/3bc2e303d280c19899beacf7c7a732e4a6b08724))
+
 ### [4.0.33](https://github.com/hokify/agenda/compare/v4.0.32...v4.0.33) (2020-10-24)
 
 
