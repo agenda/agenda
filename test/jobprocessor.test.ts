@@ -1,4 +1,5 @@
 /* eslint-disable no-console */
+import { fail } from 'assert';
 import { expect } from 'chai';
 
 import { Db } from 'mongodb';
@@ -34,7 +35,8 @@ describe('JobProcessor', () => {
 					defaultConcurrency: 1,
 					lockLimit: 15,
 					defaultLockLimit: 6,
-					processEvery: '1 second'
+					processEvery: '1 second',
+					name: 'agendaTest'
 				},
 				async () => {
 					await clearJobs();
@@ -47,6 +49,74 @@ describe('JobProcessor', () => {
 	afterEach(async () => {
 		await agenda.stop();
 		await clearJobs();
+	});
+
+	describe('getRunningStats', () => {
+		it('throws an error when agenda is not running', async () => {
+			try {
+				await agenda.getRunningStats();
+				fail();
+			} catch (err) {
+				expect(err.message).to.be.equal('agenda not running!');
+			}
+		});
+
+		it('contains the agendaVersion', async () => {
+			await agenda.start();
+
+			const status = await agenda.getRunningStats();
+			expect(status).to.have.property('version');
+			expect(status.version).to.match(/\d+.\d+.\d+/);
+		});
+
+		it('shows the correct job status', async () => {
+			agenda.define('test', async () => {
+				await new Promise(resolve => setTimeout(resolve, 30000));
+			});
+
+			agenda.now('test');
+			await agenda.start();
+
+			const status = await agenda.getRunningStats();
+			expect(status).to.have.property('jobStatus');
+			if (status.jobStatus) {
+				expect(status.jobStatus).to.have.property('test');
+				expect(status.jobStatus.test.locked).to.be.equal(1);
+				expect(status.jobStatus.test.running).to.be.equal(1);
+				expect(status.jobStatus.test.config.fn).to.be.a('function');
+				expect(status.jobStatus.test.config.concurrency).to.be.equal(1);
+				expect(status.jobStatus.test.config.lockLifetime).to.be.equal(600000);
+				expect(status.jobStatus.test.config.priority).to.be.equal(0);
+				expect(status.jobStatus.test.config.lockLimit).to.be.equal(6);
+			}
+		});
+
+		it('shows isLockingOnTheFly', async () => {
+			await agenda.start();
+
+			const status = await agenda.getRunningStats();
+			expect(status).to.have.property('isLockingOnTheFly');
+			expect(status.isLockingOnTheFly).to.be.a('boolean');
+			expect(status.isLockingOnTheFly).to.be.equal(false);
+		});
+
+		it('shows queueName', async () => {
+			await agenda.start();
+
+			const status = await agenda.getRunningStats();
+			expect(status).to.have.property('queueName');
+			expect(status.queueName).to.be.a('string');
+			expect(status.queueName).to.be.equal('agendaTest');
+		});
+
+		it('shows totalQueueSizeDB', async () => {
+			await agenda.start();
+
+			const status = await agenda.getRunningStats();
+			expect(status).to.have.property('totalQueueSizeDB');
+			expect(status.totalQueueSizeDB).to.be.a('number');
+			expect(status.totalQueueSizeDB).to.be.equal(0);
+		});
 	});
 
 	it('ensure new jobs are always filling up running queue', async () => {

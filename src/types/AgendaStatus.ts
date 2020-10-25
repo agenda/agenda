@@ -1,7 +1,12 @@
-import { IJobParameters } from './JobParameters';
+import type { IJobParameters } from './JobParameters';
+import type { IJobDefinition } from './JobDefinition';
 
 export interface IAgendaJobStatus {
-	[name: string]: { running: number; locked: number };
+	[name: string]: {
+		running: number;
+		locked: number;
+		config: IJobDefinition;
+	};
 }
 
 export interface IAgendaStatus {
