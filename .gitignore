@@ -8,3 +8,5 @@ docs/agenda/*
 !docs/agenda/2.2.0/
 !docs/agenda/3.1.0/
 dist
+.nyc_output
+coverage
