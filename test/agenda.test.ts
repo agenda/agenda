@@ -610,6 +610,55 @@ describe('Agenda', () => {
 		});
 	});
 
+	describe('ensureIndex findAndLockNextJobIndex', () => {
+		it('ensureIndex-Option false does not create index findAndLockNextJobIndex', async () => {
+			const agenda = new Agenda({
+				mongo: mongoDb,
+				ensureIndex: false
+			});
+
+			agenda.define('someJob', jobProcessor);
+			await agenda.create('someJob', 1).save();
+
+			const listIndex = await mongoDb.command({ listIndexes: 'agendaJobs' });
+			expect(listIndex.cursor.firstBatch).to.have.lengthOf(1);
+			expect(listIndex.cursor.firstBatch[0].name).to.be.equal('_id_');
+		});
+
+		it('ensureIndex-Option true does create index findAndLockNextJobIndex', async () => {
+			const agenda = new Agenda({
+				mongo: mongoDb,
+				ensureIndex: true
+			});
+
+			agenda.define('someJob', jobProcessor);
+			await agenda.create('someJob', 1).save();
+
+			const listIndex = await mongoDb.command({ listIndexes: 'agendaJobs' });
+			expect(listIndex.cursor.firstBatch).to.have.lengthOf(2);
+			expect(listIndex.cursor.firstBatch[0].name).to.be.equal('_id_');
+			expect(listIndex.cursor.firstBatch[1].name).to.be.equal('findAndLockNextJobIndex');
+		});
+
+		it('creating two agenda-instances with ensureIndex-Option true does not throw an error', async () => {
+			const agenda = new Agenda({
+				mongo: mongoDb,
+				ensureIndex: true
+			});
+
+			agenda.define('someJob', jobProcessor);
+			await agenda.create('someJob', 1).save();
+
+			const secondAgenda = new Agenda({
+				mongo: mongoDb,
+				ensureIndex: true
+			});
+
+			secondAgenda.define('someJob', jobProcessor);
+			await secondAgenda.create('someJob', 1).save();
+		});
+	});
+
 	describe('process jobs', () => {
 		// eslint-disable-line prefer-arrow-callback
 		it('should not cause unhandledRejection', async () => {

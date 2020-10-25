@@ -238,9 +238,9 @@ export class Job<DATA = unknown | void> {
 			} else {
 				this.attrs.nextRunAt = null;
 			}
-		} catch (err) {
+		} catch (error) {
 			this.attrs.nextRunAt = null;
-			this.fail(err);
+			this.fail(error);
 		}
 
 		return this;
@@ -272,22 +272,19 @@ export class Job<DATA = unknown | void> {
 				log('[%s:%s] process function being called', this.attrs.name, this.attrs._id);
 				await new Promise((resolve, reject) => {
 					try {
-						const result = (definition.fn as DefinitionProcessor<DATA, (err?) => void>)(
-							this,
-							err => {
-								if (err) {
-									reject(err);
-									return;
-								}
-								resolve();
+						const result = definition.fn(this, error => {
+							if (error) {
+								reject(error);
+								return;
 							}
-						);
+							resolve();
+						});
+
 						if (this.isPromise(result)) {
-							// eslint-disable-next-line @typescript-eslint/no-explicit-any
-							(result as any).catch(err => reject(err));
+							result.catch((error: Error) => reject(error));
 						}
-					} catch (err) {
-						reject(err);
+					} catch (error) {
+						reject(error);
 					}
 				});
 			} else {
@@ -300,14 +297,14 @@ export class Job<DATA = unknown | void> {
 			this.agenda.emit('success', this);
 			this.agenda.emit(`success:${this.attrs.name}`, this);
 			log('[%s:%s] has succeeded', this.attrs.name, this.attrs._id);
-		} catch (err) {
+		} catch (error) {
 			log('[%s:%s] unknown error occurred', this.attrs.name, this.attrs._id);
 
-			this.fail(err);
+			this.fail(error);
 
-			this.agenda.emit('fail', err, this);
-			this.agenda.emit(`fail:${this.attrs.name}`, err, this);
-			log('[%s:%s] has failed [%s]', this.attrs.name, this.attrs._id, err.message);
+			this.agenda.emit('fail', error, this);
+			this.agenda.emit(`fail:${this.attrs.name}`, error, this);
+			log('[%s:%s] has failed [%s]', this.attrs.name, this.attrs._id, error.message);
 		} finally {
 			this.attrs.lockedAt = undefined;
 			await this.save();
@@ -324,8 +321,8 @@ export class Job<DATA = unknown | void> {
 		}
 	}
 
-	private isPromise(value): value is Promise<void> {
-		return !!(value && typeof value.then === 'function');
+	private isPromise(value: unknown): value is Promise<void> {
+		return !!(value && typeof (value as Promise<void>).then === 'function');
 	}
 }
 

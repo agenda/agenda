@@ -4,6 +4,8 @@
 .travis.yml
 agenda.svg
 docs
+.nyc_output
+coverage
 History.md
 Makefile
 renovate.json
