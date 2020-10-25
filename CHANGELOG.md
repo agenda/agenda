@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.1.1](https://github.com/hokify/agenda/compare/v4.1.0...v4.1.1) (2020-10-25)
+
+
+### Bug Fixes
+
+* isRunning, check if db returns a result ([e6ea7e2](https://github.com/hokify/agenda/commit/e6ea7e2817d7d5a113de80f68c33c62b75a8602a))
+
 ## [4.1.0](https://github.com/hokify/agenda/compare/v4.0.33...v4.1.0) (2020-10-25)
 
 
