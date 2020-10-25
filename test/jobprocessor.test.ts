@@ -150,18 +150,20 @@ describe('JobProcessor', () => {
 	});
 
 	it('ensure slow jobs time out', async () => {
+		let jobStarted = false;
 		agenda.define(
 			'test long',
 			async () => {
+				jobStarted = true;
 				await new Promise(resolve => setTimeout(resolve, 1000));
 			},
 			{ lockLifetime: 500 }
 		);
 
-		await agenda.start();
-
 		// queue up long ones
 		agenda.now('test long');
+
+		await agenda.start();
 
 		const promiseResult = await new Promise(resolve => {
 			agenda.on('error', err => {
@@ -173,6 +175,7 @@ describe('JobProcessor', () => {
 			});
 		});
 
+		expect(jobStarted).to.be.equal(true);
 		expect(promiseResult).to.be.an('error');
 	});
 
