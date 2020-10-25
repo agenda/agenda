@@ -147,19 +147,25 @@ export class Job<DATA = unknown | void> {
 		return this;
 	}
 
+	private async fetchStatus(): Promise<void> {
+		const dbJob = await this.agenda.db.getJobs({ _id: this.attrs._id });
+		if (!dbJob || dbJob.length === 0) {
+			// @todo: should we just return false instead? a finished job could have been removed from database,
+			// and then this would throw...
+			throw new Error(`job with id ${this.attrs._id} not found in database`);
+		}
+
+		this.attrs.lastRunAt = dbJob[0].lastRunAt;
+		this.attrs.lockedAt = dbJob[0].lockedAt;
+		this.attrs.lastFinishedAt = dbJob[0].lastFinishedAt;
+	}
+
 	async isRunning(): Promise<boolean> {
 		const definition = this.agenda.definitions[this.attrs.name];
 		if (!definition) {
 			// we have no job definition, therfore we are not the job processor, but a client call
 			// so we get the real state from database
-			const dbJob = await this.agenda.db.getJobs({ _id: this.attrs._id });
-			if (!dbJob || dbJob.length === 0) {
-				// @todo: should we just return false instead? a finished job could have been removed from database,
-				// and then this would throw...
-				throw new Error(`job with id ${this.attrs._id} not found in database`);
-			}
-			this.attrs.lastRunAt = dbJob[0].lastRunAt;
-			this.attrs.lastFinishedAt = dbJob[0].lastFinishedAt;
+			await this.fetchStatus();
 		}
 
 		if (!this.attrs.lastRunAt) {
@@ -190,12 +196,14 @@ export class Job<DATA = unknown | void> {
 		return this.agenda.cancel({ _id: this.attrs._id });
 	}
 
-	isDead(): boolean {
+	async isDead(): Promise<boolean> {
 		const definition = this.agenda.definitions[this.attrs.name];
 		if (!definition) {
-			console.warn('this method is only callable from an agenda job processor');
-			return false;
+			// we have no job definition, therfore we are not the job processor, but a client call
+			// so we get the real state from database
+			await this.fetchStatus();
 		}
+
 		const lockDeadline = new Date(Date.now() - definition.lockLifetime);
 
 		// This means a job has "expired", as in it has not been "touched" within the lockoutTime

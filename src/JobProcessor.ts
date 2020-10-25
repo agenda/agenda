@@ -488,7 +488,7 @@ export class JobProcessor {
 								return;
 							}
 
-							if (job.isDead()) {
+							if (await job.isDead()) {
 								reject(
 									new Error(
 										`execution of '${job.attrs.name}' canceled, execution took more than ${
