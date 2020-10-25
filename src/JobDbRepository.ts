@@ -18,6 +18,9 @@ import { hasMongoProtocol } from './utils/hasMongoProtocol';
 
 const log = debug('agenda:db');
 
+/**
+ * @class
+ */
 export class JobDbRepository {
 	collection: Collection;
 
@@ -112,7 +115,6 @@ export class JobDbRepository {
 	): Promise<IJobParameters | undefined> {
 		/**
 		 * Query used to find job to run
-		 * @type {{$and: [*]}}
 		 */
 		const JOB_PROCESS_WHERE_QUERY: FilterQuery<
 			Omit<IJobParameters, 'lockedAt'> & { lockedAt?: Date | null }
@@ -138,13 +140,11 @@ export class JobDbRepository {
 
 		/**
 		 * Query used to set a job as locked
-		 * @type {{$set: {lockedAt: Date}}}
 		 */
 		const JOB_PROCESS_SET_QUERY: UpdateQuery<IJobParameters> = { $set: { lockedAt: now } };
 
 		/**
 		 * Query used to affect what gets returned
-		 * @type {{returnOriginal: boolean, sort: object}}
 		 */
 		const JOB_RETURN_QUERY: FindOneAndUpdateOption<IJobParameters> = {
 			returnOriginal: false,

@@ -11,9 +11,6 @@ const log = debug('agenda:job');
 
 /**
  * @class
- * @param {Object} args - Job Options
- * @property {Object} agenda - The Agenda instance
- * @property {Object} attrs
  */
 export class Job<DATA = unknown | void> {
 	readonly attrs: IJobParameters<DATA>;
@@ -24,6 +21,12 @@ export class Job<DATA = unknown | void> {
 	 */
 	canceled: Error | undefined;
 
+	/**
+	 * creates a new job object
+	 * @param agenda
+	 * @param args
+	 * @param byJobProcessor
+	 */
 	constructor(
 		agenda: Agenda,
 		args: Partial<IJobParameters<void>> & {
@@ -60,6 +63,9 @@ export class Job<DATA = unknown | void> {
 		};
 	}
 
+	/**
+	 * Given a job, turn it into an JobParameters object
+	 */
 	toJson(): IJobParameters {
 		const result = {} as IJobParameters;
 
@@ -75,6 +81,11 @@ export class Job<DATA = unknown | void> {
 		return result;
 	}
 
+	/**
+	 * Sets a job to repeat every X amount of time
+	 * @param interval
+	 * @param options
+	 */
 	repeatEvery(
 		interval: string | number,
 		options: { timezone?: string; skipImmediate?: boolean } = {}
@@ -93,21 +104,36 @@ export class Job<DATA = unknown | void> {
 		return this;
 	}
 
+	/**
+	 * Sets a job to repeat at a specific time
+	 * @param time
+	 */
 	repeatAt(time: string): this {
 		this.attrs.repeatAt = time;
 		return this;
 	}
 
+	/**
+	 * Prevents the job from running
+	 */
 	disable(): this {
 		this.attrs.disabled = true;
 		return this;
 	}
 
+	/**
+	 * Allows job to run
+	 */
 	enable(): this {
 		this.attrs.disabled = false;
 		return this;
 	}
 
+	/**
+	 * Data to ensure is unique for job to be created
+	 * @param unique
+	 * @param opts
+	 */
 	unique(
 		unique: Required<IJobParameters<DATA>>['unique'],
 		opts?: IJobParameters['uniqueOpts']
@@ -117,6 +143,10 @@ export class Job<DATA = unknown | void> {
 		return this;
 	}
 
+	/**
+	 * Schedules a job to run at specified time
+	 * @param time
+	 */
 	schedule(time: string | Date): this {
 		const d = new Date(time);
 
@@ -127,14 +157,18 @@ export class Job<DATA = unknown | void> {
 
 	/**
 	 * Sets priority of the job
-	 * @param {String} priority priority of when job should be queued
-	 * @returns {exports} instance of Job
+	 * @param priority priority of when job should be queued
 	 */
 	priority(priority: JobPriority): this {
 		this.attrs.priority = parsePriority(priority);
 		return this;
 	}
 
+	/**
+	 * Fails the job with a reason (error) specified
+	 *
+	 * @param reason
+	 */
 	fail(reason: Error | string): this {
 		this.attrs.failReason = reason instanceof Error ? reason.message : reason;
 		this.attrs.failCount = (this.attrs.failCount || 0) + 1;
@@ -163,6 +197,13 @@ export class Job<DATA = unknown | void> {
 		this.attrs.lastFinishedAt = dbJob[0].lastFinishedAt;
 	}
 
+	/**
+	 * A job is running if:
+	 * (lastRunAt exists AND lastFinishedAt does not exist)
+	 * OR
+	 * (lastRunAt exists AND lastFinishedAt exists but the lastRunAt is newer [in time] than lastFinishedAt)
+	 * @returns Whether or not job is running at the moment (true for running)
+	 */
 	async isRunning(): Promise<boolean> {
 		if (!this.byJobProcessor) {
 			// we have no job definition, therfore we are not the job processor, but a client call
@@ -188,12 +229,18 @@ export class Job<DATA = unknown | void> {
 		return false;
 	}
 
+	/**
+	 * Saves a job to database
+	 */
 	async save(): Promise<Job> {
 		// ensure db connection is ready
 		await this.agenda.ready;
 		return this.agenda.db.saveJob(this);
 	}
 
+	/**
+	 * Remove the job from database
+	 */
 	remove(): Promise<number> {
 		return this.agenda.cancel({ _id: this.attrs._id });
 	}
@@ -217,6 +264,10 @@ export class Job<DATA = unknown | void> {
 		return false;
 	}
 
+	/**
+	 * Updates "lockedAt" time so the job does not get picked up again
+	 * @param progress 0 to 100
+	 */
 	async touch(progress?: number): Promise<void> {
 		if (this.canceled) {
 			throw new Error(`job ${this.attrs.name} got canceled already: ${this.canceled}!`);

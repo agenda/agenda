@@ -24,7 +24,8 @@
     "mocha-debug": "DEBUG=agenda:**,-agenda:internal:** mocha -r ts-node/register --reporter spec -b",
     "mocha-debug-internal": "DEBUG=agenda:internal:** mocha -r ts-node/register --reporter spec -b",
     "mocha-debug-all": "DEBUG=agenda:** mocha -r ts-node/register --reporter spec -b",
-    "docs": "jsdoc --configure .jsdoc.json --verbose"
+    "docs-jsdoc": "jsdoc --configure .jsdoc.json --verbose",
+    "docs": "typedoc --out docs/agenda/4.x --includes src/ --mode file"
   },
   "config": {
     "blanket": {
@@ -72,12 +73,13 @@
     "coveralls": "3.1.0",
     "delay": "4.4.0",
     "eslint": "7.11.0",
+    "better-docs": "^2.3.2",
     "jsdoc": "3.6.6",
-    "jsdoc-template": "https://github.com/braintree/jsdoc-template",
     "mocha": "8.2.0",
     "mocha-lcov-reporter": "1.3.0",
     "mongodb-memory-server": "^6.9.2",
     "nyc": "^15.1.0",
+    "typedoc": "^0.19.2",
     "prettier": "^2.1.2",
     "q": "1.5.1",
     "sinon": "9.2.0",

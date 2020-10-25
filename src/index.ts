@@ -16,24 +16,7 @@ import { calculateProcessEvery } from './utils/processEvery';
 const log = debug('agenda');
 
 /**
- * @class Agenda
- * @param {Object} config - Agenda Config
- * @param {Function} cb - Callback after Agenda has started and connected to mongo
- * @property {Object} _name - Name of the current Agenda queue
- * @property {Number} _processEvery
- * @property {Number} _defaultConcurrency
- * @property {Number} _maxConcurrency
- * @property {Number} _defaultLockLimit
- * @property {Number} _lockLimit
- * @property {Object} definitions
- * @property {Object} _runningJobs
- * @property {Object} _lockedJobs
- * @property {Object} _jobQueue
- * @property {Number} _defaultLockLifetime
- * @property {Object} _sort
- * @property {Object} _indices
- * @property {Boolean} _isLockingOnTheFly
- * @property {Array} _jobsToLock
+ * @class
  */
 export class Agenda extends EventEmitter {
 	readonly attrs: IAgendaConfig & IDbConfig;
@@ -75,6 +58,10 @@ export class Agenda extends EventEmitter {
 		return this.jobProcessor.getStatus(fullDetails);
 	}
 
+	/**
+	 * @param {Object} config - Agenda Config
+	 * @param {Function} cb - Callback after Agenda has started and connected to mongo
+	 */
 	constructor(
 		config: {
 			name?: string;
@@ -114,6 +101,9 @@ export class Agenda extends EventEmitter {
 		}
 	}
 
+	/**
+	 * Connect to the spec'd MongoDB server and database.
+	 */
 	async database(
 		address: string,
 		collection?: string,
@@ -124,12 +114,22 @@ export class Agenda extends EventEmitter {
 		return this;
 	}
 
+	/**
+	 * Use existing mongo connectino to pass into agenda
+	 * @param mongo
+	 * @param collection
+	 */
 	async mongo(mongo: Db, collection?: string): Promise<Agenda> {
 		this.db = new JobDbRepository(this, { mongo, db: { collection } });
 		await this.db.connect();
 		return this;
 	}
 
+	/**
+	 * Set the sort query for finding next job
+	 * Default is { nextRunAt: 1, priority: -1 }
+	 * @param query
+	 */
 	sort(query: SortOptionObject<IJobParameters>): Agenda {
 		log('Agenda.sort([Object])');
 		this.attrs.sort = query;
@@ -142,6 +142,10 @@ export class Agenda extends EventEmitter {
 		return !!((config as IDatabaseOptions)?.db?.address || (config as IMongoOptions)?.mongo);
 	}
 
+	/**
+	 * Cancels any jobs matching the passed MongoDB query, and removes them from the database.
+	 * @param query
+	 */
 	async cancel(query: FilterQuery<IJobParameters>): Promise<number> {
 		log('attempting to cancel all Agenda jobs', query);
 		try {
@@ -154,48 +158,89 @@ export class Agenda extends EventEmitter {
 		}
 	}
 
+	/**
+	 * Set name of queue
+	 * @param name
+	 */
 	name(name: string): Agenda {
 		log('Agenda.name(%s)', name);
 		this.attrs.name = name;
 		return this;
 	}
 
+	/**
+	 * Set the time how often the job processor checks for new jobs to process
+	 * @param time
+	 */
 	processEvery(time: string | number): Agenda {
+		if (this.jobProcessor) {
+			throw new Error(
+				'job processor is already running, you need to set processEvery before calling start'
+			);
+		}
 		log('Agenda.processEvery(%d)', time);
 		this.attrs.processEvery = calculateProcessEvery(time);
 		return this;
 	}
 
+	/**
+	 * Set the concurrency for jobs (globally), type does not matter
+	 * @param num
+	 */
 	maxConcurrency(num: number): Agenda {
 		log('Agenda.maxConcurrency(%d)', num);
 		this.attrs.maxConcurrency = num;
 		return this;
 	}
 
+	/**
+	 * Set the default concurrency for each job
+	 * @param num number of max concurrency
+	 */
 	defaultConcurrency(num: number): Agenda {
 		log('Agenda.defaultConcurrency(%d)', num);
 		this.attrs.defaultConcurrency = num;
 		return this;
 	}
 
+	/**
+	 * Set the default amount jobs that are allowed to be locked at one time (GLOBAL)
+	 * @param num
+	 */
 	lockLimit(num: number): Agenda {
 		log('Agenda.lockLimit(%d)', num);
 		this.attrs.lockLimit = num;
 		return this;
 	}
 
+	/**
+	 * Set default lock limit per job type
+	 * @param num
+	 */
 	defaultLockLimit(num: number): Agenda {
 		log('Agenda.defaultLockLimit(%d)', num);
 		this.attrs.defaultLockLimit = num;
 		return this;
 	}
 
+	/**
+	 * Set the default lock time (in ms)
+	 * Default is 10 * 60 * 1000 ms (10 minutes)
+	 * @param ms
+	 */
 	defaultLockLifetime(ms: number): Agenda {
 		log('Agenda.defaultLockLifetime(%d)', ms);
 		this.attrs.defaultLockLifetime = ms;
 		return this;
 	}
 
+	/**
+	 * Finds all jobs matching 'query'
+	 * @param query
+	 * @param sort
+	 * @param limit
+	 * @param skip
+	 */
 	async jobs(
 		query: FilterQuery<IJobParameters> = {},
 		sort: FilterQuery<IJobParameters> = {},
@@ -208,6 +253,7 @@ export class Agenda extends EventEmitter {
 	}
 
 	/**
+	 * Removes all jobs from queue
 	 * @note: Only use after defining your jobs
 	 */
 	async purge(): Promise<number> {
@@ -216,7 +262,14 @@ export class Agenda extends EventEmitter {
 		return this.cancel({ name: { $not: { $in: definedNames } } });
 	}
 
-	/** BREAKING CHANGE: options moved from 2nd to 3rd parameter! */
+	/**
+	 * Setup definition for job
+	 * Method is used by consumers of lib to setup their functions
+	 * BREAKING CHANGE in v4: options moved from 2nd to 3rd parameter!
+	 * @param name
+	 * @param processor
+	 * @param options
+	 */
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	define<DATA = any>(
 		name: string,
@@ -277,6 +330,10 @@ export class Agenda extends EventEmitter {
 		}
 	}
 
+	/**
+	 * Given a name and some data, create a new job
+	 * @param name
+	 */
 	create(name: string): Job<void>;
 	create<DATA = unknown>(name: string, data: DATA): Job<DATA>;
 	create(name: string, data?: unknown): Job {
@@ -286,6 +343,13 @@ export class Agenda extends EventEmitter {
 		return job;
 	}
 
+	/**
+	 * Creates a scheduled job with given interval and name/names of the job to run
+	 * @param interval
+	 * @param names
+	 * @param data
+	 * @param options
+	 */
 	async every(
 		interval: string | number,
 		names: string[],
@@ -347,6 +411,11 @@ export class Agenda extends EventEmitter {
 		return jobs;
 	}
 
+	/**
+	 * Schedule a job or jobs at a specific time
+	 * @param when
+	 * @param names
+	 */
 	async schedule<DATA = void>(when: string | Date, names: string[]): Promise<Job<DATA>[]>;
 	async schedule<DATA = void>(when: string | Date, names: string): Promise<Job<DATA>>;
 	async schedule<DATA = unknown>(
@@ -377,6 +446,10 @@ export class Agenda extends EventEmitter {
 		return this.createJobs(names, createJob);
 	}
 
+	/**
+	 * Create a job for this exact moment
+	 * @param name
+	 */
 	async now<DATA = void>(name: string): Promise<Job<DATA>>;
 	async now<DATA = unknown>(name: string, data: DATA): Promise<Job<DATA>>;
 	async now<DATA>(name: string, data?: DATA): Promise<Job<DATA | void>> {
@@ -394,6 +467,10 @@ export class Agenda extends EventEmitter {
 		}
 	}
 
+	/**
+	 * Starts processing jobs using processJobs() methods, storing an interval ID
+	 * This method will only resolve if a db has been set up beforehand.
+	 */
 	async start(): Promise<void> {
 		log(
 			'Agenda.start called, waiting for agenda to be initialized (db connection)',
@@ -415,6 +492,9 @@ export class Agenda extends EventEmitter {
 		this.on('processJob', job => this.jobProcessor?.process(job));
 	}
 
+	/**
+	 * Clear the interval that processes the jobs
+	 */
 	async stop(): Promise<void> {
 		if (!this.jobProcessor) {
 			log('Agenda.stop called, but agenda has never started!');
@@ -437,11 +517,6 @@ export class Agenda extends EventEmitter {
 
 		this.jobProcessor = undefined;
 	}
-
-	// fina;
-	// Agenda.prototype.saveJob = save_job; -> moved to JobDbRepository
-
-	// Agenda.prototype._findAndLockNextJob = find_and_lock_next_job; -> moved to JobProcessor
 }
 
 export * from './types/AgendaConfig';

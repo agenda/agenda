@@ -24,7 +24,6 @@ export function isValidHumanInterval(value: unknown): value is string {
 
 /**
  * Internal method that computes the interval
- * @returns {undefined}
  */
 export const computeFromInterval = (attrs: IJobParameters): Date => {
 	const previousNextRunAt = attrs.nextRunAt || new Date();

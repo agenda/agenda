@@ -12,11 +12,8 @@ const log = debug('agenda:jobProcessor');
 const { version: agendaVersion } = require('../package.json');
 
 /**
+ * @class
  * Process methods for jobs
- *
- *
- * @param {Job} extraJob job to run immediately
- * @returns {undefined}
  */
 export class JobProcessor {
 	private jobStatus: {

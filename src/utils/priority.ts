@@ -10,10 +10,6 @@ const priorityMap = {
 
 /**
  * Internal method to turn priority into a number
- * @name Job#priority
- * @function
- * @param {String|Number} priority string to parse into number
- * @returns {Number} priority that was parsed
  */
 export function parsePriority(priority?: JobPriority): number {
 	if (typeof priority === 'number') {

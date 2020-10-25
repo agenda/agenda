@@ -4,12 +4,13 @@
         "dictionaries": ["jsdoc"]
     },
     "source": {
-        "include": ["lib", "package.json", "README.md"],
-        "includePattern": ".js$",
+      "includePattern": "\\.(jsx|js|ts|tsx)$",
+      "include": ["src", "package.json", "README.md"],
         "excludePattern": "(node_modules/|docs)"
     },
     "plugins": [
-        "plugins/markdown"
+        "plugins/markdown",
+        "node_modules/better-docs/typescript"
     ],
     "templates": {
         "referenceTitle": "Agenda"
@@ -18,6 +19,6 @@
         "destination": "./docs/",
         "encoding": "utf8",
         "recurse": true,
-        "template": "./node_modules/jsdoc-template"
+        "template": "./node_modules/better-docs"
     }
 }

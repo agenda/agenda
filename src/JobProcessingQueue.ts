@@ -4,9 +4,6 @@ import type { IJobParameters } from './types/JobParameters';
 import type { Agenda } from './index';
 /**
  * @class
- * @param {Object} args - Job Options
- * @property {Object} agenda - The Agenda instance
- * @property {Object} attrs
  */
 export class JobProcessingQueue {
 	private _queue: Job[];
