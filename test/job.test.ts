@@ -1479,4 +1479,17 @@ describe('Job', () => {
 			});
 		});
 	});
+
+	it('checks database for running job on "client"', async () => {
+		agenda.define('test', async () => {
+			await new Promise(resolve => setTimeout(resolve, 30000));
+		});
+
+		const job = await agenda.now('test');
+		await agenda.start();
+
+		await new Promise(resolve => agenda.on('start:test', resolve));
+
+		expect(await job.isRunning()).to.be.equal(true);
+	});
 });

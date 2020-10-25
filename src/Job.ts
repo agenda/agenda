@@ -29,7 +29,8 @@ export class Job<DATA = unknown | void> {
 		args: Partial<IJobParameters<void>> & {
 			name: string;
 			type: 'normal' | 'single';
-		}
+		},
+		byJobProcessor?
 	);
 	constructor(
 		agenda: Agenda,
@@ -37,7 +38,8 @@ export class Job<DATA = unknown | void> {
 			name: string;
 			type: 'normal' | 'single';
 			data: DATA;
-		}
+		},
+		byJobProcessor?
 	);
 	constructor(
 		readonly agenda: Agenda,
@@ -45,7 +47,8 @@ export class Job<DATA = unknown | void> {
 			name: string;
 			type: 'normal' | 'single';
 			data: DATA;
-		}
+		},
+		private readonly byJobProcessor = false
 	) {
 		// Set attrs to args
 		this.attrs = {
@@ -161,8 +164,7 @@ export class Job<DATA = unknown | void> {
 	}
 
 	async isRunning(): Promise<boolean> {
-		const definition = this.agenda.definitions[this.attrs.name];
-		if (!definition || !this.agenda.isActiveJobProcessor()) {
+		if (!this.byJobProcessor) {
 			// we have no job definition, therfore we are not the job processor, but a client call
 			// so we get the real state from database
 			await this.fetchStatus();
@@ -197,12 +199,13 @@ export class Job<DATA = unknown | void> {
 	}
 
 	async isDead(): Promise<boolean> {
-		const definition = this.agenda.definitions[this.attrs.name];
-		if (!definition || !this.agenda.isActiveJobProcessor()) {
+		if (!this.byJobProcessor) {
 			// we have no job definition, therfore we are not the job processor, but a client call
 			// so we get the real state from database
 			await this.fetchStatus();
 		}
+
+		const definition = this.agenda.definitions[this.attrs.name];
 
 		const lockDeadline = new Date(Date.now() - definition.lockLifetime);
 

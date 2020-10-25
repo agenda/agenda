@@ -239,7 +239,7 @@ export class JobProcessor {
 						);
 					}
 
-					const jobToEnqueue = new Job(this.agenda, resp) as JobWithId;
+					const jobToEnqueue = new Job(this.agenda, resp, true) as JobWithId;
 
 					// Before en-queing job make sure we haven't exceed our lock limits
 					if (!this.shouldLock(jobToEnqueue.attrs.name)) {
@@ -291,7 +291,7 @@ export class JobProcessor {
 				'found a job available to lock, creating a new job on Agenda with id [%s]',
 				result._id
 			);
-			return new Job(this.agenda, result) as JobWithId;
+			return new Job(this.agenda, result, true) as JobWithId;
 		}
 
 		return undefined;
