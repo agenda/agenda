@@ -81,8 +81,7 @@ Install via NPM
 
     npm install @hokify/agenda
 
-You will also need a working [Mongo](https://www.mongodb.com/) database (v3) to point it to.
-
+You will also need a working [Mongo](https://www.mongodb.com/) database (v3+) to point it to.
 
 # Example Usage
 
@@ -140,6 +139,8 @@ agenda.define('send email report', async job => {
 ```
 
 # Full documentation
+
+See also https://hokify.github.io/agenda/agenda/4.x/index.html
 
 Agenda's basic control structure is an instance of an agenda. Agenda's are
 mapped to a database collection and load the jobs from within.
