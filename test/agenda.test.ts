@@ -670,31 +670,42 @@ describe('Agenda', () => {
 			const rejectionsHandler = error => unhandledRejections.push(error);
 			process.on('unhandledRejection', rejectionsHandler);
 
+			/*
+			let j0processes = 0;
+			globalAgenda.define('j0', (_job, done) => {
+				j0processes += 1;
+				done();
+			}); */
+
 			let j1processes = 0;
-			globalAgenda.define('j1', (job, done) => {
+			globalAgenda.define('j1', (_job, done) => {
 				j1processes += 1;
 				done();
 			});
 
 			let j2processes = 0;
-			globalAgenda.define('j2', (job, done) => {
+			globalAgenda.define('j2', (_job, done) => {
 				j2processes += 1;
 				done();
 			});
 
 			let j3processes = 0;
-			globalAgenda.define('j3', async job => {
+			globalAgenda.define('j3', async _job => {
 				j3processes += 1;
 			});
 
 			await globalAgenda.start();
+
+			// await globalAgenda.every('1 seconds', 'j0');
 			await globalAgenda.every('5 seconds', 'j1');
 			await globalAgenda.every('10 seconds', 'j2');
 			await globalAgenda.every('15 seconds', 'j3');
 
 			await delay(6000);
+
 			process.removeListener('unhandledRejection', rejectionsHandler);
 
+			// expect(j0processes).to.equal(5);
 			expect(j1processes).to.equal(2);
 			expect(j2processes).to.equal(1);
 			expect(j3processes).to.equal(1);

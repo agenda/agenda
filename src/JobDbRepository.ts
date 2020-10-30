@@ -73,7 +73,11 @@ export class JobDbRepository {
 	}
 
 	async unlockJob(job: Job): Promise<void> {
-		await this.collection.updateOne({ _id: job.attrs._id }, { $unset: { lockedAt: true } });
+		// only unlock jobs which are not currently procsesed (nextRunAT is not null)
+		await this.collection.updateOne(
+			{ _id: job.attrs._id, nextRunAt: { $ne: null } },
+			{ $unset: { lockedAt: true } }
+		);
 	}
 
 	/**
@@ -119,21 +123,15 @@ export class JobDbRepository {
 		const JOB_PROCESS_WHERE_QUERY: FilterQuery<
 			Omit<IJobParameters, 'lockedAt'> & { lockedAt?: Date | null }
 		> = {
-			$and: [
+			name: jobName,
+			disabled: { $ne: true },
+			$or: [
 				{
-					name: jobName,
-					disabled: { $ne: true }
+					lockedAt: { $eq: null },
+					nextRunAt: { $lte: nextScanAt }
 				},
 				{
-					$or: [
-						{
-							lockedAt: { $eq: null },
-							nextRunAt: { $lte: nextScanAt }
-						},
-						{
-							lockedAt: { $lte: lockDeadline }
-						}
-					]
+					lockedAt: { $lte: lockDeadline }
 				}
 			]
 		};
