@@ -33,7 +33,26 @@ db.agendaJogs.ensureIndex({
     "priority" : -1,
     "lockedAt" : 1,
     "disabled" : 1
-})
+}, "findAndLockNextJobIndex")
+```
+
+optional, but maybe relevant:
+for agendash2
+```
+db.agendaJogs.ensureIndex({
+    "nextRunAt" : -1,
+    "lastRunAt" : -1,
+    "lastFinishedAt" : -1
+}, "agendash2")
+```
+
+for faster sortings
+```
+db.agendaJogs.ensureIndex({
+    "name" : 1,
+    "disabled" : 1,
+    "lockedAt" : 1
+}, "findAndLockDeadJobs")
 ```
  manually or set `ensureIndex: true` when initializing Agenda
 
