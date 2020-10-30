@@ -15,6 +15,16 @@ import { calculateProcessEvery } from './utils/processEvery';
 
 const log = debug('agenda');
 
+const DefaultOptions = {
+	processEvery: 5000,
+	defaultConcurrency: 5,
+	maxConcurrency: 20,
+	defaultLockLimit: 0,
+	lockLimit: 0,
+	defaultLockLifetime: 10 * 60 * 1000,
+	sort: { nextRunAt: 1, priority: -1 }
+};
+
 /**
  * @class
  */
@@ -73,20 +83,20 @@ export class Agenda extends EventEmitter {
 			defaultLockLifetime?: number;
 			// eslint-disable-next-line @typescript-eslint/ban-types
 		} & (IDatabaseOptions | IMongoOptions | {}) &
-			IDbConfig = {},
+			IDbConfig = DefaultOptions,
 		cb?: (error?: Error) => void
 	) {
 		super();
 
 		this.attrs = {
 			name: config.name || '',
-			processEvery: calculateProcessEvery(config.processEvery),
-			defaultConcurrency: config.defaultConcurrency || 5,
-			maxConcurrency: config.maxConcurrency || 20,
-			defaultLockLimit: config.defaultLockLimit || 0,
-			lockLimit: config.lockLimit || 0,
-			defaultLockLifetime: config.defaultLockLifetime || 10 * 60 * 1000, // 10 minute default lockLifetime
-			sort: config.sort || { nextRunAt: 1, priority: -1 }
+			processEvery: calculateProcessEvery(config.processEvery) || DefaultOptions.processEvery,
+			defaultConcurrency: config.defaultConcurrency || DefaultOptions.defaultConcurrency,
+			maxConcurrency: config.maxConcurrency || DefaultOptions.maxConcurrency,
+			defaultLockLimit: config.defaultLockLimit || DefaultOptions.defaultLockLimit,
+			lockLimit: config.lockLimit || DefaultOptions.lockLimit,
+			defaultLockLifetime: config.defaultLockLifetime || DefaultOptions.defaultLockLifetime, // 10 minute default lockLifetime
+			sort: config.sort || DefaultOptions.sort
 		};
 
 		this.ready = new Promise(resolve => this.once('ready', resolve));
