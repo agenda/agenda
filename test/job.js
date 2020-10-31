@@ -643,7 +643,7 @@ describe('Job', () => {
 
     it('clears locks on stop', async() => {
       agenda.define('longRunningJob', (job, cb) => { // eslint-disable-line no-unused-vars
-        // Job never finishes (the 2nd parameter is important, otherwise the job finsihes immediately)
+        // Job never finishes (the 2nd parameter is important, otherwise the job finishes immediately)
       });
       agenda.every('10 seconds', 'longRunningJob');
       agenda.processEvery('1 second');
