@@ -864,21 +864,21 @@ describe('Job', () => {
       await agenda.stop();
     });
 
-    // @todo fix this test
-    // does not on-the-fly lock more than definition.lockLimit jobs
-    it('broken-test', async() => {
-      agenda.define('lock job', {lockLimit: 1}, (job, cb) => {}); // eslint-disable-line no-unused-vars
+    it('does not on-the-fly lock more than agenda._lockLimit jobs', async () => {
+      agenda.lockLimit(1);
+
+      agenda.define('lock job', (job, cb) => {
+        /* this job nevers finishes */
+      }); // eslint-disable-line no-unused-vars
 
       await agenda.start();
 
-      await Promise.all([
-        agenda.now('lock job', {i: 1}),
-        agenda.now('lock job', {i: 2})
-      ]);
+      await Promise.all([agenda.now('lock job', { i: 1 }), agenda.now('lock job', { i: 2 })]);
 
-      await delay(500);
+      // give it some time to get picked up
+      await delay(200);
+
       expect(agenda._lockedJobs).to.have.length(1);
-      await agenda.stop();
     });
 
     it('does not lock more than agenda._lockLimit jobs during processing interval', async() => {
