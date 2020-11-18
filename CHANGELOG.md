@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.1.4](https://github.com/hokify/agenda/compare/v4.1.3...v4.1.4) (2020-11-18)
+
+
+### Bug Fixes
+
+* **jobprocessor:** check if set timeout value is valid ([2afaaa3](https://github.com/hokify/agenda/commit/2afaaa3227bf78978024c914dbc4be0c29dff7a9))
+
 ### [4.1.3](https://github.com/hokify/agenda/compare/v4.1.2...v4.1.3) (2020-10-30)
 
 
