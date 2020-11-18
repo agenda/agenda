@@ -11,6 +11,8 @@ const log = debug('agenda:jobProcessor');
 // eslint-disable-next-line @typescript-eslint/no-var-requires,global-require
 const { version: agendaVersion } = require('../package.json');
 
+const MAX_SAFE_32BIT_INTEGER = 2 ** 31; // Math.pow(2,31);
+
 /**
  * @class
  * Process methods for jobs
@@ -428,9 +430,13 @@ export class JobProcessor {
 					);
 					// re add to queue (puts it at the right position in the queue)
 					this.jobQueue.insert(job);
-					setTimeout(() => {
-						this.jobProcessing();
-					}, runIn);
+					setTimeout(
+						() => {
+							this.jobProcessing();
+						},
+						runIn > MAX_SAFE_32BIT_INTEGER ? MAX_SAFE_32BIT_INTEGER : runIn
+					); // check if runIn is higher than unsined 32 bit int, if so, use this time to recheck,
+					// because setTimeout will run in an overflow otherwise and reprocesses immediately
 				}
 			}
 
