@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.1.6](https://github.com/hokify/agenda/compare/v4.1.5...v4.1.6) (2020-11-19)
+
+
+### Bug Fixes
+
+* only unlock jobs with a next run at date on shutdown ([a458aea](https://github.com/hokify/agenda/commit/a458aea0017bf9ddde44f587e6e7da99b456663b))
+
 ### [4.1.5](https://github.com/hokify/agenda/compare/v4.1.4...v4.1.5) (2020-11-19)
 
 
