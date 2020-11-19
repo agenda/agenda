@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.1.5](https://github.com/hokify/agenda/compare/v4.1.4...v4.1.5) (2020-11-19)
+
+
+### Bug Fixes
+
+* **jobprocessor:** ensure set timeout is only called once for each job in the queue ([1590224](https://github.com/hokify/agenda/commit/159022495a83980aad82a5244313b8c0e7db9942))
+
 ### [4.1.4](https://github.com/hokify/agenda/compare/v4.1.3...v4.1.4) (2020-11-18)
 
 
