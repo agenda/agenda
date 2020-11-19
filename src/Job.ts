@@ -21,6 +21,10 @@ export class Job<DATA = unknown | void> {
 	 */
 	canceled: Error | undefined;
 
+	/** internal variable to ensure a job does not set unlimited numbers of setTimeouts if the job is not processed
+	 * immediately */
+	gotTimerToExecute: boolean;
+
 	/**
 	 * creates a new job object
 	 * @param agenda
@@ -33,7 +37,7 @@ export class Job<DATA = unknown | void> {
 			name: string;
 			type: 'normal' | 'single';
 		},
-		byJobProcessor?
+		byJobProcessor?: boolean
 	);
 	constructor(
 		agenda: Agenda,
@@ -42,7 +46,7 @@ export class Job<DATA = unknown | void> {
 			type: 'normal' | 'single';
 			data: DATA;
 		},
-		byJobProcessor?
+		byJobProcessor?: boolean
 	);
 	constructor(
 		readonly agenda: Agenda,

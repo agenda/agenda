@@ -385,7 +385,8 @@ export class JobProcessor {
 				'[%s:%s] there is a job to process (priority = %d)',
 				job.attrs.name,
 				job.attrs._id,
-				job.attrs.priority
+				job.attrs.priority,
+				job.gotTimerToExecute
 			);
 
 			this.jobQueue.remove(job);
@@ -430,13 +431,17 @@ export class JobProcessor {
 					);
 					// re add to queue (puts it at the right position in the queue)
 					this.jobQueue.insert(job);
-					setTimeout(
-						() => {
-							this.jobProcessing();
-						},
-						runIn > MAX_SAFE_32BIT_INTEGER ? MAX_SAFE_32BIT_INTEGER : runIn
-					); // check if runIn is higher than unsined 32 bit int, if so, use this time to recheck,
-					// because setTimeout will run in an overflow otherwise and reprocesses immediately
+					// ensure every job gets a timer to run at the near future time (but also ensure this time is set only once)
+					if (!job.gotTimerToExecute) {
+						job.gotTimerToExecute = true;
+						setTimeout(
+							() => {
+								this.jobProcessing();
+							},
+							runIn > MAX_SAFE_32BIT_INTEGER ? MAX_SAFE_32BIT_INTEGER : runIn
+						); // check if runIn is higher than unsined 32 bit int, if so, use this time to recheck,
+						// because setTimeout will run in an overflow otherwise and reprocesses immediately
+					}
 				}
 			}
 

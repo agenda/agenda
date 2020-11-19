@@ -117,6 +117,7 @@ export class JobProcessingQueue {
 				(!status || !def.concurrency || status.running < def.concurrency)
 			) {
 				if (!this._queue[i].attrs.nextRunAt) {
+					// eslint-disable-next-line no-console
 					console.log('this._queue[i]', this._queue[i].attrs);
 					throw new Error('no nextRunAt date');
 				}
