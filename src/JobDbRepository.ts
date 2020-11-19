@@ -84,7 +84,10 @@ export class JobDbRepository {
 	 * Internal method to unlock jobs so that they can be re-run
 	 */
 	async unlockJobs(jobIds: ObjectId[]): Promise<void> {
-		await this.collection.updateMany({ _id: { $in: jobIds } }, { $unset: { lockedAt: true } });
+		await this.collection.updateMany(
+			{ _id: { $in: jobIds }, nextRunAt: { $ne: null } },
+			{ $unset: { lockedAt: true } }
+		);
 	}
 
 	async lockJob(job: JobWithId): Promise<IJobParameters | undefined> {
