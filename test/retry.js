@@ -1,94 +1,90 @@
-/* globals before, describe, it, beforeEach, after, afterEach */
-const expect = require('expect.js');
-const path = require('path');
-const moment = require('moment-timezone');
-const cp = require('child_process');
-const Agenda = require('../index');
-const Job = require('../lib/job');
-const MongoClient = require('mongodb').MongoClient;
+/* globals describe, it, beforeEach, afterEach */
+'use strict';
+const delay = require('delay');
+const {MongoClient} = require('mongodb');
+const { Agenda } = require('../dist');
 
 const mongoHost = process.env.MONGODB_HOST || 'localhost';
 const mongoPort = process.env.MONGODB_PORT || '27017';
-const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/agenda-test';
+const agendaDatabase = 'agenda-test';
+const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/' + agendaDatabase;
 
-// create agenda instances
-var jobs = null;
-var mongo = null;
+// Create agenda instances
+let agenda = null;
+let mongoDb = null;
+let mongoClient = null;
 
-function clearJobs(done) {
-  mongo.collection('agendaJobs').remove({}, done);
-}
+const clearJobs = () => {
+  return mongoDb.collection('agendaJobs').deleteMany({});
+};
 
-// Slow timeouts for Travis
-const jobTimeout = process.env.TRAVIS ? 3500 : 500;
 const jobType = 'do work';
-const jobProcessor  = function(job) {};
+const jobProcessor = () => {};
 
-function failOnError(err) {
-  if (err) {
-    throw err;
-  }
-}
-
-describe('agenda', function() {
-  beforeEach(function(done) {
-    jobs = new Agenda({
+describe('Retry', () => {
+  beforeEach(done => {
+    agenda = new Agenda({
       db: {
         address: mongoCfg
       }
-    }, function(err) {
-      MongoClient.connect(mongoCfg, function( error, db ){
-        mongo = db;
-        setTimeout(function() {
-          clearJobs(function() {
-            jobs.define('someJob', jobProcessor);
-            jobs.define('send email', jobProcessor);
-            jobs.define('some job', jobProcessor);
-            jobs.define(jobType, jobProcessor);
-            done();
-          });
-        }, 50);
+    }, err => {
+      if (err) {
+        done(err);
+      }
+
+      MongoClient.connect(mongoCfg, async(error, client) => {
+        mongoClient = client;
+        mongoDb = client.db(agendaDatabase);
+
+        await delay(50);
+        await clearJobs();
+
+        agenda.define('someJob', jobProcessor);
+        agenda.define('send email', jobProcessor);
+        agenda.define('some job', jobProcessor);
+        agenda.define(jobType, jobProcessor);
+
+        done();
       });
     });
   });
 
-  afterEach(function(done) {
-    setTimeout(function() {
-      jobs.stop(function() {
-        clearJobs(function() {
-          mongo.close(function() {
-            jobs._mdb.close(done);
-          });
-        });
-      });
-    }, 50);
+  afterEach(async() => {
+    await delay(50);
+    await agenda.stop();
+    await clearJobs();
+    await mongoClient.close();
+    await agenda._db.close();
   });
 
-  describe('Retry', function () {
-    it('should retry a job', function(done) {
-      var shouldFail = true;
-      jobs.define('a job', function (job, done) {
-        if(shouldFail) {
-          shouldFail = false;
-          return done(new Error('test failure'));
-        }
-        done();
-      });
+  it('should retry a job', async() => {
+    let shouldFail = true;
 
-      jobs.on('fail:a job', function (err, job) {
-        job
-          .schedule('now')
-          .save();
-      });
+    agenda.processEvery(100); // Shave 5s off test runtime :grin:
+    agenda.define('a job', (job, done) => {
+      if (shouldFail) {
+        shouldFail = false;
+        return done(new Error('test failure'));
+      }
 
-      jobs.on('success:a job', function () {
-        done();
-      });
-
-      jobs.now('a job');
-
-      jobs.start();
+      done();
     });
-  });
 
+    agenda.on('fail:a job', (err, job) => {
+      if (err) {
+        // Do nothing as this is expected to fail.
+      }
+
+      job.schedule('now').save();
+    });
+
+    const successPromise = new Promise(resolve =>
+      agenda.on('success:a job', resolve)
+    );
+
+    await agenda.now('a job');
+
+    await agenda.start();
+    await successPromise;
+  });
 });
