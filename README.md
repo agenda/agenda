@@ -684,7 +684,7 @@ Saves the `job.attrs` into the database. Returns a Promise resolving to a Job in
 ```js
 try {
   await job.save();
-  cosole.log('Successfully saved job to collection');
+  console.log('Successfully saved job to collection');
 } catch (e) {
   console.error('Error saving job to collection');
 }
