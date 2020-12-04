@@ -44,7 +44,7 @@
     "url": "https://github.com/agenda/agenda/issues"
   },
   "dependencies": {
-    "cron": "~1.8.0",
+    "cron-parser": "^2.18.0",
     "date.js": "~0.3.3",
     "debug": "~4.2.0",
     "human-interval": "~1.0.0",
@@ -52,7 +52,6 @@
     "mongodb": "~3.6.2"
   },
   "devDependencies": {
-    "@types/cron": "^1.7.2",
     "@types/debug": "^4.1.5",
     "@types/human-interval": "^1.0.0",
     "@types/mongodb": "^3.5.27",

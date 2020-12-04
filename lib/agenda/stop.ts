@@ -17,7 +17,7 @@ export const stop = function(this: Agenda): Promise<any> {
    * @access private
    * @returns resolves when job unlocking fails or passes
    */
-  const _unlockJobs = function() {
+  const _unlockJobs = function(): Promise<void> {
     return new Promise((resolve, reject) => {
       debug('Agenda._unlockJobs()');
       const jobIds = self._lockedJobs.map(job => job.attrs._id);
