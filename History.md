@@ -5,6 +5,15 @@ Next
 
 * Upgrade `mongodb` dependency ~3.5.0 -> ~3.6.2 (security) ([#1122](https://github.com/agenda/agenda/pull/1122)) thanks @Elisa23
 
+* Upgrade to [Human Interval v2](https://github.com/agenda/human-interval/blob/master/History.md#200--2020-10-16), a refactor using [numbered](https://www.npmjs.com/package/numbered) package:
+  - Supports all the formats as previously, and more!
+  - Supports numbers written as English words (one, two hundred)
+  - Supports time expressions in singular and plural (minute and minutes)
+  - Supports negative numbers (-2)
+  - Supports hyphenated words (twenty-five)
+
+* Upgrade various dependencies
+
 BREAKING
 --------
 
