@@ -64,7 +64,7 @@
     "eslint-plugin-eslint-comments": "3.2.0",
     "eslint-plugin-import": "2.20.2",
     "eslint-plugin-node": "11.1.0",
-    "eslint-plugin-unicorn": "16.1.1",
+    "eslint-plugin-unicorn": "23.0.0",
     "expect.js": "0.3.1",
     "jsdoc": "3.6.6",
     "jsdoc-template": "https://github.com/braintree/jsdoc-template",
