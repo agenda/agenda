@@ -36,7 +36,7 @@ export const computeNextRunAt = function(this: Job) {
     debug('[%s:%s] computing next run via interval [%s]', this.attrs.name, this.attrs._id, interval);
     let lastRun = this.attrs.lastRunAt || new Date();
     lastRun = dateForTimezone(lastRun);
-    var cronOptions: any = { currentDate: lastRun.toDate() };
+    const cronOptions: any = { currentDate: lastRun.toDate() };
     if (timezone) cronOptions.tz = timezone;
     try {
       let cronTime = parser.parseExpression(interval, cronOptions);
