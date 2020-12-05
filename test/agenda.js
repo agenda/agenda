@@ -236,6 +236,12 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
         it('returns a job', async() => {
           expect(await jobs.every('5 minutes', 'send email')).to.be.a(Job);
         });
+        it('cron job with month starting at 1', async() => {
+          expect(await jobs.every('0 0 * 1 *', 'send email').then(({attrs}) => attrs.nextRunAt.getMonth())).to.be(0); // javascript getMonth() return 0 for january
+        });
+        it('repeating job with cron', async() => {
+          expect(await jobs.every('*/5 * * * *', 'send email').then(({attrs}) => attrs.nextRunAt)).to.not.be(null);
+        });
         it('sets the repeatEvery', async() => {
           expect(await jobs.every('5 seconds', 'send email').then(({attrs}) => attrs.repeatInterval)).to.be('5 seconds');
         });

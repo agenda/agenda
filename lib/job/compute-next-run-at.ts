@@ -1,5 +1,5 @@
 import { Job } from './index';
-import { CronTime } from 'cron';
+import * as parser from 'cron-parser';
 import humanInterval from 'human-interval';
 import createDebugger from 'debug';
 import moment from 'moment-timezone';
@@ -36,14 +36,16 @@ export const computeNextRunAt = function(this: Job) {
     debug('[%s:%s] computing next run via interval [%s]', this.attrs.name, this.attrs._id, interval);
     let lastRun = this.attrs.lastRunAt || new Date();
     lastRun = dateForTimezone(lastRun);
+    const cronOptions: any = { currentDate: lastRun.toDate() };
+    if (timezone) cronOptions.tz = timezone;
     try {
-      const cronTime = new CronTime(interval);
-      // @ts-expect-error
-      let nextDate = cronTime._getNextDateFrom(lastRun);
+      let cronTime = parser.parseExpression(interval, cronOptions);
+      let nextDate = cronTime.next().toDate();
       if (nextDate.valueOf() === lastRun.valueOf() || nextDate.valueOf() <= previousNextRunAt.valueOf()) {
         // Handle cronTime giving back the same date for the next run time
-        // @ts-expect-error
-        nextDate = cronTime._getNextDateFrom(dateForTimezone(new Date(lastRun.valueOf() + 1000)));
+        cronOptions.currentDate = new Date(lastRun.valueOf() + 1000);
+        cronTime = parser.parseExpression(interval, cronOptions);
+        nextDate = cronTime.next().toDate();
       }
 
       this.attrs.nextRunAt = nextDate;
