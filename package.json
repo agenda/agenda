@@ -56,7 +56,7 @@
     "@types/human-interval": "^1.0.0",
     "@types/mongodb": "^3.5.27",
     "blanket": "1.2.3",
-    "coveralls": "3.0.11",
+    "coveralls": "3.1.0",
     "delay": "4.4.0",
     "eslint": "6.8.0",
     "eslint-config-xo": "0.33.1",
