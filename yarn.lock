@@ -1953,10 +1953,12 @@ http-signature@~1.2.0:
     jsprim "^1.2.2"
     sshpk "^1.7.0"
 
-human-interval@~1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/human-interval/-/human-interval-1.0.0.tgz#7ba00a15f3d94ab6a4c16f76060e4aa07c713019"
-  integrity sha512-SWPw3rD6/ocA0JnGePoXp5Zf5eILzsoL5vdWdLwtTuyrElyCpfQb0whIcxMdK/gAKNl2rFDGkPAbwI2KGZCvNA==
+human-interval@~2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/human-interval/-/human-interval-2.0.0.tgz#a9f4cedf4544005398c39767a484fdf062f4287a"
+  integrity sha512-r9qKIElAPkR4+uKSY2T7ImenvKItsLhT2Rm3OmFbA0pBt44YC8mWBpSFsnAbHnVs2D47hm0GquhpCjN+yjR24g==
+  dependencies:
+    numbered "^1.1.0"
 
 iconv-lite@^0.4.24:
   version "0.4.24"
@@ -3025,6 +3027,11 @@ normalize-url@^4.1.0:
   version "4.5.0"
   resolved "https://registry.yarnpkg.com/normalize-url/-/normalize-url-4.5.0.tgz#453354087e6ca96957bd8f5baf753f5982142129"
   integrity sha512-2s47yzUxdexf1OhyRi4Em83iQk0aPvwTddtFz4hnSSw9dCEsLEGf6SwIO8ss/19S9iBb5sJaOuTvTGDeZI00BQ==
+
+numbered@^1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/numbered/-/numbered-1.1.0.tgz#9fcd79564c73a84b9574e8370c3d8e58fe3c133c"
+  integrity sha512-pv/ue2Odr7IfYOO0byC1KgBI10wo5YDauLhxY6/saNzAdAs0r1SotGCPzzCLNPL0xtrAwWRialLu23AAu9xO1g==
 
 oauth-sign@~0.9.0:
   version "0.9.0"
