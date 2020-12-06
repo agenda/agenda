@@ -1,10 +1,10 @@
-import { CronTime } from 'cron';
 import * as moment from 'moment-timezone';
 import * as humanInterval from 'human-interval';
 import * as date from 'date.js';
 import * as debug from 'debug';
-import type { IJobParameters } from '../types/JobParameters';
+import { parseExpression } from 'cron-parser';
 import { isValidDate } from './isValidDate';
+import type { IJobParameters } from '../types/JobParameters';
 
 const log = debug('agenda:nextRunAt');
 
@@ -28,21 +28,28 @@ export function isValidHumanInterval(value: unknown): value is string {
 export const computeFromInterval = (attrs: IJobParameters): Date => {
 	const previousNextRunAt = attrs.nextRunAt || new Date();
 	log('[%s:%s] computing next run via interval [%s]', attrs.name, attrs._id, attrs.repeatInterval);
+
 	const lastRun = dateForTimezone(attrs.lastRunAt || new Date(), attrs.repeatTimezone);
+
+	const cronOptions = {
+		currentDate: lastRun.toDate(),
+		tz: attrs.repeatTimezone
+	};
+
 	let nextRunAt: Date | null = null;
 
 	if (typeof attrs.repeatInterval === 'string') {
 		try {
-			const cronTime = new CronTime(attrs.repeatInterval);
-			let nextDate: Date = cronTime._getNextDateFrom(lastRun);
+			let cronTime = parseExpression(attrs.repeatInterval, cronOptions);
+			let nextDate = cronTime.next().toDate();
 			if (
 				nextDate.valueOf() === lastRun.valueOf() ||
 				nextDate.valueOf() <= previousNextRunAt.valueOf()
 			) {
 				// Handle cronTime giving back the same date for the next run time
-				nextDate = cronTime._getNextDateFrom(
-					dateForTimezone(new Date(lastRun.valueOf() + 1000), attrs.repeatTimezone)
-				);
+				cronOptions.currentDate = new Date(lastRun.valueOf() + 1000);
+				cronTime = parseExpression(attrs.repeatInterval, cronOptions);
+				nextDate = cronTime.next().toDate();
 			}
 
 			nextRunAt = nextDate;

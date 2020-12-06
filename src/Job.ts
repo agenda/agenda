@@ -335,7 +335,7 @@ export class Job<DATA = unknown | void> {
 
 			if (definition.fn.length === 2) {
 				log('[%s:%s] process function being called', this.attrs.name, this.attrs._id);
-				await new Promise((resolve, reject) => {
+				await new Promise<void>((resolve, reject) => {
 					try {
 						const result = definition.fn(this, error => {
 							if (error) {

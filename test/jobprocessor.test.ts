@@ -167,7 +167,7 @@ describe('JobProcessor', () => {
 
 		await agenda.start();
 
-		const promiseResult = await new Promise(resolve => {
+		const promiseResult = await new Promise<Error | void>(resolve => {
 			agenda.on('error', err => {
 				resolve(err);
 			});
@@ -198,7 +198,7 @@ describe('JobProcessor', () => {
 		// queue up long ones
 		agenda.now('test long');
 
-		const promiseResult = await new Promise(resolve => {
+		const promiseResult = await new Promise<Error | void>(resolve => {
 			agenda.on('error', err => {
 				resolve(err);
 			});

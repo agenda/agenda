@@ -8,6 +8,7 @@ import { Db } from 'mongodb';
 import * as Q from 'q';
 import * as delay from 'delay';
 import * as sinon from 'sinon';
+import { fail } from 'assert';
 import { Job } from '../src/Job';
 import { Agenda } from '../src';
 import { mockMongo } from './helpers/mock-mongodb';
@@ -28,7 +29,7 @@ const clearJobs = async () => {
 // Slow timeouts for Travis
 const jobTimeout = 500;
 const jobType = 'do work';
-const jobProcessor = () => {};
+const jobProcessor = () => { };
 
 describe('Job', () => {
 	beforeEach(async () => {
@@ -284,6 +285,24 @@ describe('Job', () => {
 			const jobProto = Object.getPrototypeOf(job);
 			jobProto.computeNextRunAt.call(job);
 			expect(job.attrs.nextRunAt.valueOf()).to.equal(expectedDate.valueOf());
+		});
+
+		it('cron job with month starting at 1', async () => {
+			job.repeatEvery('0 0 * 1 *', {
+				timezone: 'GMT'
+			});
+			if (job.attrs.nextRunAt) {
+				expect(job.attrs.nextRunAt.getMonth()).to.equal(0);
+			} else {
+				fail();
+			}
+		});
+
+		it('repeating job with cron', async () => {
+			job.repeatEvery('0 0 * 1 *', {
+				timezone: 'GMT'
+			});
+			expect(job.attrs.nextRunAt).to.not.eql(null);
 		});
 
 		describe('when repeat at time is invalid', () => {
@@ -664,7 +683,7 @@ describe('Job', () => {
 			).to.eq('processed');
 
 			await agenda.stop();
-			const processedStopped = new Promise(resolve => {
+			const processedStopped = new Promise<void>(resolve => {
 				agenda.define('jobQueueTest', async _job => {
 					resolve();
 				});
@@ -944,7 +963,7 @@ describe('Job', () => {
 		});
 
 		it('does not on-the-fly lock more than definition.lockLimit jobs', async () => {
-			agenda.define('lock job', (job, cb) => {}, { lockLimit: 1 }); // eslint-disable-line no-unused-vars
+			agenda.define('lock job', (job, cb) => { }, { lockLimit: 1 }); // eslint-disable-line no-unused-vars
 
 			await agenda.start();
 
@@ -958,7 +977,7 @@ describe('Job', () => {
 			agenda.lockLimit(1);
 			agenda.processEvery(200);
 
-			agenda.define('lock job', (job, cb) => {}); // eslint-disable-line no-unused-vars
+			agenda.define('lock job', (job, cb) => { }); // eslint-disable-line no-unused-vars
 
 			await agenda.start();
 
@@ -976,7 +995,7 @@ describe('Job', () => {
 		it('does not lock more than definition.lockLimit jobs during processing interval', async () => {
 			agenda.processEvery(200);
 
-			agenda.define('lock job', (job, cb) => {}, { lockLimit: 1 }); // eslint-disable-line no-unused-vars
+			agenda.define('lock job', (job, cb) => { }, { lockLimit: 1 }); // eslint-disable-line no-unused-vars
 
 			await agenda.start();
 

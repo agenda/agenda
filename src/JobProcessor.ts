@@ -488,7 +488,7 @@ export class JobProcessor {
 				// check if the job is still alive
 				const checkIfJobIsStillAlive = () => {
 					// check every "this.agenda.definitions[job.attrs.name].lockLifetime / 2"" (or at mininum every processEvery)
-					return new Promise((resolve, reject) =>
+					return new Promise<void>((resolve, reject) =>
 						setTimeout(async () => {
 							// when job is not running anymore, just finish
 							if (!(await job.isRunning())) {
