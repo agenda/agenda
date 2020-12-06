@@ -45,6 +45,7 @@ import { Job } from '../job';
  * @property {Object} _sort
  * @property {Object} _indices
  * @property {Boolean} _isLockingOnTheFly
+ * @property {Map} _isJobQueueFilling
  * @property {Array} _jobsToLock
  */
 class Agenda extends EventEmitter {
@@ -55,6 +56,7 @@ class Agenda extends EventEmitter {
   _findAndLockNextJob: any;
   _indices: any;
   _isLockingOnTheFly: boolean;
+  _isJobQueueFilling: Map<string, boolean>;
   _jobQueue: JobProcessingQueue;
   _jobsToLock: Job[];
   _lockedJobs: Job[];
@@ -113,6 +115,7 @@ class Agenda extends EventEmitter {
     this._indices = {name: 1, ...this._sort, priority: -1, lockedAt: 1, nextRunAt: 1, disabled: 1};
 
     this._isLockingOnTheFly = false;
+    this._isJobQueueFilling = new Map<string, boolean>();
     this._jobsToLock = [];
     this._ready = new Promise(resolve => this.once('ready', resolve));
 

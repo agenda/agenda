@@ -864,9 +864,7 @@ describe('Job', () => {
       await agenda.stop();
     });
 
-    // @todo fix this test
-    // does not on-the-fly lock more than definition.lockLimit jobs
-    it('broken-test', async() => {
+    it('does not on-the-fly lock more than definition.lockLimit jobs', async() => {
       agenda.define('lock job', {lockLimit: 1}, (job, cb) => {}); // eslint-disable-line no-unused-vars
 
       await agenda.start();
