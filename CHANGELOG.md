@@ -2,6 +2,58 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [5.0.0](https://github.com/hokify/agenda/compare/v4.1.6...v5.0.0) (2020-12-06)
+
+
+### ⚠ BREAKING CHANGES
+
+* Switching from [ncb000gt/node-cron](https://www.npmjs.com/package/cron) to [harrisiirak/cron-parser](https://www.npmjs.com/package/cron-parser) for cron-pattern parsing.
+
+    Previously month was 0-based (0=January). Going forward standard Unix pattern is used, which is 1-based (1=January).
+
+    Please update existing cron-patterns that specify a month (4th position of a pattern). The month is now 1 - 12
+
+    1 = January
+
+    2 = February
+
+    3...
+
+    | Example | Execute on 1st of January |
+    |---------|---------------------------|
+    | Old     | 0 0 1 **0** *             |
+    | New     | 0 0 1 **1** *             |
+
+    old Cron patterns
+
+    ```
+    * * * * * *
+    | | | | | |
+    | | | | | +-- Year              (range: 1900-3000)
+    | | | | +---- Day of the Week   (range: 1-7, 1 standing for Monday)
+    | | | +------ Month of the Year (range: 0-11) NOTE: Difference here
+    | | +-------- Day of the Month  (range: 1-31)
+    | +---------- Hour              (range: 0-23)
+    +------------ Minute            (range: 0-59)
+    ```
+
+    new cron patterns
+
+    ```
+    * * * * * *
+    | | | | | |
+    | | | | | +-- Year              (range: 1900-3000)
+    | | | | +---- Day of the Week   (range: 1-7, 1 standing for Monday)
+    | | | +------ Month of the Year (range: 1-12) NOTE: Difference here
+    | | +-------- Day of the Month  (range: 1-31)
+    | +---------- Hour              (range: 0-23)
+    +------------ Minute            (range: 0-59)
+    ```
+
+Co-authored-by: Aras Abbasi <a.abbasi@cognigy.com>
+
+* switching from cron to cron-parser ([#16](https://github.com/hokify/agenda/issues/16)) ([e5c3bf1](https://github.com/hokify/agenda/commit/e5c3bf12d4b5db8ec846b0c9c332e247077d3485))
+
 ### [4.1.6](https://github.com/hokify/agenda/compare/v4.1.5...v4.1.6) (2020-11-19)
 
 
