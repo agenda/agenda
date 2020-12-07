@@ -62,7 +62,7 @@
     "eslint-config-xo": "0.33.1",
     "eslint-plugin-ava": "11.0.0",
     "eslint-plugin-eslint-comments": "3.2.0",
-    "eslint-plugin-import": "2.20.2",
+    "eslint-plugin-import": "2.22.1",
     "eslint-plugin-node": "11.1.0",
     "eslint-plugin-unicorn": "23.0.0",
     "expect.js": "0.3.1",
