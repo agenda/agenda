@@ -44,8 +44,8 @@ import { Job } from '../job';
  * @property {Number} _defaultLockLifetime
  * @property {Object} _sort
  * @property {Object} _indices
- * @property {Boolean} _isLockingOnTheFly
- * @property {Map} _isJobQueueFilling
+ * @property {Boolean} _isLockingOnTheFly - true if 'lockingOnTheFly' is currently running. Prevent concurrent execution of this method.
+ * @property {Map} _isJobQueueFilling - A map of jobQueues and if the 'jobQueueFilling' method is currently running for a given map. 'lockingOnTheFly' and 'jobQueueFilling' should not run concurrently for the same jobQueue. It can cause that lock limits aren't honored.
  * @property {Array} _jobsToLock
  */
 class Agenda extends EventEmitter {

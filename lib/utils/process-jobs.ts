@@ -46,10 +46,9 @@ export const processJobs = function(this: Agenda, extraJob: Job) {
    * @param name name of job to check if we should lock or not
    * @returns whether or not you should lock job
    */
-  function shouldLock(name: string, jobId: string = ''): boolean {
+  function shouldLock(name: string): boolean {
     const jobDefinition = definitions[name];
     let shouldLock = true;
-    debug(`shouldLock [${name}:${jobId}]: global(locked / limit) = (${self._lockedJobs.length} / ${self._lockLimit}), jobSpecific(locked / limit) = (${jobDefinition.locked} / ${jobDefinition.lockLimit})`);
     if (self._lockLimit && self._lockLimit <= self._lockedJobs.length) {
       shouldLock = false;
     }
@@ -58,7 +57,7 @@ export const processJobs = function(this: Agenda, extraJob: Job) {
       shouldLock = false;
     }
 
-    debug('job [%s:%s] lock status: shouldLock = %s', name, jobId, shouldLock);
+    debug('job [%s] lock status: shouldLock = %s', name, shouldLock);
     return shouldLock;
   }
 
@@ -116,7 +115,7 @@ export const processJobs = function(this: Agenda, extraJob: Job) {
     // If locking limits have been hit, stop locking on the fly.
     // Jobs that were waiting to be locked will be picked up during a
     // future locking interval.
-    if (!shouldLock(job.attrs.name, job.attrs._id)) {
+    if (!shouldLock(job.attrs.name)) {
       debug('lock limit hit for: [%s:%s]', job.attrs.name, job.attrs._id);
       self._jobsToLock = [];
       self._isLockingOnTheFly = false;
@@ -163,18 +162,18 @@ export const processJobs = function(this: Agenda, extraJob: Job) {
     debug('jobQueueFilling: %s isJobQueueFilling: %s', name, self._isJobQueueFilling.has(name));
     self._isJobQueueFilling.set(name, true);
 
-    // Don't lock because of a limit we have set (lockLimit, etc)
-    if (!shouldLock(name)) {
-      debug('lock limit reached in queue filling for [%s]', name);
-      return;
-    }
-
-    // Set the date of the next time we are going to run _processEvery function
-    const now = new Date();
-    self._nextScanAt = new Date(now.valueOf() + self._processEvery);
-
-    // For this job name, find the next job to run and lock it!
     try {
+      // Don't lock because of a limit we have set (lockLimit, etc)
+      if (!shouldLock(name)) {
+        debug('lock limit reached in queue filling for [%s]', name);
+        return; // goes to finally block
+      }
+
+      // Set the date of the next time we are going to run _processEvery function
+      const now = new Date();
+      self._nextScanAt = new Date(now.valueOf() + self._processEvery);
+
+      // For this job name, find the next job to run and lock it!
       const job = await self._findAndLockNextJob(name, definitions[name]);
       // Still have the job?
       // 1. Add it to lock list
@@ -191,8 +190,9 @@ export const processJobs = function(this: Agenda, extraJob: Job) {
       }
     } catch (error) {
       debug('[%s] job lock failed while filling queue', name, error);
+    } finally {
+      self._isJobQueueFilling.delete(name);
     }
-    self._isJobQueueFilling.delete(name);
   }
 
   /**
