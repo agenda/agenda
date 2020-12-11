@@ -337,12 +337,12 @@ await agenda.start();
 
 Before you can use a job, you must define its processing behavior.
 
-### define(jobName, [options], fn)
+### define(jobName, [options], handler)
 
 Defines a job with the name of `jobName`. When a job of `jobName` gets run, it
-will be passed to `fn(job, done)`. To maintain asynchronous behavior, you may
-either provide a Promise-returning function in `fn` *or* provide `done` as a
-second parameter to `fn`. If `done` is specified in the function signature, you
+will be passed to `handler(job, done)`. To maintain asynchronous behavior, you may
+either provide a Promise-returning function in `handler` *or* provide `done` as a
+second parameter to `handler`. If `done` is specified in the function signature, you
 must call `done()` when you are processing the job. If your function is
 synchronous or returns a Promise, you may omit `done` from the signature.
 
@@ -650,7 +650,7 @@ job.unique({'data.type': 'active', 'data.userId': '123', nextRunAt: date});
 await job.save();
 ```
 
-*IMPORTANT:* To avoid high CPU usage by MongoDB, make sure to create an index on the used fields, like `data.type` and `data.userId` for the example above.
+*IMPORTANT:* To [guarantee uniqueness](https://docs.mongodb.com/manual/reference/method/db.collection.update/#use-unique-indexes) as well as avoid high CPU usage by MongoDB make sure to create a unique index on the used fields, like `name`, `data.type` and `data.userId` for the example above.
 
 ### fail(reason)
 
