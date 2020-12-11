@@ -72,7 +72,7 @@
     "mocha-lcov-reporter": "1.3.0",
     "q": "1.5.1",
     "sinon": "9.2.2",
-    "typescript": "4.0.3",
+    "typescript": "4.1.2",
     "xo": "0.35.0"
   },
   "xo": {
