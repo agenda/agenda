@@ -168,6 +168,14 @@ export const processJobs = function(this: Agenda, extraJob: Job) {
       // 3. Queue the job to actually be run now that it is locked
       // 4. Recursively run this same method we are in to check for more available jobs of same type!
       if (job) {
+        // Before en-queing job make sure we haven't exceed our lock limits
+        if (!shouldLock(name)) {
+          debug('lock limit reached before job was returned. Releasing lock on [%s]', name);
+          job.attrs.lockedAt = null;
+          self.saveJob(job);
+          return;
+        }
+
         debug('[%s:%s] job locked while filling queue', name, job.attrs._id);
         self._lockedJobs.push(job);
         definitions[job.attrs.name].locked++;
