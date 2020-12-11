@@ -8,8 +8,8 @@ const {MongoClient} = require('mongodb');
 const Q = require('q');
 const delay = require('delay');
 const sinon = require('sinon');
-const Job = require('../lib/job');
-const Agenda = require('..');
+const { Job } = require('../dist/job');
+const { Agenda } = require('../dist');
 
 const mongoHost = process.env.MONGODB_HOST || 'localhost';
 const mongoPort = process.env.MONGODB_PORT || '27017';
@@ -642,8 +642,8 @@ describe('Job', () => {
     });
 
     it('clears locks on stop', async() => {
-      agenda.define('longRunningJob', job => { // eslint-disable-line no-unused-vars
-        // Job never finishes
+      agenda.define('longRunningJob', (job, cb) => { // eslint-disable-line no-unused-vars
+        // Job never finishes (the 2nd parameter is important, otherwise the job finishes immediately)
       });
       agenda.every('10 seconds', 'longRunningJob');
       agenda.processEvery('1 second');
@@ -864,7 +864,9 @@ describe('Job', () => {
       await agenda.stop();
     });
 
-    it('does not on-the-fly lock more than definition.lockLimit jobs', async() => {
+    // @todo fix this test
+    // does not on-the-fly lock more than definition.lockLimit jobs
+    it('broken-test', async() => {
       agenda.define('lock job', {lockLimit: 1}, (job, cb) => {}); // eslint-disable-line no-unused-vars
 
       await agenda.start();
@@ -1142,7 +1144,7 @@ describe('Job', () => {
         const n = cp.fork(serverPath, [mongoCfg, 'daily-array']);
 
         let ran1 = false;
-        let ran2 = true;
+        let ran2 = false;
         let doneCalled = false;
 
         const serviceError = function(e) {
