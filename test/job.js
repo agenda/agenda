@@ -99,10 +99,10 @@ describe('Job', () => {
       expect(job.repeatEvery('one second')).to.be(job);
     });
     it('sets the nextRunAt property with skipImmediate', () => {
-      const job2 = new Job();
       const now = (new Date()).valueOf();
+      const job2 = new Job();
       job2.repeatEvery('3 minutes', {skipImmediate: true});
-      expect(job2.attrs.nextRunAt).to.be.within(now + 180000, now + 180002); // Inclusive
+      expect(job2.attrs.nextRunAt).to.be.within(now + 180000, now + 180003); // Inclusive
     });
     it('repeats from the existing nextRunAt property with skipImmediate', () => {
       const job2 = new Job();
@@ -864,9 +864,31 @@ describe('Job', () => {
       await agenda.stop();
     });
 
-    // @todo fix this test
-    // does not on-the-fly lock more than definition.lockLimit jobs
-    it('broken-test', async() => {
+    it('does not on-the-fly lock more mixed jobs than agenda._lockLimit jobs', async() => {
+      agenda.lockLimit(1);
+
+      agenda.define('lock job', (job, cb) => {}); // eslint-disable-line no-unused-vars
+      agenda.define('lock job2', (job, cb) => {}); // eslint-disable-line no-unused-vars
+      agenda.define('lock job3', (job, cb) => {}); // eslint-disable-line no-unused-vars
+      agenda.define('lock job4', (job, cb) => {}); // eslint-disable-line no-unused-vars
+      agenda.define('lock job5', (job, cb) => {}); // eslint-disable-line no-unused-vars
+
+      await agenda.start();
+
+      await Promise.all([
+        agenda.now('lock job', {i: 1}),
+        agenda.now('lock job5', {i: 2}),
+        agenda.now('lock job4', {i: 3}),
+        agenda.now('lock job3', {i: 4}),
+        agenda.now('lock job2', {i: 5})
+      ]);
+
+      await delay(500);
+      expect(agenda._lockedJobs).to.have.length(1);
+      await agenda.stop();
+    });
+
+    it('does not on-the-fly lock more than definition.lockLimit jobs', async() => {
       agenda.define('lock job', {lockLimit: 1}, (job, cb) => {}); // eslint-disable-line no-unused-vars
 
       await agenda.start();
