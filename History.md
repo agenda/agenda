@@ -3,6 +3,8 @@ Next
 
 * https://github.com/agenda/agenda/pulls
 
+* Fix issue with concurrent locking beyond locklimit ([#1086](https://github.com/agenda/agenda/pull/1086)) thanks @leonardlin
+
 * Fix issue with too many locks being set asynchronously ([#1119](https://github.com/agenda/agenda/pull/1119)) thanks @GimpMaster
 
 * Upgrade `mongodb` dependency ~3.5.0 -> ~3.6.2 (security) ([#1122](https://github.com/agenda/agenda/pull/1122)) thanks @Elisa23
