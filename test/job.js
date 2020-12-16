@@ -4,7 +4,7 @@ const path = require('path');
 const cp = require('child_process');
 const expect = require('expect.js');
 const moment = require('moment-timezone');
-const {MongoClient} = require('mongodb');
+const { MongoClient } = require('mongodb');
 const Q = require('q');
 const delay = require('delay');
 const sinon = require('sinon');
@@ -42,7 +42,7 @@ describe('Job', () => {
       }
 
       try {
-        const client = await MongoClient.connect(mongoCfg, {useNewUrlParser: true});
+        const client = await MongoClient.connect(mongoCfg, { useNewUrlParser: true });
         mongoClient = client;
         mongoDb = client.db(agendaDatabase);
 
@@ -81,11 +81,11 @@ describe('Job', () => {
   describe('unique', () => {
     const job = new Job();
     it('sets the unique property', () => {
-      job.unique({'data.type': 'active', 'data.userId': '123'});
-      expect(JSON.stringify(job.attrs.unique)).to.be(JSON.stringify({'data.type': 'active', 'data.userId': '123'}));
+      job.unique({ 'data.type': 'active', 'data.userId': '123' });
+      expect(JSON.stringify(job.attrs.unique)).to.be(JSON.stringify({ 'data.type': 'active', 'data.userId': '123' }));
     });
     it('returns the job', () => {
-      expect(job.unique({'data.type': 'active', 'data.userId': '123'})).to.be(job);
+      expect(job.unique({ 'data.type': 'active', 'data.userId': '123' })).to.be(job);
     });
   });
 
@@ -108,13 +108,13 @@ describe('Job', () => {
       const job2 = new Job();
       const futureDate = (new Date('3000-01-01T00:00:00')).valueOf();
       job2.attrs.nextRunAt = futureDate;
-      job2.repeatEvery('3 minutes', {skipImmediate: true});
+      job2.repeatEvery('3 minutes', { skipImmediate: true });
       expect(job2.attrs.nextRunAt).to.be(futureDate + 180000);
     });
     it('repeats from the existing scheduled date with skipImmediate', () => {
       const futureDate = new Date('3000-01-01T00:00:00');
       const job2 = new Job().schedule(futureDate);
-      job2.repeatEvery('3 minutes', {skipImmediate: true});
+      job2.repeatEvery('3 minutes', { skipImmediate: true });
       expect(job2.attrs.nextRunAt).to.be(futureDate.valueOf() + 180000);
     });
   });

@@ -52,14 +52,17 @@
     "mongodb": "~3.6.2"
   },
   "devDependencies": {
-    "@types/debug": "4.1.5",
-    "@types/human-interval": "1.0.0",
-    "@types/mongodb": "3.5.27",
+    "@types/debug": "^4.1.5",
+    "@types/human-interval": "^1.0.0",
+    "@types/mongodb": "^3.5.27",
+    "@typescript-eslint/eslint-plugin": "4.9.1",
+    "@typescript-eslint/parser": "4.9.1",
     "blanket": "1.2.3",
     "coveralls": "3.1.0",
     "delay": "4.4.0",
     "eslint": "7.15.0",
     "eslint-config-xo": "0.33.1",
+    "eslint-config-xo-typescript": "0.36.0",
     "eslint-plugin-ava": "11.0.0",
     "eslint-plugin-eslint-comments": "3.2.0",
     "eslint-plugin-import": "2.22.1",
@@ -81,10 +84,7 @@
       "docs/**"
     ],
     "rules": {
-      "space-before-function-paren": [
-        "error",
-        "never"
-      ],
+      "prefer-const": "error",
       "max-params": [
         "error",
         5
@@ -92,10 +92,35 @@
       "max-nested-callbacks": [
         "error",
         5
+      ],
+      "object-curly-spacing": [
+        "error",
+        "always",
+        { "objectsInObjects": false, "arraysInObjects": false }
       ]
     },
     "envs": [
       "node"
-    ]
+    ],
+    "overrides": [
+			{
+				"files": "**/*.ts",
+				"rules": {
+          "@typescript-eslint/space-before-function-paren": [
+            "error",
+            "never"
+          ]
+        }
+      },
+      {
+				"files": "**/*.js",
+				"rules": {
+          "space-before-function-paren": [
+            "error",
+            "never"
+          ]
+        }
+			}
+		]
   }
 }
