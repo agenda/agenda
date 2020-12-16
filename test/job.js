@@ -8,8 +8,8 @@ const {MongoClient} = require('mongodb');
 const Q = require('q');
 const delay = require('delay');
 const sinon = require('sinon');
-const Job = require('../lib/job');
-const Agenda = require('..');
+const { Job } = require('../dist/job');
+const { Agenda } = require('../dist');
 
 const mongoHost = process.env.MONGODB_HOST || 'localhost';
 const mongoPort = process.env.MONGODB_PORT || '27017';
@@ -99,10 +99,10 @@ describe('Job', () => {
       expect(job.repeatEvery('one second')).to.be(job);
     });
     it('sets the nextRunAt property with skipImmediate', () => {
-      const job2 = new Job();
       const now = (new Date()).valueOf();
+      const job2 = new Job();
       job2.repeatEvery('3 minutes', {skipImmediate: true});
-      expect(job2.attrs.nextRunAt).to.be.within(now + 180000, now + 180002); // Inclusive
+      expect(job2.attrs.nextRunAt).to.be.within(now + 180000, now + 180003); // Inclusive
     });
     it('repeats from the existing nextRunAt property with skipImmediate', () => {
       const job2 = new Job();
@@ -642,8 +642,8 @@ describe('Job', () => {
     });
 
     it('clears locks on stop', async() => {
-      agenda.define('longRunningJob', job => { // eslint-disable-line no-unused-vars
-        // Job never finishes
+      agenda.define('longRunningJob', (job, cb) => { // eslint-disable-line no-unused-vars
+        // Job never finishes (the 2nd parameter is important, otherwise the job finishes immediately)
       });
       agenda.every('10 seconds', 'longRunningJob');
       agenda.processEvery('1 second');
@@ -857,6 +857,30 @@ describe('Job', () => {
       await Promise.all([
         agenda.now('lock job', {i: 1}),
         agenda.now('lock job', {i: 2})
+      ]);
+
+      await delay(500);
+      expect(agenda._lockedJobs).to.have.length(1);
+      await agenda.stop();
+    });
+
+    it('does not on-the-fly lock more mixed jobs than agenda._lockLimit jobs', async() => {
+      agenda.lockLimit(1);
+
+      agenda.define('lock job', (job, cb) => {}); // eslint-disable-line no-unused-vars
+      agenda.define('lock job2', (job, cb) => {}); // eslint-disable-line no-unused-vars
+      agenda.define('lock job3', (job, cb) => {}); // eslint-disable-line no-unused-vars
+      agenda.define('lock job4', (job, cb) => {}); // eslint-disable-line no-unused-vars
+      agenda.define('lock job5', (job, cb) => {}); // eslint-disable-line no-unused-vars
+
+      await agenda.start();
+
+      await Promise.all([
+        agenda.now('lock job', {i: 1}),
+        agenda.now('lock job5', {i: 2}),
+        agenda.now('lock job4', {i: 3}),
+        agenda.now('lock job3', {i: 4}),
+        agenda.now('lock job2', {i: 5})
       ]);
 
       await delay(500);
@@ -1142,7 +1166,7 @@ describe('Job', () => {
         const n = cp.fork(serverPath, [mongoCfg, 'daily-array']);
 
         let ran1 = false;
-        let ran2 = true;
+        let ran2 = false;
         let doneCalled = false;
 
         const serviceError = function(e) {

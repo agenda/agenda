@@ -5,8 +5,8 @@ const {MongoClient} = require('mongodb');
 const delay = require('delay');
 const expect = require('expect.js');
 
-const Job = require('../lib/job');
-const Agenda = require('..');
+const { Job } = require('../dist/job');
+const { Agenda } = require('../dist');
 
 const mongoHost = process.env.MONGODB_HOST || 'localhost';
 const mongoPort = process.env.MONGODB_PORT || '27017';

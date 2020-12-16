@@ -3,6 +3,67 @@ Next
 
 * https://github.com/agenda/agenda/pulls
 
+* Fix issue with too many locks being set asynchronously ([#1119](https://github.com/agenda/agenda/pull/1119)) thanks @GimpMaster
+
+* Upgrade `mongodb` dependency ~3.5.0 -> ~3.6.2 (security) ([#1122](https://github.com/agenda/agenda/pull/1122)) thanks @Elisa23
+
+* Upgrade to [Human Interval v2](https://github.com/agenda/human-interval/blob/master/History.md#200--2020-10-16), a refactor using [numbered](https://www.npmjs.com/package/numbered) package:
+  - Supports all the formats as previously, and more!
+  - Supports numbers written as English words (one, two hundred)
+  - Supports time expressions in singular and plural (minute and minutes)
+  - Supports negative numbers (-2)
+  - Supports hyphenated words (twenty-five)
+
+* Upgrade various dependencies
+
+BREAKING
+--------
+
+* Switch from [ncb000gt/node-cron](https://www.npmjs.com/package/cron) to [harrisiirak/cron-parser](https://www.npmjs.com/package/cron-parser) for cron-pattern parsing. See issue ([#475](https://github.com/kelektiv/node-cron/issues/475))
+
+    Previously month was 0-based (0=January). Going forward standard Unix pattern is used, which is 1-based (1=January). 
+
+    Please update existing cron-patterns that specify a month (4th position of a pattern). The month is now 1 - 12
+
+    1 = January
+
+    2 = February
+
+    3...
+
+    | Example | Execute on 1st of January |
+    |---------|---------------------------|
+    | Old     | 0 0 1 **0** *             |
+    | New     | 0 0 1 **1** *             |
+
+    ([#1150](https://github.com/agenda/agenda/pull/1150))
+
+    old Cron patterns
+
+    ```
+    * * * * * *
+    | | | | | |
+    | | | | | +-- Year              (range: 1900-3000)
+    | | | | +---- Day of the Week   (range: 1-7, 1 standing for Monday)
+    | | | +------ Month of the Year (range: 0-11) NOTE: Difference here
+    | | +-------- Day of the Month  (range: 1-31)
+    | +---------- Hour              (range: 0-23)
+    +------------ Minute            (range: 0-59)
+    ```
+
+    new cron patterns
+
+    ```
+    * * * * * *
+    | | | | | |
+    | | | | | +-- Year              (range: 1900-3000)
+    | | | | +---- Day of the Week   (range: 1-7, 1 standing for Monday)
+    | | | +------ Month of the Year (range: 1-12) NOTE: Difference here
+    | | +-------- Day of the Month  (range: 1-31)
+    | +---------- Hour              (range: 0-23)
+    +------------ Minute            (range: 0-59)
+    ```
+
 3.1.0 / 2020-04-07
 ==================
 
