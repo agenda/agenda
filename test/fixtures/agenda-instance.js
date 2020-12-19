@@ -1,12 +1,12 @@
 const { Agenda } = require('../../dist');
 const addTests = require('./add-tests');
 
-const connStr = process.argv[2];
+const connString = process.argv[2];
 const tests = process.argv.slice(3);
 
 const agenda = new Agenda({
   db: {
-    address: connStr
+    address: connString
   },
   processEvery: 100
 }, async() => {
@@ -17,8 +17,8 @@ const agenda = new Agenda({
   await agenda.start();
 
   // Ensure we can shut down the process from tests
-  process.on('message', msg => {
-    if (msg === 'exit') {
+  process.on('message', message => {
+    if (message === 'exit') {
       process.exit(0);
     }
   });

@@ -1,7 +1,7 @@
 /* globals describe, it, beforeEach, afterEach */
 'use strict';
 const delay = require('delay');
-const {MongoClient} = require('mongodb');
+const { MongoClient } = require('mongodb');
 const { Agenda } = require('../dist');
 
 const mongoHost = process.env.MONGODB_HOST || 'localhost';
@@ -78,9 +78,9 @@ describe('Retry', () => {
       job.schedule('now').save();
     });
 
-    const successPromise = new Promise(resolve =>
-      agenda.on('success:a job', resolve)
-    );
+    const successPromise = new Promise(resolve => {
+      agenda.on('success:a job', resolve);
+    });
 
     await agenda.now('a job');
 

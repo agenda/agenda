@@ -1,7 +1,7 @@
 /* globals describe, it */
 'use strict';
 
-const {MongoClient} = require('mongodb');
+const { MongoClient } = require('mongodb');
 const delay = require('delay');
 const expect = require('expect.js');
 
@@ -32,7 +32,7 @@ describe('MongoDB connection', () => {
 
       await client.connect();
 
-      agenda = new Agenda({mongo: client.db()});
+      agenda = new Agenda({ mongo: client.db() });
 
       await agenda.start();
 
@@ -40,15 +40,13 @@ describe('MongoDB connection', () => {
         done();
       });
 
-      const job = new Job({agenda, name: JOB_NAME});
+      const job = new Job({ agenda, name: JOB_NAME });
 
       const now = new Date();
       await delay(5);
       await job.run();
 
       expect(job.attrs.lastRunAt.valueOf()).to.be.greaterThan(now.valueOf());
-    } catch (error) {
-      throw error;
     } finally {
       await agenda.stop();
       await clearJobs(client);
