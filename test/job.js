@@ -766,14 +766,13 @@ describe('Job', () => {
       let startCounter = 0;
 
       const processorPromise = new Promise(resolve => {
-        agenda.define('lock job', { lockLifetime: 50 }, () => {
+        agenda.define('lock job', { lockLifetime: 50 }, async() => {
           startCounter++;
 
           if (startCounter !== 1) {
             expect(startCounter).to.be(2);
-            return agenda.stop().then(() => { // eslint-disable-line promise/prefer-await-to-then
-              resolve();
-            });
+            await agenda.stop();
+            resolve();
           }
         });
       });
