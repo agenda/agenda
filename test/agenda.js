@@ -1,7 +1,7 @@
 /* globals describe, it, beforeEach, afterEach */
 'use strict';
 const expect = require('expect.js');
-const {MongoClient} = require('mongodb');
+const { MongoClient } = require('mongodb');
 const delay = require('delay');
 const { Job } = require('../dist/job');
 const { hasMongoProtocol } = require('../dist/agenda/has-mongo-protocol');
@@ -64,7 +64,7 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
       await clearJobs();
       await mongoClient.close();
       await jobs._db.close();
-      return resolve();
+      resolve();
     });
   });
 
@@ -74,7 +74,7 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
 
   describe('configuration methods', () => {
     it('sets the _db directly when passed as an option', () => {
-      const agenda = new Agenda({mongo: mongoDb});
+      const agenda = new Agenda({ mongo: mongoDb });
       expect(agenda._mdb.databaseName).to.equal(agendaDatabase);
     });
   });
@@ -176,11 +176,11 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
     });
     describe('sort', () => {
       it('returns itself', () => {
-        expect(jobs.sort({nextRunAt: 1, priority: -1})).to.be(jobs);
+        expect(jobs.sort({ nextRunAt: 1, priority: -1 })).to.be(jobs);
       });
       it('sets the default sort option', () => {
-        jobs.sort({nextRunAt: -1});
-        expect(jobs._sort).to.eql({nextRunAt: -1});
+        jobs.sort({ nextRunAt: -1 });
+        expect(jobs._sort).to.eql({ nextRunAt: -1 });
       });
     });
   });
@@ -189,7 +189,7 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
     describe('create', () => {
       let job;
       beforeEach(() => {
-        job = jobs.create('sendEmail', {to: 'some guy'});
+        job = jobs.create('sendEmail', { to: 'some guy' });
       });
 
       it('returns a job', () => {
@@ -226,7 +226,7 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
         expect(jobs._definitions.someJob).to.have.property('priority', 0);
       });
       it('takes concurrency option for the job', () => {
-        jobs.define('highPriority', {priority: 10}, jobProcessor);
+        jobs.define('highPriority', { priority: 10 }, jobProcessor);
         expect(jobs._definitions.highPriority).to.have.property('priority', 10);
       });
     });
@@ -237,16 +237,16 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
           expect(await jobs.every('5 minutes', 'send email')).to.be.a(Job);
         });
         it('cron job with month starting at 1', async() => {
-          expect(await jobs.every('0 0 * 1 *', 'send email').then(({attrs}) => attrs.nextRunAt.getMonth())).to.be(0); // javascript getMonth() return 0 for january
+          expect(await jobs.every('0 0 * 1 *', 'send email').then(({ attrs }) => attrs.nextRunAt.getMonth())).to.be(0); // Javascript getMonth() return 0 for january
         });
         it('repeating job with cron', async() => {
-          expect(await jobs.every('*/5 * * * *', 'send email').then(({attrs}) => attrs.nextRunAt)).to.not.be(null);
+          expect(await jobs.every('*/5 * * * *', 'send email').then(({ attrs }) => attrs.nextRunAt)).to.not.be(null);
         });
         it('sets the repeatEvery', async() => {
-          expect(await jobs.every('5 seconds', 'send email').then(({attrs}) => attrs.repeatInterval)).to.be('5 seconds');
+          expect(await jobs.every('5 seconds', 'send email').then(({ attrs }) => attrs.repeatInterval)).to.be('5 seconds');
         });
         it('sets the agenda', async() => {
-          expect(await jobs.every('5 seconds', 'send email').then(({agenda}) => agenda)).to.be(jobs);
+          expect(await jobs.every('5 seconds', 'send email').then(({ agenda }) => agenda)).to.be(jobs);
         });
         it('should update a job that was previously scheduled with `every`', async() => {
           await jobs.every(10, 'shouldBeSingleJob');
@@ -256,21 +256,21 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
           // Give the saves a little time to propagate
           await delay(jobTimeout);
 
-          const res = await jobs.jobs({name: 'shouldBeSingleJob'});
-          expect(res).to.have.length(1);
+          const result = await jobs.jobs({ name: 'shouldBeSingleJob' });
+          expect(result).to.have.length(1);
         });
         it('should not run immediately if options.skipImmediate is true', async() => {
           const jobName = 'send email';
-          await jobs.every('5 minutes', jobName, {}, {skipImmediate: true});
-          const job = (await jobs.jobs({name: jobName}))[0];
+          await jobs.every('5 minutes', jobName, {}, { skipImmediate: true });
+          const job = (await jobs.jobs({ name: jobName }))[0];
           const nextRunAt = job.attrs.nextRunAt.getTime();
           const now = new Date().getTime();
           expect((nextRunAt - now) > 0).to.equal(true);
         });
         it('should run immediately if options.skipImmediate is false', async() => {
           const jobName = 'send email';
-          await jobs.every('5 minutes', jobName, {}, {skipImmediate: false});
-          const job = (await jobs.jobs({name: jobName}))[0];
+          await jobs.every('5 minutes', jobName, {}, { skipImmediate: false });
+          const job = (await jobs.jobs({ name: jobName }))[0];
           const nextRunAt = job.attrs.nextRunAt.getTime();
           const now = new Date().getTime();
           expect((nextRunAt - now) <= 0).to.equal(true);
@@ -416,7 +416,7 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
       });
       it('sets the schedule', async() => {
         const now = new Date();
-        expect(await jobs.now('send email').then(({attrs}) => attrs.nextRunAt.valueOf())).to.be.greaterThan(now.valueOf() - 1);
+        expect(await jobs.now('send email').then(({ attrs }) => attrs.nextRunAt.valueOf())).to.be.greaterThan(now.valueOf() - 1);
       });
 
       it('runs the job immediately', async() => {
@@ -497,7 +497,7 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
     });
 
     afterEach(done => {
-      jobs._collection.deleteMany({name: {$in: ['jobA', 'jobB']}}, err => {
+      jobs._collection.deleteMany({ name: { $in: ['jobA', 'jobB']}}, err => {
         if (err) {
           return done(err);
         }
@@ -507,33 +507,33 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
     });
 
     it('should cancel a job', async() => {
-      const j = await jobs.jobs({name: 'jobA'});
+      const j = await jobs.jobs({ name: 'jobA' });
       expect(j).to.have.length(2);
 
-      await jobs.cancel({name: 'jobA'});
-      const job = await jobs.jobs({name: 'jobA'});
+      await jobs.cancel({ name: 'jobA' });
+      const job = await jobs.jobs({ name: 'jobA' });
 
       expect(job).to.have.length(0);
     });
 
     it('should cancel multiple jobs', async() => {
-      const jobs1 = await jobs.jobs({name: {$in: ['jobA', 'jobB']}});
+      const jobs1 = await jobs.jobs({ name: { $in: ['jobA', 'jobB']}});
       expect(jobs1).to.have.length(3);
-      await jobs.cancel({name: {$in: ['jobA', 'jobB']}});
+      await jobs.cancel({ name: { $in: ['jobA', 'jobB']}});
 
-      const jobs2 = await jobs.jobs({name: {$in: ['jobA', 'jobB']}});
+      const jobs2 = await jobs.jobs({ name: { $in: ['jobA', 'jobB']}});
       expect(jobs2).to.have.length(0);
     });
 
     it('should cancel jobs only if the data matches', async() => {
-      const jobs1 = await jobs.jobs({name: 'jobA', data: 'someData'});
+      const jobs1 = await jobs.jobs({ name: 'jobA', data: 'someData' });
       expect(jobs1).to.have.length(1);
-      await jobs.cancel({name: 'jobA', data: 'someData'});
+      await jobs.cancel({ name: 'jobA', data: 'someData' });
 
-      const jobs2 = await jobs.jobs({name: 'jobA', data: 'someData'});
+      const jobs2 = await jobs.jobs({ name: 'jobA', data: 'someData' });
       expect(jobs2).to.have.length(0);
 
-      const jobs3 = await jobs.jobs({name: 'jobA'});
+      const jobs3 = await jobs.jobs({ name: 'jobA' });
       expect(jobs3).to.have.length(1);
     });
   });
@@ -546,7 +546,7 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
     });
 
     afterEach(done => {
-      jobs._collection.deleteMany({name: 'jobA'}, err => {
+      jobs._collection.deleteMany({ name: 'jobA' }, err => {
         if (err) {
           return done(err);
         }
@@ -556,17 +556,17 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
     });
 
     it('should limit jobs', async() => {
-      const results = await jobs.jobs({name: 'jobA'}, {}, 2);
+      const results = await jobs.jobs({ name: 'jobA' }, {}, 2);
       expect(results).to.have.length(2);
     });
 
     it('should skip jobs', async() => {
-      const results = await jobs.jobs({name: 'jobA'}, {}, 2, 2);
+      const results = await jobs.jobs({ name: 'jobA' }, {}, 2, 2);
       expect(results).to.have.length(1);
     });
 
     it('should sort jobs', async() => {
-      const results = await jobs.jobs({name: 'jobA'}, {data: -1});
+      const results = await jobs.jobs({ name: 'jobA' }, { data: -1 });
 
       expect(results).to.have.length(3);
 
