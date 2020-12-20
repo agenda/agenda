@@ -1,5 +1,5 @@
 import createDebugger from 'debug';
-import { Agenda } from './index';
+import { Agenda } from '.';
 
 const debug = createDebugger('agenda:sort');
 

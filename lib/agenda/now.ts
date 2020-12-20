@@ -1,5 +1,5 @@
 import createDebugger from 'debug';
-import { Agenda } from './index';
+import { Agenda } from '.';
 import { Job } from '../job';
 
 const debug = createDebugger('agenda:now');
@@ -14,14 +14,13 @@ const debug = createDebugger('agenda:now');
 export const now = async function(this: Agenda, name: string, data: any): Promise<Job> {
   debug('Agenda.now(%s, [Object])', name);
   try {
-    // eslint-disable-next-line prefer-rest-params
     const job = this.create(name, data);
 
     job.schedule(new Date());
     await job.save();
 
     return job;
-  } catch (error) {
+  } catch (error: unknown) {
     debug('error trying to create a job for this exact moment');
     throw error;
   }

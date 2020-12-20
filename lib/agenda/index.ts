@@ -1,6 +1,6 @@
 import humanInterval from 'human-interval';
 import { EventEmitter } from 'events';
-import { MongoClient, Db as MongoDb } from 'mongodb';
+import { MongoClient, Db as MongoDb, Collection } from 'mongodb';
 import { JobProcessingQueue } from './job-processing-queue';
 import { cancel } from './cancel';
 import { create } from './create';
@@ -70,7 +70,7 @@ class Agenda extends EventEmitter {
   _sort: any;
   _db!: MongoClient;
   _mdb!: MongoDb;
-  _collection: any;
+  _collection!: Collection;
   _nextScanAt: any;
   _processInterval: any;
 
@@ -97,11 +97,11 @@ class Agenda extends EventEmitter {
   start!: typeof start;
   stop!: typeof stop;
 
-  constructor(config: any = {}, cb?: Function) {
+  constructor(config: any = {}, cb?: (error: Error, collection: Collection<any> | null) => void) {
     super();
 
     this._name = config.name;
-    this._processEvery = (humanInterval(config.processEvery) || humanInterval('5 seconds')) as number;
+    this._processEvery = (humanInterval(config.processEvery) ?? humanInterval('5 seconds')) as number;
     this._defaultConcurrency = config.defaultConcurrency || 5;
     this._maxConcurrency = config.maxConcurrency || 20;
     this._defaultLockLimit = config.defaultLockLimit || 0;
@@ -111,13 +111,15 @@ class Agenda extends EventEmitter {
     this._lockedJobs = [];
     this._jobQueue = new JobProcessingQueue();
     this._defaultLockLifetime = config.defaultLockLifetime || 10 * 60 * 1000; // 10 minute default lockLifetime
-    this._sort = config.sort || {nextRunAt: 1, priority: -1};
-    this._indices = {name: 1, ...this._sort, priority: -1, lockedAt: 1, nextRunAt: 1, disabled: 1};
+    this._sort = config.sort || { nextRunAt: 1, priority: -1 };
+    this._indices = { name: 1, ...this._sort, priority: -1, lockedAt: 1, nextRunAt: 1, disabled: 1 };
 
     this._isLockingOnTheFly = false;
     this._isJobQueueFilling = new Map<string, boolean>();
     this._jobsToLock = [];
-    this._ready = new Promise(resolve => this.once('ready', resolve));
+    this._ready = new Promise(resolve => {
+      this.once('ready', resolve);
+    });
 
     if (config.mongo) {
       this.mongo(config.mongo, config.db ? config.db.collection : undefined, cb);

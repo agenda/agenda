@@ -1,5 +1,5 @@
 import createDebugger from 'debug';
-import { Agenda } from './index';
+import { Agenda } from '.';
 
 const debug = createDebugger('agenda:purge');
 
@@ -13,5 +13,5 @@ export const purge = async function(this: Agenda) {
   // @NOTE: Only use after defining your jobs
   const definedNames = Object.keys(this._definitions);
   debug('Agenda.purge(%o)', definedNames);
-  return this.cancel({name: {$not: {$in: definedNames}}});
+  return this.cancel({ name: { $not: { $in: definedNames }}});
 };

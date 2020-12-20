@@ -1,4 +1,4 @@
-import { Job } from './index';
+import { Job } from '.';
 
 /**
  * Prevents the job type from running

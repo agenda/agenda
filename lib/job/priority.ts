@@ -1,4 +1,4 @@
-import { Job } from '../job';
+import { Job } from '.';
 import { parsePriority } from '../utils';
 
 /**

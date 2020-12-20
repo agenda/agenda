@@ -1,4 +1,4 @@
-import { Job } from './index';
+import { Job } from '.';
 
 /**
  * Saves a job into the MongoDB

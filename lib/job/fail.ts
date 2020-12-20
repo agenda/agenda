@@ -1,5 +1,5 @@
 import createDebugger from 'debug';
-import { Job } from './index';
+import { Job } from '.';
 
 const debug = createDebugger('agenda:job');
 

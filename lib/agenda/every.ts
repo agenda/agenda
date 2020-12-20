@@ -1,5 +1,5 @@
 import createDebugger from 'debug';
-import { Agenda } from './index';
+import { Agenda } from '.';
 import { Job } from '../job';
 
 const debug = createDebugger('agenda:every');
@@ -23,14 +23,12 @@ export const every = async function(this: Agenda, interval: string | number, nam
    * @param options options to run job for
    * @returns instance of job
    */
-  const createJob = async(interval: number | string, name: string, data: any, options: any) => {
+  const createJob = async(interval: number | string, name: string, data: any, options: any): Promise<Job> => {
     const job = this.create(name, data);
 
     job.attrs.type = 'single';
     job.repeatEvery(interval, options);
-    await job.save();
-
-    return job;
+    return job.save();
   };
 
   /**
@@ -41,14 +39,15 @@ export const every = async function(this: Agenda, interval: string | number, nam
    * @param options options to run job for
    * @return array of jobs created
    */
-  const createJobs = (interval: string | number, names: string[], data: any, options: any): Promise<Job[]> | undefined => {
+  const createJobs = async(interval: string | number, names: string[], data: any, options: any): Promise<Job[] | undefined> => {
     try {
-      const jobs = names.map(name => createJob(interval, name, data, options));
+      const jobs: Array<Promise<Job>> = [];
+      names.map(name => jobs.push(createJob(interval, name, data, options)));
 
       debug('every() -> all jobs created successfully');
 
       return Promise.all(jobs);
-    } catch (error) { // @TODO: catch - ignore :O
+    } catch (error: unknown) { // @TODO: catch - ignore :O
       debug('every() -> error creating one or more of the jobs', error);
     }
   };

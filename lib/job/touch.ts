@@ -1,4 +1,4 @@
-import { Job } from './index';
+import { Job } from '.';
 
 /**
  * Updates "lockedAt" time so the job does not get picked up again

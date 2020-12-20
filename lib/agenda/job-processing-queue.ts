@@ -7,11 +7,12 @@ import { Job } from '../job';
  * @property {Object} attrs
  */
 class JobProcessingQueue {
-  protected _queue: Job[];
   pop!: () => Job | undefined;
   push!: (job: any) => void;
   insert!: (job: any) => void;
   returnNextConcurrencyFreeJob!: (agendaDefinitions: any) => Job;
+
+  protected _queue: Job[];
 
   constructor() {
     this._queue = [];
