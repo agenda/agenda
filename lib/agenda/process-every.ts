@@ -2,7 +2,6 @@ import createDebugger from 'debug';
 import humanInterval from 'human-interval';
 import { Agenda } from '.';
 
-
 const debug = createDebugger('agenda:processEvery');
 
 /**

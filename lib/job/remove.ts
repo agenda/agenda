@@ -6,5 +6,5 @@ import { Job } from '.';
  * @function
  */
 export const remove = function(this: Job) {
-  return this.agenda.cancel({_id: this.attrs._id});
+  return this.agenda.cancel({ _id: this.attrs._id });
 };

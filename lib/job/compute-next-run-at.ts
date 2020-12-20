@@ -16,11 +16,11 @@ const debug = createDebugger('agenda:job');
 export const computeNextRunAt = function(this: Job) {
   const interval = this.attrs.repeatInterval;
   const timezone = this.attrs.repeatTimezone;
-  const {repeatAt} = this.attrs;
+  const { repeatAt } = this.attrs;
   const previousNextRunAt = this.attrs.nextRunAt || new Date();
   this.attrs.nextRunAt = undefined;
 
-  const dateForTimezone = (date: any) => {
+  const dateForTimezone = (date: any): moment.Moment => {
     date = moment(date);
     if (timezone !== null) {
       date.tz(timezone);
@@ -37,13 +37,16 @@ export const computeNextRunAt = function(this: Job) {
     let lastRun = this.attrs.lastRunAt || new Date();
     lastRun = dateForTimezone(lastRun);
     const cronOptions: any = { currentDate: lastRun.toDate() };
-    if (timezone) cronOptions.tz = timezone;
+    if (timezone) {
+      cronOptions.tz = timezone;
+    }
+
     try {
       let cronTime = parser.parseExpression(interval, cronOptions);
       let nextDate = cronTime.next().toDate();
       if (nextDate.valueOf() === lastRun.valueOf() || nextDate.valueOf() <= previousNextRunAt.valueOf()) {
         // Handle cronTime giving back the same date for the next run time
-        cronOptions.currentDate = new Date(lastRun.valueOf() + 1000);
+        cronOptions.currentDate = new Date((lastRun as moment.Moment).valueOf() + 1000);
         cronTime = parser.parseExpression(interval, cronOptions);
         nextDate = cronTime.next().toDate();
       }
@@ -51,20 +54,20 @@ export const computeNextRunAt = function(this: Job) {
       this.attrs.nextRunAt = nextDate;
       debug('[%s:%s] nextRunAt set to [%s]', this.attrs.name, this.attrs._id, new Date(this.attrs.nextRunAt).toISOString());
     // Either `xo` linter or Node.js 8 stumble on this line if it isn't just ignored
-    } catch (error) { // eslint-disable-line no-unused-vars
+    } catch {
       // Nope, humanInterval then!
       try {
         if (!this.attrs.lastRunAt && humanInterval(interval)) {
           this.attrs.nextRunAt = lastRun.valueOf();
           debug('[%s:%s] nextRunAt set to [%s]', this.attrs.name, this.attrs._id, new Date(this.attrs.nextRunAt).toISOString());
         } else {
-          this.attrs.nextRunAt = lastRun.valueOf() + humanInterval(interval);
+          this.attrs.nextRunAt = (lastRun as moment.Moment).valueOf() + (humanInterval(interval) ?? 0);
           debug('[%s:%s] nextRunAt set to [%s]', this.attrs.name, this.attrs._id, new Date(this.attrs.nextRunAt).toISOString());
         }
       // Either `xo` linter or Node.js 8 stumble on this line if it isn't just ignored
-      } catch (error) {} // eslint-disable-line no-unused-vars
+      } catch {}
     } finally {
-      if (isNaN(this.attrs.nextRunAt)) {
+      if (Number.isNaN(this.attrs.nextRunAt)) {
         this.attrs.nextRunAt = undefined;
         debug('[%s:%s] failed to calculate nextRunAt due to invalid repeat interval', this.attrs.name, this.attrs._id);
         this.fail('failed to calculate nextRunAt due to invalid repeat interval');
