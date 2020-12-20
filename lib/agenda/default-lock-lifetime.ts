@@ -1,4 +1,4 @@
-import { Agenda } from './index';
+import { Agenda } from '.';
 import createDebugger from 'debug';
 
 const debug = createDebugger('agenda:defaultLockLifetime');

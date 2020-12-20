@@ -1,4 +1,4 @@
-import { Agenda } from './index';
+import { Agenda } from '.';
 import createDebugger from 'debug';
 
 const debug = createDebugger('agenda:define');
@@ -12,7 +12,7 @@ const debug = createDebugger('agenda:define');
  * @param options options for job to run
  * @param processor function to be called to run actual job
  */
-export const define = function(this: Agenda, name: string, options: any, processor: Function) {
+export const define = function(this: Agenda, name: string, options: any, processor: () => void) {
   if (!processor) {
     processor = options;
     options = {};

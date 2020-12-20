@@ -9,7 +9,7 @@ const debug = createDebugger('agenda:internal:processJobs');
  * Process methods for jobs
  * @param {Job} extraJob job to run immediately
  */
-export const processJobs = function(this: Agenda, extraJob: Job) {
+export const processJobs = async function(this: Agenda, extraJob: Job) {
   debug('starting to process jobs: [%s:%s]', extraJob?.attrs?.name ?? 'unknownName', extraJob?.attrs?._id ?? 'unknownId');
   // Make sure an interval has actually been set
   // Prevents race condition with 'Agenda.stop' and already scheduled run
@@ -18,7 +18,7 @@ export const processJobs = function(this: Agenda, extraJob: Job) {
     return;
   }
 
-  const self = this;
+  const self = this; // eslint-disable-line @typescript-eslint/no-this-alias
   const definitions = this._definitions;
   const jobQueue = this._jobQueue;
   let jobName;
@@ -26,17 +26,20 @@ export const processJobs = function(this: Agenda, extraJob: Job) {
   // Determine whether or not we have a direct process call!
   if (!extraJob) {
     // Go through each jobName set in 'Agenda.process' and fill the queue with the next jobs
+    const parallelJobQueueing = [];
     for (jobName in definitions) {
       if ({}.hasOwnProperty.call(definitions, jobName)) {
         debug('queuing up job to process: [%s]', jobName);
-        jobQueueFilling(jobName);
+        parallelJobQueueing.push(jobQueueFilling(jobName));
       }
     }
+
+    await Promise.all(parallelJobQueueing);
   } else if (definitions[extraJob.attrs.name]) {
     // Add the job to list of jobs to lock and then lock it immediately!
     debug('job [%s:%s] was passed directly to processJobs(), locking and running immediately', extraJob.attrs.name, extraJob.attrs._id);
     self._jobsToLock.push(extraJob);
-    lockOnTheFly();
+    await lockOnTheFly();
   }
 
   /**
@@ -87,6 +90,7 @@ export const processJobs = function(this: Agenda, extraJob: Job) {
       debug('lockOnTheFly() already running, returning');
       return;
     }
+
     // Set that we are running this
     self._isLockingOnTheFly = true;
 
@@ -100,13 +104,13 @@ export const processJobs = function(this: Agenda, extraJob: Job) {
     // Grab a job that needs to be locked
     const now = new Date();
     const job = self._jobsToLock.pop();
-    if(job === undefined) {
+    if (job === undefined) {
       debug('no job was popped from _jobsToLock, extremly unlikely but not impossible concurrency issue');
       self._isLockingOnTheFly = false;
       return;
     }
 
-    if(self._isJobQueueFilling.has(job.attrs.name)) {
+    if (self._isJobQueueFilling.has(job.attrs.name)) {
       debug('lockOnTheFly: jobQueueFilling already running for: %s', job.attrs.name);
       self._isLockingOnTheFly = false;
       return;
@@ -127,12 +131,12 @@ export const processJobs = function(this: Agenda, extraJob: Job) {
       _id: job.attrs._id,
       lockedAt: null,
       nextRunAt: job.attrs.nextRunAt,
-      disabled: {$ne: true}
+      disabled: { $ne: true }
     };
 
     // Update / options for the MongoDB query
-    const update = {$set: {lockedAt: now}};
-    const options = {returnOriginal: false};
+    const update = { $set: { lockedAt: now }};
+    const options = { returnOriginal: false };
 
     // Lock the job in MongoDB!
     const resp = await self._collection.findOneAndUpdate(criteria, update, options);
@@ -158,7 +162,7 @@ export const processJobs = function(this: Agenda, extraJob: Job) {
    * @param {String} name fill a queue with specific job name
    * @returns {undefined}
    */
-  async function jobQueueFilling(name: string) {
+  async function jobQueueFilling(name: string): Promise<void> {
     debug('jobQueueFilling: %s isJobQueueFilling: %s', name, self._isJobQueueFilling.has(name));
     self._isJobQueueFilling.set(name, true);
 
@@ -166,7 +170,7 @@ export const processJobs = function(this: Agenda, extraJob: Job) {
       // Don't lock because of a limit we have set (lockLimit, etc)
       if (!shouldLock(name)) {
         debug('lock limit reached in queue filling for [%s]', name);
-        return; // goes to finally block
+        return; // Goes to finally block
       }
 
       // Set the date of the next time we are going to run _processEvery function
@@ -185,7 +189,7 @@ export const processJobs = function(this: Agenda, extraJob: Job) {
         if (!shouldLock(name)) {
           debug('lock limit reached before job was returned. Releasing lock on [%s]', name);
           job.attrs.lockedAt = null;
-          self.saveJob(job);
+          await self.saveJob(job);
           return;
         }
 
@@ -196,7 +200,7 @@ export const processJobs = function(this: Agenda, extraJob: Job) {
         await jobQueueFilling(name);
         jobProcessing();
       }
-    } catch (error) {
+    } catch (error: unknown) {
       debug('[%s] job lock failed while filling queue', name, error);
     } finally {
       self._isJobQueueFilling.delete(name);
@@ -237,7 +241,7 @@ export const processJobs = function(this: Agenda, extraJob: Job) {
      * Internal method that tries to run a job and if it fails, retries again!
      * @returns {undefined}
      */
-    async function runOrRetry() {
+    function runOrRetry() {
       if (self._processInterval) {
         // @todo: We should check if job exists
         const job = jobQueue.pop()!;
@@ -264,7 +268,7 @@ export const processJobs = function(this: Agenda, extraJob: Job) {
           // CALL THE ACTUAL METHOD TO PROCESS THE JOB!!!
           debug('[%s:%s] processing job', job.attrs.name, job.attrs._id);
 
-          job.run()
+          job.run() // eslint-disable-line @typescript-eslint/no-floating-promises
             .catch((error: Error) => [error, job])
             // @ts-expect-error
             .then((job: any) => processJobResult(...Array.isArray(job) ? job : [null, job])); // eslint-disable-line promise/prefer-await-to-then
@@ -287,12 +291,12 @@ export const processJobs = function(this: Agenda, extraJob: Job) {
       return job.agenda.emit('error', error);
     }
 
-    const {name} = job.attrs;
+    const { name } = job.attrs;
 
     // Job isn't in running jobs so throw an error
     if (!self._runningJobs.includes(job)) {
       debug('[%s] callback was called, job must have been marked as complete already', job.attrs._id);
-      throw new Error('callback already called - job ' + name + ' already marked complete');
+      throw new Error(`callback already called - job ${name as string} already marked complete`);
     }
 
     // Remove the job from the running queue

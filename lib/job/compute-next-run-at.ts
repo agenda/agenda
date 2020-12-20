@@ -1,4 +1,4 @@
-import { Job } from './index';
+import { Job } from '.';
 import * as parser from 'cron-parser';
 import humanInterval from 'human-interval';
 import createDebugger from 'debug';

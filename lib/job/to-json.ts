@@ -1,4 +1,4 @@
-import { Job, JobAttributes } from './index';
+import { Job, JobAttributes } from '.';
 
 /**
  * Given a job, turn it into an object we can store in Mongo

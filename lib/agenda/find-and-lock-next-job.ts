@@ -1,6 +1,6 @@
 import createDebugger from 'debug';
 import { createJob } from '../utils';
-import { Agenda } from './index';
+import { Agenda } from '.';
 
 const debug = createDebugger('agenda:internal:_findAndLockNextJob');
 
@@ -14,7 +14,6 @@ const debug = createDebugger('agenda:internal:_findAndLockNextJob');
  * @caller jobQueueFilling() only
  */
 export const findAndLockNextJob = async function(this: Agenda, jobName: string, definition: any) {
-  const self = this;
   const now = new Date();
   const lockDeadline = new Date(Date.now().valueOf() - definition.lockLifetime);
   debug('_findAndLockNextJob(%s, [Function])', jobName);
@@ -27,7 +26,7 @@ export const findAndLockNextJob = async function(this: Agenda, jobName: string, 
     if (s.topology.autoReconnect && !s.topology.isDestroyed()) {
       // Continue processing but notify that Agenda has lost the connection
       debug('Missing MongoDB connection, not attempting to find and lock a job');
-      self.emit('error', new Error('Lost MongoDB connection'));
+      this.emit('error', new Error('Lost MongoDB connection'));
     } else {
       // No longer recoverable
       debug('topology.autoReconnect: %s, topology.isDestroyed(): %s', s.topology.autoReconnect, s.topology.isDestroyed());
@@ -41,13 +40,13 @@ export const findAndLockNextJob = async function(this: Agenda, jobName: string, 
     const JOB_PROCESS_WHERE_QUERY = {
       $and: [{
         name: jobName,
-        disabled: {$ne: true}
+        disabled: { $ne: true }
       }, {
         $or: [{
-          lockedAt: {$eq: null},
-          nextRunAt: {$lte: this._nextScanAt}
+          lockedAt: { $eq: null },
+          nextRunAt: { $lte: this._nextScanAt }
         }, {
-          lockedAt: {$lte: lockDeadline}
+          lockedAt: { $lte: lockDeadline }
         }]
       }]
     };
@@ -56,13 +55,13 @@ export const findAndLockNextJob = async function(this: Agenda, jobName: string, 
      * Query used to set a job as locked
      * @type {{$set: {lockedAt: Date}}}
      */
-    const JOB_PROCESS_SET_QUERY = {$set: {lockedAt: now}};
+    const JOB_PROCESS_SET_QUERY = { $set: { lockedAt: now }};
 
     /**
      * Query used to affect what gets returned
      * @type {{returnOriginal: boolean, sort: object}}
      */
-    const JOB_RETURN_QUERY = {returnOriginal: false, sort: this._sort};
+    const JOB_RETURN_QUERY = { returnOriginal: false, sort: this._sort };
 
     // Find ONE and ONLY ONE job and set the 'lockedAt' time so that job begins to be processed
     const result = await this._collection.findOneAndUpdate(JOB_PROCESS_WHERE_QUERY, JOB_PROCESS_SET_QUERY, JOB_RETURN_QUERY);
@@ -70,7 +69,7 @@ export const findAndLockNextJob = async function(this: Agenda, jobName: string, 
     let job;
     if (result.value) {
       debug('found a job available to lock, creating a new job on Agenda with id [%s]', result.value._id);
-      job = createJob(self, result.value);
+      job = createJob(this, result.value);
     }
 
     return job;

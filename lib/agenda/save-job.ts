@@ -1,5 +1,5 @@
 import createDebugger from 'debug';
-import { Agenda } from './index';
+import { Agenda } from '.';
 import { Job } from '../job';
 import { processJobs } from '../utils';
 
@@ -12,26 +12,26 @@ const debug = createDebugger('agenda:saveJob');
  * @param result the data returned from the findOneAndUpdate() call or insertOne() call
  * @access private
  */
-const processDbResult = function(this: Agenda, job: Job, result: any) {
+const processDbResult = async function(this: Agenda, job: Job, result: any) {
   debug('processDbResult() called with success, checking whether to process job immediately or not');
 
   // We have a result from the above calls
   // findOneAndUpdate() returns different results than insertOne() so check for that
-  let res = result.ops ? result.ops : result.value;
-  if (res) {
+  let resultValue = result.ops ? result.ops : result.value;
+  if (resultValue) {
     // If it is an array, grab the first job
-    if (Array.isArray(res)) {
-      res = res[0];
+    if (Array.isArray(resultValue)) {
+      resultValue = resultValue[0];
     }
 
     // Grab ID and nextRunAt from MongoDB and store it as an attribute on Job
-    job.attrs._id = res._id;
-    job.attrs.nextRunAt = res.nextRunAt;
+    job.attrs._id = resultValue._id;
+    job.attrs.nextRunAt = resultValue.nextRunAt;
 
     // If the current job would have been processed in an older scan, process the job immediately
     if (job.attrs.nextRunAt && job.attrs.nextRunAt < this._nextScanAt) {
-      debug('[%s:%s] job would have ran by nextScanAt, processing the job immediately', job.attrs.name, res._id);
-      processJobs.call(this, job);
+      debug('[%s:%s] job would have ran by nextScanAt, processing the job immediately', job.attrs.name, resultValue._id);
+      await processJobs.call(this, job);
     }
   }
 
@@ -52,7 +52,7 @@ export const saveJob = async function(this: Agenda, job: Job): Promise<any> {
 
     // Grab information needed to save job but that we don't want to persist in MongoDB
     const id = job.attrs._id;
-    const {unique, uniqueOpts} = job.attrs;
+    const { unique, uniqueOpts } = job.attrs;
 
     // Store job as JSON and remove props we don't want to store from object
     const props = job.toJSON();
@@ -67,7 +67,7 @@ export const saveJob = async function(this: Agenda, job: Job): Promise<any> {
     // Grab current time and set default query options for MongoDB
     const now = new Date();
     const protect = {};
-    let update = {$set: props};
+    let update = { $set: props };
     debug('current time stored as %s', now.toISOString());
 
     // If the job already had an ID, then update the properties of the job
@@ -76,11 +76,11 @@ export const saveJob = async function(this: Agenda, job: Job): Promise<any> {
       // Update the job and process the resulting data'
       debug('job already has _id, calling findOneAndUpdate() using _id as query');
       const result = await this._collection.findOneAndUpdate(
-        {_id: id},
+        { _id: id },
         update,
-        {returnOriginal: false}
+        { returnOriginal: false }
       );
-      return processDbResult.call(this, job, result);
+      return await processDbResult.call(this, job, result);
     }
 
     if (props.type === 'single') {
@@ -114,29 +114,29 @@ export const saveJob = async function(this: Agenda, job: Job): Promise<any> {
         upsert: true,
         returnOriginal: false
       });
-      return processDbResult.call(this, job, result);
+      return await processDbResult.call(this, job, result);
     }
 
     if (unique) {
       // If we want the job to be unique, then we can upsert based on the 'unique' query object that was passed in
       const query = job.attrs.unique;
       query.name = props.name;
-      if (uniqueOpts && uniqueOpts.insertOnly) {
+      if (uniqueOpts?.insertOnly) {
         // @ts-expect-error
-        update = {$setOnInsert: props};
+        update = { $setOnInsert: props };
       }
 
       // Use the 'unique' query object to find an existing job or create a new one
       debug('calling findOneAndUpdate() with unique object as query: \n%O', query);
-      const result = await this._collection.findOneAndUpdate(query, update, {upsert: true, returnOriginal: false});
-      return processDbResult.call(this, job, result);
+      const result = await this._collection.findOneAndUpdate(query, update, { upsert: true, returnOriginal: false });
+      return await processDbResult.call(this, job, result);
     }
 
     // If all else fails, the job does not exist yet so we just insert it into MongoDB
     debug('using default behavior, inserting new job via insertOne() with props that were set: \n%O', props);
     const result = await this._collection.insertOne(props);
-    return processDbResult.call(this, job, result);
-  } catch (error) {
+    return await processDbResult.call(this, job, result);
+  } catch (error: unknown) {
     debug('processDbResult() received an error, job was not updated/created');
     throw error;
   }
