@@ -1,6 +1,4 @@
-const priorityMap: {
-  [key: string]: number
-} = {
+const priorityMap: Record<string, number> = {
   lowest: -20,
   low: -10,
   normal: 0,
