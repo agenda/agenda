@@ -1,5 +1,5 @@
 import createDebugger from 'debug';
-import { Agenda } from './index';
+import { Agenda } from '.';
 import { Job } from '../job';
 
 const debug = createDebugger('agenda:schedule');
@@ -13,9 +13,7 @@ const debug = createDebugger('agenda:schedule');
  * @param data data to send to job
  * @returns job or jobs created
  */
-export const schedule = function(this: Agenda, when: string, names: string[], data: object) {
-  const self = this;
-
+export const schedule = function(this: Agenda, when: string, names: string[], data: any) {
   /**
    * Internal method that creates a job with given date
    * @param when when the job gets run
@@ -23,8 +21,8 @@ export const schedule = function(this: Agenda, when: string, names: string[], da
    * @param data data to send to job
    * @returns instance of new job
    */
-  const createJob = async(when: string, name: string, data: object): Promise<Job> => {
-    const job = self.create(name, data);
+  const createJob = async(when: string, name: string, data: any): Promise<Job> => {
+    const job = this.create(name, data);
 
     await job.schedule(when).save();
 
@@ -38,12 +36,13 @@ export const schedule = function(this: Agenda, when: string, names: string[], da
    * @param data data to send to job
    * @returns jobs that were created
    */
-  const createJobs = async(when: string, names: string[], data: object): Promise<Job[]> => {
+  const createJobs = async(when: string, names: string[], data: any): Promise<Job[]> => {
     try {
-      const jobs = await Promise.all(names.map(name => createJob(when, name, data)));
+      const createJobList: Array<Promise<Job>> = [];
+      names.map(name => createJobList.push(createJob(when, name, data)));
       debug('Agenda.schedule()::createJobs() -> all jobs created successfully');
-      return jobs;
-    } catch (error) {
+      return Promise.all(createJobList);
+    } catch (error: unknown) {
       debug('Agenda.schedule()::createJobs() -> error creating one or more of the jobs');
       throw error;
     }

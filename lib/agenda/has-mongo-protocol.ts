@@ -4,5 +4,5 @@
  * @returns whether or not the url is a valid mongo URL
  */
 export const hasMongoProtocol = function(url: string): boolean {
-  return url.match(/mongodb(?:\+srv)?:\/\/.*/) !== null;
+  return /mongodb(?:\+srv)?:\/\/.*/.exec(url) !== null;
 };
