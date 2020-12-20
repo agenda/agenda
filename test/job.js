@@ -791,14 +791,13 @@ describe('Job', () => {
       let runCount = 0;
 
       const processorPromise = new Promise(resolve => {
-        agenda.define('lock job', { lockLifetime: 50 }, (job, cb) => { // eslint-disable-line no-unused-vars
+        agenda.define('lock job', { lockLifetime: 50 }, async(job, cb) => { // eslint-disable-line no-unused-vars
           runCount++;
 
           if (runCount !== 1) {
             expect(runCount).to.be(2);
-            agenda.stop().then(() => { // eslint-disable-line promise/prefer-await-to-then
-              resolve();
-            });
+            await agenda.stop();
+            resolve();
           }
         });
       });
