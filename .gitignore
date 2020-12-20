@@ -9,3 +9,4 @@ docs/agenda/*
 !docs/agenda/3.1.0/
 dist
 .ultra.cache.json
+.vscode
