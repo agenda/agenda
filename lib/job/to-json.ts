@@ -7,8 +7,7 @@ import { Job, JobAttributes } from '.';
  * @returns json object from Job
  */
 export const toJson = function(this: Job): Partial<JobAttributes> {
-  const self = this;
-  const attrs = self.attrs || {};
+  const attrs = this.attrs || {};
   const result = {};
 
   for (const prop in attrs) {

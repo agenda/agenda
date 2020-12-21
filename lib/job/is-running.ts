@@ -9,7 +9,7 @@ import { Job } from '.';
  * @function
  * @returns Whether or not job is running at the moment (true for running)
  */
-export const isRunning = function(this: Job): Boolean {
+export const isRunning = function(this: Job): boolean {
   if (!this.attrs.lastRunAt) {
     return false;
   }

@@ -7,8 +7,8 @@ import { Job } from '.';
  * @param unique mongo data query for unique
  * @param opts unique options
  */
-export const unique = function(this: Job, unique: object, opts: object): Job {
+export const unique = function(this: Job, unique: any, options: any): Job {
   this.attrs.unique = unique;
-  this.attrs.uniqueOpts = opts;
+  this.attrs.uniqueOpts = options;
   return this;
 };
