@@ -1,4 +1,4 @@
-import { Collection, MongoClient } from 'mongodb';
+import { Collection, Db } from 'mongodb';
 import { Agenda } from '.';
 
 /**
@@ -9,8 +9,7 @@ import { Agenda } from '.';
  * @param collection name collection we want to use ('agendaJobs')
  * @param cb called when MongoDB connection fails or passes
  */
-export const mongo = function(this: Agenda, mdb: MongoClient, collection: string, cb?: (error: Error, collection: Collection<any> | null) => void): Agenda {
-  // @ts-expect-error
+export const mongo = function(this: Agenda, mdb: Db, collection: string, cb?: (error: Error, collection: Collection<any> | null) => void): Agenda {
   this._mdb = mdb;
   this.db_init(collection, cb);
   return this;
