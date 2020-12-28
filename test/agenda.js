@@ -264,7 +264,7 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
           await jobs.every('5 minutes', jobName, {}, { skipImmediate: true });
           const job = (await jobs.jobs({ name: jobName }))[0];
           const nextRunAt = job.attrs.nextRunAt.getTime();
-          const now = new Date().getTime();
+          const now = Date.now();
           expect((nextRunAt - now) > 0).to.equal(true);
         });
         it('should run immediately if options.skipImmediate is false', async() => {
@@ -272,7 +272,7 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
           await jobs.every('5 minutes', jobName, {}, { skipImmediate: false });
           const job = (await jobs.jobs({ name: jobName }))[0];
           const nextRunAt = job.attrs.nextRunAt.getTime();
-          const now = new Date().getTime();
+          const now = Date.now();
           expect((nextRunAt - now) <= 0).to.equal(true);
         });
       });
@@ -289,7 +289,7 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
           expect(await jobs.schedule('in 5 minutes', 'send email')).to.be.a(Job);
         });
         it('sets the schedule', async() => {
-          const fiveish = (new Date()).valueOf() + 250000;
+          const fiveish = (Date.now() + 250000);
           const scheduledJob = await jobs.schedule('in 5 minutes', 'send email');
           expect(scheduledJob.attrs.nextRunAt.valueOf()).to.be.greaterThan(fiveish);
         });
