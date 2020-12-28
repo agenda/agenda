@@ -7,7 +7,7 @@ test-debug:
 	NODE_ENV=test $(MOCHA_PATH) -w --reporter spec debug
 
 test-once:
-	NODE_ENV=test $(MOCHA_PATH) --reporter spec --timeout 8000
+	NODE_ENV=test $(MOCHA_PATH) --reporter spec --timeout 8000 -b
 
 test-coverage:
 	NODE_ENV=test AGENDA_COVERAGE=1 $(MOCHA_PATH) test --require blanket --reporter html-cov > coverage.html

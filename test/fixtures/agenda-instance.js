@@ -1,28 +1,32 @@
-var connStr = process.argv[2];
-var tests = process.argv.slice(3);
+const { Agenda } = require('../../dist');
+const addTests = require('./add-tests');
 
-var path = require('path'),
-    Agenda = require( path.join(__dirname, '..', '..', 'index.js' ) ),
-    addTests = require( path.join(__dirname, 'addTests.js') );
+const connString = process.argv[2];
+const tests = process.argv.slice(3);
 
-var agenda = new Agenda({ db: { address: connStr } }, function(err, collection) {
+const agenda = new Agenda({
+  db: {
+    address: connString
+  },
+  processEvery: 100
+}, async() => {
+  tests.forEach(test => {
+    addTests[test](agenda);
+  });
 
-	tests.forEach(function(test) {
-	  addTests[test](agenda);
-	});
+  await agenda.start();
 
-	agenda.start();
+  // Ensure we can shut down the process from tests
+  process.on('message', message => {
+    if (message === 'exit') {
+      process.exit(0);
+    }
+  });
 
-	// Ensure we can shut down the process from tests
-	process.on('message', function(msg) {
-	  if( msg == 'exit' ) process.exit(0);
-	});
-
-	// Send default message of "notRan" after 400ms
-	setTimeout(function() {
-	  process.send('notRan');
-	  process.exit(0);
-	}, 400);
-
+  // Send default message of "notRan" after 400ms
+  setTimeout(() => {
+    process.send('notRan');
+    // eslint-disable-next-line unicorn/no-process-exit
+    process.exit(0);
+  }, 400);
 });
-

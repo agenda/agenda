@@ -1,4 +1,11 @@
-Makefile
-.travis.yml
-History.md
+.editorconfig
 .idea
+.jsdoc.json
+.travis.yml
+agenda.svg
+docs
+History.md
+Makefile
+renovate.json
+test
+yarn.lock
