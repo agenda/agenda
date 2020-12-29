@@ -12,7 +12,7 @@ matrix:
       env: RUN="yarn test"
     - name: Node.js 14 & lint
       node_js: 14
-      env: RUN="yarn test && yarn lint"
+      env: RUN="yarn lint && yarn test"
 addons:
   apt:
     sources:
