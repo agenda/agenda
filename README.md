@@ -590,6 +590,12 @@ Specifies an `interval` on which the job should repeat. The job runs at the time
 
 `options.skipImmediate`: `true` | `false` (default) Setting this `true` will skip the immediate run. The first run will occur only in configured interval.
 
+`options.startDate`: `Date` the first time the job runs, should be equal or after the start date.
+
+`options.endDate`: `Date` the job should not repeat after the endDate. The job can run on the end-date itself, but not after that.
+
+`options.skipDays`: `humand readable string` ('2 days'). After each run, it will skip the duration of 'skipDays'
+
 ```js
 job.repeatEvery('10 minutes');
 await job.save();
