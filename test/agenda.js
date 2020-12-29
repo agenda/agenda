@@ -289,7 +289,7 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
           expect(await jobs.schedule('in 5 minutes', 'send email')).to.be.a(Job);
         });
         it('sets the schedule', async() => {
-          const fiveish = Date().now() + 250000;
+          const fiveish = Date.now() + 250000;
           const scheduledJob = await jobs.schedule('in 5 minutes', 'send email');
           expect(scheduledJob.attrs.nextRunAt.valueOf()).to.be.greaterThan(fiveish);
         });
