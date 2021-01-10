@@ -44,7 +44,7 @@
     "url": "https://github.com/agenda/agenda/issues"
   },
   "dependencies": {
-    "cron-parser": "^2.18.0",
+    "cron-parser": "^3.0.0",
     "date.js": "~0.3.3",
     "debug": "~4.3.0",
     "human-interval": "~2.0.0",
