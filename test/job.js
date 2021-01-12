@@ -99,23 +99,23 @@ describe('Job', () => {
       expect(job.repeatEvery('one second')).to.be(job);
     });
     it('sets the nextRunAt property with skipImmediate', () => {
-      const now = (new Date()).valueOf();
+      const now = Date.now();
       const job2 = new Job();
       job2.repeatEvery('3 minutes', { skipImmediate: true });
       expect(job2.attrs.nextRunAt).to.be.within(now + 180000, now + 180003); // Inclusive
     });
     it('repeats from the existing nextRunAt property with skipImmediate', () => {
       const job2 = new Job();
-      const futureDate = (new Date('3000-01-01T00:00:00')).valueOf();
+      const futureDate = new Date('3000-01-01T00:00:00');
       job2.attrs.nextRunAt = futureDate;
       job2.repeatEvery('3 minutes', { skipImmediate: true });
-      expect(job2.attrs.nextRunAt).to.be(futureDate + 180000);
+      expect(job2.attrs.nextRunAt.getTime()).to.be(futureDate.getTime() + 180000);
     });
     it('repeats from the existing scheduled date with skipImmediate', () => {
       const futureDate = new Date('3000-01-01T00:00:00');
       const job2 = new Job().schedule(futureDate);
       job2.repeatEvery('3 minutes', { skipImmediate: true });
-      expect(job2.attrs.nextRunAt).to.be(futureDate.valueOf() + 180000);
+      expect(job2.attrs.nextRunAt.getTime()).to.be(futureDate.getTime() + 180000);
     });
   });
 
@@ -199,7 +199,7 @@ describe('Job', () => {
       job.attrs.lastRunAt = now;
       job.repeatEvery('2 minutes');
       job.computeNextRunAt();
-      expect(job.attrs.nextRunAt).to.be(now.valueOf() + 120000);
+      expect(job.attrs.nextRunAt.getTime()).to.be(now.valueOf() + 120000);
     });
 
     it('understands cron intervals', () => {
@@ -210,7 +210,7 @@ describe('Job', () => {
       job.attrs.lastRunAt = now;
       job.repeatEvery('*/2 * * * *');
       job.computeNextRunAt();
-      expect(job.attrs.nextRunAt.valueOf()).to.be(now.valueOf() + 60000);
+      expect(job.attrs.nextRunAt.getTime()).to.be(now.valueOf() + 60000);
     });
 
     it('understands cron intervals with a timezone', () => {
@@ -233,6 +233,75 @@ describe('Job', () => {
       job.computeNextRunAt();
       expect(moment(job.attrs.nextRunAt).tz('GMT').hour()).to.be(6);
       expect(moment(job.attrs.nextRunAt).toDate().getDate()).to.be(moment(job.attrs.lastRunAt).add(1, 'days').toDate().getDate());
+    });
+
+    describe('interval with startDate, endDate, skipDates', () => {
+      it('sets interval with startDate in future', () => {
+        const futureDate = moment().add(7, 'days');
+        const expectedFirstRunDate = moment().add(8, 'days');
+        expectedFirstRunDate.set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
+        job.repeatEvery('0 0 * * *', {
+          startDate: futureDate.toDate()
+        }); // Daily at midnight
+        job.computeNextRunAt();
+        expect(job.attrs.nextRunAt.getTime()).to.be(expectedFirstRunDate.toDate().getTime());
+      });
+
+      it('sets interval with startDate in the past', () => {
+        const futureDate = moment().add(-2, 'days');
+        const expectedFirstRunDate = moment().add(1, 'days');
+        expectedFirstRunDate.set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
+        job.repeatEvery('0 0 * * *', {
+          startDate: futureDate.toDate()
+        }); // Daily at midnight
+        job.computeNextRunAt();
+        expect(job.attrs.nextRunAt.getTime()).to.be(expectedFirstRunDate.toDate().getTime());
+      });
+
+      it('sets interval with endDate that has past', () => {
+        const futureDate = moment().add(7, 'days');
+        const lastRunDate = moment().add(2, 'days');
+        lastRunDate.set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
+        job.repeatEvery('0 0 * * *', {
+          endDate: lastRunDate.toDate()
+        }); // Daily at midnight
+        job.attrs.lastRunAt = futureDate.toDate();
+        job.computeNextRunAt();
+        expect(job.attrs.nextRunAt).to.be(undefined);
+      });
+
+      it('sets interval with endDate that has *not* past', () => {
+        const lastRunDate = moment().add(7, 'days');
+        job.repeatEvery('0 0 * * *', {
+          endDate: lastRunDate.toDate()
+        }); // Daily at midnight
+        job.computeNextRunAt();
+        expect(job.attrs.nextRunAt).not.to.be(undefined);
+      });
+
+      it('sets interval with skip days', () => {
+        const lastRun = moment().set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
+        const expectedFirstRunDate = moment().add(4, 'days');
+        expectedFirstRunDate.set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
+        job.repeatEvery('0 0 * * *', {
+          skipDays: '3 days'
+        }); // Daily at midnight
+        job.attrs.lastRunAt = lastRun.toDate();
+        job.computeNextRunAt();
+        expect(job.attrs.nextRunAt.getTime()).to.be(expectedFirstRunDate.toDate().getTime());
+      });
+
+      it('sets interval with endDate and skipDays', () => {
+        const lastRun = moment().set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
+        const lastRunDate = moment().add(1, 'days');
+        job.repeatEvery('0 0 * * *', {
+          skipDays: '3 days',
+          endDate: lastRunDate.toDate()
+        }); // Daily at midnight
+        job.attrs.lastRunAt = lastRun.toDate();
+        job.computeNextRunAt();
+        expect(job.attrs.nextRunAt).to.be(undefined);
+      });
     });
 
     it('gives the correct nextDate when the lastRun is 1ms before the expected time', () => {
