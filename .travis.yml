@@ -1,10 +1,10 @@
 language: node_js
-services: mongodb
-sudo: required
 node_js:
   - 10
   - 12
   - 14
+services: mongodb
+sudo: required
 addons:
   apt:
     sources:
@@ -23,7 +23,7 @@ env:
     # NodeJS v4+ requires gcc 4.8+
     - CXX=g++-4.9 CC=gcc-4.9
     - TRAVIS=true
-script: npm test
+script: 'yarn lint && yarn test'
 before_script:
   - mongo --version
   - mongod --version
