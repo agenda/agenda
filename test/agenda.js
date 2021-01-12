@@ -455,7 +455,7 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
         expect(await jobs.now('send email')).to.be.a(Job);
       });
       it('sets the schedule', async() => {
-        const now = new Date().now();
+        const now = Date.now();
         expect(await jobs.now('send email').then(({ attrs }) => attrs.nextRunAt.valueOf())).to.be.greaterThan(now - 1);
       });
 

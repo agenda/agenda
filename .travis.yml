@@ -1,18 +1,18 @@
 language: node_js
+node_js:
+  - 10
+  - 12
+  - 14
 services: mongodb
 sudo: required
-matrix:
-  fast_finish: true
+jobs:
   include:
-    - name: Node.js 10
-      node_js: 10
-      env: RUN="yarn test"
-    - name: Node.js 12
-      node_js: 12
-      env: RUN="yarn test"
-    - name: Node.js 14 & lint
-      node_js: 14
-      env: RUN="yarn lint && yarn test"
+    - stage: lint
+      name: "Check Linting"
+      script: "yarn lint"
+    - stage: test
+      name: "Test"
+      script: "yarn test"
 addons:
   apt:
     sources:
@@ -31,7 +31,6 @@ env:
     # NodeJS v4+ requires gcc 4.8+
     - CXX=g++-4.9 CC=gcc-4.9
     - TRAVIS=true
-script: '$RUN'
 before_script:
   - mongo --version
   - mongod --version
