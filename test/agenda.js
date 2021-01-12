@@ -88,7 +88,7 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
         expect(job.attrs._id).not.to.be(undefined);
 
         // Close connection
-        await agenda2.close(true);
+        await agenda2.close({ force: true });
         // Attemp to insert should fail now with correct message
         const job2 = agenda2.create('some job', {
           wee: 2
@@ -107,7 +107,7 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
           address: mongoCfg
         }
       }, async() => {
-        expect(await agenda2.close(true)).to.be(agenda2);
+        expect(await agenda2.close({ force: true })).to.be(agenda2);
       });
     });
   });
