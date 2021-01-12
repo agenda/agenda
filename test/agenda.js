@@ -348,7 +348,7 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
             type: 'active',
             userId: '123',
             other: true
-          }).unique({
+          } ).unique({
             'data.type': 'active',
             'data.userId': '123'
           }).schedule('now').save();
