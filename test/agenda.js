@@ -72,6 +72,46 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
     expect(jobs._processEvery).to.be(5000);
   });
 
+  describe('close', () => {
+    it('closes database connection', async() => {
+      const agenda2 = new Agenda({
+        db: {
+          address: mongoCfg
+        }
+      }, async() => {
+        // Inserting should still work
+        const job = agenda2.create('some job', {
+          wee: 1
+        });
+        await job.save();
+        console.log(job);
+        expect(job.attrs._id).not.to.be(undefined);
+
+        // Close connection
+        await agenda2.close({ force: true });
+        // Attemp to insert should fail now with correct message
+        const job2 = agenda2.create('some job', {
+          wee: 2
+        });
+        try {
+          await job2.save();
+        } catch (error) {
+          expect(error.message).to.be('server instance pool was destroyed');
+        }
+      });
+    });
+
+    it('returns itself', () => {
+      const agenda2 = new Agenda({
+        db: {
+          address: mongoCfg
+        }
+      }, async() => {
+        expect(await agenda2.close({ force: true })).to.be(agenda2);
+      });
+    });
+  });
+
   describe('configuration methods', () => {
     it('sets the _db directly when passed as an option', () => {
       const agenda = new Agenda({ mongo: mongoDb });

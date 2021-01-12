@@ -3,6 +3,7 @@ import { EventEmitter } from 'events';
 import { MongoClient, Db as MongoDb, Collection } from 'mongodb';
 import { JobProcessingQueue } from './job-processing-queue';
 import { cancel } from './cancel';
+import { close } from './close';
 import { create } from './create';
 import { database } from './database';
 import { dbInit } from './db-init';
@@ -75,6 +76,7 @@ class Agenda extends EventEmitter {
   _processInterval: any;
 
   cancel!: typeof cancel;
+  close!: typeof close;
   create!: typeof create;
   database!: typeof database;
   db_init!: typeof dbInit;
@@ -134,6 +136,7 @@ class Agenda extends EventEmitter {
 
 Agenda.prototype._findAndLockNextJob = findAndLockNextJob;
 Agenda.prototype.cancel = cancel;
+Agenda.prototype.close = close;
 Agenda.prototype.create = create;
 Agenda.prototype.database = database;
 Agenda.prototype.db_init = dbInit;
