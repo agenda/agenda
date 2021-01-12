@@ -546,6 +546,18 @@ process.on('SIGTERM', graceful);
 process.on('SIGINT' , graceful);
 ```
 
+### close(force)
+
+Closes database connection. You don't normally have to do this, but it might be useful for testing purposes.
+
+Using `force` boolean you can force close connection.
+
+Read more from [Node.js MongoDB Driver API](https://mongodb.github.io/node-mongodb-native/2.0/api/Db.html#close)
+
+```js
+await agenda.close({ force: true });
+```
+
 
 ## Multiple job processors
 
