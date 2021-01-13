@@ -3,6 +3,10 @@ Next
 
 * https://github.com/agenda/agenda/pulls
 
+* Add `agenda.close()` ([#450](https://github.com/agenda/agenda/pull/450)) thanks @simison
+
+* Add ability to schedule jobs with startDate, endDate, and skipping ([#361](https://github.com/agenda/agenda/pull/361)) thanks @suryanaik
+
 * Fix issue with concurrent locking beyond locklimit ([#1086](https://github.com/agenda/agenda/pull/1086)) thanks @leonardlin
 
 * Fix issue with too many locks being set asynchronously ([#1119](https://github.com/agenda/agenda/pull/1119)) thanks @GimpMaster
