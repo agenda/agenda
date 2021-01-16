@@ -15,7 +15,7 @@ function sleep(ms) {
 
 const agenda = new Agenda({
   db: {
-    address: 'mongodb://agendan:nuam0agenda@ds052408.mlab.com:52408/agenda',
+    address: 'mongodb://127.0.0.1/agenda',
     options: { useNewUrlParser: true },
     collection: `agendaJobs-${Math.random()}` // Start fresh every time
   }
