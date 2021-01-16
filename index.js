@@ -1,3 +1,3 @@
-const Agenda = require('./lib/agenda');
+const { Agenda } = require('./dist/agenda');
 
 module.exports = Agenda;
