@@ -1,3 +1,3 @@
-const Agenda = require('./dist');
+const { Agenda } = require('./dist/agenda');
 
 module.exports = Agenda;
