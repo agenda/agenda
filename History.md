@@ -3,6 +3,9 @@ Next
 
 * https://github.com/agenda/agenda/pulls
 
+4.0.0 / 2021-01-16
+==================
+
 * Add `agenda.close()` ([#450](https://github.com/agenda/agenda/pull/450)) thanks @simison
 
 * Add ability to schedule jobs with startDate, endDate, and skipping ([#361](https://github.com/agenda/agenda/pull/361)) thanks @suryanaik
