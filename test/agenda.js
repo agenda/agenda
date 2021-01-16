@@ -84,7 +84,6 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
           wee: 1
         });
         await job.save();
-        console.log(job);
         expect(job.attrs._id).not.to.be(undefined);
 
         // Close connection
