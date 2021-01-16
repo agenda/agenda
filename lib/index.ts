@@ -1,1 +1,3 @@
-export { Agenda } from './agenda';
+import { Agenda } from './agenda';
+export { Agenda }
+export default Agenda;
