@@ -211,7 +211,7 @@
   dependencies:
     "@types/node" "*"
 
-"@types/debug@^4.1.5":
+"@types/debug@4.1.5":
   version "4.1.5"
   resolved "https://registry.yarnpkg.com/@types/debug/-/debug-4.1.5.tgz#b14efa8852b7768d898906613c23f688713e02cd"
   integrity sha512-Q1y515GcOdTHgagaVFhHnIFQ38ygs/kmxdNpvpou+raI9UO3YZcHDngBSYKQklcKlvA7iuQlmIKbzvmxcOE9CQ==
@@ -224,7 +224,7 @@
     "@types/minimatch" "*"
     "@types/node" "*"
 
-"@types/human-interval@^1.0.0":
+"@types/human-interval@1.0.0":
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/@types/human-interval/-/human-interval-1.0.0.tgz#beab44537d9de829a87642855ac71f3bc244abc1"
   integrity sha512-ud7H6R7y58RpOFcJPhmuCacUAaE5Tpkhhm1gwx3vaaAiVEvqalvG/yaG6K0+yPaSEorkI/HGKp0/H3xirxJ4Tg==
@@ -249,7 +249,7 @@
   resolved "https://registry.yarnpkg.com/@types/minimist/-/minimist-1.2.1.tgz#283f669ff76d7b8260df8ab7a4262cc83d988256"
   integrity sha512-fZQQafSREFyuZcdWFAExYjBiCL7AUCdgsk80iO0q4yihYYdcIiH28CcuPTGFgLOCC8RlW49GSQxdHwZP+I7CNg==
 
-"@types/mongodb@^3.5.27":
+"@types/mongodb@3.6.3":
   version "3.6.3"
   resolved "https://registry.yarnpkg.com/@types/mongodb/-/mongodb-3.6.3.tgz#5655af409d9e32d5d5ae9a653abf3e5f9c83eb7a"
   integrity sha512-6YNqGP1hk5bjUFaim+QoFFuI61WjHiHE1BNeB41TA00Xd2K7zG4lcWyLLq/XtIp36uMavvS5hoAUJ+1u/GcX2Q==
