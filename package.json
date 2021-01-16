@@ -1,6 +1,6 @@
 {
   "name": "agenda",
-  "version": "3.1.0",
+  "version": "4.0.0",
   "description": "Light weight job scheduler for Node.js",
   "main": "index.js",
   "files": [
@@ -96,16 +96,19 @@
       "object-curly-spacing": [
         "error",
         "always",
-        { "objectsInObjects": false, "arraysInObjects": false }
+        {
+          "objectsInObjects": false,
+          "arraysInObjects": false
+        }
       ]
     },
     "envs": [
       "node"
     ],
     "overrides": [
-			{
-				"files": "**/*.ts",
-				"rules": {
+      {
+        "files": "**/*.ts",
+        "rules": {
           "@typescript-eslint/space-before-function-paren": [
             "error",
             "never"
@@ -113,14 +116,14 @@
         }
       },
       {
-				"files": "**/*.js",
-				"rules": {
+        "files": "**/*.js",
+        "rules": {
           "space-before-function-paren": [
             "error",
             "never"
           ]
         }
-			}
-		]
+      }
+    ]
   }
 }
