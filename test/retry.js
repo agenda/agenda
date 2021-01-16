@@ -27,9 +27,9 @@ describe('Retry', () => {
       db: {
         address: mongoCfg
       }
-    }, err => {
-      if (err) {
-        done(err);
+    }, error => {
+      if (error) {
+        done(error);
       }
 
       MongoClient.connect(mongoCfg, async(error, client) => {
@@ -70,8 +70,8 @@ describe('Retry', () => {
       done();
     });
 
-    agenda.on('fail:a job', (err, job) => {
-      if (err) {
+    agenda.on('fail:a job', (error, job) => {
+      if (error) {
         // Do nothing as this is expected to fail.
       }
 

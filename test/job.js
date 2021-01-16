@@ -36,9 +36,9 @@ describe('Job', () => {
       db: {
         address: mongoCfg
       }
-    }, async err => {
-      if (err) {
-        done(err);
+    }, async error => {
+      if (error) {
+        done(error);
       }
 
       try {
@@ -455,18 +455,18 @@ describe('Job', () => {
       job.attrs.name = 'asyncFail';
 
       const failSpy = sinon.stub();
-      const err = new Error('failure');
+      const error = new Error('failure');
 
       agenda.once('fail:asyncFail', failSpy);
 
       agenda.define('asyncFail', async() => {
         await delay(5);
-        throw err;
+        throw error;
       });
 
       await job.run();
       expect(failSpy.callCount).to.equal(1);
-      expect(failSpy.calledWith(err)).to.equal(true);
+      expect(failSpy.calledWith(error)).to.equal(true);
     });
 
     it('waits for the callback to be called even if the function is async', async() => {
@@ -494,65 +494,65 @@ describe('Job', () => {
       job.attrs.name = 'asyncCbError';
 
       const failSpy = sinon.stub();
-      const err = new Error('failure');
+      const error = new Error('failure');
 
       agenda.once('fail:asyncCbError', failSpy);
 
       agenda.define('asyncCbError', async(job, cb) => {
         (async() => {
           await delay(5);
-          cb(err);
+          cb(error);
         })();
       });
 
       await job.run();
       expect(failSpy.callCount).to.equal(1);
-      expect(failSpy.calledWith(err)).to.equal(true);
+      expect(failSpy.calledWith(error)).to.equal(true);
     });
 
     it('favors the async function error over the callback error if it comes first', async() => {
       job.attrs.name = 'asyncCbTwoError';
 
       const failSpy = sinon.stub();
-      const fnErr = new Error('functionFailure');
-      const cbErr = new Error('callbackFailure');
+      const fnError = new Error('functionFailure');
+      const cbError = new Error('callbackFailure');
 
       agenda.on('fail:asyncCbTwoError', failSpy);
 
       agenda.define('asyncCbTwoError', async(job, cb) => {
         (async() => {
           await delay(5);
-          cb(cbErr);
+          cb(cbError);
         })();
 
-        throw fnErr;
+        throw fnError;
       });
 
       await job.run();
       expect(failSpy.callCount).to.equal(1);
-      expect(failSpy.calledWith(fnErr)).to.equal(true);
-      expect(failSpy.calledWith(cbErr)).to.equal(false);
+      expect(failSpy.calledWith(fnError)).to.equal(true);
+      expect(failSpy.calledWith(cbError)).to.equal(false);
     });
 
     it('favors the callback error over the async function error if it comes first', async() => {
       job.attrs.name = 'asyncCbTwoErrorCb';
 
       const failSpy = sinon.stub();
-      const fnErr = new Error('functionFailure');
-      const cbErr = new Error('callbackFailure');
+      const fnError = new Error('functionFailure');
+      const cbError = new Error('callbackFailure');
 
       agenda.on('fail:asyncCbTwoErrorCb', failSpy);
 
       agenda.define('asyncCbTwoErrorCb', async(job, cb) => {
-        cb(cbErr);
+        cb(cbError);
         await delay(5);
-        throw fnErr;
+        throw fnError;
       });
 
       await job.run();
       expect(failSpy.callCount).to.equal(1);
-      expect(failSpy.calledWith(cbErr)).to.equal(true);
-      expect(failSpy.calledWith(fnErr)).to.equal(false);
+      expect(failSpy.calledWith(cbError)).to.equal(true);
+      expect(failSpy.calledWith(fnError)).to.equal(false);
     });
 
     it('doesn\'t allow a stale job to be saved', async() => {
@@ -805,8 +805,8 @@ describe('Job', () => {
 
         expect(spy.called).to.be(true);
 
-        const err = spy.args[0][0];
-        expect(err.message).to.be('Zomg fail');
+        const error = spy.args[0][0];
+        expect(error.message).to.be('Zomg fail');
         expect(job.attrs.failCount).to.be(1);
         expect(job.attrs.failedAt.valueOf()).not.to.be.below(job.attrs.lastFinishedAt.valueOf());
       });
@@ -822,8 +822,8 @@ describe('Job', () => {
 
         expect(spy.called).to.be(true);
 
-        const err = spy.args[0][0];
-        expect(err.message).to.be('Zomg fail');
+        const error = spy.args[0][0];
+        expect(error.message).to.be('Zomg fail');
         expect(job.attrs.failCount).to.be(1);
         expect(job.attrs.failedAt.valueOf()).not.to.be.below(job.attrs.lastFinishedAt.valueOf());
       });
@@ -1344,8 +1344,8 @@ describe('Job', () => {
         let ran2 = false;
         let doneCalled = false;
 
-        const serviceError = err => {
-          done(err);
+        const serviceError = error => {
+          done(error);
         };
 
         const receiveMessage = message => {
