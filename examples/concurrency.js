@@ -8,22 +8,24 @@ function time() {
 }
 
 function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise(resolve => {
+    setTimeout(resolve, ms);
+  });
 }
 
 const agenda = new Agenda({
   db: {
     address: 'mongodb://agendan:nuam0agenda@ds052408.mlab.com:52408/agenda',
     options: { useNewUrlParser: true },
-    collection: `agendaJobs-${Math.random()}`,  // start fresh every time
-  },
+    collection: `agendaJobs-${Math.random()}` // Start fresh every time
+  }
 });
 
 let jobRunCount = 1;
 agenda.define('long-running job', {
-  lockLifetime: 5 * 1000,  // max amount of time the job should take
-  concurrency: 3,  // max number of job instances to run at the same time
-}, async (job, done) => {
+  lockLifetime: 5 * 1000, // Max amount of time the job should take
+  concurrency: 3 // Max number of job instances to run at the same time
+}, async(job, done) => {
   const thisJob = jobRunCount++;
   console.log(`#${thisJob} started`);
 
@@ -46,7 +48,6 @@ agenda.define('long-running job', {
   done();
 });
 
-
 (async function() {
   console.log(time(), 'Agenda started');
   agenda.processEvery('1 second');
@@ -63,5 +64,4 @@ agenda.define('long-running job', {
   agenda.on('fail', (error, job) => {
     console.log(time(), `Job <${job.attrs.name}> failed:`, error);
   });
-
 })();
