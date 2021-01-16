@@ -36,9 +36,9 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
           address: mongoCfg
         }
       }, () => {
-        MongoClient.connect(mongoCfg, async(err, client) => {
-          if (err) {
-            throw err;
+        MongoClient.connect(mongoCfg, async(error, client) => {
+          if (error) {
+            throw error;
           }
 
           mongoClient = client;
@@ -366,9 +366,9 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
 
           mongoDb.collection('agendaJobs').find({
             name: 'unique job'
-          }).toArray((err, jobs) => {
-            if (err) {
-              throw err;
+          }).toArray((error, jobs) => {
+            if (error) {
+              throw error;
             }
 
             expect(jobs).to.have.length(1);
@@ -402,9 +402,9 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
 
           mongoDb.collection('agendaJobs').find({
             name: 'unique job'
-          }).toArray((err, jobs) => {
-            if (err) {
-              throw err;
+          }).toArray((error, jobs) => {
+            if (error) {
+              throw error;
             }
 
             expect(jobs).to.have.length(1);
@@ -439,9 +439,9 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
 
           mongoDb.collection('agendaJobs').find({
             name: 'unique job'
-          }).toArray((err, jobs) => {
-            if (err) {
-              throw err;
+          }).toArray((error, jobs) => {
+            if (error) {
+              throw error;
             }
 
             expect(jobs).to.have.length(2);
@@ -472,9 +472,9 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
     describe('jobs', () => {
       it('returns jobs', async() => {
         await jobs.create('test').save();
-        jobs.jobs({}, async(err, c) => {
-          if (err) {
-            throw err;
+        jobs.jobs({}, async(error, c) => {
+          if (error) {
+            throw error;
           }
 
           expect(c.length).to.not.be(0);
@@ -491,18 +491,18 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
         await job.save();
         jobs.jobs({
           name: 'no definition'
-        }, async(err, j) => {
-          if (err) {
-            throw err;
+        }, async(error, j) => {
+          if (error) {
+            throw error;
           }
 
           expect(j).to.have.length(1);
           await jobs.purge();
           jobs.jobs({
             name: 'no definition'
-          }, (err, j) => {
-            if (err) {
-              throw err;
+          }, (error, j) => {
+            if (error) {
+              throw error;
             }
 
             expect(j).to.have.length(0);
@@ -537,9 +537,9 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
     });
 
     afterEach(done => {
-      jobs._collection.deleteMany({ name: { $in: ['jobA', 'jobB']}}, err => {
-        if (err) {
-          return done(err);
+      jobs._collection.deleteMany({ name: { $in: ['jobA', 'jobB']}}, error => {
+        if (error) {
+          return done(error);
         }
 
         done();
@@ -586,9 +586,9 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
     });
 
     afterEach(done => {
-      jobs._collection.deleteMany({ name: 'jobA' }, err => {
-        if (err) {
-          return done(err);
+      jobs._collection.deleteMany({ name: 'jobA' }, error => {
+        if (error) {
+          return done(error);
         }
 
         done();
