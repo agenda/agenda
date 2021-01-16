@@ -2,14 +2,15 @@
   "name": "agenda",
   "version": "4.0.0",
   "description": "Light weight job scheduler for Node.js",
-  "main": "index.js",
+  "main": "dist/index.js",
   "files": [
-    "lib"
+    "dist"
   ],
   "engines": {
     "node": ">=10.0.0"
   },
   "scripts": {
+    "prepublishOnly": "npm run build",
     "build": "tsc",
     "pretest": "npm run build",
     "test": "npm run mocha",
