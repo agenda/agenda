@@ -1,7 +1,13 @@
 Next
 ====
 
-* https://github.com/agenda/agenda/pulls
+* _Contributions welcome!_ https://github.com/agenda/agenda/pulls
+
+4.0.1 / 2021-01-16
+==================
+
+* Fix _"Cannot find module ./lib/agenda"_ bug due us not targeting correct ES5 files for distribution after the TypeScript rewrite. ([#1193](https://github.com/agenda/agenda/pull/1193))
+* Update dependencies
 
 4.0.0 / 2021-01-16
 ==================
@@ -30,7 +36,7 @@ BREAKING
 
 * Switch from [ncb000gt/node-cron](https://www.npmjs.com/package/cron) to [harrisiirak/cron-parser](https://www.npmjs.com/package/cron-parser) for cron-pattern parsing. See issue ([#475](https://github.com/kelektiv/node-cron/issues/475))
 
-    Previously month was 0-based (0=January). Going forward standard Unix pattern is used, which is 1-based (1=January). 
+    Previously month was 0-based (0=January). Going forward standard Unix pattern is used, which is 1-based (1=January).
 
     Please update existing cron-patterns that specify a month (4th position of a pattern). The month is now 1 - 12
 
