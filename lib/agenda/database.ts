@@ -25,7 +25,11 @@ export const database = function(this: Agenda, url: string, collection: string, 
     url = 'mongodb://' + url;
   }
 
-  const reconnectOptions = options?.useUnifiedTopology === true ? {} : {
+  if (options.useUnifiedTopology === undefined) {
+    options.useUnifiedTopology = true;
+  }
+
+  const reconnectOptions = options?.useUnifiedTopology ? {} : {
     autoReconnect: true,
     reconnectTries: Number.MAX_SAFE_INTEGER,
     reconnectInterval: this._processEvery
