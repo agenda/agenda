@@ -25,8 +25,8 @@ export const database = function(this: Agenda, url: string, collection: string, 
     url = 'mongodb://' + url;
   }
 
-  if (options.useUnifiedTopology === undefined) {
-    options.useUnifiedTopology = true;
+  if (options?.useUnifiedTopology === undefined) {
+    options = { ...{ useUnifiedTopology: true }, ...options };
   }
 
   const reconnectOptions = options?.useUnifiedTopology ? {} : {
@@ -37,6 +37,7 @@ export const database = function(this: Agenda, url: string, collection: string, 
 
   collection = collection || 'agendaJobs';
   options = { ...reconnectOptions, ...options };
+
   MongoClient.connect(url, options, (error, client) => {
     if (error) {
       debug('error connecting to MongoDB using collection: [%s]', collection);

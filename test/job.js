@@ -42,7 +42,7 @@ describe('Job', () => {
       }
 
       try {
-        const client = await MongoClient.connect(mongoCfg, { useNewUrlParser: true });
+        const client = await MongoClient.connect(mongoCfg, { useNewUrlParser: true, useUnifiedTopology: true });
         mongoClient = client;
         mongoDb = client.db(agendaDatabase);
 
