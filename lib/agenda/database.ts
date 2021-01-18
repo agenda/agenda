@@ -1,4 +1,4 @@
-import { Collection, MongoClient } from 'mongodb';
+import { Collection, MongoClient, MongoClientOptions } from 'mongodb';
 import createDebugger from 'debug';
 import { hasMongoProtocol } from './has-mongo-protocol';
 import { Agenda } from '.';
@@ -20,12 +20,16 @@ const debug = createDebugger('agenda:database');
  * or use Agenda.mongo(). If your app already has a MongoDB connection then use that. ie. specify config.mongo in
  * the constructor or use Agenda.mongo().
  */
-export const database = function(this: Agenda, url: string, collection: string, options: any, cb?: (error: Error, collection: Collection<any> | null) => void) {
+export const database = function(this: Agenda, url: string, collection: string, options: MongoClientOptions, cb?: (error: Error, collection: Collection<any> | null) => void) {
   if (!hasMongoProtocol(url)) {
     url = 'mongodb://' + url;
   }
 
-  const reconnectOptions = options?.useUnifiedTopology === true ? {} : {
+  if (options?.useUnifiedTopology === undefined) {
+    options = { ...{ useUnifiedTopology: true }, ...options };
+  }
+
+  const reconnectOptions = options?.useUnifiedTopology ? {} : {
     autoReconnect: true,
     reconnectTries: Number.MAX_SAFE_INTEGER,
     reconnectInterval: this._processEvery
@@ -33,6 +37,7 @@ export const database = function(this: Agenda, url: string, collection: string, 
 
   collection = collection || 'agendaJobs';
   options = { ...reconnectOptions, ...options };
+
   MongoClient.connect(url, options, (error, client) => {
     if (error) {
       debug('error connecting to MongoDB using collection: [%s]', collection);

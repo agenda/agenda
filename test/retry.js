@@ -32,7 +32,7 @@ describe('Retry', () => {
         done(error);
       }
 
-      MongoClient.connect(mongoCfg, async(error, client) => {
+      MongoClient.connect(mongoCfg, { useUnifiedTopology: true }, async(error, client) => {
         mongoClient = client;
         mongoDb = client.db(agendaDatabase);
 

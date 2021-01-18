@@ -36,7 +36,7 @@ describe('Agenda', function() { // eslint-disable-line prefer-arrow-callback
           address: mongoCfg
         }
       }, () => {
-        MongoClient.connect(mongoCfg, async(error, client) => {
+        MongoClient.connect(mongoCfg, { useUnifiedTopology: true }, async(error, client) => {
           if (error) {
             throw error;
           }
