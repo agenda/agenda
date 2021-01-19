@@ -227,7 +227,7 @@ export const processJobs = async function(this: Agenda, extraJob: Job) {
 
     // If the 'nextRunAt' time is older than the current time, run the job
     // Otherwise, setTimeout that gets called at the time of 'nextRunAt'
-    if (job.attrs.nextRunAt <= now) {
+    if (!job.attrs.nextRunAt || job.attrs.nextRunAt <= now) {
       debug('[%s:%s] nextRunAt is in the past, run the job immediately', job.attrs.name, job.attrs._id);
       runOrRetry();
     } else {
@@ -253,7 +253,7 @@ export const processJobs = async function(this: Agenda, extraJob: Job) {
           // This means a job has "expired", as in it has not been "touched" within the lockoutTime
           // Remove from local lock
           // NOTE: Shouldn't we update the 'lockedAt' value in MongoDB so it can be picked up on restart?
-          if (job.attrs.lockedAt < lockDeadline) {
+          if (!job.attrs.lockedAt || job.attrs.lockedAt < lockDeadline) {
             debug('[%s:%s] job lock has expired, freeing it up', job.attrs.name, job.attrs._id);
             self._lockedJobs.splice(self._lockedJobs.indexOf(job), 1);
             jobDefinition.locked--;
@@ -296,7 +296,7 @@ export const processJobs = async function(this: Agenda, extraJob: Job) {
     // Job isn't in running jobs so throw an error
     if (!self._runningJobs.includes(job)) {
       debug('[%s] callback was called, job must have been marked as complete already', job.attrs._id);
-      throw new Error(`callback already called - job ${name as string} already marked complete`);
+      throw new Error(`callback already called - job ${name} already marked complete`);
     }
 
     // Remove the job from the running queue

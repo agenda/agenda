@@ -35,7 +35,7 @@ export const run = async function(this: Job): Promise<Job> {
         this.attrs.lastFinishedAt = new Date();
       }
 
-      this.attrs.lockedAt = null;
+      this.attrs.lockedAt = undefined;
 
       await this.save().catch((error: Error) => {
         debug('[%s:%s] failed to be saved to MongoDB', this.attrs.name, this.attrs._id);
@@ -45,16 +45,16 @@ export const run = async function(this: Job): Promise<Job> {
 
       if (error) {
         agenda.emit('fail', error, this);
-        agenda.emit('fail:' + (this.attrs.name as string), error, this);
+        agenda.emit('fail:' + this.attrs.name, error, this);
         debug('[%s:%s] has failed [%s]', this.attrs.name, this.attrs._id, error.message);
       } else {
         agenda.emit('success', this);
-        agenda.emit('success:' + (this.attrs.name as string), this);
+        agenda.emit('success:' + this.attrs.name, this);
         debug('[%s:%s] has succeeded', this.attrs.name, this.attrs._id);
       }
 
       agenda.emit('complete', this);
-      agenda.emit('complete:' + (this.attrs.name as string), this);
+      agenda.emit('complete:' + this.attrs.name, this);
       debug('[%s:%s] job finished at [%s] and was unlocked', this.attrs.name, this.attrs._id, this.attrs.lastFinishedAt);
       // Curiously, we still resolve successfully if the job processor failed.
       // Agenda is not equipped to handle errors originating in user code, so, we leave them to inspect the side-effects of job.fail()
@@ -63,7 +63,7 @@ export const run = async function(this: Job): Promise<Job> {
 
     try {
       agenda.emit('start', this);
-      agenda.emit('start:' + (this.attrs.name as string), this);
+      agenda.emit('start:' + this.attrs.name, this);
       debug('[%s:%s] starting job', this.attrs.name, this.attrs._id);
       if (!definition) {
         debug('[%s:%s] has no definition, can not run', this.attrs.name, this.attrs._id);

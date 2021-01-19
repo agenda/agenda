@@ -1,6 +1,6 @@
 import humanInterval from 'human-interval';
 import { EventEmitter } from 'events';
-import { MongoClient, Db as MongoDb, Collection } from 'mongodb';
+import { MongoClient, Db as MongoDb, Collection, MongoClientOptions } from 'mongodb';
 import { JobProcessingQueue } from './job-processing-queue';
 import { cancel } from './cancel';
 import { close } from './close';
@@ -27,6 +27,23 @@ import { start } from './start';
 import { stop } from './stop';
 import { findAndLockNextJob } from './find-and-lock-next-job';
 import { Job } from '../job';
+
+export interface AgendaConfig {
+  name?: string;
+  processEvery?: string;
+  maxConcurrency?: number;
+  defaultConcurrency?: number;
+  lockLimit?: number;
+  defaultLockLimit?: number;
+  defaultLockLifetime?: number;
+  sort?: any;
+  mongo?: MongoDb;
+  db?: {
+    address: string;
+    collection: string;
+    options: MongoClientOptions;
+  };
+}
 
 /**
  * @class Agenda
@@ -99,21 +116,21 @@ class Agenda extends EventEmitter {
   start!: typeof start;
   stop!: typeof stop;
 
-  constructor(config: any = {}, cb?: (error: Error, collection: Collection<any> | null) => void) {
+  constructor(config: AgendaConfig = {}, cb?: (error: Error, collection: Collection<any> | null) => void) {
     super();
 
     this._name = config.name;
     this._processEvery = (humanInterval(config.processEvery) ?? humanInterval('5 seconds')) as number; // eslint-disable-line @typescript-eslint/non-nullable-type-assertion-style
-    this._defaultConcurrency = config.defaultConcurrency || 5;
-    this._maxConcurrency = config.maxConcurrency || 20;
-    this._defaultLockLimit = config.defaultLockLimit || 0;
-    this._lockLimit = config.lockLimit || 0;
+    this._defaultConcurrency = config.defaultConcurrency ?? 5;
+    this._maxConcurrency = config.maxConcurrency ?? 20;
+    this._defaultLockLimit = config.defaultLockLimit ?? 0;
+    this._lockLimit = config.lockLimit ?? 0;
     this._definitions = {};
     this._runningJobs = [];
     this._lockedJobs = [];
     this._jobQueue = new JobProcessingQueue();
-    this._defaultLockLifetime = config.defaultLockLifetime || 10 * 60 * 1000; // 10 minute default lockLifetime
-    this._sort = config.sort || { nextRunAt: 1, priority: -1 };
+    this._defaultLockLifetime = config.defaultLockLifetime ?? 10 * 60 * 1000; // 10 minute default lockLifetime
+    this._sort = config.sort ?? { nextRunAt: 1, priority: -1 };
     this._indices = { name: 1, ...this._sort, priority: -1, lockedAt: 1, nextRunAt: 1, disabled: 1 };
 
     this._isLockingOnTheFly = false;
@@ -124,8 +141,8 @@ class Agenda extends EventEmitter {
     });
 
     if (config.mongo) {
-      this.mongo(config.mongo, config.db ? config.db.collection : undefined, cb);
-      if (config.mongo.s && config.mongo.topology && config.mongo.topology.s) {
+      this.mongo(config.mongo, config.db ? config.db.collection : undefined, cb); // @ts-expect-error // the documentation shows it should be correct: http://mongodb.github.io/node-mongodb-native/3.6/api/Db.html
+      if (config.mongo.s && config.mongo.topology && config.mongo.topology.s) { // @ts-expect-error
         this._mongoUseUnifiedTopology = Boolean(config.mongo.topology.s.options.useUnifiedTopology);
       }
     } else if (config.db) {
