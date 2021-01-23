@@ -1,3 +1,3 @@
 import { Agenda } from './agenda';
-export { Agenda }
+export { Agenda };
 export default Agenda;
