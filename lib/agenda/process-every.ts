@@ -10,7 +10,7 @@ const debug = createDebugger('agenda:processEvery');
  * @function
  * @param time - time to process, expressed in human interval
  */
-export const processEvery = function(this: Agenda, time: string): Agenda {
+export const processEvery = function (this: Agenda, time: string): Agenda {
   debug('Agenda.processEvery(%d)', time);
   // @ts-expect-error
   this._processEvery = humanInterval(time);

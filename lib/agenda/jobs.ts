@@ -12,7 +12,13 @@ import { createJob } from '../utils';
  * @param number of documents to skip in MongoDB
  * @returns resolves when fails or passes
  */
-export const jobs = async function(this: Agenda, query: FilterQuery<any> = {}, sort = {}, limit = 0, skip = 0) {
+export const jobs = async function (
+  this: Agenda,
+  query: FilterQuery<any> = {},
+  sort = {},
+  limit = 0,
+  skip = 0
+) {
   const result = await this._collection
     .find(query) // eslint-disable-line unicorn/no-fn-reference-in-iterator
     .sort(sort)

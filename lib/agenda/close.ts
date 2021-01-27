@@ -14,7 +14,10 @@ const debug = createDebugger('agenda:close');
  *
  * @link https://mongodb.github.io/node-mongodb-native/2.0/api/Db.html#close
  */
-export const close = async function(this: Agenda, option?: { force: boolean }): Promise<Agenda> {
+export const close = async function (
+  this: Agenda,
+  option?: {force: boolean}
+): Promise<Agenda> {
   debug('close db connection for this agenda instance');
   const closeOptions = {
     force: false,

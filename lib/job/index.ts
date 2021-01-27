@@ -46,7 +46,7 @@ class Job {
   touch!: typeof touch;
 
   constructor(options: any) {
-    const { agenda, type, nextRunAt, ...args } = (options ?? {});
+    const { agenda, type, nextRunAt, ...args } = options ?? {};
 
     // Save Agenda instance
     this.agenda = agenda;
@@ -89,6 +89,4 @@ Job.prototype.save = save;
 Job.prototype.remove = remove;
 Job.prototype.touch = touch;
 
-export {
-  Job
-};
+export { Job };

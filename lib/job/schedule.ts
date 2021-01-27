@@ -8,7 +8,7 @@ import { Job } from '.';
  * @function
  * @param time schedule a job to run "then"
  */
-export const schedule = function(this: Job, time: string | Date): Job {
+export const schedule = function (this: Job, time: string | Date): Job {
   const d = new Date(time);
   this.attrs.nextRunAt = Number.isNaN(d.getTime()) ? date(time) : d;
   return this;

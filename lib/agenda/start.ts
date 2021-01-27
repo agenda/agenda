@@ -11,14 +11,20 @@ const debug = createDebugger('agenda:start');
  * @function
  * @returns resolves if db set beforehand, returns undefined otherwise
  */
-export const start = async function(this: Agenda) {
+export const start = async function (this: Agenda) {
   if (this._processInterval) {
     debug('Agenda.start was already called, ignoring');
     return this._ready;
   }
 
   await this._ready;
-  debug('Agenda.start called, creating interval to call processJobs every [%dms]', this._processEvery);
-  this._processInterval = setInterval(processJobs.bind(this), this._processEvery);
+  debug(
+    'Agenda.start called, creating interval to call processJobs every [%dms]',
+    this._processEvery
+  );
+  this._processInterval = setInterval(
+    processJobs.bind(this),
+    this._processEvery
+  );
   process.nextTick(processJobs.bind(this));
 };

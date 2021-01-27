@@ -5,7 +5,7 @@ import { Job } from '.';
  * @name Job#enable
  * @function
  */
-export const enable = function(this: Job): Job {
+export const enable = function (this: Job): Job {
   this.attrs.disabled = false;
   return this;
 };

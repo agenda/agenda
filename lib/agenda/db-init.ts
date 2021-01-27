@@ -11,7 +11,11 @@ const debug = createDebugger('agenda:db_init');
  * @param collection name or undefined for default 'agendaJobs'
  * @param cb called when the db is initialized
  */
-export const dbInit = function(this: Agenda, collection: string, cb?: (error: Error, collection: Collection<any> | null) => void) {
+export const dbInit = function (
+  this: Agenda,
+  collection: string,
+  cb?: (error: Error, collection: Collection<any> | null) => void
+) {
   debug('init database collection using name [%s]', collection);
   this._collection = this._mdb.collection(collection || 'agendaJobs');
   debug('attempting index creation');

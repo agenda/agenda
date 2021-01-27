@@ -7,7 +7,17 @@ import { Job } from '.';
  * @param interval repeat every X
  * @param options options to use for job
  */
-export const repeatEvery = function(this: Job, interval: string | number, options: { timezone?: string; startDate?: Date | number; endDate?: Date | number; skipDays?: string; skipImmediate?: boolean } = {}): Job {
+export const repeatEvery = function (
+  this: Job,
+  interval: string | number,
+  options: {
+    timezone?: string;
+    startDate?: Date | number;
+    endDate?: Date | number;
+    skipDays?: string;
+    skipImmediate?: boolean;
+  } = {}
+): Job {
   this.attrs.repeatInterval = interval;
   this.attrs.repeatTimezone = options.timezone ? options.timezone : null;
   // Following options are added to handle start day

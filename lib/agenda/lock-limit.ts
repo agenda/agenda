@@ -9,7 +9,7 @@ const debug = createDebugger('agenda:locklimit');
  * @function
  * @param num Lock limit
  */
-export const lockLimit = function(this: Agenda, limit: number): Agenda {
+export const lockLimit = function (this: Agenda, limit: number): Agenda {
   // @NOTE: Is this different than max concurrency?
   debug('Agenda.lockLimit(%d)', limit);
   this._lockLimit = limit;

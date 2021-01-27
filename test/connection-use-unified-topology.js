@@ -11,7 +11,8 @@ const { Agenda } = require('../dist');
 const mongoHost = process.env.MONGODB_HOST || 'localhost';
 const mongoPort = process.env.MONGODB_PORT || '27017';
 const agendaDatabase = 'agenda-test';
-const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/' + agendaDatabase;
+const mongoCfg =
+  'mongodb://' + mongoHost + ':' + mongoPort + '/' + agendaDatabase;
 
 function clearJobs(client) {
   return client.db().collection('agendaJobs').deleteMany({});
@@ -20,7 +21,7 @@ function clearJobs(client) {
 const JOB_NAME = 'dummyJob';
 
 describe('MongoDB connection', () => {
-  it('with useUnifiedTopology option', async() => {
+  it('with useUnifiedTopology option', async () => {
     let client;
     let agenda;
 

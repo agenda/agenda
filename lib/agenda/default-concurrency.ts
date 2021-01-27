@@ -9,7 +9,10 @@ const debug = createDebugger('agenda:defaultConcurrency');
  * @function
  * @param concurrency default concurrency
  */
-export const defaultConcurrency = function(this: Agenda, concurrency: number): Agenda {
+export const defaultConcurrency = function (
+  this: Agenda,
+  concurrency: number
+): Agenda {
   debug('Agenda.defaultConcurrency(%d)', concurrency);
   this._defaultConcurrency = concurrency;
   return this;

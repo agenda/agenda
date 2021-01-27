@@ -10,7 +10,7 @@ const debug = createDebugger('agenda:defaultLockLimit');
  * @param {Number} num Lock limit per job
  * @returns {Agenda} agenda instance
  */
-export const defaultLockLimit = function(this: Agenda, times: number): Agenda {
+export const defaultLockLimit = function (this: Agenda, times: number): Agenda {
   debug('Agenda.defaultLockLimit(%d)', times);
   this._defaultLockLimit = times;
   return this;

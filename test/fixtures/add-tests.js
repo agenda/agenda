@@ -2,7 +2,7 @@
 /* eslint-disable unicorn/no-process-exit */
 module.exports = {
   none: () => {},
-  daily: agenda => {
+  daily: (agenda) => {
     agenda.define('once a day test job', (job, done) => {
       process.send('ran');
       done();
@@ -11,7 +11,7 @@ module.exports = {
 
     agenda.every('one day', 'once a day test job');
   },
-  'daily-array': agenda => {
+  'daily-array': (agenda) => {
     agenda.define('daily test 1', (job, done) => {
       process.send('test1-ran');
       done();
@@ -24,7 +24,7 @@ module.exports = {
 
     agenda.every('one day', ['daily test 1', 'daily test 2']);
   },
-  'define-future-job': agenda => {
+  'define-future-job': (agenda) => {
     const future = new Date();
     future.setDate(future.getDate() + 1);
 
@@ -36,7 +36,7 @@ module.exports = {
 
     agenda.schedule(future, 'job in the future');
   },
-  'define-past-due-job': agenda => {
+  'define-past-due-job': (agenda) => {
     const past = new Date();
     past.setDate(past.getDate() - 1);
 
@@ -48,7 +48,7 @@ module.exports = {
 
     agenda.schedule(past, 'job in the past');
   },
-  'schedule-array': agenda => {
+  'schedule-array': (agenda) => {
     const past = new Date();
     past.setDate(past.getDate() - 1);
 

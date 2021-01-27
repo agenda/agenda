@@ -14,7 +14,13 @@ const debug = createDebugger('agenda:every');
  * @param options - options to run job for
  * @returns Job/s created. Resolves when schedule fails or passes
  */
-export const every = async function(this: Agenda, interval: string | number, names: string | string[], data: any, options: any): Promise<any> {
+export const every = async function (
+  this: Agenda,
+  interval: string | number,
+  names: string | string[],
+  data: any,
+  options: any
+): Promise<any> {
   /**
    * Internal method to setup job that gets run every interval
    * @param interval run every X interval
@@ -23,7 +29,12 @@ export const every = async function(this: Agenda, interval: string | number, nam
    * @param options options to run job for
    * @returns instance of job
    */
-  const createJob = async(interval: number | string, name: string, data: any, options: any): Promise<Job> => {
+  const createJob = async (
+    interval: number | string,
+    name: string,
+    data: any,
+    options: any
+  ): Promise<Job> => {
     const job = this.create(name, data);
 
     job.attrs.type = 'single';
@@ -39,15 +50,21 @@ export const every = async function(this: Agenda, interval: string | number, nam
    * @param options options to run job for
    * @return array of jobs created
    */
-  const createJobs = async(interval: string | number, names: string[], data: any, options: any): Promise<Job[] | undefined> => {
+  const createJobs = async (
+    interval: string | number,
+    names: string[],
+    data: any,
+    options: any
+  ): Promise<Job[] | undefined> => {
     try {
       const jobs: Array<Promise<Job>> = [];
-      names.map(name => jobs.push(createJob(interval, name, data, options)));
+      names.map((name) => jobs.push(createJob(interval, name, data, options)));
 
       debug('every() -> all jobs created successfully');
 
       return Promise.all(jobs);
-    } catch (error: unknown) { // @TODO: catch - ignore :O
+    } catch (error: unknown) {
+      // @TODO: catch - ignore :O
       debug('every() -> error creating one or more of the jobs', error);
     }
   };

@@ -13,7 +13,11 @@ const debug = createDebugger('agenda:internal:_findAndLockNextJob');
  * @access protected
  * @caller jobQueueFilling() only
  */
-export const findAndLockNextJob = async function(this: Agenda, jobName: string, definition: any) {
+export const findAndLockNextJob = async function (
+  this: Agenda,
+  jobName: string,
+  definition: any
+) {
   const now = new Date();
   const lockDeadline = new Date(Date.now().valueOf() - definition.lockLifetime);
   debug('_findAndLockNextJob(%s, [Function])', jobName);
@@ -22,15 +26,27 @@ export const findAndLockNextJob = async function(this: Agenda, jobName: string, 
   // Trying to resolve crash on Dev PC when it resumes from sleep. NOTE: Does this still happen?
   // @ts-expect-error
   const s = this._mdb.s || this._mdb.db.s;
-  if (s.topology.connections && s.topology.connections().length === 0 && !this._mongoUseUnifiedTopology) {
+  if (
+    s.topology.connections &&
+    s.topology.connections().length === 0 &&
+    !this._mongoUseUnifiedTopology
+  ) {
     if (s.topology.autoReconnect && !s.topology.isDestroyed()) {
       // Continue processing but notify that Agenda has lost the connection
-      debug('Missing MongoDB connection, not attempting to find and lock a job');
+      debug(
+        'Missing MongoDB connection, not attempting to find and lock a job'
+      );
       this.emit('error', new Error('Lost MongoDB connection'));
     } else {
       // No longer recoverable
-      debug('topology.autoReconnect: %s, topology.isDestroyed(): %s', s.topology.autoReconnect, s.topology.isDestroyed());
-      throw new Error('MongoDB connection is not recoverable, application restart required');
+      debug(
+        'topology.autoReconnect: %s, topology.isDestroyed(): %s',
+        s.topology.autoReconnect,
+        s.topology.isDestroyed()
+      );
+      throw new Error(
+        'MongoDB connection is not recoverable, application restart required'
+      );
     }
   } else {
     // /**
@@ -38,17 +54,23 @@ export const findAndLockNextJob = async function(this: Agenda, jobName: string, 
     // * @type {{$and: [*]}}
     // */
     const JOB_PROCESS_WHERE_QUERY = {
-      $and: [{
-        name: jobName,
-        disabled: { $ne: true }
-      }, {
-        $or: [{
-          lockedAt: { $eq: null },
-          nextRunAt: { $lte: this._nextScanAt }
-        }, {
-          lockedAt: { $lte: lockDeadline }
-        }]
-      }]
+      $and: [
+        {
+          name: jobName,
+          disabled: { $ne: true }
+        },
+        {
+          $or: [
+            {
+              lockedAt: { $eq: null },
+              nextRunAt: { $lte: this._nextScanAt }
+            },
+            {
+              lockedAt: { $lte: lockDeadline }
+            }
+          ]
+        }
+      ]
     };
 
     /**
@@ -64,11 +86,18 @@ export const findAndLockNextJob = async function(this: Agenda, jobName: string, 
     const JOB_RETURN_QUERY = { returnOriginal: false, sort: this._sort };
 
     // Find ONE and ONLY ONE job and set the 'lockedAt' time so that job begins to be processed
-    const result = await this._collection.findOneAndUpdate(JOB_PROCESS_WHERE_QUERY, JOB_PROCESS_SET_QUERY, JOB_RETURN_QUERY);
+    const result = await this._collection.findOneAndUpdate(
+      JOB_PROCESS_WHERE_QUERY,
+      JOB_PROCESS_SET_QUERY,
+      JOB_RETURN_QUERY
+    );
 
     let job;
     if (result.value) {
-      debug('found a job available to lock, creating a new job on Agenda with id [%s]', result.value._id);
+      debug(
+        'found a job available to lock, creating a new job on Agenda with id [%s]',
+        result.value._id
+      );
       job = createJob(this, result.value);
     }
 
