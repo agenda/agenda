@@ -7,7 +7,7 @@ jobs:
     strategy:
       matrix:
         node-version: [10.x, 12.x, 14.x]
-        mongodb-version: [4.0, 4.2, 4.4]
+        mongodb-version: [3.4, 3.6, 4.0, 4.2, 4.4]
     steps:
       - name: Git checkout
         uses: actions/checkout@v2
