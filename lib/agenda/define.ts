@@ -1,7 +1,7 @@
-import { Agenda } from '.';
-import createDebugger from 'debug';
+import { Agenda } from ".";
+import createDebugger from "debug";
 
-const debug = createDebugger('agenda:define');
+const debug = createDebugger("agenda:define");
 
 /**
  * Setup definition for job
@@ -30,10 +30,10 @@ export const define = function (
     priority: options.priority || 0,
     lockLifetime: options.lockLifetime || this._defaultLockLifetime,
     running: 0,
-    locked: 0
+    locked: 0,
   };
   debug(
-    'job [%s] defined with following options: \n%O',
+    "job [%s] defined with following options: \n%O",
     name,
     this._definitions[name]
   );

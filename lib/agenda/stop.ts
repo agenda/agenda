@@ -1,7 +1,7 @@
-import createDebugger from 'debug';
-import { Agenda } from '.';
+import createDebugger from "debug";
+import { Agenda } from ".";
 
-const debug = createDebugger('agenda:stop');
+const debug = createDebugger("agenda:stop");
 
 /**
  * Clear the interval that processes the jobs
@@ -18,18 +18,18 @@ export const stop = async function (this: Agenda): Promise<any> {
    */
   const _unlockJobs = async (): Promise<void> => {
     return new Promise((resolve, reject) => {
-      debug('Agenda._unlockJobs()');
+      debug("Agenda._unlockJobs()");
       const jobIds = this._lockedJobs.map((job) => job.attrs._id);
 
       if (jobIds.length === 0) {
-        debug('no jobs to unlock');
+        debug("no jobs to unlock");
         resolve();
       }
 
-      debug('about to unlock jobs with ids: %O', jobIds);
+      debug("about to unlock jobs with ids: %O", jobIds);
       this._collection.updateMany(
-        { _id: { $in: jobIds }},
-        { $set: { lockedAt: null }},
+        { _id: { $in: jobIds } },
+        { $set: { lockedAt: null } },
         (error: Error) => {
           if (error) {
             reject(error);
@@ -42,7 +42,7 @@ export const stop = async function (this: Agenda): Promise<any> {
     });
   };
 
-  debug('Agenda.stop called, clearing interval for processJobs()');
+  debug("Agenda.stop called, clearing interval for processJobs()");
   clearInterval(this._processInterval);
   this._processInterval = undefined;
   return _unlockJobs();

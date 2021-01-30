@@ -1,7 +1,7 @@
-import createDebugger from 'debug';
-import { Agenda } from '.';
+import createDebugger from "debug";
+import { Agenda } from ".";
 
-const debug = createDebugger('agenda:maxConcurrency');
+const debug = createDebugger("agenda:maxConcurrency");
 
 /**
  * Set the concurrency for jobs (globally), type does not matter
@@ -11,7 +11,7 @@ const debug = createDebugger('agenda:maxConcurrency');
  * @returns agenda instance
  */
 export const maxConcurrency = function (this: Agenda, concurrency: number) {
-  debug('Agenda.maxConcurrency(%d)', concurrency);
+  debug("Agenda.maxConcurrency(%d)", concurrency);
   this._maxConcurrency = concurrency;
   return this;
 };

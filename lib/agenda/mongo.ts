@@ -1,5 +1,5 @@
-import { Collection, Db } from 'mongodb';
-import { Agenda } from '.';
+import { Collection, Db } from "mongodb";
+import { Agenda } from ".";
 
 /**
  * Build method used to add MongoDB connection details

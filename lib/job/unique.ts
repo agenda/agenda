@@ -1,4 +1,4 @@
-import { Job } from '.';
+import { Job } from ".";
 
 /**
  * Data to ensure is unique for job to be created

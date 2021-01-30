@@ -1,6 +1,6 @@
 // @ts-expect-error
-import date from 'date.js';
-import { Job } from '.';
+import date from "date.js";
+import { Job } from ".";
 
 /**
  * Schedules a job to run at specified time

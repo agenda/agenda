@@ -1,7 +1,7 @@
-import { Agenda } from '.';
-import createDebugger from 'debug';
+import { Agenda } from ".";
+import createDebugger from "debug";
 
-const debug = createDebugger('agenda:defaultLockLimit');
+const debug = createDebugger("agenda:defaultLockLimit");
 
 /**
  * Set default lock limit per job type
@@ -11,7 +11,7 @@ const debug = createDebugger('agenda:defaultLockLimit');
  * @returns {Agenda} agenda instance
  */
 export const defaultLockLimit = function (this: Agenda, times: number): Agenda {
-  debug('Agenda.defaultLockLimit(%d)', times);
+  debug("Agenda.defaultLockLimit(%d)", times);
   this._defaultLockLimit = times;
   return this;
 };

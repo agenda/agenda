@@ -1,4 +1,4 @@
-import { Job } from '.';
+import { Job } from ".";
 
 /**
  * Sets a job to repeat at a specific time

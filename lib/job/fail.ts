@@ -1,7 +1,7 @@
-import createDebugger from 'debug';
-import { Job } from '.';
+import createDebugger from "debug";
+import { Job } from ".";
 
-const debug = createDebugger('agenda:job');
+const debug = createDebugger("agenda:job");
 
 /**
  * Fails the job with a reason (error) specified
@@ -20,7 +20,7 @@ export const fail = function (this: Job, reason: string | Error): Job {
   this.attrs.failedAt = now;
   this.attrs.lastFinishedAt = now;
   debug(
-    '[%s:%s] fail() called [%d] times so far',
+    "[%s:%s] fail() called [%d] times so far",
     this.attrs.name,
     this.attrs._id,
     this.attrs.failCount

@@ -1,19 +1,19 @@
-import { toJson } from './to-json';
-import { computeNextRunAt } from './compute-next-run-at';
-import { repeatEvery } from './repeat-every';
-import { repeatAt } from './repeat-at';
-import { disable } from './disable';
-import { enable } from './enable';
-import { unique } from './unique';
-import { schedule } from './schedule';
-import { priority } from './priority';
-import { fail } from './fail';
-import { run } from './run';
-import { isRunning } from './is-running';
-import { save } from './save';
-import { remove } from './remove';
-import { touch } from './touch';
-import { parsePriority } from '../utils';
+import { toJson } from "./to-json";
+import { computeNextRunAt } from "./compute-next-run-at";
+import { repeatEvery } from "./repeat-every";
+import { repeatAt } from "./repeat-at";
+import { disable } from "./disable";
+import { enable } from "./enable";
+import { unique } from "./unique";
+import { schedule } from "./schedule";
+import { priority } from "./priority";
+import { fail } from "./fail";
+import { run } from "./run";
+import { isRunning } from "./is-running";
+import { save } from "./save";
+import { remove } from "./remove";
+import { touch } from "./touch";
+import { parsePriority } from "../utils";
 
 // @todo
 export type JobAttributes = any;
@@ -67,8 +67,8 @@ class Job {
     this.attrs = {
       ...attrs,
       // NOTE: What is the difference between 'once' here and 'single' in agenda/index.js?
-      type: type || 'once',
-      nextRunAt: nextRunAt || new Date()
+      type: type || "once",
+      nextRunAt: nextRunAt || new Date(),
     };
   }
 }

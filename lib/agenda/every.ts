@@ -1,8 +1,8 @@
-import createDebugger from 'debug';
-import { Agenda } from '.';
-import { Job } from '../job';
+import createDebugger from "debug";
+import { Agenda } from ".";
+import { Job } from "../job";
 
-const debug = createDebugger('agenda:every');
+const debug = createDebugger("agenda:every");
 
 /**
  * Creates a scheduled job with given interval and name/names of the job to run
@@ -37,7 +37,7 @@ export const every = async function (
   ): Promise<Job> => {
     const job = this.create(name, data);
 
-    job.attrs.type = 'single';
+    job.attrs.type = "single";
     job.repeatEvery(interval, options);
     return job.save();
   };
@@ -60,24 +60,24 @@ export const every = async function (
       const jobs: Array<Promise<Job>> = [];
       names.map((name) => jobs.push(createJob(interval, name, data, options)));
 
-      debug('every() -> all jobs created successfully');
+      debug("every() -> all jobs created successfully");
 
       return Promise.all(jobs);
     } catch (error: unknown) {
       // @TODO: catch - ignore :O
-      debug('every() -> error creating one or more of the jobs', error);
+      debug("every() -> error creating one or more of the jobs", error);
     }
   };
 
-  if (typeof names === 'string') {
-    debug('Agenda.every(%s, %O, %O)', interval, names, options);
+  if (typeof names === "string") {
+    debug("Agenda.every(%s, %O, %O)", interval, names, options);
     const jobs = await createJob(interval, names, data, options);
 
     return jobs;
   }
 
   if (Array.isArray(names)) {
-    debug('Agenda.every(%s, %s, %O)', interval, names, options);
+    debug("Agenda.every(%s, %s, %O)", interval, names, options);
     const jobs = await createJobs(interval, names, data, options);
 
     return jobs;

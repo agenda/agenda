@@ -1,6 +1,6 @@
-import { FilterQuery } from 'mongodb';
-import { Agenda } from '.';
-import { createJob } from '../utils';
+import { FilterQuery } from "mongodb";
+import { Agenda } from ".";
+import { createJob } from "../utils";
 
 /**
  * Finds all jobs matching 'query'
@@ -20,7 +20,7 @@ export const jobs = async function (
   skip = 0
 ) {
   const result = await this._collection
-    .find(query) // eslint-disable-line unicorn/no-fn-reference-in-iterator
+    .find(query) // eslint-disable-line
     .sort(sort)
     .limit(limit)
     .skip(skip)

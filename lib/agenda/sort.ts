@@ -1,7 +1,7 @@
-import createDebugger from 'debug';
-import { Agenda } from '.';
+import createDebugger from "debug";
+import { Agenda } from ".";
 
-const debug = createDebugger('agenda:sort');
+const debug = createDebugger("agenda:sort");
 
 /**
  * Set the sort query for finding next job
@@ -11,7 +11,7 @@ const debug = createDebugger('agenda:sort');
  * @param query sort query object for MongoDB
  */
 export const sort = function (this: Agenda, query: any): Agenda {
-  debug('Agenda.sort([Object])');
+  debug("Agenda.sort([Object])");
   this._sort = query;
   return this;
 };

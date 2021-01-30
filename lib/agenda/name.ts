@@ -1,7 +1,7 @@
-import createDebugger from 'debug';
-import { Agenda } from '.';
+import createDebugger from "debug";
+import { Agenda } from ".";
 
-const debug = createDebugger('agenda:name');
+const debug = createDebugger("agenda:name");
 
 /**
  * Set name of queue
@@ -10,7 +10,7 @@ const debug = createDebugger('agenda:name');
  * @param name name of agenda instance
  */
 export const name = function (this: Agenda, name: string) {
-  debug('Agenda.name(%s)', name);
+  debug("Agenda.name(%s)", name);
   this._name = name;
   return this;
 };

@@ -1,7 +1,7 @@
-import { Agenda } from '.';
-import createDebugger from 'debug';
+import { Agenda } from ".";
+import createDebugger from "debug";
 
-const debug = createDebugger('agenda:defaultConcurrency');
+const debug = createDebugger("agenda:defaultConcurrency");
 
 /**
  * Set the default concurrency for each job
@@ -13,7 +13,7 @@ export const defaultConcurrency = function (
   this: Agenda,
   concurrency: number
 ): Agenda {
-  debug('Agenda.defaultConcurrency(%d)', concurrency);
+  debug("Agenda.defaultConcurrency(%d)", concurrency);
   this._defaultConcurrency = concurrency;
   return this;
 };

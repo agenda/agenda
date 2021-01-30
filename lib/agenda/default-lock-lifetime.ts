@@ -1,7 +1,7 @@
-import { Agenda } from '.';
-import createDebugger from 'debug';
+import { Agenda } from ".";
+import createDebugger from "debug";
 
-const debug = createDebugger('agenda:defaultLockLifetime');
+const debug = createDebugger("agenda:defaultLockLifetime");
 
 /**
  * Set the default lock time (in ms)
@@ -11,7 +11,7 @@ const debug = createDebugger('agenda:defaultLockLifetime');
  * @param {Number} ms time in ms to set default lock
  */
 export const defaultLockLifetime = function (this: Agenda, ms: number): Agenda {
-  debug('Agenda.defaultLockLifetime(%d)', ms);
+  debug("Agenda.defaultLockLifetime(%d)", ms);
   this._defaultLockLifetime = ms;
   return this;
 };

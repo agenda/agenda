@@ -1,5 +1,5 @@
-import { Job } from '.';
-import { parsePriority } from '../utils';
+import { Job } from ".";
+import { parsePriority } from "../utils";
 
 /**
  * Sets priority of the job

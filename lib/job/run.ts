@@ -1,7 +1,7 @@
-import createDebugger from 'debug';
-import { Job } from '.';
+import createDebugger from "debug";
+import { Job } from ".";
 
-const debug = createDebugger('agenda:job');
+const debug = createDebugger("agenda:job");
 
 /**
  * Internal method (RUN)
@@ -17,7 +17,7 @@ export const run = async function (this: Job): Promise<Job> {
   return new Promise(async (resolve, reject) => {
     this.attrs.lastRunAt = new Date();
     debug(
-      '[%s:%s] setting lastRunAt to: %s',
+      "[%s:%s] setting lastRunAt to: %s",
       this.attrs.name,
       this.attrs._id,
       this.attrs.lastRunAt.toISOString()
@@ -44,37 +44,37 @@ export const run = async function (this: Job): Promise<Job> {
 
       await this.save().catch((error: Error) => {
         debug(
-          '[%s:%s] failed to be saved to MongoDB',
+          "[%s:%s] failed to be saved to MongoDB",
           this.attrs.name,
           this.attrs._id
         );
         reject(error);
       });
       debug(
-        '[%s:%s] was saved successfully to MongoDB',
+        "[%s:%s] was saved successfully to MongoDB",
         this.attrs.name,
         this.attrs._id
       );
 
       if (error) {
-        agenda.emit('fail', error, this);
-        agenda.emit('fail:' + (this.attrs.name as string), error, this);
+        agenda.emit("fail", error, this);
+        agenda.emit("fail:" + (this.attrs.name as string), error, this);
         debug(
-          '[%s:%s] has failed [%s]',
+          "[%s:%s] has failed [%s]",
           this.attrs.name,
           this.attrs._id,
           error.message
         );
       } else {
-        agenda.emit('success', this);
-        agenda.emit('success:' + (this.attrs.name as string), this);
-        debug('[%s:%s] has succeeded', this.attrs.name, this.attrs._id);
+        agenda.emit("success", this);
+        agenda.emit("success:" + (this.attrs.name as string), this);
+        debug("[%s:%s] has succeeded", this.attrs.name, this.attrs._id);
       }
 
-      agenda.emit('complete', this);
-      agenda.emit('complete:' + (this.attrs.name as string), this);
+      agenda.emit("complete", this);
+      agenda.emit("complete:" + (this.attrs.name as string), this);
       debug(
-        '[%s:%s] job finished at [%s] and was unlocked',
+        "[%s:%s] job finished at [%s] and was unlocked",
         this.attrs.name,
         this.attrs._id,
         this.attrs.lastFinishedAt
@@ -85,28 +85,28 @@ export const run = async function (this: Job): Promise<Job> {
     };
 
     try {
-      agenda.emit('start', this);
-      agenda.emit('start:' + (this.attrs.name as string), this);
-      debug('[%s:%s] starting job', this.attrs.name, this.attrs._id);
+      agenda.emit("start", this);
+      agenda.emit("start:" + (this.attrs.name as string), this);
+      debug("[%s:%s] starting job", this.attrs.name, this.attrs._id);
       if (!definition) {
         debug(
-          '[%s:%s] has no definition, can not run',
+          "[%s:%s] has no definition, can not run",
           this.attrs.name,
           this.attrs._id
         );
-        throw new Error('Undefined job');
+        throw new Error("Undefined job");
       }
 
       if (definition.fn.length === 2) {
         debug(
-          '[%s:%s] process function being called',
+          "[%s:%s] process function being called",
           this.attrs.name,
           this.attrs._id
         );
         await definition.fn(this, jobCallback);
       } else {
         debug(
-          '[%s:%s] process function being called',
+          "[%s:%s] process function being called",
           this.attrs.name,
           this.attrs._id
         );
@@ -114,7 +114,7 @@ export const run = async function (this: Job): Promise<Job> {
         await jobCallback();
       }
     } catch (error: unknown) {
-      debug('[%s:%s] unknown error occurred', this.attrs.name, this.attrs._id);
+      debug("[%s:%s] unknown error occurred", this.attrs.name, this.attrs._id);
       await jobCallback(error as Error);
     }
   });

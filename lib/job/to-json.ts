@@ -1,4 +1,4 @@
-import { Job, JobAttributes } from '.';
+import { Job, JobAttributes } from ".";
 
 /**
  * Given a job, turn it into an object we can store in Mongo
@@ -18,11 +18,11 @@ export const toJson = function (this: Job): Partial<JobAttributes> {
   }
 
   const dates = [
-    'lastRunAt',
-    'lastFinishedAt',
-    'nextRunAt',
-    'failedAt',
-    'lockedAt'
+    "lastRunAt",
+    "lastFinishedAt",
+    "nextRunAt",
+    "failedAt",
+    "lockedAt",
   ];
   dates.forEach((d) => {
     // @ts-expect-error

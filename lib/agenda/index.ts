@@ -1,32 +1,32 @@
-import humanInterval from 'human-interval';
-import { EventEmitter } from 'events';
-import { MongoClient, Db as MongoDb, Collection } from 'mongodb';
-import { JobProcessingQueue } from './job-processing-queue';
-import { cancel } from './cancel';
-import { close } from './close';
-import { create } from './create';
-import { database } from './database';
-import { dbInit } from './db-init';
-import { defaultConcurrency } from './default-concurrency';
-import { defaultLockLifetime } from './default-lock-lifetime';
-import { defaultLockLimit } from './default-lock-limit';
-import { define } from './define';
-import { every } from './every';
-import { jobs } from './jobs';
-import { lockLimit } from './lock-limit';
-import { maxConcurrency } from './max-concurrency';
-import { mongo } from './mongo';
-import { name } from './name';
-import { now } from './now';
-import { processEvery } from './process-every';
-import { purge } from './purge';
-import { saveJob } from './save-job';
-import { schedule } from './schedule';
-import { sort } from './sort';
-import { start } from './start';
-import { stop } from './stop';
-import { findAndLockNextJob } from './find-and-lock-next-job';
-import { Job } from '../job';
+import humanInterval from "human-interval";
+import { EventEmitter } from "events";
+import { MongoClient, Db as MongoDb, Collection } from "mongodb";
+import { JobProcessingQueue } from "./job-processing-queue";
+import { cancel } from "./cancel";
+import { close } from "./close";
+import { create } from "./create";
+import { database } from "./database";
+import { dbInit } from "./db-init";
+import { defaultConcurrency } from "./default-concurrency";
+import { defaultLockLifetime } from "./default-lock-lifetime";
+import { defaultLockLimit } from "./default-lock-limit";
+import { define } from "./define";
+import { every } from "./every";
+import { jobs } from "./jobs";
+import { lockLimit } from "./lock-limit";
+import { maxConcurrency } from "./max-concurrency";
+import { mongo } from "./mongo";
+import { name } from "./name";
+import { now } from "./now";
+import { processEvery } from "./process-every";
+import { purge } from "./purge";
+import { saveJob } from "./save-job";
+import { schedule } from "./schedule";
+import { sort } from "./sort";
+import { start } from "./start";
+import { stop } from "./stop";
+import { findAndLockNextJob } from "./find-and-lock-next-job";
+import { Job } from "../job";
 
 /**
  * @class Agenda
@@ -107,7 +107,7 @@ class Agenda extends EventEmitter {
 
     this._name = config.name;
     this._processEvery =
-      humanInterval(config.processEvery) ?? humanInterval('5 seconds')!; // eslint-disable-line @typescript-eslint/non-nullable-type-assertion-style
+      humanInterval(config.processEvery) ?? humanInterval("5 seconds")!; // eslint-disable-line @typescript-eslint/non-nullable-type-assertion-style
     this._defaultConcurrency = config.defaultConcurrency || 5;
     this._maxConcurrency = config.maxConcurrency || 20;
     this._defaultLockLimit = config.defaultLockLimit || 0;
@@ -124,14 +124,14 @@ class Agenda extends EventEmitter {
       priority: -1,
       lockedAt: 1,
       nextRunAt: 1,
-      disabled: 1
+      disabled: 1,
     };
 
     this._isLockingOnTheFly = false;
     this._isJobQueueFilling = new Map<string, boolean>();
     this._jobsToLock = [];
     this._ready = new Promise((resolve) => {
-      this.once('ready', resolve);
+      this.once("ready", resolve);
     });
 
     if (config.mongo) {
