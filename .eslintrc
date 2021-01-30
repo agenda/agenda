@@ -1,7 +1,0 @@
-{
-  "extends": ["plugin:@typescript-eslint/recommended", "prettier"],
-  "rules": {
-    "@typescript-eslint/ban-ts-comment": "warn",
-    "prefer-const": "warn"
-  }
-}

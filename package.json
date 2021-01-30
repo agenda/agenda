@@ -76,6 +76,16 @@
     "sinon": "9.2.4",
     "typescript": "4.1.3"
   },
+  "eslintConfig": {
+    "extends": [
+      "plugin:@typescript-eslint/recommended",
+      "prettier"
+    ],
+    "rules": {
+      "@typescript-eslint/ban-ts-comment": "warn",
+      "prefer-const": "warn"
+    }
+  },
   "husky": {
     "hooks": {
       "pre-commit": "lint-staged"
