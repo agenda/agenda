@@ -3,7 +3,7 @@ const priorityMap: Record<string, number> = {
   low: -10,
   normal: 0,
   high: 10,
-  highest: 20
+  highest: 20,
 };
 
 /**
@@ -11,7 +11,7 @@ const priorityMap: Record<string, number> = {
  * @param priority string to parse into number
  */
 export const parsePriority = (priority: string | number): number => {
-  if (typeof priority === 'number') {
+  if (typeof priority === "number") {
     return priority;
   }
 

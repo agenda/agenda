@@ -1,19 +1,19 @@
-import { Job } from '.';
-import * as parser from 'cron-parser';
-import humanInterval from 'human-interval';
-import createDebugger from 'debug';
-import moment from 'moment-timezone';
+import { Job } from ".";
+import * as parser from "cron-parser";
+import humanInterval from "human-interval";
+import createDebugger from "debug";
+import moment from "moment-timezone";
 // @ts-expect-error
-import date from 'date.js';
+import date from "date.js";
 
-const debug = createDebugger('agenda:job');
+const debug = createDebugger("agenda:job");
 
 /**
  * Internal method used to compute next time a job should run and sets the proper values
  * @name Job#computeNextRunAt
  * @function
  */
-export const computeNextRunAt = function(this: Job) {
+export const computeNextRunAt = function (this: Job) {
   const interval = this.attrs.repeatInterval;
   const timezone = this.attrs.repeatTimezone;
   const { repeatAt } = this.attrs;
@@ -33,7 +33,12 @@ export const computeNextRunAt = function(this: Job) {
    * Internal method that computes the interval
    */
   const computeFromInterval = () => {
-    debug('[%s:%s] computing next run via interval [%s]', this.attrs.name, this.attrs._id, interval);
+    debug(
+      "[%s:%s] computing next run via interval [%s]",
+      this.attrs.name,
+      this.attrs._id,
+      interval
+    );
     const dateNow = new Date();
     let lastRun: Date = this.attrs.lastRunAt || dateNow;
     let { startDate, endDate, skipDays } = this.attrs;
@@ -46,7 +51,10 @@ export const computeNextRunAt = function(this: Job) {
     try {
       let cronTime = parser.parseExpression(interval, cronOptions);
       let nextDate: Date | null = cronTime.next().toDate();
-      if (nextDate.getTime() === lastRun.getTime() || nextDate.getTime() <= previousNextRunAt.getTime()) {
+      if (
+        nextDate.getTime() === lastRun.getTime() ||
+        nextDate.getTime() <= previousNextRunAt.getTime()
+      ) {
         // Handle cronTime giving back the same date for the next run time
         cronOptions.currentDate = new Date(lastRun.getTime() + 1000);
         cronTime = parser.parseExpression(interval, cronOptions);
@@ -55,7 +63,9 @@ export const computeNextRunAt = function(this: Job) {
 
       // If start date is present, check if the nextDate should be larger or equal to startDate. If not set startDate as nextDate
       if (startDate !== null) {
-        startDate = moment.tz(moment(startDate).format('YYYY-MM-DD'), timezone).toDate();
+        startDate = moment
+          .tz(moment(startDate).format("YYYY-MM-DD"), timezone)
+          .toDate();
         if (startDate > nextDate) {
           cronOptions.currentDate = startDate;
           cronTime = parser.parseExpression(interval, cronOptions);
@@ -64,41 +74,73 @@ export const computeNextRunAt = function(this: Job) {
       }
 
       // If job has run in the past and skipDays is not null, add skipDays to nextDate
-      if ((dateNow > lastRun) && skipDays !== null) {
+      if (dateNow > lastRun && skipDays !== null) {
         try {
-          nextDate = new Date(nextDate.getTime() + (humanInterval(skipDays) ?? 0));
+          nextDate = new Date(
+            nextDate.getTime() + (humanInterval(skipDays) ?? 0)
+          );
         } catch {}
       }
 
       // If endDate is less than the nextDate, set nextDate to null to stop the job from running further
       if (endDate !== null) {
-        const endDateDate: Date = moment.tz(moment(endDate).format('YYYY-MM-DD'), timezone).toDate();
+        const endDateDate: Date = moment
+          .tz(moment(endDate).format("YYYY-MM-DD"), timezone)
+          .toDate();
         if (nextDate > endDateDate) {
           nextDate = null;
         }
       }
 
       this.attrs.nextRunAt = nextDate;
-      debug('[%s:%s] nextRunAt set to [%s]', this.attrs.name, this.attrs._id, this.attrs.nextRunAt.toISOString());
-    // Either `xo` linter or Node.js 8 stumble on this line if it isn't just ignored
+      debug(
+        "[%s:%s] nextRunAt set to [%s]",
+        this.attrs.name,
+        this.attrs._id,
+        this.attrs.nextRunAt.toISOString()
+      );
+      // Either `xo` linter or Node.js 8 stumble on this line if it isn't just ignored
     } catch {
-      debug('[%s:%s] failed nextRunAt based on interval [%s]', this.attrs.name, this.attrs._id, interval);
+      debug(
+        "[%s:%s] failed nextRunAt based on interval [%s]",
+        this.attrs.name,
+        this.attrs._id,
+        interval
+      );
       // Nope, humanInterval then!
       try {
         if (!this.attrs.lastRunAt && humanInterval(interval)) {
           this.attrs.nextRunAt = lastRun;
-          debug('[%s:%s] nextRunAt set to [%s]', this.attrs.name, this.attrs._id, this.attrs.nextRunAt.toISOString());
+          debug(
+            "[%s:%s] nextRunAt set to [%s]",
+            this.attrs.name,
+            this.attrs._id,
+            this.attrs.nextRunAt.toISOString()
+          );
         } else {
-          this.attrs.nextRunAt = new Date(lastRun.getTime() + (humanInterval(interval) ?? 0));
-          debug('[%s:%s] nextRunAt set to [%s]', this.attrs.name, this.attrs._id, this.attrs.nextRunAt.toISOString());
+          this.attrs.nextRunAt = new Date(
+            lastRun.getTime() + (humanInterval(interval) ?? 0)
+          );
+          debug(
+            "[%s:%s] nextRunAt set to [%s]",
+            this.attrs.name,
+            this.attrs._id,
+            this.attrs.nextRunAt.toISOString()
+          );
         }
-      // Either `xo` linter or Node.js 8 stumble on this line if it isn't just ignored
+        // Either `xo` linter or Node.js 8 stumble on this line if it isn't just ignored
       } catch {}
     } finally {
       if (Number.isNaN(this.attrs.nextRunAt.getTime())) {
         this.attrs.nextRunAt = undefined;
-        debug('[%s:%s] failed to calculate nextRunAt due to invalid repeat interval', this.attrs.name, this.attrs._id);
-        this.fail('failed to calculate nextRunAt due to invalid repeat interval');
+        debug(
+          "[%s:%s] failed to calculate nextRunAt due to invalid repeat interval",
+          this.attrs.name,
+          this.attrs._id
+        );
+        this.fail(
+          "failed to calculate nextRunAt due to invalid repeat interval"
+        );
       }
     }
   };
@@ -114,14 +156,28 @@ export const computeNextRunAt = function(this: Job) {
     const offset = Date.now();
     if (offset === date(repeatAt, offset).getTime()) {
       this.attrs.nextRunAt = undefined;
-      debug('[%s:%s] failed to calculate repeatAt due to invalid format', this.attrs.name, this.attrs._id);
-      this.fail('failed to calculate repeatAt time due to invalid format');
+      debug(
+        "[%s:%s] failed to calculate repeatAt due to invalid format",
+        this.attrs.name,
+        this.attrs._id
+      );
+      this.fail("failed to calculate repeatAt time due to invalid format");
     } else if (nextDate.getTime() === lastRun.getTime()) {
-      this.attrs.nextRunAt = date('tomorrow at ', repeatAt);
-      debug('[%s:%s] nextRunAt set to [%s]', this.attrs.name, this.attrs._id, this.attrs.nextRunAt.toISOString());
+      this.attrs.nextRunAt = date("tomorrow at ", repeatAt);
+      debug(
+        "[%s:%s] nextRunAt set to [%s]",
+        this.attrs.name,
+        this.attrs._id,
+        this.attrs.nextRunAt.toISOString()
+      );
     } else {
       this.attrs.nextRunAt = date(repeatAt);
-      debug('[%s:%s] nextRunAt set to [%s]', this.attrs.name, this.attrs._id, this.attrs.nextRunAt.toISOString());
+      debug(
+        "[%s:%s] nextRunAt set to [%s]",
+        this.attrs.name,
+        this.attrs._id,
+        this.attrs.nextRunAt.toISOString()
+      );
     }
   };
 

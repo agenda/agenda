@@ -1,33 +1,34 @@
 /* globals describe, it */
-'use strict';
+"use strict";
 
-const { MongoClient } = require('mongodb');
-const delay = require('delay');
-const expect = require('expect.js');
+const { MongoClient } = require("mongodb");
+const delay = require("delay");
+const expect = require("expect.js");
 
-const { Job } = require('../dist/job');
-const { Agenda } = require('../dist');
+const { Job } = require("../dist/job");
+const { Agenda } = require("../dist");
 
-const mongoHost = process.env.MONGODB_HOST || 'localhost';
-const mongoPort = process.env.MONGODB_PORT || '27017';
-const agendaDatabase = 'agenda-test';
-const mongoCfg = 'mongodb://' + mongoHost + ':' + mongoPort + '/' + agendaDatabase;
+const mongoHost = process.env.MONGODB_HOST || "localhost";
+const mongoPort = process.env.MONGODB_PORT || "27017";
+const agendaDatabase = "agenda-test";
+const mongoCfg =
+  "mongodb://" + mongoHost + ":" + mongoPort + "/" + agendaDatabase;
 
 function clearJobs(client) {
-  return client.db().collection('agendaJobs').deleteMany({});
+  return client.db().collection("agendaJobs").deleteMany({});
 }
 
-const JOB_NAME = 'dummyJob';
+const JOB_NAME = "dummyJob";
 
-describe('MongoDB connection', () => {
-  it('with useUnifiedTopology option', async() => {
+describe("MongoDB connection", () => {
+  it("with useUnifiedTopology option", async () => {
     let client;
     let agenda;
 
     try {
       client = new MongoClient(mongoCfg, {
         useNewUrlParser: true,
-        useUnifiedTopology: true
+        useUnifiedTopology: true,
       });
 
       await client.connect();

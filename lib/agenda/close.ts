@@ -1,7 +1,7 @@
-import { Agenda } from '.';
-import createDebugger from 'debug';
+import { Agenda } from ".";
+import createDebugger from "debug";
 
-const debug = createDebugger('agenda:close');
+const debug = createDebugger("agenda:close");
 
 /** Close the db and it's underlying connections
  * Only works if agenda was instantiated without preconfigured mongoDb instance.
@@ -14,11 +14,14 @@ const debug = createDebugger('agenda:close');
  *
  * @link https://mongodb.github.io/node-mongodb-native/2.0/api/Db.html#close
  */
-export const close = async function(this: Agenda, option?: { force: boolean }): Promise<Agenda> {
-  debug('close db connection for this agenda instance');
+export const close = async function (
+  this: Agenda,
+  option?: { force: boolean }
+): Promise<Agenda> {
+  debug("close db connection for this agenda instance");
   const closeOptions = {
     force: false,
-    ...option
+    ...option,
   };
   try {
     if (this._db) {
@@ -27,7 +30,7 @@ export const close = async function(this: Agenda, option?: { force: boolean }): 
 
     return this;
   } catch (error: unknown) {
-    debug('error trying to close db connection to');
+    debug("error trying to close db connection to");
     throw error;
   }
 };

@@ -1,4 +1,4 @@
-import { Job } from '.';
+import { Job } from ".";
 
 /**
  * A job is running if:
@@ -9,7 +9,7 @@ import { Job } from '.';
  * @function
  * @returns Whether or not job is running at the moment (true for running)
  */
-export const isRunning = function(this: Job): boolean {
+export const isRunning = function (this: Job): boolean {
   if (!this.attrs.lastRunAt) {
     return false;
   }
@@ -18,7 +18,10 @@ export const isRunning = function(this: Job): boolean {
     return true;
   }
 
-  if (this.attrs.lockedAt && this.attrs.lastRunAt.getTime() > this.attrs.lastFinishedAt.getTime()) {
+  if (
+    this.attrs.lockedAt &&
+    this.attrs.lastRunAt.getTime() > this.attrs.lastFinishedAt.getTime()
+  ) {
     return true;
   }
 

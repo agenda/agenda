@@ -1,4 +1,4 @@
-import { Job } from '.';
+import { Job } from ".";
 
 /**
  * Saves a job into the MongoDB
@@ -6,6 +6,6 @@ import { Job } from '.';
  * @function
  * @returns instance of Job resolved after job is saved or errors
  */
-export const save = function(this: Job) {
+export const save = function (this: Job) {
   return this.agenda.saveJob(this);
 };

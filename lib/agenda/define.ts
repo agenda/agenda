@@ -1,7 +1,7 @@
-import { Agenda } from '.';
-import createDebugger from 'debug';
+import { Agenda } from ".";
+import createDebugger from "debug";
 
-const debug = createDebugger('agenda:define');
+const debug = createDebugger("agenda:define");
 
 /**
  * Setup definition for job
@@ -12,7 +12,12 @@ const debug = createDebugger('agenda:define');
  * @param options options for job to run
  * @param processor function to be called to run actual job
  */
-export const define = function(this: Agenda, name: string, options: any, processor: () => void) {
+export const define = function (
+  this: Agenda,
+  name: string,
+  options: any,
+  processor: () => void
+) {
   if (!processor) {
     processor = options;
     options = {};
@@ -25,7 +30,11 @@ export const define = function(this: Agenda, name: string, options: any, process
     priority: options.priority || 0,
     lockLifetime: options.lockLifetime || this._defaultLockLifetime,
     running: 0,
-    locked: 0
+    locked: 0,
   };
-  debug('job [%s] defined with following options: \n%O', name, this._definitions[name]);
+  debug(
+    "job [%s] defined with following options: \n%O",
+    name,
+    this._definitions[name]
+  );
 };

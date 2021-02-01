@@ -1,4 +1,4 @@
-import { Job } from '../job';
+import { Job } from "../job";
 
 /**
  * @class
@@ -27,7 +27,7 @@ class JobProcessingQueue {
  * Pops and returns last queue element (next job to be processed) without checking concurrency.
  * @returns Next Job to be processed
  */
-JobProcessingQueue.prototype.pop = function(this: JobProcessingQueue) {
+JobProcessingQueue.prototype.pop = function (this: JobProcessingQueue) {
   return this._queue.pop();
 };
 
@@ -35,7 +35,10 @@ JobProcessingQueue.prototype.pop = function(this: JobProcessingQueue) {
  * Inserts job in first queue position
  * @param job job to add to queue
  */
-JobProcessingQueue.prototype.push = function(this: JobProcessingQueue, job: Job) {
+JobProcessingQueue.prototype.push = function (
+  this: JobProcessingQueue,
+  job: Job
+) {
   this._queue.push(job);
 };
 
@@ -45,8 +48,11 @@ JobProcessingQueue.prototype.push = function(this: JobProcessingQueue, job: Job)
  * are even the first jobs to be introduced will have priority
  * @param job job to add to queue
  */
-JobProcessingQueue.prototype.insert = function(this: JobProcessingQueue, job: Job) {
-  const matchIndex = this._queue.findIndex(element => {
+JobProcessingQueue.prototype.insert = function (
+  this: JobProcessingQueue,
+  job: Job
+) {
+  const matchIndex = this._queue.findIndex((element) => {
     if (element.attrs.nextRunAt.getTime() <= job.attrs.nextRunAt.getTime()) {
       if (element.attrs.nextRunAt.getTime() === job.attrs.nextRunAt.getTime()) {
         if (element.attrs.priority >= job.attrs.priority) {
@@ -73,7 +79,10 @@ JobProcessingQueue.prototype.insert = function(this: JobProcessingQueue, job: Jo
  * @param agendaDefinitions job to add to queue
  * @returns Next Job to be processed
  */
-JobProcessingQueue.prototype.returnNextConcurrencyFreeJob = function(this: JobProcessingQueue, agendaDefinitions: any) {
+JobProcessingQueue.prototype.returnNextConcurrencyFreeJob = function (
+  this: JobProcessingQueue,
+  agendaDefinitions: any
+) {
   let next;
   for (next = this._queue.length - 1; next > 0; next -= 1) {
     const def = agendaDefinitions[this._queue[next].attrs.name];
@@ -85,6 +94,4 @@ JobProcessingQueue.prototype.returnNextConcurrencyFreeJob = function(this: JobPr
   return this._queue[next];
 };
 
-export {
-  JobProcessingQueue
-};
+export { JobProcessingQueue };

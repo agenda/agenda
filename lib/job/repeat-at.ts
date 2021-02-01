@@ -1,4 +1,4 @@
-import { Job } from '.';
+import { Job } from ".";
 
 /**
  * Sets a job to repeat at a specific time
@@ -6,7 +6,7 @@ import { Job } from '.';
  * @function
  * @param time time to repeat job at (human readable or number)
  */
-export const repeatAt = function(this: Job, time: string): Job {
+export const repeatAt = function (this: Job, time: string): Job {
   this.attrs.repeatAt = time;
   return this;
 };
