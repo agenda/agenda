@@ -1,5 +1,5 @@
-import { Agenda } from '../agenda';
-import { Job, JobAttributes } from '../job';
+import { Agenda } from "../agenda";
+import { Job, JobAttributes } from "../job";
 
 /**
  * Create Job object from data

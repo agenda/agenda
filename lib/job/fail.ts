@@ -1,7 +1,7 @@
-import createDebugger from 'debug';
-import { Job } from '.';
+import createDebugger from "debug";
+import { Job } from ".";
 
-const debug = createDebugger('agenda:job');
+const debug = createDebugger("agenda:job");
 
 /**
  * Fails the job with a reason (error) specified
@@ -9,7 +9,7 @@ const debug = createDebugger('agenda:job');
  * @function
  * @param reason reason job failed
  */
-export const fail = function(this: Job, reason: string | Error): Job {
+export const fail = function (this: Job, reason: string | Error): Job {
   if (reason instanceof Error) {
     reason = reason.message;
   }
@@ -19,6 +19,11 @@ export const fail = function(this: Job, reason: string | Error): Job {
   const now = new Date();
   this.attrs.failedAt = now;
   this.attrs.lastFinishedAt = now;
-  debug('[%s:%s] fail() called [%d] times so far', this.attrs.name, this.attrs._id, this.attrs.failCount);
+  debug(
+    "[%s:%s] fail() called [%d] times so far",
+    this.attrs.name,
+    this.attrs._id,
+    this.attrs.failCount
+  );
   return this;
 };

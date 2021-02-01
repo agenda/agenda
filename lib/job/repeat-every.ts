@@ -1,4 +1,4 @@
-import { Job } from '.';
+import { Job } from ".";
 
 export interface JobOptions {
   timezone?: string;
@@ -15,7 +15,11 @@ export interface JobOptions {
  * @param interval repeat every X
  * @param options options to use for job
  */
-export const repeatEvery = function(this: Job, interval: string, options: JobOptions = {}): Job {
+export const repeatEvery = function (
+  this: Job,
+  interval: string,
+  options: JobOptions = {}
+): Job {
   this.attrs.repeatInterval = interval;
   this.attrs.repeatTimezone = options.timezone ? options.timezone : null;
   // Following options are added to handle start day

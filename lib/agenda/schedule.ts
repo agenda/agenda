@@ -55,7 +55,7 @@ export const schedule = function (
       names.map((name) => createJobList.push(createJob(when, name, data)));
       debug("Agenda.schedule()::createJobs() -> all jobs created successfully");
       return Promise.all(createJobList);
-    } catch (error: unknown) {
+    } catch (error) {
       debug(
         "Agenda.schedule()::createJobs() -> error creating one or more of the jobs"
       );

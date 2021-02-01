@@ -24,7 +24,7 @@ export const now = async function (
     await job.save();
 
     return job;
-  } catch (error: unknown) {
+  } catch (error) {
     debug("error trying to create a job for this exact moment");
     throw error;
   }

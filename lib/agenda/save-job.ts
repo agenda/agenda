@@ -160,7 +160,7 @@ export const saveJob = async function (this: Agenda, job: Job): Promise<any> {
     );
     const result = await this._collection.insertOne(props);
     return await processDbResult.call(this, job, result);
-  } catch (error: unknown) {
+  } catch (error) {
     debug("processDbResult() received an error, job was not updated/created");
     throw error;
   }
