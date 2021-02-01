@@ -2,7 +2,6 @@ import { Job } from ".";
 import * as parser from "cron-parser";
 import humanInterval from "human-interval";
 import createDebugger from "debug";
-// @ts-expect-error
 import moment from "moment-timezone";
 // @ts-expect-error
 import date from "date.js";
