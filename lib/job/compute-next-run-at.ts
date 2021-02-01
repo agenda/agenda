@@ -2,7 +2,6 @@ import { Job } from ".";
 import * as parser from "cron-parser";
 import humanInterval from "human-interval";
 import createDebugger from "debug";
-// @ts-expect-error
 import moment from "moment-timezone";
 // @ts-expect-error
 import date from "date.js";
@@ -67,7 +66,6 @@ export const computeNextRunAt = function (this: Job) {
         startDate = moment
           .tz(moment(startDate).format("YYYY-MM-DD"), timezone!)
           .toDate();
-        // @ts-expect-error
         if (startDate > nextDate) {
           cronOptions.currentDate = startDate;
           cronTime = parser.parseExpression(interval!, cronOptions);
