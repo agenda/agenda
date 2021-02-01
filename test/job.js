@@ -26,8 +26,8 @@ const clearJobs = () => {
   return mongoDb.collection("agendaJobs").deleteMany({});
 };
 
-// Slow timeouts for Travis
-const jobTimeout = process.env.TRAVIS ? 2500 : 500;
+// Slow timeouts for CI
+const jobTimeout = 500;
 const jobType = "do work";
 const jobProcessor = () => {};
 
