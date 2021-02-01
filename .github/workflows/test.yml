@@ -1,0 +1,35 @@
+name: Run Test
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [10.x, 12.x, 14.x]
+        mongodb-version: [3.4, 3.6, 4.0, 4.2, 4.4]
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v2
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Start MongoDB
+        uses: supercharge/mongodb-github-action@1.3.0
+        with:
+          mongodb-version: ${{ matrix.mongodb-version }}
+
+      - name: Install Packages
+        run: yarn install
+
+      - name: Run Lint
+        run: yarn lint
+
+      - name: Test
+        run: yarn test
+        env:
+          CI: true
+
