@@ -6,7 +6,6 @@
 </p>
 <p align="center">
   <a href="https://slackin-ekwifvcwbr.now.sh/"><img src="https://slackin-ekwifvcwbr.now.sh/badge.svg" alt="Slack Status"></a>
-  <a href="http://travis-ci.org/agenda/agenda"><img src="https://api.travis-ci.org/agenda/agenda.svg?branch=master" alt="Build Status"></a>
   <a href="https://david-dm.org/agenda/agenda"><img src="https://david-dm.org/agenda/agenda/status.svg" alt="dependencies Status"></a>
   <a href="https://david-dm.org/agenda/agenda?type=dev"><img src="https://david-dm.org/agenda/agenda/dev-status.svg" alt="devDependencies Status"></a>
   <a href="https://coveralls.io/github/agenda/agenda?branch=master"><img src="https://coveralls.io/repos/github/agenda/agenda/badge.svg?branch=master" alt="Coverage Status"></a>
@@ -23,10 +22,9 @@
 - Scheduling with configurable priority, concurrency, and repeating.
 - Scheduling via cron or human readable syntax.
 - Event backed job queue that you can hook into.
-- [Agendash2](https://github.com/agenda/agendash-v2): optional standalone web-interface.
 - [Agenda-rest](https://github.com/agenda/agenda-rest): optional standalone REST API.
 - [Inversify-agenda](https://github.com/lautarobock/inversify-agenda) - Some utilities for the development of agenda workers with Inversify.
-- [Agendash](https://github.com/agenda/agendash): optional standalone web-interface (legacy, not maintained anymore).
+- [Agendash](https://github.com/agenda/agendash): optional standalone web-interface.
 
 ### Feature Comparison
 
@@ -35,22 +33,22 @@ better suits your needs.
 
 Agenda is great if you need a MongoDB job scheduler, but try **[Bree](https://jobscheduler.net)** if you need something simpler (built by a previous maintainer).
 
-| Feature         | Bull          | Bee | Agenda |
-| :-------------  |:-------------:|:---:|:------:|
-| Backend         | redis         |redis| mongo  |
-| Priorities      | ✓             |     |   ✓    |
-| Concurrency     | ✓             |  ✓  |   ✓    |
-| Delayed jobs    | ✓             |     |   ✓    |
-| Global events   | ✓             |     |        |
-| Rate Limiter    | ✓             |     |        |
-| Pause/Resume    | ✓             |     |        |
-| Sandboxed worker| ✓             |     |        |
-| Repeatable jobs | ✓             |     |   ✓    |
-| Atomic ops      | ✓             |  ✓  |        |
-| Persistence     | ✓             |  ✓  |   ✓    |
-| UI              | ✓             |     |   ✓    |
-| REST API        |               |     |   ✓    |
-| Optimized for   | Jobs / Messages | Messages | Jobs |
+| Feature          |      Bull       |   Bee    | Agenda |
+| :--------------- | :-------------: | :------: | :----: |
+| Backend          |      redis      |  redis   | mongo  |
+| Priorities       |        ✓        |          |   ✓    |
+| Concurrency      |        ✓        |    ✓     |   ✓    |
+| Delayed jobs     |        ✓        |          |   ✓    |
+| Global events    |        ✓        |          |        |
+| Rate Limiter     |        ✓        |          |        |
+| Pause/Resume     |        ✓        |          |        |
+| Sandboxed worker |        ✓        |          |        |
+| Repeatable jobs  |        ✓        |          |   ✓    |
+| Atomic ops       |        ✓        |    ✓     |        |
+| Persistence      |        ✓        |    ✓     |   ✓    |
+| UI               |        ✓        |          |   ✓    |
+| REST API         |                 |          |   ✓    |
+| Optimized for    | Jobs / Messages | Messages |  Jobs  |
 
 _Kudos for making the comparison chart goes to [Bull](https://www.npmjs.com/package/bull#feature-comparison) maintainers._
 
@@ -62,13 +60,12 @@ Install via NPM
 
 You will also need a working [Mongo](https://www.mongodb.com/) database (v3) to point it to.
 
-
 # Example Usage
 
 ```js
-const mongoConnectionString = 'mongodb://127.0.0.1/agenda';
+const mongoConnectionString = "mongodb://127.0.0.1/agenda";
 
-const agenda = new Agenda({db: {address: mongoConnectionString}});
+const agenda = new Agenda({ db: { address: mongoConnectionString } });
 
 // Or override the default collection name:
 // const agenda = new Agenda({db: {address: mongoConnectionString, collection: 'jobCollectionName'}});
@@ -79,42 +76,51 @@ const agenda = new Agenda({db: {address: mongoConnectionString}});
 // or pass in an existing mongodb-native MongoClient instance
 // const agenda = new Agenda({mongo: myMongoClient});
 
-agenda.define('delete old users', async job => {
-  await User.remove({lastLogIn: {$lt: twoDaysAgo}});
+agenda.define("delete old users", async (job) => {
+  await User.remove({ lastLogIn: { $lt: twoDaysAgo } });
 });
 
-(async function() { // IIFE to give access to async/await
+(async function () {
+  // IIFE to give access to async/await
   await agenda.start();
 
-  await agenda.every('3 minutes', 'delete old users');
+  await agenda.every("3 minutes", "delete old users");
 
   // Alternatively, you could also do:
-  await agenda.every('*/3 * * * *', 'delete old users');
+  await agenda.every("*/3 * * * *", "delete old users");
 })();
 ```
 
 ```js
-agenda.define('send email report', {priority: 'high', concurrency: 10}, async job => {
-  const {to} = job.attrs.data;
-  await emailClient.send({
-    to,
-    from: 'example@example.com',
-    subject: 'Email Report',
-    body: '...'
+agenda.define(
+  "send email report",
+  { priority: "high", concurrency: 10 },
+  async (job) => {
+    const { to } = job.attrs.data;
+    await emailClient.send({
+      to,
+      from: "example@example.com",
+      subject: "Email Report",
+      body: "...",
+    });
+  }
+);
+
+(async function () {
+  await agenda.start();
+  await agenda.schedule("in 20 minutes", "send email report", {
+    to: "admin@example.com",
   });
-});
-
-(async function() {
-  await agenda.start();
-  await agenda.schedule('in 20 minutes', 'send email report', {to: 'admin@example.com'});
 })();
 ```
 
 ```js
-(async function() {
-  const weeklyReport = agenda.create('send email report', {to: 'example@example.com'});
+(async function () {
+  const weeklyReport = agenda.create("send email report", {
+    to: "example@example.com",
+  });
   await agenda.start();
-  await weeklyReport.repeatEvery('1 week').save();
+  await weeklyReport.repeatEvery("1 week").save();
 })();
 ```
 
@@ -124,6 +130,7 @@ Agenda's basic control structure is an instance of an agenda. Agenda's are
 mapped to a database collection and load the jobs from within.
 
 ## Table of Contents
+
 - [Configuring an agenda](#configuring-an-agenda)
 - [Agenda Events](#agenda-events)
 - [Defining job processors](#defining-job-processors)
@@ -140,6 +147,7 @@ mapped to a database collection and load the jobs from within.
 - [Acknowledgements](#acknowledgements)
 
 ## Configuring an agenda
+
 All configuration methods are chainable, meaning you can do something like:
 
 ```js
@@ -156,12 +164,11 @@ Agenda uses [Human Interval](http://github.com/rschmukler/human-interval) for sp
 
 More sophisticated examples
 
-
 ```js
-agenda.processEvery('one minute');
-agenda.processEvery('1.5 minutes');
-agenda.processEvery('3 days and 4 hours');
-agenda.processEvery('3 days, 4 hours and 36 seconds');
+agenda.processEvery("one minute");
+agenda.processEvery("1.5 minutes");
+agenda.processEvery("3 days and 4 hours");
+agenda.processEvery("3 days, 4 hours and 36 seconds");
 ```
 
 ### database(url, [collectionName])
@@ -170,13 +177,15 @@ Specifies the database at the `url` specified. If no collection name is given,
 `agendaJobs` is used.
 
 ```js
-agenda.database('localhost:27017/agenda-test', 'agendaJobs');
+agenda.database("localhost:27017/agenda-test", "agendaJobs");
 ```
 
 You can also specify it during instantiation.
 
 ```js
-const agenda = new Agenda({db: {address: 'localhost:27017/agenda-test', collection: 'agendaJobs'}});
+const agenda = new Agenda({
+  db: { address: "localhost:27017/agenda-test", collection: "agendaJobs" },
+});
 ```
 
 Agenda will emit a `ready` event (see [Agenda Events](#agenda-events)) when properly connected to the database.
@@ -191,8 +200,9 @@ database. You can instead use `.database` to have agenda handle connecting for y
 You can also specify it during instantiation:
 
 ```js
-const agenda = new Agenda({mongo: mongoClientInstance.db('agenda-test')});
+const agenda = new Agenda({ mongo: mongoClientInstance.db("agenda-test") });
 ```
+
 Note that MongoClient.connect() returns a mongoClientInstance since [node-mongodb-native 3.0.0](https://github.com/mongodb/node-mongodb-native/blob/master/CHANGES_3.0.0.md), while it used to return a dbInstance that could then be directly passed to agenda.
 
 ### name(name)
@@ -202,13 +212,13 @@ Useful if you have multiple job processors (agendas) and want to see which
 job queue last ran the job.
 
 ```js
-agenda.name(os.hostname + '-' + process.pid);
+agenda.name(os.hostname + "-" + process.pid);
 ```
 
 You can also specify it during instantiation
 
 ```js
-const agenda = new Agenda({name: 'test queue'});
+const agenda = new Agenda({ name: "test queue" });
 ```
 
 ### processEvery(interval)
@@ -228,13 +238,13 @@ that haven't run will still be locked, meaning that you may have to wait for the
 lock to expire. By default it is `'5 seconds'`.
 
 ```js
-agenda.processEvery('1 minute');
+agenda.processEvery("1 minute");
 ```
 
 You can also specify it during instantiation
 
 ```js
-const agenda = new Agenda({processEvery: '30 seconds'});
+const agenda = new Agenda({ processEvery: "30 seconds" });
 ```
 
 ### maxConcurrency(number)
@@ -249,7 +259,7 @@ agenda.maxConcurrency(20);
 You can also specify it during instantiation
 
 ```js
-const agenda = new Agenda({maxConcurrency: 20});
+const agenda = new Agenda({ maxConcurrency: 20 });
 ```
 
 ### defaultConcurrency(number)
@@ -264,7 +274,7 @@ agenda.defaultConcurrency(5);
 You can also specify it during instantiation
 
 ```js
-const agenda = new Agenda({defaultConcurrency: 5});
+const agenda = new Agenda({ defaultConcurrency: 5 });
 ```
 
 ### lockLimit(number)
@@ -278,7 +288,7 @@ agenda.lockLimit(0);
 You can also specify it during instantiation
 
 ```js
-const agenda = new Agenda({lockLimit: 0});
+const agenda = new Agenda({ lockLimit: 0 });
 ```
 
 ### defaultLockLimit(number)
@@ -292,7 +302,7 @@ agenda.defaultLockLimit(0);
 You can also specify it during instantiation
 
 ```js
-const agenda = new Agenda({defaultLockLimit: 0});
+const agenda = new Agenda({ defaultLockLimit: 0 });
 ```
 
 ### defaultLockLifetime(number)
@@ -312,7 +322,7 @@ agenda.defaultLockLifetime(10000);
 You can also specify it during instantiation
 
 ```js
-const agenda = new Agenda({defaultLockLifetime: 10000});
+const agenda = new Agenda({ defaultLockLifetime: 10000 });
 ```
 
 ### sort(query)
@@ -326,8 +336,8 @@ By default it is `{ nextRunAt: 1, priority: -1 }`, which obeys a first in first 
 An instance of an agenda will emit the following events:
 
 - `ready` - called when Agenda mongo connection is successfully opened and indices created.
-        If you're passing agenda an existing connection, you shouldn't need to listen for this, as `agenda.start()` will not resolve until indices have been created.
-        If you're using the `db` options, or call `database`, then you may still need to listen for the `ready` event before saving jobs. `agenda.start()` will still wait for the connection to be opened.
+  If you're passing agenda an existing connection, you shouldn't need to listen for this, as `agenda.start()` will not resolve until indices have been created.
+  If you're using the `db` options, or call `database`, then you may still need to listen for the `ready` event before saving jobs. `agenda.start()` will still wait for the connection to be opened.
 - `error` - called when Agenda mongo connection process has thrown an error
 
 ```js
@@ -342,7 +352,7 @@ Before you can use a job, you must define its processing behavior.
 
 Defines a job with the name of `jobName`. When a job of `jobName` gets run, it
 will be passed to `handler(job, done)`. To maintain asynchronous behavior, you may
-either provide a Promise-returning function in `handler` *or* provide `done` as a
+either provide a Promise-returning function in `handler` _or_ provide `done` as a
 second parameter to `handler`. If `done` is specified in the function signature, you
 must call `done()` when you are processing the job. If your function is
 synchronous or returns a Promise, you may omit `done` from the signature.
@@ -353,12 +363,13 @@ the following:
 - `concurrency`: `number` maximum number of that job that can be running at once (per instance of agenda)
 - `lockLimit`: `number` maximum number of that job that can be locked at once (per instance of agenda)
 - `lockLifetime`: `number` interval in ms of how long the job stays locked for (see [multiple job processors](#multiple-job-processors) for more info).
-A job will automatically unlock once a returned promise resolves/rejects (or if `done` is specified in the signature and `done()` is called).
+  A job will automatically unlock once a returned promise resolves/rejects (or if `done` is specified in the signature and `done()` is called).
 - `priority`: `(lowest|low|normal|high|highest|number)` specifies the priority
   of the job. Higher priority jobs will run first. See the priority mapping
   below
 
 Priority mapping:
+
 ```
 {
   highest: 20,
@@ -370,8 +381,9 @@ Priority mapping:
 ```
 
 Async Job:
+
 ```js
-agenda.define('some long running job', async job => {
+agenda.define("some long running job", async (job) => {
   const data = await doSomelengthyTask();
   await formatThatData(data);
   await sendThatData(data);
@@ -379,9 +391,10 @@ agenda.define('some long running job', async job => {
 ```
 
 Async Job (using `done`):
+
 ```js
-agenda.define('some long running job', (job, done) => {
-  doSomelengthyTask(data => {
+agenda.define("some long running job", (job, done) => {
+  doSomelengthyTask((data) => {
     formatThatData(data);
     sendThatData(data);
     done();
@@ -392,13 +405,12 @@ agenda.define('some long running job', (job, done) => {
 Sync Job:
 
 ```js
-agenda.define('say hello', job => {
-  console.log('Hello!');
+agenda.define("say hello", (job) => {
+  console.log("Hello!");
 });
 ```
 
 `define()` acts like an assignment: if `define(jobName, ...)` is called multiple times (e.g. every time your script starts), the definition in the last call will overwrite the previous one. Thus, if you `define` the `jobName` only once in your code, it's safe for that call to execute multiple times.
-
 
 ## Creating Jobs
 
@@ -421,20 +433,24 @@ In order to use this argument, `data` must also be specified.
 Returns the `job`.
 
 ```js
-agenda.define('printAnalyticsReport', async job => {
+agenda.define("printAnalyticsReport", async (job) => {
   const users = await User.doSomethingReallyIntensive();
   processUserData(users);
-  console.log('I print a report!');
+  console.log("I print a report!");
 });
 
-agenda.every('15 minutes', 'printAnalyticsReport');
+agenda.every("15 minutes", "printAnalyticsReport");
 ```
 
 Optionally, `name` could be array of job names, which is convenient for scheduling
 different jobs for same `interval`.
 
 ```js
-agenda.every('15 minutes', ['printAnalyticsReport', 'sendNotifications', 'updateUserRecords']);
+agenda.every("15 minutes", [
+  "printAnalyticsReport",
+  "sendNotifications",
+  "updateUserRecords",
+]);
 ```
 
 In this case, `every` returns array of `jobs`.
@@ -450,13 +466,17 @@ under `job.attrs.data`.
 Returns the `job`.
 
 ```js
-agenda.schedule('tomorrow at noon', 'printAnalyticsReport', {userCount: 100});
+agenda.schedule("tomorrow at noon", "printAnalyticsReport", { userCount: 100 });
 ```
 
 Optionally, `name` could be array of job names, similar to the `every` method.
 
 ```js
-agenda.schedule('tomorrow at noon', ['printAnalyticsReport', 'sendNotifications', 'updateUserRecords']);
+agenda.schedule("tomorrow at noon", [
+  "printAnalyticsReport",
+  "sendNotifications",
+  "updateUserRecords",
+]);
 ```
 
 In this case, `schedule` returns array of `jobs`.
@@ -471,29 +491,33 @@ under `job.attrs.data`.
 Returns the `job`.
 
 ```js
-agenda.now('do the hokey pokey');
+agenda.now("do the hokey pokey");
 ```
 
 ### create(jobName, data)
 
-Returns an instance of a `jobName` with `data`. This does *NOT* save the job in
+Returns an instance of a `jobName` with `data`. This does _NOT_ save the job in
 the database. See below to learn how to manually work with jobs.
 
 ```js
-const job = agenda.create('printAnalyticsReport', {userCount: 100});
+const job = agenda.create("printAnalyticsReport", { userCount: 100 });
 await job.save();
-console.log('Job successfully saved');
+console.log("Job successfully saved");
 ```
 
 ## Managing Jobs
-
 
 ### jobs(mongodb-native query, mongodb-native sort, mongodb-native limit, mongodb-native skip)
 
 Lets you query (then sort, limit and skip the result) all of the jobs in the agenda job's database. These are full [mongodb-native](https://github.com/mongodb/node-mongodb-native) `find`, `sort`, `limit` and `skip` commands. See mongodb-native's documentation for details.
 
 ```js
-const jobs = await agenda.jobs({name: 'printAnalyticsReport'}, {data:-1}, 3, 1);
+const jobs = await agenda.jobs(
+  { name: "printAnalyticsReport" },
+  { data: -1 },
+  3,
+  1
+);
 // Work with jobs (see below)
 ```
 
@@ -502,7 +526,7 @@ const jobs = await agenda.jobs({name: 'printAnalyticsReport'}, {data:-1}, 3, 1);
 Cancels any jobs matching the passed mongodb-native query, and removes them from the database. Returns a Promise resolving to the number of cancelled jobs, or rejecting on error.
 
 ```js
-const numRemoved = await agenda.cancel({name: 'printAnalyticsReport'});
+const numRemoved = await agenda.cancel({ name: "printAnalyticsReport" });
 ```
 
 This functionality can also be achieved by first retrieving all the jobs from the database using `agenda.jobs()`, looping through the resulting array and calling `job.remove()` on each. It is however preferable to use `agenda.cancel()` for this use case, as this ensures the operation is atomic.
@@ -511,7 +535,7 @@ This functionality can also be achieved by first retrieving all the jobs from th
 
 Removes all jobs in the database without defined behaviors. Useful if you change a definition name and want to remove old jobs. Returns a Promise resolving to the number of removed jobs, or rejecting on error.
 
-*IMPORTANT:* Do not run this before you finish defining all of your jobs. If you do, you will nuke your database of jobs.
+_IMPORTANT:_ Do not run this before you finish defining all of your jobs. If you do, you will nuke your database of jobs.
 
 ```js
 const numRemoved = await agenda.purge();
@@ -526,7 +550,7 @@ run them. You can also stop the queue.
 ### start
 
 Starts the job queue processing, checking [`processEvery`](#processeveryinterval) time to see if there
-are new jobs. Must be called *after* `processEvery`, and *before* any job scheduling (e.g. `every`).
+are new jobs. Must be called _after_ `processEvery`, and _before_ any job scheduling (e.g. `every`).
 
 ### stop
 
@@ -542,8 +566,8 @@ async function graceful() {
   process.exit(0);
 }
 
-process.on('SIGTERM', graceful);
-process.on('SIGINT' , graceful);
+process.on("SIGTERM", graceful);
+process.on("SIGINT", graceful);
 ```
 
 ### close(force)
@@ -558,7 +582,6 @@ Read more from [Node.js MongoDB Driver API](https://mongodb.github.io/node-mongo
 await agenda.close({ force: true });
 ```
 
-
 ## Multiple job processors
 
 Sometimes you may want to have multiple node instances / machines process from
@@ -569,7 +592,7 @@ You can configure the locking mechanism by specifying `lockLifetime` as an
 interval when defining the job.
 
 ```js
-agenda.define('someJob', {lockLifetime: 10000}, (job, cb) => {
+agenda.define("someJob", { lockLifetime: 10000 }, (job, cb) => {
   // Do something in 10 seconds or less...
 });
 ```
@@ -588,7 +611,6 @@ specified in the signature and `done()` is called), it will automatically unlock
 
 A job instance has many instance methods. All mutating methods must be followed
 with a call to `await job.save()` in order to persist the changes to the database.
-
 
 ### repeatEvery(interval, [options])
 
@@ -609,20 +631,20 @@ Specifies an `interval` on which the job should repeat. The job runs at the time
 `options.skipDays`: `humand readable string` ('2 days'). After each run, it will skip the duration of 'skipDays'
 
 ```js
-job.repeatEvery('10 minutes');
+job.repeatEvery("10 minutes");
 await job.save();
 ```
 
 ```js
-job.repeatEvery('3 minutes', {
-  skipImmediate: true
+job.repeatEvery("3 minutes", {
+  skipImmediate: true,
 });
 await job.save();
 ```
 
 ```js
-job.repeatEvery('0 6 * * *', {
-  timezone: 'America/New_York'
+job.repeatEvery("0 6 * * *", {
+  timezone: "America/New_York",
 });
 await job.save();
 ```
@@ -632,7 +654,7 @@ await job.save();
 Specifies a `time` when the job should repeat. [Possible values](https://github.com/matthewmueller/date#examples)
 
 ```js
-job.repeatAt('3:30pm');
+job.repeatAt("3:30pm");
 await job.save();
 ```
 
@@ -641,7 +663,7 @@ await job.save();
 Specifies the next `time` at which the job should run.
 
 ```js
-job.schedule('tomorrow at 6pm');
+job.schedule("tomorrow at 6pm");
 await job.save();
 ```
 
@@ -651,7 +673,7 @@ Specifies the `priority` weighting of the job. Can be a number or a string from
 the above priority table.
 
 ```js
-job.priority('low');
+job.priority("low");
 await job.save();
 ```
 
@@ -665,11 +687,11 @@ the following:
 - `insertOnly`: `boolean` will prevent any properties from persisting if the job already exists. Defaults to false.
 
 ```js
-job.unique({'data.type': 'active', 'data.userId': '123', nextRunAt: date});
+job.unique({ "data.type": "active", "data.userId": "123", nextRunAt: date });
 await job.save();
 ```
 
-*IMPORTANT:* To [guarantee uniqueness](https://docs.mongodb.com/manual/reference/method/db.collection.update/#use-unique-indexes) as well as avoid high CPU usage by MongoDB make sure to create a unique index on the used fields, like `name`, `data.type` and `data.userId` for the example above.
+_IMPORTANT:_ To [guarantee uniqueness](https://docs.mongodb.com/manual/reference/method/db.collection.update/#use-unique-indexes) as well as avoid high CPU usage by MongoDB make sure to create a unique index on the used fields, like `name`, `data.type` and `data.userId` for the example above.
 
 ### fail(reason)
 
@@ -679,9 +701,9 @@ Optionally, `reason` can be an error, in which case `job.attrs.failReason` will
 be set to `error.message`
 
 ```js
-job.fail('insufficient disk space');
+job.fail("insufficient disk space");
 // or
-job.fail(new Error('insufficient disk space'));
+job.fail(new Error("insufficient disk space"));
 await job.save();
 ```
 
@@ -692,7 +714,7 @@ you never need to call this manually.
 
 ```js
 job.run((err, job) => {
-  console.log('I don\'t know why you would need to do this...');
+  console.log("I don't know why you would need to do this...");
 });
 ```
 
@@ -703,9 +725,9 @@ Saves the `job.attrs` into the database. Returns a Promise resolving to a Job in
 ```js
 try {
   await job.save();
-  console.log('Successfully saved job to collection');
+  console.log("Successfully saved job to collection");
 } catch (e) {
-  console.error('Error saving job to collection');
+  console.error("Error saving job to collection");
 }
 ```
 
@@ -716,9 +738,9 @@ Removes the `job` from the database. Returns a Promise resolving to the number o
 ```js
 try {
   await job.remove();
-  console.log('Successfully removed job from collection');
+  console.log("Successfully removed job from collection");
 } catch (e) {
-  console.error('Error removing job from collection');
+  console.error("Error removing job from collection");
 }
 ```
 
@@ -737,7 +759,7 @@ when you have very long running jobs. The call returns a promise that resolves
 when the job's lock has been renewed.
 
 ```js
-agenda.define('super long job', async job => {
+agenda.define("super long job", async (job) => {
   await doSomeLongTask();
   await job.touch();
   await doAnotherLongTask();
@@ -754,8 +776,8 @@ An instance of an agenda will emit the following events:
 - `start:job name` - called just before the specified job starts
 
 ```js
-agenda.on('start', job => {
-  console.log('Job %s starting', job.attrs.name);
+agenda.on("start", (job) => {
+  console.log("Job %s starting", job.attrs.name);
 });
 ```
 
@@ -763,7 +785,7 @@ agenda.on('start', job => {
 - `complete:job name` - called when a job finishes, regardless of if it succeeds or fails
 
 ```js
-agenda.on('complete', job => {
+agenda.on("complete", (job) => {
   console.log(`Job ${job.attrs.name} finished`);
 });
 ```
@@ -772,7 +794,7 @@ agenda.on('complete', job => {
 - `success:job name` - called when a job finishes successfully
 
 ```js
-agenda.on('success:send email', job => {
+agenda.on("success:send email", (job) => {
   console.log(`Sent Email Successfully to ${job.attrs.data.to}`);
 });
 ```
@@ -781,7 +803,7 @@ agenda.on('success:send email', job => {
 - `fail:job name` - called when a job throws an error
 
 ```js
-agenda.on('fail:send email', (err, job) => {
+agenda.on("fail:send email", (err, job) => {
   console.log(`Job failed with error: ${err.message}`);
 });
 ```
@@ -809,7 +831,6 @@ If you have multiple instances of agenda processing the same job definition with
 Agenda doesn't have a preferred project structure and leaves it to the user to
 choose how they would like to use it. That being said, you can check out the
 [example project structure](#example-project-structure) below.
-
 
 ### Can I Donate?
 
@@ -841,11 +862,11 @@ guaranteed persistence.
 Ultimately Agenda can work from a single job queue across multiple machines, node processes, or forks. If you are interested in having more than one worker, [Bars3s](http://github.com/bars3s) has written up a fantastic example of how one might do it:
 
 ```js
-const cluster = require('cluster');
-const os = require('os');
+const cluster = require("cluster");
+const os = require("os");
 
-const httpServer = require('./app/http-server');
-const jobWorker = require('./app/job-worker');
+const httpServer = require("./app/http-server");
+const jobWorker = require("./app/job-worker");
 
 const jobWorkers = [];
 const webWorkers = [];
@@ -858,15 +879,19 @@ if (cluster.isMaster) {
     addWebWorker();
   }
 
-  cluster.on('exit', (worker, code, signal) => {
+  cluster.on("exit", (worker, code, signal) => {
     if (jobWorkers.indexOf(worker.id) !== -1) {
-      console.log(`job worker ${worker.process.pid} exited (signal: ${signal}). Trying to respawn...`);
+      console.log(
+        `job worker ${worker.process.pid} exited (signal: ${signal}). Trying to respawn...`
+      );
       removeJobWorker(worker.id);
       addJobWorker();
     }
 
     if (webWorkers.indexOf(worker.id) !== -1) {
-      console.log(`http worker ${worker.process.pid} exited (signal: ${signal}). Trying to respawn...`);
+      console.log(
+        `http worker ${worker.process.pid} exited (signal: ${signal}). Trying to respawn...`
+      );
       removeWebWorker(worker.id);
       addWebWorker();
     }
@@ -886,11 +911,11 @@ if (cluster.isMaster) {
 }
 
 function addWebWorker() {
-  webWorkers.push(cluster.fork({web: 1}).id);
+  webWorkers.push(cluster.fork({ web: 1 }).id);
 }
 
 function addJobWorker() {
-  jobWorkers.push(cluster.fork({job: 1}).id);
+  jobWorkers.push(cluster.fork({ job: 1 }).id);
 }
 
 function removeWebWorker(id) {
@@ -941,16 +966,20 @@ lib/
 Sample job processor (eg. `jobs/email.js`)
 
 ```js
-let email = require('some-email-lib'),
-  User = require('../models/user-model.js');
+let email = require("some-email-lib"),
+  User = require("../models/user-model.js");
 
-module.exports = function(agenda) {
-  agenda.define('registration email', async job => {
+module.exports = function (agenda) {
+  agenda.define("registration email", async (job) => {
     const user = await User.get(job.attrs.data.userId);
-    await email(user.email(), 'Thanks for registering', 'Thanks for registering ' + user.name());
+    await email(
+      user.email(),
+      "Thanks for registering",
+      "Thanks for registering " + user.name()
+    );
   });
 
-  agenda.define('reset password', async job => {
+  agenda.define("reset password", async (job) => {
     // Etc
   });
 
@@ -959,17 +988,20 @@ module.exports = function(agenda) {
 ```
 
 lib/agenda.js
-```js
-const Agenda = require('agenda');
 
-const connectionOpts = {db: {address: 'localhost:27017/agenda-test', collection: 'agendaJobs'}};
+```js
+const Agenda = require("agenda");
+
+const connectionOpts = {
+  db: { address: "localhost:27017/agenda-test", collection: "agendaJobs" },
+};
 
 const agenda = new Agenda(connectionOpts);
 
-const jobTypes = process.env.JOB_TYPES ? process.env.JOB_TYPES.split(',') : [];
+const jobTypes = process.env.JOB_TYPES ? process.env.JOB_TYPES.split(",") : [];
 
-jobTypes.forEach(type => {
-  require('./jobs/' + type)(agenda);
+jobTypes.forEach((type) => {
+  require("./jobs/" + type)(agenda);
 });
 
 if (jobTypes.length) {
@@ -980,45 +1012,51 @@ module.exports = agenda;
 ```
 
 lib/controllers/user-controller.js
+
 ```js
 let app = express(),
-  User = require('../models/user-model'),
-  agenda = require('../worker.js');
+  User = require("../models/user-model"),
+  agenda = require("../worker.js");
 
-app.post('/users', (req, res, next) => {
+app.post("/users", (req, res, next) => {
   const user = new User(req.body);
-  user.save(err => {
+  user.save((err) => {
     if (err) {
       return next(err);
     }
-    agenda.now('registration email', {userId: user.primary()});
+    agenda.now("registration email", { userId: user.primary() });
     res.send(201, user.toJson());
   });
 });
 ```
 
 worker.js
+
 ```js
-require('./lib/agenda.js');
+require("./lib/agenda.js");
 ```
 
 Now you can do the following in your project:
+
 ```bash
 node server.js
 ```
 
 Fire up an instance with no `JOB_TYPES`, giving you the ability to process jobs,
 but not wasting resources processing jobs.
+
 ```bash
 JOB_TYPES=email node server.js
 ```
 
 Allow your http server to process email jobs.
+
 ```bash
 JOB_TYPES=email node worker.js
 ```
 
 Fire up an instance that processes email jobs.
+
 ```bash
 JOB_TYPES=video-processing,image-processing node worker.js
 ```
@@ -1032,6 +1070,7 @@ If you think you have encountered a bug, please feel free to report it here:
 [Submit Issue](https://github.com/agenda/agenda/issues/new)
 
 Please provide us with as much details as possible such as:
+
 - Agenda version
 - Environment (OSX, Linux, Windows, etc)
 - Small description of what happened
@@ -1055,9 +1094,11 @@ be extremely useful in debugging certain issues and is encouraged.
 When running Agenda on Azure cosmosDB, you might run into this issue caused by Agenda's sort query used for finding and locking the next job. To fix this, you can pass [custom sort option](https://github.com/agenda/agenda#sortquery): `sort: { nextRunAt: 1 }`
 
 # Acknowledgements
+
 - Agenda was originally created by [@rschmukler](https://github.com/rschmukler).
 - [Agendash](https://github.com/agenda/agendash) was originally created by [@joeframbach](https://github.com/joeframbach).
 - These days Agenda has a great community of [contributors](https://github.com/agenda/agenda/graphs/contributors) around it. [Join us!](https://github.com/agenda/agenda/wiki)
 
 # License
+
 [The MIT License](LICENSE.md)
