@@ -355,6 +355,15 @@ describe("Job", () => {
         job.computeNextRunAt();
         expect(job.attrs.nextRunAt).to.be(undefined);
       });
+
+      it("sets the correct interval when endDate is undefined", () => {
+        // (Issue #1224): failed to calculate nextRunAt when endDate is undefined
+        job.repeatEvery("0 0 * * *"); // Daily at midnight
+        job.attrs.endDate = undefined;
+        job.computeNextRunAt();
+        expect(job.attrs.failCount).to.be(undefined);
+        expect(job.attrs.nextRunAt).not.to.be(undefined);
+      });
     });
 
     it("gives the correct nextDate when the lastRun is 1ms before the expected time", () => {
