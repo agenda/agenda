@@ -1,7 +1,8 @@
-import humanInterval from "human-interval";
 import { EventEmitter } from "events";
-import { MongoClient, Db as MongoDb, Collection } from "mongodb";
-import { JobProcessingQueue } from "./job-processing-queue";
+import humanInterval from "human-interval";
+import { Collection, Db as MongoDb, MongoClient } from "mongodb";
+import { Job } from "../job";
+import Registry from "../registry/registry";
 import { cancel } from "./cancel";
 import { close } from "./close";
 import { create } from "./create";
@@ -12,6 +13,8 @@ import { defaultLockLifetime } from "./default-lock-lifetime";
 import { defaultLockLimit } from "./default-lock-limit";
 import { define } from "./define";
 import { every } from "./every";
+import { findAndLockNextJob } from "./find-and-lock-next-job";
+import { JobProcessingQueue } from "./job-processing-queue";
 import { jobs } from "./jobs";
 import { lockLimit } from "./lock-limit";
 import { maxConcurrency } from "./max-concurrency";
@@ -25,8 +28,6 @@ import { schedule } from "./schedule";
 import { sort } from "./sort";
 import { start } from "./start";
 import { stop } from "./stop";
-import { findAndLockNextJob } from "./find-and-lock-next-job";
-import { Job } from "../job";
 
 /**
  * @class Agenda
@@ -80,6 +81,7 @@ class Agenda extends EventEmitter {
   create!: typeof create;
   database!: typeof database;
   db_init!: typeof dbInit;
+  registry!: Registry;
   defaultConcurrency!: typeof defaultConcurrency;
   defaultLockLifetime!: typeof defaultLockLifetime;
   defaultLockLimit!: typeof defaultLockLimit;
@@ -104,7 +106,7 @@ class Agenda extends EventEmitter {
     cb?: (error: Error, collection: Collection<any> | null) => void
   ) {
     super();
-
+    this.registry = config.registry;
     this._name = config.name;
     this._processEvery =
       humanInterval(config.processEvery) ?? humanInterval("5 seconds")!; // eslint-disable-line @typescript-eslint/non-nullable-type-assertion-style

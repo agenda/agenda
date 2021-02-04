@@ -27,4 +27,6 @@ export const start = async function (this: Agenda) {
     this._processEvery
   );
   process.nextTick(processJobs.bind(this));
+
+  await this.registry?.registerWorker();
 };
