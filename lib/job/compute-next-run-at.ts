@@ -17,7 +17,7 @@ export const computeNextRunAt = function (this: Job) {
   const interval = this.attrs.repeatInterval;
   const timezone = this.attrs.repeatTimezone;
   const { repeatAt } = this.attrs;
-  const previousNextRunAt = this.attrs.nextRunAt ?? new Date();
+  const previousNextRunAt = this.attrs.nextRunAt || new Date();
   this.attrs.nextRunAt = undefined;
 
   const dateForTimezone = (date: any): moment.Moment => {
@@ -40,7 +40,7 @@ export const computeNextRunAt = function (this: Job) {
       interval
     );
     const dateNow = new Date();
-    let lastRun: Date = this.attrs.lastRunAt ?? dateNow;
+    let lastRun: Date = this.attrs.lastRunAt || dateNow;
     let { startDate, endDate, skipDays } = this.attrs;
     lastRun = dateForTimezone(lastRun).toDate();
     const cronOptions: any = { currentDate: lastRun };
@@ -149,7 +149,7 @@ export const computeNextRunAt = function (this: Job) {
    * Internal method to compute next run time from the repeat string
    */
   const computeFromRepeatAt = () => {
-    const lastRun = this.attrs.lastRunAt ?? new Date();
+    const lastRun = this.attrs.lastRunAt || new Date();
     const nextDate: Date = date(repeatAt);
 
     // If you do not specify offset date for below test it will fail for ms

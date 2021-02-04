@@ -130,16 +130,16 @@ class Agenda extends EventEmitter {
     this._name = config.name;
     this._processEvery = (humanInterval(config.processEvery) ??
       humanInterval("5 seconds")) as number; // eslint-disable-line @typescript-eslint/non-nullable-type-assertion-style
-    this._defaultConcurrency = config.defaultConcurrency ?? 5;
-    this._maxConcurrency = config.maxConcurrency ?? 20;
-    this._defaultLockLimit = config.defaultLockLimit ?? 0;
-    this._lockLimit = config.lockLimit ?? 0;
+    this._defaultConcurrency = config.defaultConcurrency || 5;
+    this._maxConcurrency = config.maxConcurrency || 20;
+    this._defaultLockLimit = config.defaultLockLimit || 0;
+    this._lockLimit = config.lockLimit || 0;
     this._definitions = {};
     this._runningJobs = [];
     this._lockedJobs = [];
     this._jobQueue = new JobProcessingQueue();
-    this._defaultLockLifetime = config.defaultLockLifetime ?? 10 * 60 * 1000; // 10 minute default lockLifetime
-    this._sort = config.sort ?? { nextRunAt: 1, priority: -1 };
+    this._defaultLockLifetime = config.defaultLockLifetime || 10 * 60 * 1000; // 10 minute default lockLifetime
+    this._sort = config.sort || { nextRunAt: 1, priority: -1 };
     this._indices = {
       name: 1,
       ...this._sort,

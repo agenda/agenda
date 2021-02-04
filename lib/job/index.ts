@@ -96,10 +96,10 @@ class Job {
     this.attrs = {
       ...attrs,
       // NOTE: What is the difference between 'once' here and 'single' in agenda/index.js?
-      name: attrs.name ?? "",
+      name: attrs.name || "",
       priority: attrs.priority,
-      type: type ?? "once",
-      nextRunAt: nextRunAt ?? new Date(),
+      type: type || "once",
+      nextRunAt: nextRunAt || new Date(),
     };
   }
 }

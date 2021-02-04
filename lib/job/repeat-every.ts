@@ -29,7 +29,7 @@ export const repeatEvery = function (
   this.attrs.skipDays = options.skipDays ?? null;
   if (options.skipImmediate) {
     // Set the lastRunAt time to the nextRunAt so that the new nextRunAt will be computed in reference to the current value.
-    this.attrs.lastRunAt = this.attrs.nextRunAt ?? new Date();
+    this.attrs.lastRunAt = this.attrs.nextRunAt || new Date();
     this.computeNextRunAt();
     this.attrs.lastRunAt = undefined;
   } else {
