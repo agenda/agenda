@@ -1,6 +1,11 @@
 import humanInterval from "human-interval";
 import { EventEmitter } from "events";
-import { MongoClient, Db as MongoDb, Collection } from "mongodb";
+import {
+  MongoClient,
+  Db as MongoDb,
+  Collection,
+  MongoClientOptions,
+} from "mongodb";
 import { JobProcessingQueue } from "./job-processing-queue";
 import { cancel } from "./cancel";
 import { close } from "./close";
@@ -27,6 +32,23 @@ import { start } from "./start";
 import { stop } from "./stop";
 import { findAndLockNextJob } from "./find-and-lock-next-job";
 import { Job } from "../job";
+
+export interface AgendaConfig {
+  name?: string;
+  processEvery?: string;
+  maxConcurrency?: number;
+  defaultConcurrency?: number;
+  lockLimit?: number;
+  defaultLockLimit?: number;
+  defaultLockLifetime?: number;
+  sort?: any;
+  mongo?: MongoDb;
+  db?: {
+    address: string;
+    collection: string;
+    options: MongoClientOptions;
+  };
+}
 
 /**
  * @class Agenda
@@ -100,14 +122,14 @@ class Agenda extends EventEmitter {
   stop!: typeof stop;
 
   constructor(
-    config: any = {},
+    config: AgendaConfig = {},
     cb?: (error: Error, collection: Collection<any> | null) => void
   ) {
     super();
 
     this._name = config.name;
-    this._processEvery =
-      humanInterval(config.processEvery) ?? humanInterval("5 seconds")!; // eslint-disable-line @typescript-eslint/non-nullable-type-assertion-style
+    this._processEvery = (humanInterval(config.processEvery) ??
+      humanInterval("5 seconds")) as number; // eslint-disable-line @typescript-eslint/non-nullable-type-assertion-style
     this._defaultConcurrency = config.defaultConcurrency || 5;
     this._maxConcurrency = config.maxConcurrency || 20;
     this._defaultLockLimit = config.defaultLockLimit || 0;
@@ -139,9 +161,10 @@ class Agenda extends EventEmitter {
         config.mongo,
         config.db ? config.db.collection : undefined,
         cb
-      );
+      ); // @ts-expect-error // the documentation shows it should be correct: http://mongodb.github.io/node-mongodb-native/3.6/api/Db.html
       if (config.mongo.s && config.mongo.topology && config.mongo.topology.s) {
         this._mongoUseUnifiedTopology = Boolean(
+          // @ts-expect-error
           config.mongo.topology.s.options.useUnifiedTopology
         );
       }

@@ -13,11 +13,11 @@ const debug = createDebugger("agenda:db_init");
  */
 export const dbInit = function (
   this: Agenda,
-  collection: string,
+  collection: string | undefined,
   cb?: (error: Error, collection: Collection<any> | null) => void
 ) {
   debug("init database collection using name [%s]", collection);
-  this._collection = this._mdb.collection(collection || "agendaJobs");
+  this._collection = this._mdb.collection(collection || "agendaJobs"); // eslint-disable-line @typescript-eslint/prefer-nullish-coalescing
   debug("attempting index creation");
   this._collection.createIndex(
     this._indices,

@@ -1,5 +1,13 @@
 import { Job } from ".";
 
+export interface JobOptions {
+  timezone?: string;
+  startDate?: Date | number;
+  endDate?: Date | number;
+  skipDays?: string;
+  skipImmediate?: boolean;
+}
+
 /**
  * Sets a job to repeat every X amount of time
  * @name Job#repeatEvery
@@ -9,14 +17,8 @@ import { Job } from ".";
  */
 export const repeatEvery = function (
   this: Job,
-  interval: string | number,
-  options: {
-    timezone?: string;
-    startDate?: Date | number;
-    endDate?: Date | number;
-    skipDays?: string;
-    skipImmediate?: boolean;
-  } = {}
+  interval: string,
+  options: JobOptions = {}
 ): Job {
   this.attrs.repeatInterval = interval;
   this.attrs.repeatTimezone = options.timezone ? options.timezone : null;

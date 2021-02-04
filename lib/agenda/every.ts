@@ -1,6 +1,7 @@
 import createDebugger from "debug";
 import { Agenda } from ".";
 import { Job } from "../job";
+import { JobOptions } from "../job/repeat-every";
 
 const debug = createDebugger("agenda:every");
 
@@ -16,10 +17,10 @@ const debug = createDebugger("agenda:every");
  */
 export const every = async function (
   this: Agenda,
-  interval: string | number,
+  interval: string,
   names: string | string[],
-  data: any,
-  options: any
+  data: unknown,
+  options: JobOptions
 ): Promise<any> {
   /**
    * Internal method to setup job that gets run every interval
@@ -30,10 +31,10 @@ export const every = async function (
    * @returns instance of job
    */
   const createJob = async (
-    interval: number | string,
+    interval: string,
     name: string,
-    data: any,
-    options: any
+    data: unknown,
+    options: JobOptions
   ): Promise<Job> => {
     const job = this.create(name, data);
 
@@ -51,10 +52,10 @@ export const every = async function (
    * @return array of jobs created
    */
   const createJobs = async (
-    interval: string | number,
+    interval: string,
     names: string[],
-    data: any,
-    options: any
+    data: unknown,
+    options: JobOptions
   ): Promise<Job[] | undefined> => {
     try {
       const jobs: Array<Promise<Job>> = [];
@@ -63,7 +64,7 @@ export const every = async function (
       debug("every() -> all jobs created successfully");
 
       return Promise.all(jobs);
-    } catch (error: unknown) {
+    } catch (error) {
       // @TODO: catch - ignore :O
       debug("every() -> error creating one or more of the jobs", error);
     }

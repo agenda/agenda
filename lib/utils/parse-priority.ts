@@ -1,10 +1,4 @@
-const priorityMap: Record<string, number> = {
-  lowest: -20,
-  low: -10,
-  normal: 0,
-  high: 10,
-  highest: 20,
-};
+import { JobPriority } from "../agenda/define";
 
 /**
  * Internal method to turn priority into a number
@@ -15,5 +9,29 @@ export const parsePriority = (priority: string | number): number => {
     return priority;
   }
 
-  return priorityMap[priority];
+  switch (priority) {
+    case "lowest": {
+      return JobPriority.lowest;
+    }
+
+    case "low": {
+      return JobPriority.low;
+    }
+
+    case "normal": {
+      return JobPriority.normal;
+    }
+
+    case "high": {
+      return JobPriority.high;
+    }
+
+    case "highest": {
+      return JobPriority.highest;
+    }
+
+    default: {
+      return JobPriority.normal;
+    }
+  }
 };

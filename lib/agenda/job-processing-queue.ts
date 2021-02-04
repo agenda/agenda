@@ -53,8 +53,10 @@ JobProcessingQueue.prototype.insert = function (
   job: Job
 ) {
   const matchIndex = this._queue.findIndex((element) => {
-    if (element.attrs.nextRunAt.getTime() <= job.attrs.nextRunAt.getTime()) {
-      if (element.attrs.nextRunAt.getTime() === job.attrs.nextRunAt.getTime()) {
+    if (element.attrs.nextRunAt!.getTime() <= job.attrs.nextRunAt!.getTime()) {
+      if (
+        element.attrs.nextRunAt!.getTime() === job.attrs.nextRunAt!.getTime()
+      ) {
         if (element.attrs.priority >= job.attrs.priority) {
           return true;
         }

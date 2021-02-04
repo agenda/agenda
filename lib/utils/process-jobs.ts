@@ -231,7 +231,7 @@ export const processJobs = async function (this: Agenda, extraJob: Job) {
         await jobQueueFilling(name);
         jobProcessing();
       }
-    } catch (error: unknown) {
+    } catch (error) {
       debug("[%s] job lock failed while filling queue", name, error);
     } finally {
       self._isJobQueueFilling.delete(name);
@@ -258,7 +258,7 @@ export const processJobs = async function (this: Agenda, extraJob: Job) {
 
     // If the 'nextRunAt' time is older than the current time, run the job
     // Otherwise, setTimeout that gets called at the time of 'nextRunAt'
-    if (job.attrs.nextRunAt <= now) {
+    if (!job.attrs.nextRunAt || job.attrs.nextRunAt <= now) {
       debug(
         "[%s:%s] nextRunAt is in the past, run the job immediately",
         job.attrs.name,
@@ -298,7 +298,7 @@ export const processJobs = async function (this: Agenda, extraJob: Job) {
           // This means a job has "expired", as in it has not been "touched" within the lockoutTime
           // Remove from local lock
           // NOTE: Shouldn't we update the 'lockedAt' value in MongoDB so it can be picked up on restart?
-          if (job.attrs.lockedAt < lockDeadline) {
+          if (!job.attrs.lockedAt || job.attrs.lockedAt < lockDeadline) {
             debug(
               "[%s:%s] job lock has expired, freeing it up",
               job.attrs.name,
@@ -323,7 +323,7 @@ export const processJobs = async function (this: Agenda, extraJob: Job) {
             .then((job: any) =>
               // @ts-expect-error
               processJobResult(...(Array.isArray(job) ? job : [null, job]))
-            ); // eslint-disable-line
+            );
         } else {
           // Run the job immediately by putting it on the top of the queue
           debug(
@@ -356,9 +356,7 @@ export const processJobs = async function (this: Agenda, extraJob: Job) {
         job.attrs._id
       );
       throw new Error(
-        `callback already called - job ${
-          name as string
-        } already marked complete`
+        `callback already called - job ${name} already marked complete`
       );
     }
 

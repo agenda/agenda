@@ -1,5 +1,5 @@
 import { Agenda } from "../agenda";
-import { Job } from "../job";
+import { Job, JobAttributes } from "../job";
 
 /**
  * Create Job object from data
@@ -7,7 +7,7 @@ import { Job } from "../job";
  * @param {Object} jobData job data
  * @returns {Job} returns created job
  */
-export const createJob = (agenda: Agenda, jobData: any) => {
+export const createJob = (agenda: Agenda, jobData: JobAttributes) => {
   jobData.agenda = agenda;
   return new Job(jobData);
 };
