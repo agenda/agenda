@@ -75,6 +75,7 @@ describe("find-and-lock-next-job", () => {
       .findOneAndUpdate({ name: jobType }, { $unset: { lockedAt: "" } }); // deleting the property
     expect(lastErrorObject.updatedExisting).to.equal(true);
     expect(value.lockedAt).to.equal(undefined);
+    expect(value.nextRunAt.getTime()).to.be.lessThan(Date.now() + 1000);
 
     agenda.processEvery(100);
 
