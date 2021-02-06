@@ -62,7 +62,7 @@ export const computeNextRunAt = function (this: Job) {
       }
 
       // If start date is present, check if the nextDate should be larger or equal to startDate. If not set startDate as nextDate
-      if (startDate !== null) {
+      if (startDate) {
         startDate = moment
           .tz(moment(startDate).format("YYYY-MM-DD"), timezone!)
           .toDate();
@@ -83,7 +83,7 @@ export const computeNextRunAt = function (this: Job) {
       }
 
       // If endDate is less than the nextDate, set nextDate to null to stop the job from running further
-      if (endDate !== null) {
+      if (endDate) {
         const endDateDate: Date = moment
           .tz(moment(endDate).format("YYYY-MM-DD"), timezone!)
           .toDate();
