@@ -3,8 +3,7 @@ Next
 
 * _Contributions welcome!_ https://github.com/agenda/agenda/pulls
 
-* Changed default MongoDB connection to use 'useUnifiedTopology'. This will remove the warning message. ([#1200](https://github.com/agenda/agenda/pull/1200
-)) 
+* Added type information ([#1202](https://github.com/agenda/agenda/pull/1202)) thanks @leonardlin
 
 4.0.1 / 2021-01-16
 ==================

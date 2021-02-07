@@ -14,9 +14,37 @@ import { save } from "./save";
 import { remove } from "./remove";
 import { touch } from "./touch";
 import { parsePriority } from "../utils";
+import { Agenda } from "../agenda";
+import { JobPriority } from "../agenda/define";
+import * as mongodb from "mongodb";
 
-// @todo
-export type JobAttributes = any;
+export interface JobAttributes {
+  _id?: mongodb.ObjectID;
+  agenda: Agenda;
+  type: string;
+  name: string;
+  disabled?: boolean;
+  nextRunAt?: Date | null;
+  lockedAt?: Date;
+  priority: number | string;
+  data?: any;
+  unique?: any;
+  uniqueOpts?: {
+    insertOnly: boolean;
+  };
+  repeatInterval?: string;
+  repeatTimezone?: string | null;
+  repeatAt?: string;
+  lastRunAt?: Date;
+  lastFinishedAt?: Date;
+  startDate?: Date | number | null;
+  endDate?: Date | number | null;
+  skipDays?: string | null;
+  failReason?: string;
+  failCount?: number;
+  failedAt?: Date;
+  lastModifiedBy?: string;
+}
 
 /**
  * @class
@@ -25,9 +53,7 @@ export type JobAttributes = any;
  * @property {Object} attrs
  */
 class Job {
-  _definitions: any;
-
-  agenda: any;
+  agenda: Agenda;
   attrs: JobAttributes;
   toJSON!: typeof toJson;
   computeNextRunAt!: typeof computeNextRunAt;
@@ -45,17 +71,20 @@ class Job {
   remove!: typeof remove;
   touch!: typeof touch;
 
-  constructor(options: any) {
+  constructor(options: JobAttributes) {
     const { agenda, type, nextRunAt, ...args } = options ?? {};
 
     // Save Agenda instance
     this.agenda = agenda;
 
     // Set priority
-    args.priority = parsePriority(args.priority) || 0;
+    args.priority =
+      args.priority === undefined
+        ? JobPriority.normal
+        : parsePriority(args.priority);
 
     // Set attrs to args
-    const attrs = {};
+    const attrs: any = {};
     for (const key in args) {
       if ({}.hasOwnProperty.call(args, key)) {
         // @ts-expect-error
@@ -67,6 +96,8 @@ class Job {
     this.attrs = {
       ...attrs,
       // NOTE: What is the difference between 'once' here and 'single' in agenda/index.js?
+      name: attrs.name || "",
+      priority: attrs.priority,
       type: type || "once",
       nextRunAt: nextRunAt || new Date(),
     };

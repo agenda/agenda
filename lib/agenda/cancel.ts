@@ -17,7 +17,7 @@ export const cancel = async function (this: Agenda, query: FilterQuery<any>) {
     const { result } = await this._collection.deleteMany(query);
     debug("%s jobs cancelled", result.n);
     return result.n;
-  } catch (error: unknown) {
+  } catch (error) {
     debug("error trying to delete jobs from MongoDB");
     throw error;
   }

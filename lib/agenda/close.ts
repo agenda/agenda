@@ -29,7 +29,7 @@ export const close = async function (
     }
 
     return this;
-  } catch (error: unknown) {
+  } catch (error) {
     debug("error trying to close db connection to");
     throw error;
   }

@@ -12,7 +12,7 @@ import { Agenda } from ".";
 export const mongo = function (
   this: Agenda,
   mdb: Db,
-  collection: string,
+  collection: string | undefined,
   cb?: (error: Error, collection: Collection<any> | null) => void
 ): Agenda {
   this._mdb = mdb;

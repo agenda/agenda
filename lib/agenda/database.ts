@@ -31,21 +31,17 @@ export const database = function (
     url = "mongodb://" + url;
   }
 
-  if (options?.useUnifiedTopology === undefined) {
-    options = { ...{ useUnifiedTopology: true }, ...options };
-  }
-
-  const reconnectOptions = options?.useUnifiedTopology
-    ? {}
-    : {
-        autoReconnect: true,
-        reconnectTries: Number.MAX_SAFE_INTEGER,
-        reconnectInterval: this._processEvery,
-      };
+  const reconnectOptions =
+    options?.useUnifiedTopology === true
+      ? {}
+      : {
+          autoReconnect: true,
+          reconnectTries: Number.MAX_SAFE_INTEGER,
+          reconnectInterval: this._processEvery,
+        };
 
   collection = collection || "agendaJobs";
   options = { ...reconnectOptions, ...options };
-
   MongoClient.connect(url, options, (error, client) => {
     if (error) {
       debug("error connecting to MongoDB using collection: [%s]", collection);

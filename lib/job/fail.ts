@@ -15,7 +15,7 @@ export const fail = function (this: Job, reason: string | Error): Job {
   }
 
   this.attrs.failReason = reason;
-  this.attrs.failCount = ((this.attrs.failCount as number) || 0) + 1;
+  this.attrs.failCount = (this.attrs.failCount || 0) + 1;
   const now = new Date();
   this.attrs.failedAt = now;
   this.attrs.lastFinishedAt = now;

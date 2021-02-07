@@ -6,6 +6,6 @@ import { Job } from ".";
  * @function
  * @returns instance of Job resolved after job is saved or errors
  */
-export const save = function (this: Job) {
+export const save = async function (this: Job) {
   return this.agenda.saveJob(this);
 };

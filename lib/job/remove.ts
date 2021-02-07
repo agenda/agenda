@@ -5,6 +5,6 @@ import { Job } from ".";
  * @name Job#remove
  * @function
  */
-export const remove = function (this: Job) {
+export const remove = async function (this: Job) {
   return this.agenda.cancel({ _id: this.attrs._id });
 };

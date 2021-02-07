@@ -40,7 +40,7 @@ export const run = async function (this: Job): Promise<Job> {
         this.attrs.lastFinishedAt = new Date();
       }
 
-      this.attrs.lockedAt = null;
+      this.attrs.lockedAt = undefined;
 
       await this.save().catch((error: Error) => {
         debug(
@@ -58,7 +58,7 @@ export const run = async function (this: Job): Promise<Job> {
 
       if (error) {
         agenda.emit("fail", error, this);
-        agenda.emit("fail:" + (this.attrs.name as string), error, this);
+        agenda.emit("fail:" + this.attrs.name, error, this);
         debug(
           "[%s:%s] has failed [%s]",
           this.attrs.name,
@@ -67,12 +67,12 @@ export const run = async function (this: Job): Promise<Job> {
         );
       } else {
         agenda.emit("success", this);
-        agenda.emit("success:" + (this.attrs.name as string), this);
+        agenda.emit("success:" + this.attrs.name, this);
         debug("[%s:%s] has succeeded", this.attrs.name, this.attrs._id);
       }
 
       agenda.emit("complete", this);
-      agenda.emit("complete:" + (this.attrs.name as string), this);
+      agenda.emit("complete:" + this.attrs.name, this);
       debug(
         "[%s:%s] job finished at [%s] and was unlocked",
         this.attrs.name,
@@ -86,7 +86,7 @@ export const run = async function (this: Job): Promise<Job> {
 
     try {
       agenda.emit("start", this);
-      agenda.emit("start:" + (this.attrs.name as string), this);
+      agenda.emit("start:" + this.attrs.name, this);
       debug("[%s:%s] starting job", this.attrs.name, this.attrs._id);
       if (!definition) {
         debug(
@@ -113,7 +113,7 @@ export const run = async function (this: Job): Promise<Job> {
         await definition.fn(this);
         await jobCallback();
       }
-    } catch (error: unknown) {
+    } catch (error) {
       debug("[%s:%s] unknown error occurred", this.attrs.name, this.attrs._id);
       await jobCallback(error as Error);
     }
