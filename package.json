@@ -3,6 +3,7 @@
   "version": "4.0.1",
   "description": "Light weight job scheduler for Node.js",
   "main": "index.js",
+  "types": "./dist/index.d.ts",
   "files": [
     "dist"
   ],
