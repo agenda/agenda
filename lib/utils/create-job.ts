@@ -7,7 +7,7 @@ import { Job, JobAttributes } from "../job";
  * @param {Object} jobData job data
  * @returns {Job} returns created job
  */
-export const createJob = (agenda: Agenda, jobData: JobAttributes) => {
+export const createJob = (agenda: Agenda, jobData: JobAttributes): Job => {
   jobData.agenda = agenda;
   return new Job(jobData);
 };

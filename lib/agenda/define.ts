@@ -13,9 +13,26 @@ export enum JobPriority {
 }
 
 export interface DefineOptions {
+  /**
+   * Maximum number of that job that can be running at once (per instance of agenda)
+   */
   concurrency?: number;
+
+  /**
+   * Maximum number of that job that can be locked at once (per instance of agenda)
+   */
   lockLimit?: number;
+
+  /**
+   * Interval in ms of how long the job stays locked for (see multiple job processors for more info). A job will
+   * automatically unlock if done() is called.
+   */
   lockLifetime?: number;
+
+  /**
+   * (lowest|low|normal|high|highest|number) specifies the priority of the job. Higher priority jobs will run
+   * first.
+   */
   priority?: JobPriority;
 }
 
