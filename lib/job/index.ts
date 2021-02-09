@@ -18,31 +18,103 @@ import { Agenda } from "../agenda";
 import { JobPriority } from "../agenda/define";
 import * as mongodb from "mongodb";
 
-export interface JobAttributes {
+export interface JobAttributesData {
+  [key: string]: any;
+}
+export interface JobAttributes<
+  T extends JobAttributesData = JobAttributesData
+> {
+  /**
+   * The record identity.
+   */
   _id?: mongodb.ObjectID;
+
   agenda: Agenda;
+
+  /**
+   * The type of the job (single|normal).
+   */
   type: string;
+
+  /**
+   * The name of the job.
+   */
   name: string;
+
+  /**
+   * Job's state
+   */
   disabled?: boolean;
+
+  /**
+   * Date/time the job will run next.
+   */
   nextRunAt?: Date | null;
+
+  /**
+   * Date/time the job was locked.
+   */
   lockedAt?: Date;
+
+  /**
+   * The priority of the job.
+   */
   priority: number | string;
-  data?: any;
+
+  /**
+   * The job details.
+   */
+  data?: T;
+
   unique?: any;
   uniqueOpts?: {
     insertOnly: boolean;
   };
+
+  /**
+   * How often the job is repeated using a human-readable or cron format.
+   */
   repeatInterval?: string;
+
+  /**
+   * The timezone that conforms to [moment-timezone](http://momentjs.com/timezone/).
+   */
   repeatTimezone?: string | null;
+
   repeatAt?: string;
+
+  /**
+   * Date/time the job was last run.
+   */
   lastRunAt?: Date;
+
+  /**
+   * Date/time the job last finished running.
+   */
   lastFinishedAt?: Date;
+
   startDate?: Date | number | null;
   endDate?: Date | number | null;
   skipDays?: string | null;
+
+  /**
+   * The reason the job failed.
+   */
   failReason?: string;
+
+  /**
+   * The number of times the job has failed.
+   */
   failCount?: number;
+
+  /**
+   * The date/time the job last failed.
+   */
   failedAt?: Date;
+
+  /**
+   * Date/time the job was last modified.
+   */
   lastModifiedBy?: string;
 }
 
@@ -52,9 +124,17 @@ export interface JobAttributes {
  * @property {Object} agenda - The Agenda instance
  * @property {Object} attrs
  */
-class Job {
+class Job<T extends JobAttributesData = JobAttributesData> {
+  /**
+   * The agenda that created the job.
+   */
   agenda: Agenda;
-  attrs: JobAttributes;
+
+  /**
+   * The database record associated with the job.
+   */
+  attrs: JobAttributes<T>;
+
   toJSON!: typeof toJson;
   computeNextRunAt!: typeof computeNextRunAt;
   repeatEvery!: typeof repeatEvery;
@@ -71,7 +151,7 @@ class Job {
   remove!: typeof remove;
   touch!: typeof touch;
 
-  constructor(options: JobAttributes) {
+  constructor(options: JobAttributes<T>) {
     const { agenda, type, nextRunAt, ...args } = options ?? {};
 
     // Save Agenda instance
