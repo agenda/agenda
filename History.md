@@ -3,7 +3,7 @@ Next
 
 * _Contributions welcome!_ https://github.com/agenda/agenda/pulls
 
-* Added type information ([#1202](https://github.com/agenda/agenda/pull/1202)) thanks @leonardlin
+* Added type information ([#1202](https://github.com/agenda/agenda/pull/1202) [#1243](https://github.com/agenda/agenda/pull/1243)) thanks @boredland, @leonardlin
 
 4.0.1 / 2021-01-16
 ==================
