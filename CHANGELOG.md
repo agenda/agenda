@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.0.1](https://github.com/hokify/agenda/compare/v5.0.0...v5.0.1) (2021-02-12)
+
+
+### Bug Fixes
+
+* update deps and switch moment-timezone to luxon ([e5eb973](https://github.com/hokify/agenda/commit/e5eb973deaa3e02bc071b26e57edd6735928bb70))
+
 ## [5.0.0](https://github.com/hokify/agenda/compare/v4.1.6...v5.0.0) (2020-12-06)
 
 
