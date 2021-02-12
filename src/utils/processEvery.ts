@@ -1,4 +1,4 @@
-import * as humanInterval from 'human-interval';
+import humanInterval = require('human-interval');
 
 export function calculateProcessEvery(input: number | string = 5000): number {
 	if (typeof input === 'number') return input;

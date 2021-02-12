@@ -2,7 +2,7 @@
 import * as path from 'path';
 import * as cp from 'child_process';
 import { expect } from 'chai';
-import * as moment from 'moment-timezone';
+import { DateTime } from 'luxon';
 import { Db } from 'mongodb';
 
 import * as Q from 'q';
@@ -250,9 +250,9 @@ describe('Job', () => {
 			});
 			const jobProto = Object.getPrototypeOf(job);
 			jobProto.computeNextRunAt.call(job);
-			expect(moment(job.attrs.nextRunAt).tz('GMT').hour()).to.equal(6);
-			expect(moment(job.attrs.nextRunAt).toDate().getDate()).to.equal(
-				moment(job.attrs.lastRunAt).add(1, 'days').toDate().getDate()
+			expect(DateTime.fromJSDate(job.attrs.nextRunAt!).setZone('GMT').hour).to.equal(6);
+			expect(DateTime.fromJSDate(job.attrs.nextRunAt!).toJSDate().getDate()).to.equal(
+				DateTime.fromJSDate(job.attrs.lastRunAt!).plus({days: 1}).toJSDate().getDate()
 			);
 		});
 
@@ -264,9 +264,9 @@ describe('Job', () => {
 			});
 			const jobProto = Object.getPrototypeOf(job);
 			jobProto.computeNextRunAt.call(job);
-			expect(moment(job.attrs.nextRunAt).tz('GMT').hour()).to.equal(6);
-			expect(moment(job.attrs.nextRunAt).toDate().getDate()).to.equal(
-				moment(job.attrs.lastRunAt).add(1, 'days').toDate().getDate()
+			expect(DateTime.fromJSDate(job.attrs.nextRunAt!).setZone('GMT').hour).to.equal(6);
+			expect(DateTime.fromJSDate(job.attrs.nextRunAt!).toJSDate().getDate()).to.equal(
+				DateTime.fromJSDate(job.attrs.lastRunAt!).plus({day: 1}).toJSDate().getDate()
 			);
 		});
 
@@ -981,7 +981,7 @@ describe('Job', () => {
 
 			await agenda.start();
 
-			const when = moment().add(300, 'ms').toDate();
+			const when = DateTime.local().plus({millisecond: 300}).toJSDate();
 
 			await Promise.all([
 				agenda.schedule(when, 'lock job', { i: 1 }),
@@ -999,7 +999,7 @@ describe('Job', () => {
 
 			await agenda.start();
 
-			const when = moment().add(300, 'ms').toDate();
+			const when = DateTime.local().plus({millisecond: 300}).toJSDate();
 
 			await Promise.all([
 				agenda.schedule(when, 'lock job', { i: 1 }),

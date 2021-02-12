@@ -486,9 +486,9 @@ export class JobProcessor {
 				log.extend('runOrRetry')('[%s:%s] processing job', job.attrs.name, job.attrs._id);
 
 				// check if the job is still alive
-				const checkIfJobIsStillAlive = () => {
+				const checkIfJobIsStillAlive = () =>
 					// check every "this.agenda.definitions[job.attrs.name].lockLifetime / 2"" (or at mininum every processEvery)
-					return new Promise<void>((resolve, reject) =>
+					new Promise<void>((resolve, reject) =>
 						setTimeout(async () => {
 							// when job is not running anymore, just finish
 							if (!(await job.isRunning())) {
@@ -510,8 +510,6 @@ export class JobProcessor {
 							resolve(checkIfJobIsStillAlive());
 						}, Math.max(this.processEvery / 2, this.agenda.definitions[job.attrs.name].lockLifetime / 2))
 					);
-				};
-
 				// CALL THE ACTUAL METHOD TO PROCESS THE JOB!!!
 				await Promise.race([job.run(), checkIfJobIsStillAlive()]);
 

@@ -1,21 +1,16 @@
-import * as moment from 'moment-timezone';
-import * as humanInterval from 'human-interval';
+/* eslint-disable import/first */
+import { DateTime } from 'luxon';
 import * as date from 'date.js';
 import * as debug from 'debug';
 import { parseExpression } from 'cron-parser';
+import humanInterval = require('human-interval');
 import { isValidDate } from './isValidDate';
 import type { IJobParameters } from '../types/JobParameters';
 
 const log = debug('agenda:nextRunAt');
 
-const dateForTimezone = (timezoneDate: Date, timezone?: string): moment.Moment => {
-	const momentDate = moment(timezoneDate);
-	if (timezone) {
-		momentDate.tz(timezone);
-	}
-
-	return momentDate;
-};
+const dateForTimezone = (timezoneDate: Date, timezone?: string): DateTime =>
+	DateTime.fromJSDate(timezoneDate, { zone: timezone });
 
 export function isValidHumanInterval(value: unknown): value is string {
 	const transformedValue = humanInterval(value as string);
@@ -32,7 +27,7 @@ export const computeFromInterval = (attrs: IJobParameters): Date => {
 	const lastRun = dateForTimezone(attrs.lastRunAt || new Date(), attrs.repeatTimezone);
 
 	const cronOptions = {
-		currentDate: lastRun.toDate(),
+		currentDate: lastRun.toJSDate(),
 		tz: attrs.repeatTimezone
 	};
 

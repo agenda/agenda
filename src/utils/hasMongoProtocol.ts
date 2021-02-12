@@ -1,3 +1,1 @@
-export const hasMongoProtocol = (url: string): boolean => {
-	return /mongodb(?:\+srv)?:\/\/.*/.test(url);
-};
+export const hasMongoProtocol = (url: string): boolean => /mongodb(?:\+srv)?:\/\/.*/.test(url);
