@@ -11,7 +11,11 @@ const debug = createDebugger("agenda:cancel");
  * @param FilterQuery<any> query MongoDB query to use when cancelling
  * @caller client code, Agenda.purge(), Job.remove()
  */
-export const cancel = async function (this: Agenda, query: FilterQuery<any>) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const cancel = async function (
+  this: Agenda,
+  query: FilterQuery<any>
+): Promise<number | undefined> {
   debug("attempting to cancel all Agenda jobs", query);
   try {
     const { result } = await this._collection.deleteMany(query);

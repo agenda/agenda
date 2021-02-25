@@ -11,7 +11,7 @@ const debug = createDebugger("agenda:start");
  * @function
  * @returns resolves if db set beforehand, returns undefined otherwise
  */
-export const start = async function (this: Agenda) {
+export const start = async function (this: Agenda): Promise<void | unknown> {
   if (this._processInterval) {
     debug("Agenda.start was already called, ignoring");
     return this._ready;

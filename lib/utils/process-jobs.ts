@@ -9,7 +9,10 @@ const debug = createDebugger("agenda:internal:processJobs");
  * Process methods for jobs
  * @param {Job} extraJob job to run immediately
  */
-export const processJobs = async function (this: Agenda, extraJob: Job) {
+export const processJobs = async function (
+  this: Agenda,
+  extraJob: Job
+): Promise<void> {
   debug(
     "starting to process jobs: [%s:%s]",
     extraJob?.attrs?.name ?? "unknownName",
@@ -79,12 +82,12 @@ export const processJobs = async function (this: Agenda, extraJob: Job) {
    * Internal method that adds jobs to be processed to the local queue
    * @param jobs Jobs to queue
    */
-  function enqueueJobs(jobs: any[] | any) {
+  function enqueueJobs(jobs: Job[] | Job) {
     if (!Array.isArray(jobs)) {
       jobs = [jobs];
     }
 
-    jobs.forEach((job: any) => {
+    jobs.forEach((job: Job) => {
       jobQueue.insert(job);
     });
   }
@@ -266,7 +269,7 @@ export const processJobs = async function (this: Agenda, extraJob: Job) {
       );
       runOrRetry();
     } else {
-      // @ts-expect-error
+      // @ts-expect-error linter complains about Date-arithmetic
       const runIn = job.attrs.nextRunAt - now;
       debug(
         "[%s:%s] nextRunAt is in the future, calling setTimeout(%d)",
@@ -318,12 +321,12 @@ export const processJobs = async function (this: Agenda, extraJob: Job) {
           debug("[%s:%s] processing job", job.attrs.name, job.attrs._id);
 
           job
-            .run() // eslint-disable-line @typescript-eslint/no-floating-promises
-            .catch((error: Error) => [error, job])
-            .then((job: any) =>
-              // @ts-expect-error
-              processJobResult(...(Array.isArray(job) ? job : [null, job]))
-            );
+            .run()
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            .then((job: any) => processJobResult(job))
+            .catch((error: Error) => {
+              return job.agenda.emit("error", error);
+            });
         } else {
           // Run the job immediately by putting it on the top of the queue
           debug(
@@ -342,11 +345,7 @@ export const processJobs = async function (this: Agenda, extraJob: Job) {
    * @param {Error} err thrown if can't process job
    * @param {Job} job job to process
    */
-  function processJobResult(error: Error, job: Job) {
-    if (error) {
-      return job.agenda.emit("error", error);
-    }
-
+  function processJobResult(job: Job) {
     const { name } = job.attrs;
 
     // Job isn't in running jobs so throw an error

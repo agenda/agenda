@@ -26,7 +26,7 @@ export const database = function (
   collection: string,
   options: MongoClientOptions,
   cb?: (error: Error, collection: Collection<any> | null) => void
-) {
+): Agenda | void {
   if (!hasMongoProtocol(url)) {
     url = "mongodb://" + url;
   }

@@ -1,5 +1,6 @@
 import { FilterQuery } from "mongodb";
 import { Agenda } from ".";
+import { Job } from "../job";
 import { createJob } from "../utils";
 
 /**
@@ -18,7 +19,7 @@ export const jobs = async function (
   sort = {},
   limit = 0,
   skip = 0
-) {
+): Promise<Job[]> {
   const result = await this._collection
     .find(query) // eslint-disable-line
     .sort(sort)

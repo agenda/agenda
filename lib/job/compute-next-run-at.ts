@@ -13,20 +13,20 @@ const debug = createDebugger("agenda:job");
  * @name Job#computeNextRunAt
  * @function
  */
-export const computeNextRunAt = function (this: Job) {
+export const computeNextRunAt = function (this: Job): Job {
   const interval = this.attrs.repeatInterval;
   const timezone = this.attrs.repeatTimezone;
   const { repeatAt } = this.attrs;
   const previousNextRunAt = this.attrs.nextRunAt || new Date();
   this.attrs.nextRunAt = undefined;
 
-  const dateForTimezone = (date: any): moment.Moment => {
-    date = moment(date);
-    if (timezone !== null) {
-      date.tz(timezone);
+  const dateForTimezone = (date: Date): moment.Moment => {
+    const mdate: moment.Moment = moment(date);
+    if (timezone) {
+      mdate.tz(timezone);
     }
 
-    return date;
+    return mdate;
   };
 
   /**

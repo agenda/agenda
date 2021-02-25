@@ -5,7 +5,7 @@ import { Job } from ".";
  * @name Job#touch
  * @function
  */
-export const touch = async function (this: Job) {
+export const touch = async function (this: Job): Promise<any> {
   this.attrs.lockedAt = new Date();
   return this.save();
 };
