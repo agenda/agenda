@@ -54,7 +54,7 @@ export const define = function (
   name: string,
   options: DefineOptions | Processor,
   processor?: Processor
-) {
+): void {
   if (processor === undefined) {
     processor = options as Processor;
     options = {};

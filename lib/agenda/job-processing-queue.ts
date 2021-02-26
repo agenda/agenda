@@ -8,8 +8,8 @@ import { Job } from "../job";
  */
 class JobProcessingQueue {
   pop!: () => Job | undefined;
-  push!: (job: any) => void;
-  insert!: (job: any) => void;
+  push!: (job: Job) => void;
+  insert!: (job: Job) => void;
   returnNextConcurrencyFreeJob!: (agendaDefinitions: any) => Job;
 
   protected _queue: Job[];
@@ -18,7 +18,7 @@ class JobProcessingQueue {
     this._queue = [];
   }
 
-  get length() {
+  get length(): number {
     return this._queue.length;
   }
 }

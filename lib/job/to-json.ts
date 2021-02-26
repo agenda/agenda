@@ -12,7 +12,7 @@ export const toJson = function (this: Job): Partial<JobAttributes> {
 
   for (const prop in attrs) {
     if ({}.hasOwnProperty.call(attrs, prop)) {
-      // @ts-expect-error
+      // @ts-expect-error index signature missing
       result[prop] = attrs[prop];
     }
   }
@@ -25,9 +25,9 @@ export const toJson = function (this: Job): Partial<JobAttributes> {
     "lockedAt",
   ];
   dates.forEach((d) => {
-    // @ts-expect-error
+    // @ts-expect-error index signature missing
     if (result[d]) {
-      // @ts-expect-error
+      // @ts-expect-error index signature missing
       result[d] = new Date(result[d]);
     }
   });

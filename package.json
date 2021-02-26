@@ -84,7 +84,8 @@
     ],
     "rules": {
       "@typescript-eslint/ban-ts-comment": "warn",
-      "prefer-const": "warn"
+      "prefer-const": "warn",
+      "@typescript-eslint/no-non-null-assertion": "off"
     }
   },
   "husky": {

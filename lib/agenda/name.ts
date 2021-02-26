@@ -9,7 +9,7 @@ const debug = createDebugger("agenda:name");
  * @function
  * @param name name of agenda instance
  */
-export const name = function (this: Agenda, name: string) {
+export const name = function (this: Agenda, name: string): Agenda {
   debug("Agenda.name(%s)", name);
   this._name = name;
   return this;

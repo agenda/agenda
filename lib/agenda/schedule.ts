@@ -18,7 +18,7 @@ export const schedule = function (
   when: string,
   names: string[],
   data: any
-) {
+): undefined | Promise<Job | Job[]> {
   /**
    * Internal method that creates a job with given date
    * @param when when the job gets run
