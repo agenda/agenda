@@ -15,7 +15,7 @@ const debug = createDebugger("agenda:schedule");
  */
 export const schedule = function (
   this: Agenda,
-  when: string,
+  when: string | Date,
   names: string[],
   data: any
 ): undefined | Promise<Job | Job[]> {
@@ -27,7 +27,7 @@ export const schedule = function (
    * @returns instance of new job
    */
   const createJob = async (
-    when: string,
+    when: string | Date,
     name: string,
     data: any
   ): Promise<Job> => {
@@ -46,7 +46,7 @@ export const schedule = function (
    * @returns jobs that were created
    */
   const createJobs = async (
-    when: string,
+    when: string | Date,
     names: string[],
     data: any
   ): Promise<Job[]> => {
