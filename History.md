@@ -2,6 +2,8 @@
 
 - _Contributions welcome!_ https://github.com/agenda/agenda/pulls
 
+- Export `Job`, `JobAttributes` type information thank ([#1202](https://github.com/agenda/agenda/pull/1202) @leonardlin
+
   # 4.1.0 / 2021-02-25
 
 - Added type information ([#1202](https://github.com/agenda/agenda/pull/1202) [#1243](https://github.com/agenda/agenda/pull/1243)) thanks @boredland, @leonardlin
