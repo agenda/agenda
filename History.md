@@ -2,6 +2,10 @@
 
 - _Contributions welcome!_ https://github.com/agenda/agenda/pulls
 
+  # 4.1.1 / 2021-03-02
+
+- Compatibility with DefinitelyTyped/agenda ([#1258](https://github.com/agenda/agenda/pull/1258)) thanks @boredland
+
   # 4.1.0 / 2021-02-25
 
 - Added type information ([#1202](https://github.com/agenda/agenda/pull/1202) [#1243](https://github.com/agenda/agenda/pull/1243)) thanks @boredland, @leonardlin
