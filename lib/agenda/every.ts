@@ -19,8 +19,8 @@ export const every = async function (
   this: Agenda,
   interval: string,
   names: string | string[],
-  data: unknown,
-  options: JobOptions
+  data?: unknown,
+  options?: JobOptions
 ): Promise<any> {
   /**
    * Internal method to setup job that gets run every interval
@@ -33,8 +33,8 @@ export const every = async function (
   const createJob = async (
     interval: string,
     name: string,
-    data: unknown,
-    options: JobOptions
+    data?: unknown,
+    options?: JobOptions
   ): Promise<Job> => {
     const job = this.create(name, data);
 
@@ -54,8 +54,8 @@ export const every = async function (
   const createJobs = async (
     interval: string,
     names: string[],
-    data: unknown,
-    options: JobOptions
+    data?: unknown,
+    options?: JobOptions
   ): Promise<Job[] | undefined> => {
     try {
       const jobs: Array<Promise<Job>> = [];
