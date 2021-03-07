@@ -2,8 +2,8 @@
   "name": "agenda",
   "version": "4.1.0",
   "description": "Light weight job scheduler for Node.js",
-  "main": "index.js",
-  "types": "./dist/index.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "files": [
     "dist"
   ],
