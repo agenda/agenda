@@ -45,8 +45,8 @@ export interface AgendaConfig {
   mongo?: MongoDb;
   db?: {
     address: string;
-    collection: string;
-    options: MongoClientOptions;
+    collection?: string;
+    options?: MongoClientOptions;
   };
 }
 
