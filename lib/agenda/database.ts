@@ -23,8 +23,8 @@ const debug = createDebugger("agenda:database");
 export const database = function (
   this: Agenda,
   url: string,
-  collection: string,
-  options: MongoClientOptions,
+  collection?: string,
+  options?: MongoClientOptions,
   cb?: (error: Error, collection: Collection<any> | null) => void
 ): Agenda | void {
   if (!hasMongoProtocol(url)) {
