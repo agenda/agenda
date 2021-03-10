@@ -5,7 +5,7 @@ import { Job } from ".";
  * @name Job#unique
  * @function
  * @param unique mongo data query for unique
- * @param opts unique options
+ * @param options unique options
  */
 export const unique = function (
   this: Job,

@@ -9,7 +9,7 @@ const debug = createDebugger("agenda:stop");
  * @function
  * @returns resolves when job unlocking fails or passes
  */
-export const stop = async function (this: Agenda): Promise<any> {
+export const stop = async function (this: Agenda): Promise<void> {
   /**
    * Internal method to unlock jobs so that they can be re-run
    * NOTE: May need to update what properties get set here, since job unlocking seems to fail
