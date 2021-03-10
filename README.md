@@ -33,7 +33,7 @@ better suits your needs.
 
 Agenda is great if you need a MongoDB job scheduler, but try **[Bree](https://jobscheduler.net)** if you need something simpler (built by a previous maintainer).
 
-| Feature          |      Bull       |   Bree    | Agenda |
+| Feature          |      Bull       |   Bee    | Agenda |
 | :--------------- | :-------------: | :------: | :----: |
 | Backend          |      redis      |  redis   | mongo  |
 | Priorities       |        ✓        |          |   ✓    |
