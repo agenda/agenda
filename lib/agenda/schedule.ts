@@ -13,12 +13,14 @@ const debug = createDebugger("agenda:schedule");
  * @param data data to send to job
  * @returns job or jobs created
  */
-export const schedule = function (
+export function schedule(this: Agenda, when: string | Date, names: string, data: any): Promise<Job>;
+export function schedule(this: Agenda, when: string | Date, names: string[], data: any): Promise<Job[]>;
+export function schedule (
   this: Agenda,
   when: string | Date,
-  names: string[],
+  names: string | string[],
   data: any
-): undefined | Promise<Job | Job[]> {
+): Promise<Job | Job[]> {
   /**
    * Internal method that creates a job with given date
    * @param when when the job gets run
@@ -41,7 +43,7 @@ export const schedule = function (
   /**
    * Internal helper method that calls createJob on a names array
    * @param when when the job gets run
-   * @param of jobs to run
+   * @param names names of jobs to run
    * @param data data to send to job
    * @returns jobs that were created
    */
@@ -72,4 +74,6 @@ export const schedule = function (
     debug("Agenda.schedule(%s, %O, [%O])", when, names);
     return createJobs(when, names, data);
   }
+
+  throw new TypeError("Name must be string or array of strings")
 };
