@@ -26,8 +26,8 @@ export const every = async function (
    * Internal method to setup job that gets run every interval
    * @param interval run every X interval
    * @param name String job to schedule
-   * @param data data to run for job
-   * @param options options to run job for
+   * @param [data] data to run for job
+   * @param [options] options to run job for
    * @returns instance of job
    */
   const createJob = async (
@@ -47,8 +47,8 @@ export const every = async function (
    * Internal helper method that uses createJob to create jobs for an array of names
    * @param interval run every X interval
    * @param names Strings of jobs to schedule
-   * @param data data to run for job
-   * @param options options to run job for
+   * @param [data] data to run for job
+   * @param [options] options to run job for
    * @return array of jobs created
    */
   const createJobs = async (

@@ -10,9 +10,9 @@ const debug = createDebugger("agenda:database");
  * @name Agenda#database
  * @function
  * @param url MongoDB server URI
- * @param collection name of collection to use. Defaults to `agendaJobs`
- * @param options options for connecting
- * @param cb callback of MongoDB connection
+ * @param [collection] name of collection to use. Defaults to `agendaJobs`
+ * @param [options] options for connecting
+ * @param [cb] callback of MongoDB connection
  * NOTE:
  * If `url` includes auth details then `options` must specify: { 'uri_decode_auth': true }. This does Auth on
  * the specified database, not the Admin database. If you are using Auth on the Admin DB and not on the Agenda DB,

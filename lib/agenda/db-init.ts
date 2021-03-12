@@ -9,7 +9,7 @@ const debug = createDebugger("agenda:db_init");
  * @name Agenda#dbInit
  * @function
  * @param collection name or undefined for default 'agendaJobs'
- * @param cb called when the db is initialized
+ * @param [cb] called when the db is initialized
  */
 export const dbInit = function (
   this: Agenda,

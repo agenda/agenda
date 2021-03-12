@@ -6,8 +6,8 @@ import { Agenda } from ".";
  * @name Agenda#mongo
  * @function
  * @param mdb instance of MongoClient to use
- * @param collection name collection we want to use ('agendaJobs')
- * @param cb called when MongoDB connection fails or passes
+ * @param [collection] name collection we want to use ('agendaJobs')
+ * @param [cb] called when MongoDB connection fails or passes
  */
 export const mongo = function (
   this: Agenda,
