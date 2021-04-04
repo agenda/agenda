@@ -97,7 +97,7 @@ export const computeNextRunAt = function (this: Job): Job {
         "[%s:%s] nextRunAt set to [%s]",
         this.attrs.name,
         this.attrs._id,
-        this.attrs.nextRunAt!.toISOString()
+        this.attrs.nextRunAt?.toISOString()
       );
       // Either `xo` linter or Node.js 8 stumble on this line if it isn't just ignored
     } catch {
@@ -131,7 +131,7 @@ export const computeNextRunAt = function (this: Job): Job {
         // Either `xo` linter or Node.js 8 stumble on this line if it isn't just ignored
       } catch {}
     } finally {
-      if (Number.isNaN(this.attrs.nextRunAt!.getTime())) {
+      if (!this.attrs.nextRunAt?.getTime()) {
         this.attrs.nextRunAt = undefined;
         debug(
           "[%s:%s] failed to calculate nextRunAt due to invalid repeat interval",
@@ -168,7 +168,7 @@ export const computeNextRunAt = function (this: Job): Job {
         "[%s:%s] nextRunAt set to [%s]",
         this.attrs.name,
         this.attrs._id,
-        this.attrs.nextRunAt!.toISOString()
+        this.attrs.nextRunAt?.toISOString()
       );
     } else {
       this.attrs.nextRunAt = date(repeatAt);
@@ -176,7 +176,7 @@ export const computeNextRunAt = function (this: Job): Job {
         "[%s:%s] nextRunAt set to [%s]",
         this.attrs.name,
         this.attrs._id,
-        this.attrs.nextRunAt!.toISOString()
+        this.attrs.nextRunAt?.toISOString()
       );
     }
   };
