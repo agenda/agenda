@@ -2,6 +2,12 @@
 
 - _Contributions welcome!_ https://github.com/agenda/agenda/pulls
 
+  # 4.1.2 / 2021-04-04
+
+- Docs, JSDocs and TS typo fixes. Thanks @niftylettuce @thebestnom @simllll and @Igor-lkm
+
+- fix: typescript export needs es6 ([#1268](https://github.com/agenda/agenda/pull/#1268)) thanks @simllll
+
   # 4.1.1 / 2021-03-02
 
 - Compatibility with DefinitelyTyped/agenda ([#1258](https://github.com/agenda/agenda/pull/1258)) thanks @boredland
