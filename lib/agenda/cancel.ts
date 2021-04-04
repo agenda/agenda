@@ -8,7 +8,7 @@ const debug = createDebugger("agenda:cancel");
  * Cancels any jobs matching the passed MongoDB query, and removes them from the database.
  * @name Agenda#cancel
  * @function
- * @param FilterQuery<any> query MongoDB query to use when cancelling
+ * @param query MongoDB query to use when cancelling
  * @caller client code, Agenda.purge(), Job.remove()
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

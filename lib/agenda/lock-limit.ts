@@ -7,7 +7,7 @@ const debug = createDebugger("agenda:locklimit");
  * Set the default amount jobs that are allowed to be locked at one time (GLOBAL)
  * @name Agenda#locklimit
  * @function
- * @param num Lock limit
+ * @param limit num Lock limit
  */
 export const lockLimit = function (this: Agenda, limit: number): Agenda {
   // @NOTE: Is this different than max concurrency?
