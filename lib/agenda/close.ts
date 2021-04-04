@@ -8,8 +8,9 @@ const debug = createDebugger("agenda:close");
  * If the mongoDb instance was supplied during instantiation or via agenda.mongo, this function will do nothing and return agenda anyway.
  * @name Agenda#close
  * @function
- * @param option: { force: boolean } Force close, emitting no events
+ * @param [option]: { force: boolean } Force close, emitting no events
  *
+ * 
  * @caller client code
  *
  * @link https://mongodb.github.io/node-mongodb-native/2.0/api/Db.html#close

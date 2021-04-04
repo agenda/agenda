@@ -47,7 +47,7 @@ export type Processor =
  * @function
  * @param name name of job
  * @param options options for job to run
- * @param processor function to be called to run actual job
+ * @param [processor] function to be called to run actual job
  */
 export const define = function (
   this: Agenda,
