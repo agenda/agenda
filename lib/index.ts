@@ -1,10 +1,6 @@
-export * from "./agenda";
-export * from "./job";
-
-export { DefineOptions, JobPriority, Processor } from "./agenda/define";
-export { JobOptions } from "./job/repeat-every";
+// old common js export (see es.ts for module exports)
 
 import { Agenda } from "./agenda";
-export { Agenda };
-export default Agenda;
+module.exports = Agenda;
+
 
