@@ -60,6 +60,19 @@ Install via NPM
 
 You will also need a working [Mongo](https://www.mongodb.com/) database (v3) to point it to.
 
+# CJS / Module Imports
+
+for regular javascript code, just use the default entrypoint
+```js
+const Agenda = require('agenda');
+```
+
+For Typescript, Webpack or other module imports, use `agenda/es` entrypoint:
+e.g.
+```ts
+import { Agenda } from 'agenda/es';
+```
+
 # Example Usage
 
 ```js

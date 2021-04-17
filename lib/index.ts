@@ -1,6 +1,12 @@
-// old common js export (see es.ts for module exports)
+// module export, beware: cjs.ts is exported as main entry point!
+export * from "./agenda";
+export * from "./job";
+
+export { DefineOptions, JobPriority, Processor } from "./agenda/define";
+export { JobOptions } from "./job/repeat-every";
 
 import { Agenda } from "./agenda";
-module.exports = Agenda;
+export { Agenda };
+export default Agenda;
 
 
