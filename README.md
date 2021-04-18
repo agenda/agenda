@@ -72,6 +72,8 @@ e.g.
 ```ts
 import { Agenda } from 'agenda/es';
 ```
+***NOTE***: If you migrating from @types/agenda you also should change imports to `agenda/es`.
+Instead of `import Agenda from 'agenda'` use `import { Agenda} from 'agenda/es'`.
 
 # Example Usage
 
