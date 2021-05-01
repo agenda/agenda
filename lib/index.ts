@@ -8,5 +8,3 @@ export { JobOptions } from "./job/repeat-every";
 import { Agenda } from "./agenda";
 export { Agenda };
 export default Agenda;
-
-

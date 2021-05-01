@@ -2,5 +2,4 @@
 
 import { Agenda } from "./agenda";
 module.exports = Agenda;
-
-
+module.exports.Agenda = Agenda;
