@@ -5,6 +5,7 @@
   "main": "dist/cjs.js",
   "types": "dist/index.d.ts",
   "files": [
+    "es.js",
     "dist"
   ],
   "engines": {
