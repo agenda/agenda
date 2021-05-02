@@ -2,6 +2,10 @@
 
 - _Contributions welcome!_ https://github.com/agenda/agenda/pulls
 
+  # 4.1.2 / 2021-05-02
+
+- fix: broken main cjs export works again. See more [here](https://github.com/agenda/agenda/issues/1266#issuecomment-830628762).
+
   # 4.1.2 / 2021-04-04
 
 - Docs, JSDocs and TS typo fixes. Thanks @niftylettuce @thebestnom @simllll and @Igor-lkm
