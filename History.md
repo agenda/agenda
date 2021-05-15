@@ -2,6 +2,8 @@
 
 - _Contributions welcome!_ https://github.com/agenda/agenda/pulls
 
+- Updated dependencies: `mongodb@3.6.6`, `lodash@4.17.21`, as well as various dev dependencies.
+
   # 4.1.2 / 2021-05-02
 
 - fix: broken main cjs export works again. See more [here](https://github.com/agenda/agenda/issues/1266#issuecomment-830628762).
