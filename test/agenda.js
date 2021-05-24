@@ -287,6 +287,10 @@ describe("Agenda", () => {
         jobs.define("highPriority", { priority: 10 }, jobProcessor);
         expect(jobs._definitions.highPriority).to.have.property("priority", 10);
       });
+      it("takes saveResult option for the job", () => {
+        jobs.define("savedResultJob", { saveResult: true }, jobProcessor);
+        expect(jobs._definitions.savedResultJob).to.have.property("saveResult", true);
+      });
     });
 
     describe("every", () => {
