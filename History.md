@@ -88,12 +88,12 @@
       ```
       * * * * * *
       | | | | | |
-      | | | | | +-- Year              (range: 1900-3000)
-      | | | | +---- Day of the Week   (range: 1-7, 1 standing for Monday)
-      | | | +------ Month of the Year (range: 1-12) NOTE: Difference here
-      | | +-------- Day of the Month  (range: 1-31)
-      | +---------- Hour              (range: 0-23)
-      +------------ Minute            (range: 0-59)
+      | | | | | +-- Day of the Week   (range: 0-7, 0 or 7 is Sunday)
+      | | | | +---- Month of the Year (range: 1-12) NOTE: Difference here
+      | | | +------ Day of the Month  (range: 1-31)
+      | | +-------- Hour              (range: 0-23)
+      | +---------- Minute            (range: 0-59)
+      +------------ Second            (range: 0-59, optional)
       ```
 
   # 3.1.0 / 2020-04-07
