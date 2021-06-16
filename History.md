@@ -2,6 +2,10 @@
 
 - _Contributions welcome!_ https://github.com/agenda/agenda/pulls
 
+- # 4.2.0 / 2021-08-09
+
+- fix: deprecation warning for collection.findOneAndUpdate ([#1338](https://github.com/agenda/agenda/pull/1338)) thanks @frobinsonj
+
 - # 4.2.0 / 2021-08-05
 
 - Feat: Add top level disable and enable ([#1109](https://github.com/agenda/agenda/pull/1109)) thanks @pdfowler
