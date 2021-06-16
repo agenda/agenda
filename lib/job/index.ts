@@ -54,7 +54,7 @@ export interface JobAttributes<
   /**
    * Date/time the job was locked.
    */
-  lockedAt?: Date;
+  lockedAt?: Date | null;
 
   /**
    * The priority of the job.
