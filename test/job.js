@@ -1288,6 +1288,127 @@ describe("Job", () => {
     });
   });
 
+  describe("job save result", () => {
+    describe("set option", () => {
+      it("should not be true by default", () => {
+        let job = new Job();
+        expect(job.attrs.saveResult).to.be(false);
+      });
+      it("should set option via method", () => {
+        let job = new Job();
+        job.setSaveResult(true);
+        expect(job.attrs.saveResult).to.be(true);
+      });
+      it("should set option via constructor", () => {
+        let job = new Job({saveResult: true});
+        expect(job.attrs.saveResult).to.be(true);
+      });
+      it("returns the job", () => {
+        let job = new Job();
+        expect(job.setSaveResult(true)).to.be(job);
+      });
+    });
+    describe("saves result", () => {
+      describe("using callback", () => {
+        it("should not save result if option is missing", async () => {
+          agenda.define("savedResultJob", (job, cb) => {
+            cb(undefined, "job-result");
+          });
+          await agenda.start();
+          await agenda.now("savedResultJob");
+          await delay(jobTimeout);
+          const result = await agenda.jobs({ name: "savedResultJob" });
+          expect(result[0].attrs.result).to.be(undefined)
+        });
+        it("should not save result if option is false", async () => {
+          agenda.define("savedResultJob", {saveResult: false}, (job, cb) => {
+            cb(undefined, "job-result");
+          });
+          await agenda.start();
+          await agenda.now("savedResultJob");
+          await delay(jobTimeout);
+          const result = await agenda.jobs({ name: "savedResultJob" });
+          expect(result[0].attrs.result).to.be(undefined)
+        });
+        it("should save result if option is true", async () => {
+          agenda.define("savedResultJob", {saveResult: true}, (job, cb) => {
+            cb(undefined, "job-result");
+          });
+          await agenda.start();
+          await agenda.now("savedResultJob");
+          await delay(jobTimeout);
+          const result = await agenda.jobs({ name: "savedResultJob" });
+          expect(result[0].attrs.result).to.be("job-result");
+        });
+      });
+
+      describe("using promise", () => {
+        it("should not save result if option is missing", async () => {
+          agenda.define("savedResultJob", async (job) => {
+            return "job-result";
+          });
+          await agenda.start();
+          await agenda.now("savedResultJob");
+          await delay(jobTimeout);
+          const result = await agenda.jobs({ name: "savedResultJob" });
+          expect(result[0].attrs.result).to.be(undefined)
+        });
+        it("should not save result if option is false", async () => {
+          agenda.define("savedResultJob", {saveResult: false}, async (job) => {
+            return "job-result";
+          });
+          await agenda.start();
+          await agenda.now("savedResultJob");
+          await delay(jobTimeout);
+          const result = await agenda.jobs({ name: "savedResultJob" });
+          expect(result[0].attrs.result).to.be(undefined)
+        });
+        it("should save result if option is true", async () => {
+          agenda.define("savedResultJob", {saveResult: true}, async (job) => {
+            return "job-result";
+          });
+          await agenda.start();
+          await agenda.now("savedResultJob");
+          await delay(jobTimeout);
+          const result = await agenda.jobs({ name: "savedResultJob" });
+          expect(result[0].attrs.result).to.be("job-result");
+        });
+      });
+      describe("using sync function", () => {
+        it("should not save result if option is missing", async () => {
+          agenda.define("savedResultJob", (job) => {
+            return "job-result";
+          });
+          await agenda.start();
+          await agenda.now("savedResultJob");
+          await delay(jobTimeout);
+          const result = await agenda.jobs({ name: "savedResultJob" });
+          expect(result[0].attrs.result).to.be(undefined)
+        });
+        it("should not save result if option is false", async () => {
+          agenda.define("savedResultJob", {saveResult: false}, (job) => {
+            return "job-result";
+          });
+          await agenda.start();
+          await agenda.now("savedResultJob");
+          await delay(jobTimeout);
+          const result = await agenda.jobs({ name: "savedResultJob" });
+          expect(result[0].attrs.result).to.be(undefined)
+        });
+        it("should save result if option is true", async () => {
+          agenda.define("savedResultJob", {saveResult: true}, (job) => {
+            return "job-result";
+          });
+          await agenda.start();
+          await agenda.now("savedResultJob");
+          await delay(jobTimeout);
+          const result = await agenda.jobs({ name: "savedResultJob" });
+          expect(result[0].attrs.result).to.be("job-result");
+        });
+      });
+    });
+  })
+
   describe("Integration Tests", () => {
     describe(".every()", () => {
       it("Should not rerun completed jobs after restart", (done) => {
