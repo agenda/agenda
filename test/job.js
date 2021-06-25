@@ -917,8 +917,8 @@ describe("Job", () => {
           // eslint-disable-line no-unused-vars
           runCount++;
 
-          if (c !== 1) {
-            expect(c).to.be(2);
+          if (runCount !== 1) {
+            expect(runCount).to.be(2);
             await agenda.stop();
             return resolve();
           }
