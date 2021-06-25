@@ -4,12 +4,9 @@ const expect = require("expect.js");
 const delay = require("delay");
 const { MongoClient } = require("mongodb");
 const { Agenda } = require("../dist");
+const getMongoCfg = require("./fixtures/mongo-connector");
 
-const mongoHost = process.env.MONGODB_HOST || "localhost";
-const mongoPort = process.env.MONGODB_PORT || "27017";
-const agendaDatabase = "agenda-test";
-const mongoCfg =
-  "mongodb://" + mongoHost + ":" + mongoPort + "/" + agendaDatabase;
+let mongoCfg;
 
 // Create agenda instances
 let agenda = null;
@@ -24,42 +21,32 @@ const jobType = "do work";
 const jobProcessor = () => {};
 
 describe("find-and-lock-next-job", () => {
-  beforeEach((done) => {
+  beforeEach(async () => {
+    mongoCfg = await getMongoCfg(agendaDatabase);
+  });
+
+  beforeEach(async () => {
     agenda = new Agenda(
       {
         db: {
           address: mongoCfg,
         },
-      },
-      (error) => {
-        if (error) {
-          done(error);
-        }
-
-        MongoClient.connect(
-          mongoCfg,
-          { useUnifiedTopology: true },
-          async (error, client) => {
-            mongoClient = client;
-            mongoDb = client.db(agendaDatabase);
-
-            await delay(50);
-            await clearJobs();
-
-            agenda.define("someJob", jobProcessor);
-            agenda.define("send email", jobProcessor);
-            agenda.define("some job", jobProcessor);
-            agenda.define(jobType, jobProcessor);
-
-            done();
-          }
-        );
-      }
-    );
+      });
+  
+      await jobs._ready;
+  
+      mongoClient = await MongoClient.connect(mongoCfg);
+  
+      mongoDb = mongoClient.db(agendaDatabase);
+      await delay(5);
+      jobs.define("someJob", jobProcessor);
+      jobs.define("send email", jobProcessor);
+      jobs.define("some job", jobProcessor);
+      jobs.define(jobType, jobProcessor);
   });
 
   afterEach(async () => {
-    await delay(50);
+    await delay(5);
     await agenda.stop();
     await clearJobs();
     await mongoClient.close();
