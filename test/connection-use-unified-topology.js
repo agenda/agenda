@@ -7,20 +7,17 @@ const expect = require("expect.js");
 
 const { Job } = require("../dist/job");
 const { Agenda } = require("../dist");
+const getMongoCfg = require("./fixtures/mongo-connector");
 
-const mongoHost = process.env.MONGODB_HOST || "localhost";
-const mongoPort = process.env.MONGODB_PORT || "27017";
-const agendaDatabase = "agenda-test";
-const mongoCfg =
-  "mongodb://" + mongoHost + ":" + mongoPort + "/" + agendaDatabase;
-
-function clearJobs(client) {
-  return client.db().collection("agendaJobs").deleteMany({});
-}
+let mongoCfg;
 
 const JOB_NAME = "dummyJob";
 
 describe("MongoDB connection", () => {
+  beforeEach(async () => {
+    mongoCfg = await getMongoCfg();
+  });
+
   it("with useUnifiedTopology option", async () => {
     let client;
     let agenda;
@@ -50,7 +47,6 @@ describe("MongoDB connection", () => {
       expect(job.attrs.lastRunAt.valueOf()).to.be.greaterThan(now.valueOf());
     } finally {
       await agenda.stop();
-      await clearJobs(client);
       await client.close();
     }
   });
