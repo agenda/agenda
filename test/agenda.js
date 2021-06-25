@@ -38,7 +38,7 @@ describe("Agenda", () => {
     mongoClient = await MongoClient.connect(mongoCfg);
 
     mongoDb = mongoClient.db(agendaDatabase);
-    await delay(50);
+    await delay(5);
     jobs.define("someJob", jobProcessor);
     jobs.define("send email", jobProcessor);
     jobs.define("some job", jobProcessor);
@@ -46,7 +46,7 @@ describe("Agenda", () => {
   });
 
   afterEach(async () => {
-    await delay(50);
+    await delay(5);
     await jobs.stop();
     await jobs.cancel({});
     await mongoClient.close();

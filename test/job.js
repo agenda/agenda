@@ -39,7 +39,7 @@ describe("Job", () => {
 
     mongoClient = await MongoClient.connect(mongoCfg);
 
-    await delay(50);
+    await delay(5);
 
     agenda.define("someJob", jobProcessor);
     agenda.define("send email", jobProcessor);

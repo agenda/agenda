@@ -31,7 +31,7 @@ describe("Retry", () => {
 
     mongoClient = await MongoClient.connect(mongoCfg);
 
-    await delay(50);
+    await delay(5);
 
     agenda.define("someJob", jobProcessor);
     agenda.define("send email", jobProcessor);
@@ -40,7 +40,7 @@ describe("Retry", () => {
   });
 
   afterEach(async () => {
-    await delay(50);
+    await delay(5);
     await agenda.stop();
     await mongoClient.close();
     await agenda._db.close();
