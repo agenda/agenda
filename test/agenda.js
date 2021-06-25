@@ -6,6 +6,8 @@ const delay = require("delay");
 const { Job } = require("../dist/job");
 const { hasMongoProtocol } = require("../dist/agenda/has-mongo-protocol");
 const { Agenda } = require("../dist");
+const debug = require("debug")("agenda:test");
+
 const getMongoCfg = require("./fixtures/mongo-connector");
 
 let mongoCfg;
@@ -393,6 +395,8 @@ describe("Agenda", () => {
             .schedule("now")
             .save();
 
+          debug('Job 1 scheduled for ' + job1.attrs.nextRunAt.toISOString())
+
           const job2 = await jobs
             .create("unique job", {
               type: "active",
@@ -405,7 +409,10 @@ describe("Agenda", () => {
             })
             .schedule("now")
             .save();
+            debug('Job 2 scheduled for ' + job2.attrs.nextRunAt.toISOString())
 
+          // TODO: This test is currently failing, and I have to ask whether the test describes the expected behavior
+          // since the 'insertOnly' flag is not set on the `unique` call
           expect(job1.attrs.nextRunAt.toISOString()).not.to.equal(
             job2.attrs.nextRunAt.toISOString()
           );
