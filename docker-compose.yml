@@ -1,9 +1,9 @@
-# Run tests in Docker `docker-compose up` on Node.js ^10
+# Run tests in Docker `docker-compose up` on Node.js v14
 # - install node deps first `docker-compose run agenda npm install`
 version: "3"
 services:
   agenda:
-    image: node:10
+    image: node:14
     command: npm test
     working_dir: /usr/src/app
     volumes:
@@ -17,6 +17,6 @@ services:
   mongodb:
     image: mongo:latest
     ports:
-      - "27017"
+      - "27017:27017"
     command:
       - --storageEngine=wiredTiger

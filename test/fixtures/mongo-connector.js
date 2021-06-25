@@ -1,21 +1,22 @@
-const debug = require('debug')('agenda:test:connector');
+const debug = require("debug")("agenda:test:connector");
 
 const useHostedMongo = /^(true|ye?s?|1)$/i.test(process.env.USE_MONGODB);
 
 let mongoServer;
 
 if (!useHostedMongo) {
-  mongoServer = require('./mongo-server');
+  mongoServer = require("./mongo-server");
 }
 
-module.exports = async function(agendaDatabase = 'agenda-test') {
+module.exports = async function (agendaDatabase = "agenda-test") {
   let mongoURI;
 
   if (useHostedMongo) {
-    const mongoHost = process.env.MONGODB_HOST || 'localhost';
-    const mongoPort = process.env.MONGODB_PORT || '27017';
+    const mongoHost = process.env.MONGODB_HOST || "localhost";
+    const mongoPort = process.env.MONGODB_PORT || "27017";
 
-    mongoURI = 'mongodb://' + mongoHost + ':' + mongoPort + '/' + agendaDatabase;
+    mongoURI =
+      "mongodb://" + mongoHost + ":" + mongoPort + "/" + agendaDatabase;
     debug('Returning Hosted Mongo URI: "%s"', mongoURI);
   } else {
     mongoURI = await mongoServer.getConnectionString();
