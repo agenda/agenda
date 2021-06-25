@@ -18,8 +18,6 @@ let mongoCfg;
 let agenda = null;
 let mongoClient = null;
 
-// Slow timeouts for Travis
-const jobTimeout = process.env.TRAVIS ? 2500 : 500;
 const jobType = "do work";
 const jobProcessor = () => {};
 
