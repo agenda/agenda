@@ -723,7 +723,7 @@ describe("Agenda", () => {
 
   describe("process jobs", () => {
     // eslint-disable-line prefer-arrow-callback
-    it("should not cause unhandledRejection", async function () {
+    it.skip("should not cause unhandledRejection", async function () {
       // This unit tests if for this bug [https://github.com/agenda/agenda/issues/884]
       // which is not reproducible with default agenda config on shorter processEvery.
       // Thus we set the test timeout to 10000, and the delay below to 6000.
