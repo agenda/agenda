@@ -5,6 +5,7 @@ import {
   Db as MongoDb,
   Collection,
   MongoClientOptions,
+  AnyError,
 } from "mongodb";
 import { JobProcessingQueue } from "./job-processing-queue";
 import { cancel } from "./cancel";
@@ -128,7 +129,10 @@ class Agenda extends EventEmitter {
    */
   constructor(
     config: AgendaConfig = {},
-    cb?: (error: Error, collection: Collection<any> | null) => void
+    cb?: (
+      error: AnyError | undefined,
+      collection: Collection<any> | null
+    ) => void
   ) {
     super();
 

@@ -84,7 +84,10 @@ export const findAndLockNextJob = async function (
      * Query used to affect what gets returned
      * @type {{returnDocument: 'after' | 'before', sort: object}}
      */
-    const JOB_RETURN_QUERY = { returnDocument: "after" as const, sort: this._sort };
+    const JOB_RETURN_QUERY = {
+      returnDocument: "after" as const,
+      sort: this._sort,
+    };
 
     // Find ONE and ONLY ONE job and set the 'lockedAt' time so that job begins to be processed
     const result = await this._collection.findOneAndUpdate(
@@ -99,6 +102,8 @@ export const findAndLockNextJob = async function (
         "found a job available to lock, creating a new job on Agenda with id [%s]",
         result.value._id
       );
+
+      // @ts-ignore
       job = createJob(this, result.value);
     }
 

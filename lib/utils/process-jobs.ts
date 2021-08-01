@@ -165,6 +165,7 @@ export const processJobs = async function (
     );
 
     if (resp.value) {
+      // @ts-ignore
       const job = createJob(self, resp.value);
       debug(
         "found job [%s:%s] that can be locked on the fly",

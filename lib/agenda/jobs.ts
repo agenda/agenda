@@ -1,4 +1,4 @@
-import { FilterQuery } from "mongodb";
+import { Filter } from "mongodb";
 import { Agenda } from ".";
 import { Job } from "../job";
 import { createJob } from "../utils";
@@ -15,7 +15,7 @@ import { createJob } from "../utils";
  */
 export const jobs = async function (
   this: Agenda,
-  query: FilterQuery<any> = {},
+  query: Filter<any> = {},
   sort = {},
   limit = 0,
   skip = 0
