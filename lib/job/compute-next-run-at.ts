@@ -13,20 +13,20 @@ const debug = createDebugger("agenda:job");
  * @name Job#computeNextRunAt
  * @function
  */
-export const computeNextRunAt = function (this: Job) {
+export const computeNextRunAt = function (this: Job): Job {
   const interval = this.attrs.repeatInterval;
   const timezone = this.attrs.repeatTimezone;
   const { repeatAt } = this.attrs;
   const previousNextRunAt = this.attrs.nextRunAt || new Date();
   this.attrs.nextRunAt = undefined;
 
-  const dateForTimezone = (date: any): moment.Moment => {
-    date = moment(date);
-    if (timezone !== null) {
-      date.tz(timezone);
+  const dateForTimezone = (date: Date): moment.Moment => {
+    const mdate: moment.Moment = moment(date);
+    if (timezone) {
+      mdate.tz(timezone);
     }
 
-    return date;
+    return mdate;
   };
 
   /**
@@ -97,7 +97,7 @@ export const computeNextRunAt = function (this: Job) {
         "[%s:%s] nextRunAt set to [%s]",
         this.attrs.name,
         this.attrs._id,
-        this.attrs.nextRunAt!.toISOString()
+        this.attrs.nextRunAt?.toISOString()
       );
       // Either `xo` linter or Node.js 8 stumble on this line if it isn't just ignored
     } catch {
@@ -131,7 +131,7 @@ export const computeNextRunAt = function (this: Job) {
         // Either `xo` linter or Node.js 8 stumble on this line if it isn't just ignored
       } catch {}
     } finally {
-      if (Number.isNaN(this.attrs.nextRunAt!.getTime())) {
+      if (!this.attrs.nextRunAt?.getTime()) {
         this.attrs.nextRunAt = undefined;
         debug(
           "[%s:%s] failed to calculate nextRunAt due to invalid repeat interval",
@@ -168,7 +168,7 @@ export const computeNextRunAt = function (this: Job) {
         "[%s:%s] nextRunAt set to [%s]",
         this.attrs.name,
         this.attrs._id,
-        this.attrs.nextRunAt!.toISOString()
+        this.attrs.nextRunAt?.toISOString()
       );
     } else {
       this.attrs.nextRunAt = date(repeatAt);
@@ -176,7 +176,7 @@ export const computeNextRunAt = function (this: Job) {
         "[%s:%s] nextRunAt set to [%s]",
         this.attrs.name,
         this.attrs._id,
-        this.attrs.nextRunAt!.toISOString()
+        this.attrs.nextRunAt?.toISOString()
       );
     }
   };

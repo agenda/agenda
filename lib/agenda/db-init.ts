@@ -9,15 +9,15 @@ const debug = createDebugger("agenda:db_init");
  * @name Agenda#dbInit
  * @function
  * @param collection name or undefined for default 'agendaJobs'
- * @param cb called when the db is initialized
+ * @param [cb] called when the db is initialized
  */
 export const dbInit = function (
   this: Agenda,
-  collection: string | undefined,
+  collection = "agendaJobs",
   cb?: (error: Error, collection: Collection<any> | null) => void
-) {
+): void {
   debug("init database collection using name [%s]", collection);
-  this._collection = this._mdb.collection(collection || "agendaJobs"); // eslint-disable-line @typescript-eslint/prefer-nullish-coalescing
+  this._collection = this._mdb.collection(collection);
   debug("attempting index creation");
   this._collection.createIndex(
     this._indices,

@@ -1,6 +1,7 @@
 import createDebugger from "debug";
 import { createJob } from "../utils";
 import { Agenda } from ".";
+import { Job } from "../job";
 
 const debug = createDebugger("agenda:internal:_findAndLockNextJob");
 
@@ -17,7 +18,7 @@ export const findAndLockNextJob = async function (
   this: Agenda,
   jobName: string,
   definition: any
-) {
+): Promise<Job | undefined> {
   const now = new Date();
   const lockDeadline = new Date(Date.now().valueOf() - definition.lockLifetime);
   debug("_findAndLockNextJob(%s, [Function])", jobName);
@@ -81,9 +82,9 @@ export const findAndLockNextJob = async function (
 
     /**
      * Query used to affect what gets returned
-     * @type {{returnOriginal: boolean, sort: object}}
+     * @type {{returnDocument: 'after' | 'before', sort: object}}
      */
-    const JOB_RETURN_QUERY = { returnOriginal: false, sort: this._sort };
+    const JOB_RETURN_QUERY = { returnDocument: "after" as const, sort: this._sort };
 
     // Find ONE and ONLY ONE job and set the 'lockedAt' time so that job begins to be processed
     const result = await this._collection.findOneAndUpdate(
@@ -92,7 +93,7 @@ export const findAndLockNextJob = async function (
       JOB_RETURN_QUERY
     );
 
-    let job;
+    let job: Job | undefined = undefined;
     if (result.value) {
       debug(
         "found a job available to lock, creating a new job on Agenda with id [%s]",

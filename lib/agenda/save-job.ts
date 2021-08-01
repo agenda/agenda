@@ -52,7 +52,7 @@ const processDbResult = async function (this: Agenda, job: Job, result: any) {
  * @param job job to save into MongoDB
  * @returns resolves when job is saved or errors
  */
-export const saveJob = async function (this: Agenda, job: Job): Promise<any> {
+export const saveJob = async function (this: Agenda, job: Job): Promise<Job> {
   try {
     debug("attempting to save a job into Agenda instance");
 
@@ -86,7 +86,7 @@ export const saveJob = async function (this: Agenda, job: Job): Promise<any> {
       const result = await this._collection.findOneAndUpdate(
         { _id: id },
         update,
-        { returnOriginal: false }
+        { returnDocument: "after" }
       );
       return await processDbResult.call(this, job, result);
     }
@@ -126,7 +126,7 @@ export const saveJob = async function (this: Agenda, job: Job): Promise<any> {
         update,
         {
           upsert: true,
-          returnOriginal: false,
+          returnDocument: "after",
         }
       );
       return await processDbResult.call(this, job, result);
@@ -148,7 +148,7 @@ export const saveJob = async function (this: Agenda, job: Job): Promise<any> {
       );
       const result = await this._collection.findOneAndUpdate(query, update, {
         upsert: true,
-        returnOriginal: false,
+        returnDocument: "after",
       });
       return await processDbResult.call(this, job, result);
     }

@@ -9,7 +9,9 @@ const debug = createDebugger("agenda:purge");
  * @function
  * @returns resolved when job cancelling fails or passes
  */
-export const purge = async function (this: Agenda) {
+export const purge = async function (
+  this: Agenda
+): Promise<number | undefined> {
   // @NOTE: Only use after defining your jobs
   const definedNames = Object.keys(this._definitions);
   debug("Agenda.purge(%o)", definedNames);

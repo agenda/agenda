@@ -60,6 +60,21 @@ Install via NPM
 
 You will also need a working [Mongo](https://www.mongodb.com/) database (v3) to point it to.
 
+# CJS / Module Imports
+
+for regular javascript code, just use the default entrypoint
+```js
+const Agenda = require('agenda');
+```
+
+For Typescript, Webpack or other module imports, use `agenda/es` entrypoint:
+e.g.
+```ts
+import { Agenda } from 'agenda/es';
+```
+***NOTE***: If you're migrating from `@types/agenda` you also should change imports to `agenda/es`.
+Instead of `import Agenda from 'agenda'` use `import Agenda from 'agenda/es'`.
+
 # Example Usage
 
 ```js
@@ -1079,8 +1094,8 @@ Please provide us with as much details as possible such as:
 
 #### To turn on logging, please set your DEBUG env variable like so:
 
-- OSX: `DEBUG="agenda:*" node index.js`
-- Linux: `DEBUG="agenda:*" node index.js`
+- OSX: `DEBUG="agenda:*" ts-node src/index.js`
+- Linux: `DEBUG="agenda:*" ts-node src/index.js`
 - Windows CMD: `set DEBUG=agenda:*`
 - Windows PowerShell: `$env:DEBUG = "agenda:*"`
 
