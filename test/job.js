@@ -1291,21 +1291,21 @@ describe("Job", () => {
   describe("job save result", () => {
     describe("set option", () => {
       it("should not be true by default", () => {
-        let job = new Job();
-        expect(job.attrs.saveResult).to.be(false);
+        const job = new Job();
+        expect(job.attrs.shouldSaveResult).to.be(false);
       });
       it("should set option via method", () => {
-        let job = new Job();
-        job.setSaveResult(true);
-        expect(job.attrs.saveResult).to.be(true);
+        const job = new Job();
+        job.setShouldSaveResult(true);
+        expect(job.attrs.shouldSaveResult).to.be(true);
       });
       it("should set option via constructor", () => {
-        let job = new Job({saveResult: true});
-        expect(job.attrs.saveResult).to.be(true);
+        const job = new Job({shouldSaveResult: true});
+        expect(job.attrs.shouldSaveResult).to.be(true);
       });
       it("returns the job", () => {
-        let job = new Job();
-        expect(job.setSaveResult(true)).to.be(job);
+        const job = new Job();
+        expect(job.setShouldSaveResult(true)).to.be(job);
       });
     });
     describe("saves result", () => {
@@ -1321,7 +1321,7 @@ describe("Job", () => {
           expect(result[0].attrs.result).to.be(undefined)
         });
         it("should not save result if option is false", async () => {
-          agenda.define("savedResultJob", {saveResult: false}, (job, cb) => {
+          agenda.define("savedResultJob", {shouldSaveResult: false}, (job, cb) => {
             cb(undefined, "job-result");
           });
           await agenda.start();
@@ -1331,7 +1331,7 @@ describe("Job", () => {
           expect(result[0].attrs.result).to.be(undefined)
         });
         it("should save result if option is true", async () => {
-          agenda.define("savedResultJob", {saveResult: true}, (job, cb) => {
+          agenda.define("savedResultJob", {shouldSaveResult: true}, (job, cb) => {
             cb(undefined, "job-result");
           });
           await agenda.start();
@@ -1354,7 +1354,7 @@ describe("Job", () => {
           expect(result[0].attrs.result).to.be(undefined)
         });
         it("should not save result if option is false", async () => {
-          agenda.define("savedResultJob", {saveResult: false}, async (job) => {
+          agenda.define("savedResultJob", {shouldSaveResult: false}, async (job) => {
             return "job-result";
           });
           await agenda.start();
@@ -1364,7 +1364,7 @@ describe("Job", () => {
           expect(result[0].attrs.result).to.be(undefined)
         });
         it("should save result if option is true", async () => {
-          agenda.define("savedResultJob", {saveResult: true}, async (job) => {
+          agenda.define("savedResultJob", {shouldSaveResult: true}, async (job) => {
             return "job-result";
           });
           await agenda.start();
@@ -1386,7 +1386,7 @@ describe("Job", () => {
           expect(result[0].attrs.result).to.be(undefined)
         });
         it("should not save result if option is false", async () => {
-          agenda.define("savedResultJob", {saveResult: false}, (job) => {
+          agenda.define("savedResultJob", {shouldSaveResult: false}, (job) => {
             return "job-result";
           });
           await agenda.start();
@@ -1396,7 +1396,7 @@ describe("Job", () => {
           expect(result[0].attrs.result).to.be(undefined)
         });
         it("should save result if option is true", async () => {
-          agenda.define("savedResultJob", {saveResult: true}, (job) => {
+          agenda.define("savedResultJob", {shouldSaveResult: true}, (job) => {
             return "job-result";
           });
           await agenda.start();

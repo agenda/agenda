@@ -39,7 +39,7 @@ export const run = async function (this: Job): Promise<Job> {
       } else {
         this.attrs.lastFinishedAt = new Date();
 
-        if(this.attrs.saveResult && result) {
+        if(this.attrs.shouldSaveResult && result) {
           this.attrs.result = result;
         }
       }
