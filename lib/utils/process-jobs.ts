@@ -155,7 +155,7 @@ export const processJobs = async function (
 
     // Update / options for the MongoDB query
     const update = { $set: { lockedAt: now } };
-    const options = { returnDocument: "after" as const };
+    const options = { returnOriginal: false };
 
     // Lock the job in MongoDB!
     const resp = await self._collection.findOneAndUpdate(
