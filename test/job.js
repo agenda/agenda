@@ -489,7 +489,7 @@ describe("Job", () => {
     it("handles errors with q promises", async () => {
       job.attrs.name = "failBoat2";
       agenda.define("failBoat2", (job, cb) => {
-        Q.delay(100)
+        delay(100)
           .then(() => {
             // eslint-disable-line
             throw new Error("Zomg fail");
