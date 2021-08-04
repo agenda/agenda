@@ -7,6 +7,7 @@ const { Agenda } = require("../dist");
 const getMongoCfg = require("./fixtures/mongo-connector");
 
 let mongoCfg;
+const agendaDatabase = "agenda-test";
 
 // Create agenda instances
 let agenda = null;
