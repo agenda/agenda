@@ -402,6 +402,8 @@ describe("Agenda", () => {
             .schedule("now")
             .save();
 
+          await delay(10);
+
           const job2 = await jobs
             .create("unique job", {
               type: "active",
@@ -679,101 +681,129 @@ describe("Agenda", () => {
     });
   });
 
-  describe('disable', () => {
-    beforeEach(async() => {
+  describe("disable", () => {
+    beforeEach(async () => {
       await Promise.all([
-        jobs.create('sendEmail', {to: 'some guy'}).schedule('1 minute').save(),
-        jobs.create('sendEmail', {from: 'some guy'}).schedule('1 minute').save(),
-        jobs.create('some job').schedule('30 seconds').save()
+        jobs
+          .create("sendEmail", { to: "some guy" })
+          .schedule("1 minute")
+          .save(),
+        jobs
+          .create("sendEmail", { from: "some guy" })
+          .schedule("1 minute")
+          .save(),
+        jobs.create("some job").schedule("30 seconds").save(),
       ]);
     });
 
-    it('disables all jobs', async() => {
+    it("disables all jobs", async () => {
       const ct = await jobs.disable({});
 
       expect(ct).to.be(3);
       const disabledJobs = await jobs.jobs({});
 
       expect(disabledJobs).to.have.length(3);
-      disabledJobs.map(x => expect(x.attrs.disabled).to.be(true));
+      disabledJobs.map((x) => expect(x.attrs.disabled).to.be(true));
     });
 
-    it('disables jobs when queried by name', async() => {
-      const ct = await jobs.disable({name: 'sendEmail'});
+    it("disables jobs when queried by name", async () => {
+      const ct = await jobs.disable({ name: "sendEmail" });
 
       expect(ct).to.be(2);
-      const disabledJobs = await jobs.jobs({name: 'sendEmail'});
+      const disabledJobs = await jobs.jobs({ name: "sendEmail" });
 
       expect(disabledJobs).to.have.length(2);
-      disabledJobs.map(x => expect(x.attrs.disabled).to.be(true));
+      disabledJobs.map((x) => expect(x.attrs.disabled).to.be(true));
     });
 
-    it('disables jobs when queried by data', async() => {
-      const ct = await jobs.disable({'data.from': 'some guy'});
+    it("disables jobs when queried by data", async () => {
+      const ct = await jobs.disable({ "data.from": "some guy" });
 
       expect(ct).to.be(1);
-      const disabledJobs = await jobs.jobs({'data.from': 'some guy', disabled: true});
+      const disabledJobs = await jobs.jobs({
+        "data.from": "some guy",
+        disabled: true,
+      });
 
       expect(disabledJobs).to.have.length(1);
     });
 
-    it('does not modify `nextRunAt`', async() => {
-      const js = await jobs.jobs({name: 'some job'});
-      const ct = await jobs.disable({name: 'some job'});
+    it("does not modify `nextRunAt`", async () => {
+      const js = await jobs.jobs({ name: "some job" });
+      const ct = await jobs.disable({ name: "some job" });
 
       expect(ct).to.be(1);
-      const disabledJobs = await jobs.jobs({name: 'some job', disabled: true});
+      const disabledJobs = await jobs.jobs({
+        name: "some job",
+        disabled: true,
+      });
 
-      expect(disabledJobs[0].attrs.nextRunAt.toString()).to.be(js[0].attrs.nextRunAt.toString());
+      expect(disabledJobs[0].attrs.nextRunAt.toString()).to.be(
+        js[0].attrs.nextRunAt.toString()
+      );
     });
   });
 
-  describe('enable', () => {
-    beforeEach(async() => {
+  describe("enable", () => {
+    beforeEach(async () => {
       await Promise.all([
-        jobs.create('sendEmail', {to: 'some guy'}).schedule('1 minute').save(),
-        jobs.create('sendEmail', {from: 'some guy'}).schedule('1 minute').save(),
-        jobs.create('some job').schedule('30 seconds').save()
+        jobs
+          .create("sendEmail", { to: "some guy" })
+          .schedule("1 minute")
+          .save(),
+        jobs
+          .create("sendEmail", { from: "some guy" })
+          .schedule("1 minute")
+          .save(),
+        jobs.create("some job").schedule("30 seconds").save(),
       ]);
     });
 
-    it('enables all jobs', async() => {
+    it("enables all jobs", async () => {
       const ct = await jobs.enable({});
 
       expect(ct).to.be(3);
       const enabledJobs = await jobs.jobs({});
 
       expect(enabledJobs).to.have.length(3);
-      enabledJobs.map(x => expect(x.attrs.disabled).to.be(false));
+      enabledJobs.map((x) => expect(x.attrs.disabled).to.be(false));
     });
 
-    it('enables jobs when queried by name', async() => {
-      const ct = await jobs.enable({name: 'sendEmail'});
+    it("enables jobs when queried by name", async () => {
+      const ct = await jobs.enable({ name: "sendEmail" });
 
       expect(ct).to.be(2);
-      const enabledJobs = await jobs.jobs({name: 'sendEmail'});
+      const enabledJobs = await jobs.jobs({ name: "sendEmail" });
 
       expect(enabledJobs).to.have.length(2);
-      enabledJobs.map(x => expect(x.attrs.disabled).to.be(false));
+      enabledJobs.map((x) => expect(x.attrs.disabled).to.be(false));
     });
 
-    it('enables jobs when queried by data', async() => {
-      const ct = await jobs.enable({'data.from': 'some guy'});
+    it("enables jobs when queried by data", async () => {
+      const ct = await jobs.enable({ "data.from": "some guy" });
 
       expect(ct).to.be(1);
-      const enabledJobs = await jobs.jobs({'data.from': 'some guy', disabled: false});
+      const enabledJobs = await jobs.jobs({
+        "data.from": "some guy",
+        disabled: false,
+      });
 
       expect(enabledJobs).to.have.length(1);
     });
 
-    it('does not modify `nextRunAt`', async() => {
-      const js = await jobs.jobs({name: 'some job'});
-      const ct = await jobs.enable({name: 'some job'});
+    it("does not modify `nextRunAt`", async () => {
+      const js = await jobs.jobs({ name: "some job" });
+      const ct = await jobs.enable({ name: "some job" });
 
       expect(ct).to.be(1);
-      const enabledJobs = await jobs.jobs({name: 'some job', disabled: false});
+      const enabledJobs = await jobs.jobs({
+        name: "some job",
+        disabled: false,
+      });
 
-      expect(enabledJobs[0].attrs.nextRunAt.toString()).to.be(js[0].attrs.nextRunAt.toString());
+      expect(enabledJobs[0].attrs.nextRunAt.toString()).to.be(
+        js[0].attrs.nextRunAt.toString()
+      );
     });
   });
 
