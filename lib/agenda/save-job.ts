@@ -29,7 +29,8 @@ const processDbResult = async function (this: Agenda, job: Job, result: any) {
     if (result.insertedId) {
       _id = result.insertedId;
       // find the doc using _id
-      const _job = await this._collection.findOne({ _id: new ObjectId(_id) });
+      const _job = await this._collection.findOne({ _id });
+
       if (_job) {
         nextRunAt = _job.nextRunAt;
       }
