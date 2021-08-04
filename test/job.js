@@ -5,7 +5,6 @@ const cp = require("child_process");
 const expect = require("expect.js");
 const moment = require("moment-timezone");
 const { MongoClient } = require("mongodb");
-const Q = require("q");
 const delay = require("delay");
 const sinon = require("sinon");
 const { Job } = require("../dist/job");
