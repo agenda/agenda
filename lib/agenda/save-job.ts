@@ -86,7 +86,7 @@ export const saveJob = async function (this: Agenda, job: Job): Promise<Job> {
       const result = await this._collection.findOneAndUpdate(
         { _id: id },
         update,
-        { returnDocument: "after" }
+        { returnOriginal: false }
       );
       return await processDbResult.call(this, job, result);
     }
@@ -126,7 +126,7 @@ export const saveJob = async function (this: Agenda, job: Job): Promise<Job> {
         update,
         {
           upsert: true,
-          returnDocument: "after",
+          returnOriginal: false,
         }
       );
       return await processDbResult.call(this, job, result);
@@ -148,7 +148,7 @@ export const saveJob = async function (this: Agenda, job: Job): Promise<Job> {
       );
       const result = await this._collection.findOneAndUpdate(query, update, {
         upsert: true,
-        returnDocument: "after",
+        returnOriginal: false,
       });
       return await processDbResult.call(this, job, result);
     }
