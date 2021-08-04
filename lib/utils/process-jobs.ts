@@ -155,12 +155,13 @@ export const processJobs = async function (
 
     // Update / options for the MongoDB query
     const update = { $set: { lockedAt: now } };
-    const options = { returnOriginal: false };
+    const options = { returnDocument: "after", returnNewDocument: true };
 
     // Lock the job in MongoDB!
     const resp = await self._collection.findOneAndUpdate(
       criteria,
       update,
+      // @ts-ignore
       options
     );
 

@@ -83,10 +83,11 @@ export const saveJob = async function (this: Agenda, job: Job): Promise<Job> {
       debug(
         "job already has _id, calling findOneAndUpdate() using _id as query"
       );
+      // @ts-ignore
       const result = await this._collection.findOneAndUpdate(
         { _id: id },
         update,
-        { returnOriginal: false }
+        { returnDocument: "after", returnNewDocument: true }
       );
       return await processDbResult.call(this, job, result);
     }
@@ -118,6 +119,7 @@ export const saveJob = async function (this: Agenda, job: Job): Promise<Job> {
       debug(
         'calling findOneAndUpdate() with job name and type of "single" as query'
       );
+      // @ts-ignore
       const result = await this._collection.findOneAndUpdate(
         {
           name: props.name,
@@ -126,7 +128,8 @@ export const saveJob = async function (this: Agenda, job: Job): Promise<Job> {
         update,
         {
           upsert: true,
-          returnOriginal: false,
+          returnDocument: "after",
+          returnNewDocument: true,
         }
       );
       return await processDbResult.call(this, job, result);
@@ -146,9 +149,11 @@ export const saveJob = async function (this: Agenda, job: Job): Promise<Job> {
         "calling findOneAndUpdate() with unique object as query: \n%O",
         query
       );
+      // @ts-ignore
       const result = await this._collection.findOneAndUpdate(query, update, {
         upsert: true,
-        returnOriginal: false,
+        returnDocument: "after",
+        returnNewDocument: true,
       });
       return await processDbResult.call(this, job, result);
     }
