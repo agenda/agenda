@@ -17,6 +17,7 @@ let mongoCfg;
 let agenda = null;
 let mongoClient = null;
 
+const jobTimeout = 50;
 const jobType = "do work";
 const jobProcessor = () => {};
 
