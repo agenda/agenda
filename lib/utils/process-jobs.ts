@@ -309,7 +309,11 @@ export const processJobs = async function (
             );
             self._lockedJobs.splice(self._lockedJobs.indexOf(job), 1);
             jobDefinition.locked--;
-            jobProcessing();
+
+            // If you have few thousand jobs for one worker it would throw "RangeError: Maximum call stack size exceeded"
+            // every 5 minutes (using the default options).
+            // We need to utilise the setImmedaite() to break the call stack back to 0.
+            setImmediate(jobProcessing);
             return;
           }
 
