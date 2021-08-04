@@ -5,7 +5,6 @@ const cp = require("child_process");
 const expect = require("expect.js");
 const moment = require("moment-timezone");
 const { MongoClient } = require("mongodb");
-const Q = require("q");
 const delay = require("delay");
 const sinon = require("sinon");
 const { Job } = require("../dist/job");
@@ -489,7 +488,7 @@ describe("Job", () => {
     it("handles errors with q promises", async () => {
       job.attrs.name = "failBoat2";
       agenda.define("failBoat2", (job, cb) => {
-        Q.delay(100)
+        delay(100)
           .then(() => {
             // eslint-disable-line
             throw new Error("Zomg fail");
