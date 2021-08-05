@@ -53,12 +53,12 @@
     "debug": "~4.3.0",
     "human-interval": "~2.0.0",
     "moment-timezone": "~0.5.27",
-    "mongodb": "~3.6.6"
+    "mongodb": "~4.1.0"
   },
   "devDependencies": {
     "@types/debug": "4.1.5",
     "@types/human-interval": "1.0.0",
-    "@types/mongodb": "3.6.14",
+    "@types/mongodb": "4.0.6",
     "@typescript-eslint/eslint-plugin": "4.25.0",
     "@typescript-eslint/parser": "4.25.0",
     "blanket": "1.2.3",
