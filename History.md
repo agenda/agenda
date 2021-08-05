@@ -4,10 +4,10 @@
 
 - # 4.2.0 / 2021-08-05
 
-- Feat: Add top level disable and enable (#1109) thanks @pdfowler
-- fix(history): match cron-parser pattern (#1335) thanks @dockleryxk
-- fix: "RangeError: Maximum call stack size exceeded" (#1365) thanks @koresar
-- fix: JobAttributes.lockedAt to allow null values (#1340) thanks @tjramage
+- Feat: Add top level disable and enable ([#1109](https://github.com/agenda/agenda/pull/1109)) thanks @pdfowler
+- fix(history): match cron-parser pattern ([#1335](https://github.com/agenda/agenda/pull/1335)) thanks @dockleryxk
+- fix: "RangeError: Maximum call stack size exceeded" ([#1365](https://github.com/agenda/agenda/pull/1365)) thanks @koresar
+- fix: JobAttributes.lockedAt to allow null values ([#1340](https://github.com/agenda/agenda/pull/1340)) thanks @tjramage
 - Updated dependencies: `mongodb@3.6.6`, `lodash@4.17.21`, as well as various dev dependencies.
 - Added node 16 in tests ([#1314](https://github.com/agenda/agenda/pull/1086)) thanks @simison
 
