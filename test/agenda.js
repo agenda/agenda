@@ -120,7 +120,7 @@ describe("Agenda", () => {
   describe("configuration methods", () => {
     let mongoHost;
     beforeEach(() => {
-       mongoHost =  process.env.MONGODB_HOST || "localhost"; 
+       mongoHost =  process.env.MONGODB_HOST || "localhost";
     })
 
     describe("mongo connection tester", () => {
@@ -412,8 +412,6 @@ describe("Agenda", () => {
             .save();
             debug('Job 2 scheduled for ' + job2.attrs.nextRunAt.toISOString())
 
-          // TODO: This test is currently failing, and I have to ask whether the test describes the expected behavior
-          // since the 'insertOnly' flag is not set on the `unique` call
           expect(job1.attrs.nextRunAt.toISOString()).not.to.equal(
             job2.attrs.nextRunAt.toISOString()
           );
