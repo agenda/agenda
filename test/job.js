@@ -16,6 +16,7 @@ let mongoCfg;
 // Create agenda instances
 let agenda = null;
 let mongoClient = null;
+let mongoDb = null;
 
 const jobTimeout = process.env.CI ? 500 : 50;
 const jobType = "do work";
@@ -36,6 +37,7 @@ describe("Job", () => {
     await agenda._ready;
 
     mongoClient = await MongoClient.connect(mongoCfg);
+    mongoDb = mongoClient.db();
 
     await delay(5);
 
