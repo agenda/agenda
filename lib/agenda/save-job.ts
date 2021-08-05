@@ -1,4 +1,5 @@
 import createDebugger from "debug";
+import { ObjectId } from "mongodb";
 import { Agenda } from ".";
 import { Job } from "../job";
 import { processJobs } from "../utils";
@@ -19,16 +20,33 @@ const processDbResult = async function (this: Agenda, job: Job, result: any) {
 
   // We have a result from the above calls
   // findOneAndUpdate() returns different results than insertOne() so check for that
-  let resultValue = result.ops ? result.ops : result.value;
+  let resultValue = result.insertedId ? result.insertedId : result.value;
+
   if (resultValue) {
-    // If it is an array, grab the first job
-    if (Array.isArray(resultValue)) {
-      resultValue = resultValue[0];
+    let _id: ObjectId;
+    let nextRunAt: Date | null | undefined;
+
+    if (result.insertedId) {
+      _id = result.insertedId;
+      // find the doc using _id
+      const _job = await this._collection.findOne({ _id });
+
+      if (_job) {
+        nextRunAt = _job.nextRunAt;
+      }
+    } else {
+      // If it is an array, grab the first job
+      if (Array.isArray(resultValue)) {
+        resultValue = resultValue[0];
+      }
+
+      _id = resultValue._id;
+      nextRunAt = resultValue.nextRunAt;
     }
 
     // Grab ID and nextRunAt from MongoDB and store it as an attribute on Job
-    job.attrs._id = resultValue._id;
-    job.attrs.nextRunAt = resultValue.nextRunAt;
+    job.attrs._id = _id;
+    job.attrs.nextRunAt = nextRunAt;
 
     // If the current job would have been processed in an older scan, process the job immediately
     if (job.attrs.nextRunAt && job.attrs.nextRunAt < this._nextScanAt) {
@@ -86,7 +104,7 @@ export const saveJob = async function (this: Agenda, job: Job): Promise<Job> {
       const result = await this._collection.findOneAndUpdate(
         { _id: id },
         update,
-        { returnOriginal: false }
+        { returnDocument: "after" }
       );
       return await processDbResult.call(this, job, result);
     }
@@ -126,7 +144,7 @@ export const saveJob = async function (this: Agenda, job: Job): Promise<Job> {
         update,
         {
           upsert: true,
-          returnOriginal: false,
+          returnDocument: "after",
         }
       );
       return await processDbResult.call(this, job, result);
@@ -148,7 +166,7 @@ export const saveJob = async function (this: Agenda, job: Job): Promise<Job> {
       );
       const result = await this._collection.findOneAndUpdate(query, update, {
         upsert: true,
-        returnOriginal: false,
+        returnDocument: "after",
       });
       return await processDbResult.call(this, job, result);
     }

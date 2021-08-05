@@ -54,6 +54,10 @@ _Kudos for making the comparison chart goes to [Bull](https://www.npmjs.com/pack
 
 # Installation
 
+### Notice
+
+In order to support new MongoDB 5.0 and mongodb node.js driver/package the next release (5.x.x) of Agenda will be major. The required node version will become >=12. The mongodb dependency version will become >=3.2.
+
 Install via NPM
 
     npm install agenda
@@ -63,16 +67,19 @@ You will also need a working [Mongo](https://www.mongodb.com/) database (v3) to 
 # CJS / Module Imports
 
 for regular javascript code, just use the default entrypoint
+
 ```js
-const Agenda = require('agenda');
+const Agenda = require("agenda");
 ```
 
 For Typescript, Webpack or other module imports, use `agenda/es` entrypoint:
 e.g.
+
 ```ts
-import { Agenda } from 'agenda/es';
+import { Agenda } from "agenda/es";
 ```
-***NOTE***: If you're migrating from `@types/agenda` you also should change imports to `agenda/es`.
+
+**_NOTE_**: If you're migrating from `@types/agenda` you also should change imports to `agenda/es`.
 Instead of `import Agenda from 'agenda'` use `import Agenda from 'agenda/es'`.
 
 # Example Usage
@@ -551,7 +558,7 @@ This functionality can also be achieved by first retrieving all the jobs from th
 Disables any jobs matching the passed mongodb-native query, preventing any matching jobs from being run by the Job Processor.
 
 ```js
-const numDisabled = await agenda.disable({name: 'pollExternalService'});
+const numDisabled = await agenda.disable({ name: "pollExternalService" });
 ```
 
 Similar to `agenda.cancel()`, this functionality can be acheived with a combination of `agenda.jobs()` and `job.disable()`
@@ -561,7 +568,7 @@ Similar to `agenda.cancel()`, this functionality can be acheived with a combinat
 Enables any jobs matching the passed mongodb-native query, allowing any matching jobs to be run by the Job Processor.
 
 ```js
-const numEnabled = await agenda.enable({name: 'pollExternalService'});
+const numEnabled = await agenda.enable({ name: "pollExternalService" });
 ```
 
 Similar to `agenda.cancel()`, this functionality can be acheived with a combination of `agenda.jobs()` and `job.enable()`

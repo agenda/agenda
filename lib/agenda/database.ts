@@ -1,7 +1,7 @@
-import { Collection, MongoClient, MongoClientOptions } from "mongodb";
 import createDebugger from "debug";
-import { hasMongoProtocol } from "./has-mongo-protocol";
+import { AnyError, Collection, MongoClient, MongoClientOptions } from "mongodb";
 import { Agenda } from ".";
+import { hasMongoProtocol } from "./has-mongo-protocol";
 
 const debug = createDebugger("agenda:database");
 
@@ -24,24 +24,15 @@ export const database = function (
   this: Agenda,
   url: string,
   collection?: string,
-  options?: MongoClientOptions,
-  cb?: (error: Error, collection: Collection<any> | null) => void
+  options: MongoClientOptions = {},
+  cb?: (error: AnyError | undefined, collection: Collection<any> | null) => void
 ): Agenda | void {
   if (!hasMongoProtocol(url)) {
     url = "mongodb://" + url;
   }
 
-  const reconnectOptions =
-    options?.useUnifiedTopology === true
-      ? {}
-      : {
-          autoReconnect: true,
-          reconnectTries: Number.MAX_SAFE_INTEGER,
-          reconnectInterval: this._processEvery,
-        };
-
   collection = collection || "agendaJobs";
-  options = { ...reconnectOptions, ...options };
+
   MongoClient.connect(url, options, (error, client) => {
     if (error) {
       debug("error connecting to MongoDB using collection: [%s]", collection);
@@ -58,9 +49,14 @@ export const database = function (
       "successful connection to MongoDB using collection: [%s]",
       collection
     );
-    this._db = client;
-    this._mdb = client.db();
-    this.db_init(collection, cb);
+
+    if (client) {
+      this._db = client;
+      this._mdb = client.db();
+      this.db_init(collection, cb);
+    } else {
+      throw new Error("Mongo Client is undefined");
+    }
   });
   return this;
 };
