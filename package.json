@@ -56,7 +56,7 @@
     "mongodb": "^4.0.1"
   },
   "devDependencies": {
-    "@types/debug": "4.1.5",
+    "@types/debug": "4.1.7",
     "@types/human-interval": "1.0.0",
     "@typescript-eslint/eslint-plugin": "4.25.0",
     "@typescript-eslint/parser": "4.25.0",
