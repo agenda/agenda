@@ -9,66 +9,44 @@ const delay = require("delay");
 const sinon = require("sinon");
 const { Job } = require("../dist/job");
 const { Agenda } = require("../dist");
+const getMongoCfg = require("./fixtures/mongo-connector");
 
-const mongoHost = process.env.MONGODB_HOST || "localhost";
-const mongoPort = process.env.MONGODB_PORT || "27017";
-const agendaDatabase = "agenda-test";
-const mongoCfg =
-  "mongodb://" + mongoHost + ":" + mongoPort + "/" + agendaDatabase;
+let mongoCfg;
 
 // Create agenda instances
 let agenda = null;
-let mongoDb = null;
 let mongoClient = null;
 
-const clearJobs = () => {
-  return mongoDb.collection("agendaJobs").deleteMany({});
-};
-
-// Slow timeouts for CI
-const jobTimeout = 500;
+const jobTimeout = process.env.CI ? 500 : 50;
 const jobType = "do work";
 const jobProcessor = () => {};
 
 describe("Job", () => {
-  beforeEach((done) => {
-    agenda = new Agenda(
-      {
-        db: {
-          address: mongoCfg,
-        },
+  beforeEach(async () => {
+    mongoCfg = await getMongoCfg();
+  });
+
+  beforeEach(async () => {
+    agenda = new Agenda({
+      db: {
+        address: mongoCfg,
       },
-      async (error) => {
-        if (error) {
-          done(error);
-        }
+    });
 
-        try {
-          const client = await MongoClient.connect(mongoCfg, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-          });
-          mongoClient = client;
-          mongoDb = client.db(agendaDatabase);
+    await agenda._ready;
 
-          await delay(50);
-          await clearJobs();
+    mongoClient = await MongoClient.connect(mongoCfg);
 
-          agenda.define("someJob", jobProcessor);
-          agenda.define("send email", jobProcessor);
-          agenda.define("some job", jobProcessor);
-          agenda.define(jobType, jobProcessor);
-          done();
-        } catch (error) {
-          done(error);
-        }
-      }
-    );
+    await delay(5);
+
+    agenda.define("someJob", jobProcessor);
+    agenda.define("send email", jobProcessor);
+    agenda.define("some job", jobProcessor);
+    agenda.define(jobType, jobProcessor);
   });
 
   afterEach(async () => {
     await agenda.stop();
-    await clearJobs();
     await mongoClient.close();
     await agenda._db.close();
   });
@@ -933,17 +911,19 @@ describe("Job", () => {
       let runCount = 0;
 
       const processorPromise = new Promise((resolve) => {
-        agenda.define("lock job", { lockLifetime: 50 }, async (job, cb) => {
+        agenda.define("lock job", { lockLifetime: 50 }, async () => {
           // eslint-disable-line no-unused-vars
           runCount++;
 
           if (runCount !== 1) {
             expect(runCount).to.be(2);
             await agenda.stop();
-            resolve();
+            return resolve();
           }
         });
       });
+
+      expect(agenda._definitions["lock job"].lockLifetime).to.be(50);
 
       agenda.processEvery(50);
       await agenda.start();
@@ -951,7 +931,11 @@ describe("Job", () => {
         i: 1,
       });
       await processorPromise;
-    });
+
+      // Without this delay, the initial job execution will finish and attempt to
+      // save to a DB that doesn't exist anymore.
+      await delay(100);
+    }).timeout(10000);
 
     it("does not process locked jobs", async () => {
       const history = [];
@@ -979,12 +963,12 @@ describe("Job", () => {
         agenda.now("lock job", { i: 3 }),
       ]);
 
-      await delay(500);
+      await delay(600);
       expect(history).to.have.length(3);
       expect(history).to.contain(1);
       expect(history).to.contain(2);
       expect(history).to.contain(3);
-    });
+    }).timeout(10000);
 
     it("does not on-the-fly lock more than agenda._lockLimit jobs", async () => {
       agenda.lockLimit(1);

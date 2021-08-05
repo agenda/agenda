@@ -6,21 +6,17 @@ const delay = require("delay");
 const { Job } = require("../dist/job");
 const { hasMongoProtocol } = require("../dist/agenda/has-mongo-protocol");
 const { Agenda } = require("../dist");
+const debug = require("debug")("agenda:test");
 
-const mongoHost = process.env.MONGODB_HOST || "localhost";
-const mongoPort = process.env.MONGODB_PORT || "27017";
+const getMongoCfg = require("./fixtures/mongo-connector");
+
+let mongoCfg;
 const agendaDatabase = "agenda-test";
-const mongoCfg =
-  "mongodb://" + mongoHost + ":" + mongoPort + "/" + agendaDatabase;
 
 // Create agenda instances
 let jobs = null;
 let mongoDb = null;
 let mongoClient = null;
-
-const clearJobs = () => {
-  return mongoDb.collection("agendaJobs").deleteMany({});
-};
 
 // Slow timeouts for CI
 const jobTimeout = 500;
@@ -28,53 +24,35 @@ const jobType = "do work";
 const jobProcessor = () => {};
 
 describe("Agenda", () => {
-  // eslint-disable-line prefer-arrow-callback
-  beforeEach(() => {
-    // @TODO: this lint issue should be looked into: https://eslint.org/docs/rules/no-async-promise-executor
-    // eslint-disable-next-line no-async-promise-executor
-    return new Promise(async (resolve) => {
-      jobs = new Agenda(
-        {
-          db: {
-            address: mongoCfg,
-          },
-        },
-        () => {
-          MongoClient.connect(
-            mongoCfg,
-            { useUnifiedTopology: true },
-            async (error, client) => {
-              if (error) {
-                throw error;
-              }
-
-              mongoClient = client;
-              mongoDb = client.db(agendaDatabase);
-              await delay(50);
-              await clearJobs();
-              jobs.define("someJob", jobProcessor);
-              jobs.define("send email", jobProcessor);
-              jobs.define("some job", jobProcessor);
-              jobs.define(jobType, jobProcessor);
-              return resolve();
-            }
-          );
-        }
-      );
-    });
+  beforeEach(async () => {
+    mongoCfg = await getMongoCfg(agendaDatabase);
   });
 
-  afterEach(() => {
-    // @TODO: this lint issue should be looked into: https://eslint.org/docs/rules/no-async-promise-executor
-    // eslint-disable-next-line no-async-promise-executor
-    return new Promise(async (resolve) => {
-      await delay(50);
-      await jobs.stop();
-      await clearJobs();
-      await mongoClient.close();
-      await jobs._db.close();
-      resolve();
+  beforeEach(async () => {
+    jobs = new Agenda({
+      db: {
+        address: mongoCfg,
+      },
     });
+
+    await jobs._ready;
+
+    mongoClient = await MongoClient.connect(mongoCfg);
+
+    mongoDb = mongoClient.db(agendaDatabase);
+    await delay(5);
+    jobs.define("someJob", jobProcessor);
+    jobs.define("send email", jobProcessor);
+    jobs.define("some job", jobProcessor);
+    jobs.define(jobType, jobProcessor);
+  });
+
+  afterEach(async () => {
+    await delay(5);
+    await jobs.stop();
+    await jobs.cancel({});
+    await mongoClient.close();
+    await jobs._db.close();
   });
 
   it("sets a default processEvery", () => {
@@ -127,13 +105,24 @@ describe("Agenda", () => {
   });
 
   describe("configuration methods", () => {
-    it("sets the _db directly when passed as an option", () => {
-      const agenda = new Agenda({ mongo: mongoDb });
+    let agenda;
+    it("sets the _db directly when passed as an option", async () => {
+      agenda = new Agenda({ mongo: mongoDb });
+      await agenda.start(); // ??
       expect(agenda._mdb.databaseName).to.equal(agendaDatabase);
+    });
+
+    afterEach(() => {
+      agenda.stop();
     });
   });
 
   describe("configuration methods", () => {
+    let mongoHost;
+    beforeEach(() => {
+       mongoHost =  process.env.MONGODB_HOST || "localhost";
+    })
+
     describe("mongo connection tester", () => {
       it("passing a valid server connection string", () => {
         expect(hasMongoProtocol(mongoCfg)).to.equal(true);
@@ -336,18 +325,22 @@ describe("Agenda", () => {
         it("should not run immediately if options.skipImmediate is true", async () => {
           const jobName = "send email";
           await jobs.every("5 minutes", jobName, {}, { skipImmediate: true });
-          const job = (await jobs.jobs({ name: jobName }))[0];
+          const matchingJobs = await jobs.jobs({ name: jobName });
+          expect(matchingJobs).to.have.length(1);
+          const job = matchingJobs[0];
           const nextRunAt = job.attrs.nextRunAt.getTime();
-          const now = Date.now();
-          expect(nextRunAt - now > 0).to.equal(true);
+          const now = new Date().getTime();
+          const diff = nextRunAt - now;
+          expect(diff).to.be.greaterThan(0);
         });
         it("should run immediately if options.skipImmediate is false", async () => {
           const jobName = "send email";
           await jobs.every("5 minutes", jobName, {}, { skipImmediate: false });
           const job = (await jobs.jobs({ name: jobName }))[0];
           const nextRunAt = job.attrs.nextRunAt.getTime();
-          const now = Date.now();
-          expect(nextRunAt - now <= 0).to.equal(true);
+          const now = new Date().getTime();
+          const diff = nextRunAt - now;
+          expect(diff).to.be.lessThan(1);
         });
       });
       describe("with array of names specified", () => {
@@ -402,6 +395,7 @@ describe("Agenda", () => {
             .schedule("now")
             .save();
 
+          debug('Job 1 scheduled for ' + job1.attrs.nextRunAt.toISOString())
           await delay(10);
 
           const job2 = await jobs
@@ -416,6 +410,7 @@ describe("Agenda", () => {
             })
             .schedule("now")
             .save();
+            debug('Job 2 scheduled for ' + job2.attrs.nextRunAt.toISOString())
 
           expect(job1.attrs.nextRunAt.toISOString()).not.to.equal(
             job2.attrs.nextRunAt.toISOString()
@@ -573,7 +568,6 @@ describe("Agenda", () => {
 
           expect(c.length).to.not.be(0);
           expect(c[0]).to.be.a(Job);
-          await clearJobs();
         });
       });
     });
@@ -617,8 +611,6 @@ describe("Agenda", () => {
         await job.save();
 
         expect(job.attrs._id).to.be.ok();
-
-        await clearJobs();
       });
     });
   });
@@ -634,19 +626,6 @@ describe("Agenda", () => {
       await jobs.create("jobA", "someData").save().then(checkDone);
       await jobs.create("jobB").save().then(checkDone);
       expect(remaining).to.be(0);
-    });
-
-    afterEach((done) => {
-      jobs._collection.deleteMany(
-        { name: { $in: ["jobA", "jobB"] } },
-        (error) => {
-          if (error) {
-            return done(error);
-          }
-
-          done();
-        }
-      );
     });
 
     it("should cancel a job", async () => {
@@ -812,16 +791,6 @@ describe("Agenda", () => {
       await jobs.create("jobA", 1).save();
       await jobs.create("jobA", 2).save();
       await jobs.create("jobA", 3).save();
-    });
-
-    afterEach((done) => {
-      jobs._collection.deleteMany({ name: "jobA" }, (error) => {
-        if (error) {
-          return done(error);
-        }
-
-        done();
-      });
     });
 
     it("should limit jobs", async () => {
