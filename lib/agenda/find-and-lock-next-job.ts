@@ -23,10 +23,6 @@ export const findAndLockNextJob = async function (
   const lockDeadline = new Date(Date.now().valueOf() - definition.lockLifetime);
   debug("_findAndLockNextJob(%s, [Function])", jobName);
 
-  //**
-  //* Query used to find job to run
-  //* @type {{$and: [*]}}
-  //*/
   const JOB_PROCESS_WHERE_QUERY = {
     $and: [
       {

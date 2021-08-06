@@ -21,6 +21,7 @@
     "mocha-debug": "DEBUG=agenda:**,-agenda:internal:** mocha --reporter spec --timeout 8000 -b",
     "mocha-debug-internal": "DEBUG=agenda:internal:** mocha --reporter spec --timeout 8000 -b",
     "mocha-debug-all": "DEBUG=agenda:** mocha --reporter spec --timeout 8000 -b",
+    "postversion": "npm run docs",
     "predocs": "npm run build",
     "docs": "jsdoc --configure .jsdoc.json --verbose ./dist"
   },
@@ -58,12 +59,12 @@
   "devDependencies": {
     "@types/debug": "4.1.5",
     "@types/human-interval": "1.0.0",
-    "@typescript-eslint/eslint-plugin": "4.25.0",
-    "@typescript-eslint/parser": "4.25.0",
+    "@typescript-eslint/eslint-plugin": "4.29.0",
+    "@typescript-eslint/parser": "4.29.0",
     "blanket": "1.2.3",
-    "coveralls": "3.1.0",
+    "coveralls": "3.1.1",
     "delay": "5.0.0",
-    "eslint": "7.27.0",
+    "eslint": "7.32.0",
     "eslint-config-prettier": "8.3.0",
     "esm": "3.2.25",
     "expect.js": "0.3.1",
@@ -73,10 +74,10 @@
     "lint-staged": "10.5.4",
     "mocha": "8.4.0",
     "mocha-lcov-reporter": "1.3.0",
-    "mongodb-memory-server": "^7.3.4",
-    "prettier": "2.3.0",
-    "sinon": "11.1.0",
-    "typescript": "4.2.4"
+    "mongodb-memory-server": "7.3.4",
+    "prettier": "2.3.2",
+    "sinon": "11.1.2",
+    "typescript": "4.3.5"
   },
   "eslintConfig": {
     "extends": [
