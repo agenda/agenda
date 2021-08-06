@@ -6,8 +6,8 @@ let connectionString;
 let mongoServer;
 beforeEach(async () => {
   debug("beforeEach START");
-  mongoServer = new MongoMemoryServer({});
-  connectionString = await mongoServer.getConnectionString();
+  mongoServer = await MongoMemoryServer.create({});
+  connectionString = mongoServer.getUri();
   debug('beforeEach END URI: "%s"', connectionString);
 });
 

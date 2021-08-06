@@ -11,9 +11,6 @@ let mongoCfg;
 let agenda = null;
 let mongoClient = null;
 
-const jobType = "do work";
-const jobProcessor = () => {};
-
 describe("Retry", () => {
   beforeEach(async () => {
     mongoCfg = await getMongoCfg();
@@ -32,11 +29,6 @@ describe("Retry", () => {
     mongoClient = await MongoClient.connect(mongoCfg);
 
     await delay(5);
-
-    agenda.define("someJob", jobProcessor);
-    agenda.define("send email", jobProcessor);
-    agenda.define("some job", jobProcessor);
-    agenda.define(jobType, jobProcessor);
   });
 
   afterEach(async () => {

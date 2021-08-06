@@ -19,7 +19,6 @@ const clearJobs = () => {
 };
 
 const jobType = "do work";
-const jobProcessor = () => {};
 
 describe("find-and-lock-next-job", () => {
   beforeEach(async () => {
@@ -27,22 +26,19 @@ describe("find-and-lock-next-job", () => {
   });
 
   beforeEach(async () => {
-    jobs = new Agenda({
+    agenda = new Agenda({
       db: {
         address: mongoCfg,
       },
     });
 
-    await jobs._ready;
+    await agenda._ready;
 
     mongoClient = await MongoClient.connect(mongoCfg);
 
     mongoDb = mongoClient.db(agendaDatabase);
     await delay(5);
-    jobs.define("someJob", jobProcessor);
-    jobs.define("send email", jobProcessor);
-    jobs.define("some job", jobProcessor);
-    jobs.define(jobType, jobProcessor);
+    agenda.define(jobType, () => {});
   });
 
   afterEach(async () => {
@@ -53,7 +49,7 @@ describe("find-and-lock-next-job", () => {
     await agenda._db.close();
   });
 
-  it.skip("should find jobs without lockedAt property", async () => {
+  it("should find jobs without lockedAt property", async () => {
     const collection = await mongoDb.collection("agendaJobs");
     const job = await agenda.create(jobType, {}).save();
     expect(job.attrs.lockedAt).to.equal(undefined);
@@ -80,7 +76,7 @@ describe("find-and-lock-next-job", () => {
     expect(processed).to.equal(1);
   });
 
-  it.skip("should find and rerun stuck jobs (with long ago lockedAt property)", async () => {
+  it("should find and rerun stuck jobs (with long ago lockedAt property)", async () => {
     const collection = await mongoDb.collection("agendaJobs");
     const job = await agenda.create(jobType, {}).save();
     expect(job.attrs.lockedAt).to.equal(undefined);

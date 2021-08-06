@@ -17,10 +17,11 @@ let mongoCfg;
 let agenda = null;
 let mongoClient = null;
 let mongoDb = null;
+const clearJobs = () => {
+  return mongoDb.collection("agendaJobs").deleteMany({});
+};
 
 const jobTimeout = process.env.CI ? 500 : 50;
-const jobType = "do work";
-const jobProcessor = () => {};
 
 describe("Job", () => {
   beforeEach(async () => {
@@ -40,15 +41,14 @@ describe("Job", () => {
     mongoDb = mongoClient.db();
 
     await delay(5);
+    await clearJobs();
 
-    agenda.define("someJob", jobProcessor);
-    agenda.define("send email", jobProcessor);
-    agenda.define("some job", jobProcessor);
-    agenda.define(jobType, jobProcessor);
+    agenda.define("some job", () => {});
   });
 
   afterEach(async () => {
     await agenda.stop();
+    await clearJobs();
     await mongoClient.close();
     await agenda._db.close();
   });
@@ -914,7 +914,6 @@ describe("Job", () => {
 
       const processorPromise = new Promise((resolve) => {
         agenda.define("lock job", { lockLifetime: 50 }, async () => {
-          // eslint-disable-line no-unused-vars
           runCount++;
 
           if (runCount !== 1) {
