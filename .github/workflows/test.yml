@@ -44,3 +44,6 @@ jobs:
         env:
           CI: true
 
+      - name: Docs
+        run: yarn docs
+
