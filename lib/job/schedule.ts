@@ -1,5 +1,6 @@
 // @ts-expect-error
 import date from "date.js";
+import { ClientSession } from "mongodb";
 import { Job } from ".";
 
 /**
@@ -8,7 +9,11 @@ import { Job } from ".";
  * @function
  * @param time schedule a job to run "then"
  */
-export const schedule = function (this: Job, time: string | Date): Job {
+export const schedule = function (
+  this: Job,
+  time: string | Date,
+  session?: ClientSession
+): Job {
   const d = new Date(time);
   this.attrs.nextRunAt = Number.isNaN(d.getTime()) ? date(time) : d;
   return this;

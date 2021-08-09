@@ -1,4 +1,5 @@
 import createDebugger from "debug";
+import { ClientSession } from "mongodb";
 import { Agenda } from ".";
 import { Job } from "../job";
 import { JobOptions } from "../job/repeat-every";
@@ -20,7 +21,8 @@ export const every = async function (
   interval: string,
   names: string | string[],
   data?: unknown,
-  options?: JobOptions
+  options?: JobOptions,
+  session?: ClientSession
 ): Promise<any> {
   /**
    * Internal method to setup job that gets run every interval
