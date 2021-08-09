@@ -20,7 +20,7 @@ export const now = async function (
 ): Promise<Job> {
   debug("Agenda.now(%s, [Object])", name);
   try {
-    const job = this.create(name, data, session);
+    const job = this.create(name, data);
 
     job.schedule(new Date());
     await job.save(session);

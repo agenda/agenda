@@ -70,9 +70,7 @@ export function schedule(
   ): Promise<Job[]> => {
     try {
       const createJobList: Array<Promise<Job>> = [];
-      names.map((name) =>
-        createJobList.push(createJob(when, name, data)
-      );
+      names.map((name) => createJobList.push(createJob(when, name, data)));
       debug("Agenda.schedule()::createJobs() -> all jobs created successfully");
       return Promise.all(createJobList);
     } catch (error) {
