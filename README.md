@@ -4,16 +4,6 @@
 <p align="center">
   A light-weight job scheduling library for Node.js
 </p>
-<p align="center">
-  <a href="https://slackin-ekwifvcwbr.now.sh/"><img src="https://slackin-ekwifvcwbr.now.sh/badge.svg" alt="Slack Status"></a>
-  <a href="https://david-dm.org/agenda/agenda"><img src="https://david-dm.org/agenda/agenda/status.svg" alt="dependencies Status"></a>
-  <a href="https://david-dm.org/agenda/agenda?type=dev"><img src="https://david-dm.org/agenda/agenda/dev-status.svg" alt="devDependencies Status"></a>
-  <a href="https://coveralls.io/github/agenda/agenda?branch=master"><img src="https://coveralls.io/repos/github/agenda/agenda/badge.svg?branch=master" alt="Coverage Status"></a>
-	<br>
-	<br>
-	<br>
-</p>
-
 # Agenda offers
 
 - Minimal overhead. Agenda aims to keep its code base small.
