@@ -1,5 +1,5 @@
 import createDebugger from "debug";
-import { ObjectId } from "mongodb";
+import { ClientSession, ObjectId } from "mongodb";
 import { Agenda } from ".";
 import { Job } from "../job";
 import { processJobs } from "../utils";
@@ -70,7 +70,11 @@ const processDbResult = async function (this: Agenda, job: Job, result: any) {
  * @param job job to save into MongoDB
  * @returns resolves when job is saved or errors
  */
-export const saveJob = async function (this: Agenda, job: Job): Promise<Job> {
+export const saveJob = async function (
+  this: Agenda,
+  job: Job,
+  session?: ClientSession
+): Promise<Job> {
   try {
     debug("attempting to save a job into Agenda instance");
 
