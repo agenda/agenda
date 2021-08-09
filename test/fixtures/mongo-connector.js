@@ -14,9 +14,12 @@ module.exports = async function (agendaDatabase = "agenda-test") {
   if (useHostedMongo) {
     const mongoHost = process.env.MONGODB_HOST || "localhost";
     const mongoPort = process.env.MONGODB_PORT || "27017";
+    const replSet = process.env.MONGODB_REPLICA_SET;
 
-    mongoURI =
-      "mongodb://" + mongoHost + ":" + mongoPort + "/" + agendaDatabase;
+    mongoURI = `mongodb://${mongoHost}:${mongoPort}/${agendaDatabase}`;
+    if (replSet) {
+      mongoURI = `mongodb://${mongoHost}:${mongoPort}/${agendaDatabase}?replicaSet=${replSet}`;
+    }
     debug('Returning Hosted Mongo URI: "%s"', mongoURI);
   } else {
     mongoURI = await mongoServer.getConnectionString();

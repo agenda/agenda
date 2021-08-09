@@ -68,7 +68,6 @@ jobs:
         with:
           mongodb-version: ${{ matrix.mongodb-version }}
           mongodb-replica-set: test-rs
-          mongodb-port: 42069
 
       - name: Cache node modules
         uses: actions/cache@v2
@@ -91,6 +90,7 @@ jobs:
         run: yarn test
         env:
           CI: true
+          MONGODB_REPLICA_SET: test-rs
 
       - name: Docs
         run: yarn docs
