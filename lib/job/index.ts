@@ -1,22 +1,22 @@
-import { toJson } from "./to-json";
-import { computeNextRunAt } from "./compute-next-run-at";
-import { repeatEvery } from "./repeat-every";
-import { repeatAt } from "./repeat-at";
-import { disable } from "./disable";
-import { enable } from "./enable";
-import { unique } from "./unique";
-import { schedule } from "./schedule";
-import { priority } from "./priority";
-import { fail } from "./fail";
-import { run } from "./run";
-import { isRunning } from "./is-running";
-import { save } from "./save";
-import { remove } from "./remove";
-import { touch } from "./touch";
-import { parsePriority } from "../utils";
+import * as mongodb from "mongodb";
 import { Agenda } from "../agenda";
 import { JobPriority } from "../agenda/define";
-import * as mongodb from "mongodb";
+import { parsePriority } from "../utils";
+import { computeNextRunAt } from "./compute-next-run-at";
+import { disable } from "./disable";
+import { enable } from "./enable";
+import { fail } from "./fail";
+import { isRunning } from "./is-running";
+import { priority } from "./priority";
+import { remove } from "./remove";
+import { repeatAt } from "./repeat-at";
+import { repeatEvery } from "./repeat-every";
+import { run } from "./run";
+import { save } from "./save";
+import { schedule } from "./schedule";
+import { toJson } from "./to-json";
+import { touch } from "./touch";
+import { unique } from "./unique";
 
 export interface JobAttributesData {
   [key: string]: any;
@@ -116,6 +116,13 @@ export interface JobAttributes<
    * Date/time the job was last modified.
    */
   lastModifiedBy?: string;
+
+  /**
+   * Should the job execution use transaction internally to run the job
+   * These types of jobs should exit within 60 seconds
+   * @memberof Job
+   */
+  shouldUseTransactions?: boolean;
 }
 
 /**
@@ -134,6 +141,13 @@ class Job<T extends JobAttributesData = JobAttributesData> {
    * The database record associated with the job.
    */
   attrs: JobAttributes<T>;
+
+  /**
+   * Should the job execution use transaction internally to run the job
+   * These types of jobs should exit within 60 seconds
+   * @memberof Job
+   */
+  shouldUseTransactions = false;
 
   toJSON!: typeof toJson;
   computeNextRunAt!: typeof computeNextRunAt;
@@ -172,6 +186,8 @@ class Job<T extends JobAttributesData = JobAttributesData> {
       }
     }
 
+    this.shouldUseTransactions = args.shouldUseTransactions ?? false;
+
     // Set defaults if undefined
     this.attrs = {
       ...attrs,
@@ -180,6 +196,7 @@ class Job<T extends JobAttributesData = JobAttributesData> {
       priority: attrs.priority,
       type: type || "once",
       nextRunAt: nextRunAt || new Date(),
+      shouldUseTransactions: this.shouldUseTransactions,
     };
   }
 }
