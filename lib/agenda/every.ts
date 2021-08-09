@@ -39,11 +39,11 @@ export const every = async function (
     options?: JobOptions,
     session?: ClientSession
   ): Promise<Job> => {
-    const job = this.create(name, data, session);
+    const job = this.create(name, data);
 
     job.attrs.type = "single";
     job.repeatEvery(interval, options);
-    return job.save();
+    return job.save(session);
   };
 
   /**
@@ -63,9 +63,7 @@ export const every = async function (
   ): Promise<Job[] | undefined> => {
     try {
       const jobs: Array<Promise<Job>> = [];
-      names.map((name) =>
-        jobs.push(createJob(interval, name, data, options, session))
-      );
+      names.map((name) => jobs.push(createJob(interval, name, data, options)));
 
       debug("every() -> all jobs created successfully");
 

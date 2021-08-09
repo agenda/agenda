@@ -48,7 +48,7 @@ export function schedule(
     data: any,
     session?: ClientSession
   ): Promise<Job> => {
-    const job = this.create(name, data, session);
+    const job = this.create(name, data);
 
     await job.schedule(when).save(session);
 
@@ -71,7 +71,7 @@ export function schedule(
     try {
       const createJobList: Array<Promise<Job>> = [];
       names.map((name) =>
-        createJobList.push(createJob(when, name, data, session))
+        createJobList.push(createJob(when, name, data)
       );
       debug("Agenda.schedule()::createJobs() -> all jobs created successfully");
       return Promise.all(createJobList);

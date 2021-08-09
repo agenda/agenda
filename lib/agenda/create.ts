@@ -1,7 +1,6 @@
 import createDebugger from "debug";
-import { Job } from "../job";
 import { Agenda } from ".";
-import { ClientSession } from "mongodb";
+import { Job } from "../job";
 
 const debug = createDebugger("agenda:create");
 
@@ -12,12 +11,7 @@ const debug = createDebugger("agenda:create");
  * @param name name of job
  * @param data data to set for job
  */
-export const create = function (
-  this: Agenda,
-  name: string,
-  data: any,
-  session?: ClientSession
-): Job {
+export const create = function (this: Agenda, name: string, data: any): Job {
   debug("Agenda.create(%s, [Object])", name);
   const priority = this._definitions[name]
     ? this._definitions[name].priority

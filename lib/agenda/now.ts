@@ -23,7 +23,7 @@ export const now = async function (
     const job = this.create(name, data, session);
 
     job.schedule(new Date());
-    await job.save();
+    await job.save(session);
 
     return job;
   } catch (error) {
