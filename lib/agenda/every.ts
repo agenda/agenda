@@ -36,9 +36,10 @@ export const every = async function (
     interval: string,
     name: string,
     data?: unknown,
-    options?: JobOptions
+    options?: JobOptions,
+    session?: ClientSession
   ): Promise<Job> => {
-    const job = this.create(name, data);
+    const job = this.create(name, data, session);
 
     job.attrs.type = "single";
     job.repeatEvery(interval, options);
@@ -57,11 +58,14 @@ export const every = async function (
     interval: string,
     names: string[],
     data?: unknown,
-    options?: JobOptions
+    options?: JobOptions,
+    session?: ClientSession
   ): Promise<Job[] | undefined> => {
     try {
       const jobs: Array<Promise<Job>> = [];
-      names.map((name) => jobs.push(createJob(interval, name, data, options)));
+      names.map((name) =>
+        jobs.push(createJob(interval, name, data, options, session))
+      );
 
       debug("every() -> all jobs created successfully");
 
@@ -74,14 +78,14 @@ export const every = async function (
 
   if (typeof names === "string") {
     debug("Agenda.every(%s, %O, %O)", interval, names, options);
-    const jobs = await createJob(interval, names, data, options);
+    const jobs = await createJob(interval, names, data, options, session);
 
     return jobs;
   }
 
   if (Array.isArray(names)) {
     debug("Agenda.every(%s, %s, %O)", interval, names, options);
-    const jobs = await createJobs(interval, names, data, options);
+    const jobs = await createJobs(interval, names, data, options, session);
 
     return jobs;
   }

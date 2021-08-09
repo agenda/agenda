@@ -13,7 +13,12 @@ const debug = createDebugger("agenda:saveJob");
  * @param result the data returned from the findOneAndUpdate() call or insertOne() call
  * @access private
  */
-const processDbResult = async function (this: Agenda, job: Job, result: any) {
+const processDbResult = async function (
+  this: Agenda,
+  job: Job,
+  result: any,
+  session?: ClientSession
+) {
   debug(
     "processDbResult() called with success, checking whether to process job immediately or not"
   );
@@ -29,7 +34,7 @@ const processDbResult = async function (this: Agenda, job: Job, result: any) {
     if (result.insertedId) {
       _id = result.insertedId;
       // find the doc using _id
-      const _job = await this._collection.findOne({ _id });
+      const _job = await this._collection.findOne({ _id }, { session });
 
       if (_job) {
         nextRunAt = _job.nextRunAt;
@@ -108,7 +113,7 @@ export const saveJob = async function (
       const result = await this._collection.findOneAndUpdate(
         { _id: id },
         update,
-        { returnDocument: "after" }
+        { returnDocument: "after", session }
       );
       return await processDbResult.call(this, job, result);
     }
@@ -149,6 +154,7 @@ export const saveJob = async function (
         {
           upsert: true,
           returnDocument: "after",
+          session,
         }
       );
       return await processDbResult.call(this, job, result);
@@ -171,8 +177,9 @@ export const saveJob = async function (
       const result = await this._collection.findOneAndUpdate(query, update, {
         upsert: true,
         returnDocument: "after",
+        session,
       });
-      return await processDbResult.call(this, job, result);
+      return await processDbResult.call(this, job, result, session);
     }
 
     // If all else fails, the job does not exist yet so we just insert it into MongoDB

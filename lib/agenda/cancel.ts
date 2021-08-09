@@ -19,7 +19,9 @@ export const cancel = async function (
 ): Promise<number | undefined> {
   debug("attempting to cancel all Agenda jobs", query);
   try {
-    const { deletedCount } = await this._collection.deleteMany(query);
+    const { deletedCount } = await this._collection.deleteMany(query, {
+      session,
+    });
     debug("%s jobs cancelled", deletedCount);
     return deletedCount;
   } catch (error) {

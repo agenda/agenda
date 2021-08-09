@@ -1,4 +1,5 @@
 import createDebugger from "debug";
+import { ClientSession } from "mongodb";
 import { Agenda } from ".";
 import { Job } from "../job";
 
@@ -13,13 +14,26 @@ const debug = createDebugger("agenda:schedule");
  * @param data data to send to job
  * @returns job or jobs created
  */
-export function schedule(this: Agenda, when: string | Date, names: string, data: any): Promise<Job>;
-export function schedule(this: Agenda, when: string | Date, names: string[], data: any): Promise<Job[]>;
-export function schedule (
+export function schedule(
+  this: Agenda,
+  when: string | Date,
+  names: string,
+  data: any,
+  session?: ClientSession
+): Promise<Job>;
+export function schedule(
+  this: Agenda,
+  when: string | Date,
+  names: string[],
+  data: any,
+  session?: ClientSession
+): Promise<Job[]>;
+export function schedule(
   this: Agenda,
   when: string | Date,
   names: string | string[],
-  data: any
+  data: any,
+  session?: ClientSession
 ): Promise<Job | Job[]> {
   /**
    * Internal method that creates a job with given date
@@ -31,11 +45,12 @@ export function schedule (
   const createJob = async (
     when: string | Date,
     name: string,
-    data: any
+    data: any,
+    session?: ClientSession
   ): Promise<Job> => {
-    const job = this.create(name, data);
+    const job = this.create(name, data, session);
 
-    await job.schedule(when).save();
+    await job.schedule(when).save(session);
 
     return job;
   };
@@ -50,11 +65,14 @@ export function schedule (
   const createJobs = async (
     when: string | Date,
     names: string[],
-    data: any
+    data: any,
+    session?: ClientSession
   ): Promise<Job[]> => {
     try {
       const createJobList: Array<Promise<Job>> = [];
-      names.map((name) => createJobList.push(createJob(when, name, data)));
+      names.map((name) =>
+        createJobList.push(createJob(when, name, data, session))
+      );
       debug("Agenda.schedule()::createJobs() -> all jobs created successfully");
       return Promise.all(createJobList);
     } catch (error) {
@@ -67,13 +85,13 @@ export function schedule (
 
   if (typeof names === "string") {
     debug("Agenda.schedule(%s, %O, [%O], cb)", when, names);
-    return createJob(when, names, data);
+    return createJob(when, names, data, session);
   }
 
   if (Array.isArray(names)) {
     debug("Agenda.schedule(%s, %O, [%O])", when, names);
-    return createJobs(when, names, data);
+    return createJobs(when, names, data, session);
   }
 
-  throw new TypeError("Name must be string or array of strings")
-};
+  throw new TypeError("Name must be string or array of strings");
+}
