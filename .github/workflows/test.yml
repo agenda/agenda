@@ -2,8 +2,8 @@ name: Run Test
 on: [push, pull_request, workflow_dispatch]
 
 jobs:
-  all:
-    name: "all"
+  standalone:
+    name: "standalone"
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -47,8 +47,8 @@ jobs:
 
       - name: Docs
         run: yarn docs
-  transactions:
-    name: "transactions"
+  replset:
+    name: "replset"
     runs-on: ubuntu-latest
     strategy:
       matrix:
