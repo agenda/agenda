@@ -1,5 +1,5 @@
 import createDebugger from "debug";
-import { Filter } from "mongodb";
+import { ClientSession, Filter } from "mongodb";
 import { Agenda } from ".";
 const debug = createDebugger("agenda:enable");
 
@@ -13,13 +13,18 @@ const debug = createDebugger("agenda:enable");
  */
 export const enable = async function (
   this: Agenda,
-  query: Filter<unknown> = {}
+  query: Filter<unknown> = {},
+  session?: ClientSession
 ): Promise<number> {
   debug("attempting to enable all jobs matching query", query);
   try {
-    const { modifiedCount } = await this._collection.updateMany(query, {
-      $set: { disabled: false },
-    });
+    const { modifiedCount } = await this._collection.updateMany(
+      query,
+      {
+        $set: { disabled: false },
+      },
+      { session }
+    );
     debug("%s jobs enabled", modifiedCount);
     return modifiedCount;
   } catch (error) {

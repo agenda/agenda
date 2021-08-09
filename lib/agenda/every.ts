@@ -1,4 +1,5 @@
 import createDebugger from "debug";
+import { ClientSession } from "mongodb";
 import { Agenda } from ".";
 import { Job } from "../job";
 import { JobOptions } from "../job/repeat-every";
@@ -20,7 +21,8 @@ export const every = async function (
   interval: string,
   names: string | string[],
   data?: unknown,
-  options?: JobOptions
+  options?: JobOptions,
+  session?: ClientSession
 ): Promise<any> {
   /**
    * Internal method to setup job that gets run every interval
@@ -34,13 +36,14 @@ export const every = async function (
     interval: string,
     name: string,
     data?: unknown,
-    options?: JobOptions
+    options?: JobOptions,
+    session?: ClientSession
   ): Promise<Job> => {
     const job = this.create(name, data);
 
     job.attrs.type = "single";
     job.repeatEvery(interval, options);
-    return job.save();
+    return job.save(session);
   };
 
   /**
@@ -55,7 +58,8 @@ export const every = async function (
     interval: string,
     names: string[],
     data?: unknown,
-    options?: JobOptions
+    options?: JobOptions,
+    session?: ClientSession
   ): Promise<Job[] | undefined> => {
     try {
       const jobs: Array<Promise<Job>> = [];
@@ -72,14 +76,14 @@ export const every = async function (
 
   if (typeof names === "string") {
     debug("Agenda.every(%s, %O, %O)", interval, names, options);
-    const jobs = await createJob(interval, names, data, options);
+    const jobs = await createJob(interval, names, data, options, session);
 
     return jobs;
   }
 
   if (Array.isArray(names)) {
     debug("Agenda.every(%s, %s, %O)", interval, names, options);
-    const jobs = await createJobs(interval, names, data, options);
+    const jobs = await createJobs(interval, names, data, options, session);
 
     return jobs;
   }

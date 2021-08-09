@@ -1,6 +1,6 @@
 import createDebugger from "debug";
-import { Job } from "../job";
 import { Agenda } from ".";
+import { Job } from "../job";
 
 const debug = createDebugger("agenda:create");
 

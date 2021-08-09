@@ -1,4 +1,5 @@
 import createDebugger from "debug";
+import { ClientSession } from "mongodb";
 import { Agenda } from ".";
 import { Job } from "../job";
 
@@ -14,14 +15,15 @@ const debug = createDebugger("agenda:now");
 export const now = async function (
   this: Agenda,
   name: string,
-  data: any
+  data: any,
+  session?: ClientSession
 ): Promise<Job> {
   debug("Agenda.now(%s, [Object])", name);
   try {
     const job = this.create(name, data);
 
     job.schedule(new Date());
-    await job.save();
+    await job.save(session);
 
     return job;
   } catch (error) {

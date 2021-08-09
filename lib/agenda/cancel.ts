@@ -1,6 +1,6 @@
 import { Agenda } from ".";
 import createDebugger from "debug";
-import { Document, Filter } from "mongodb";
+import { ClientSession, Document, Filter } from "mongodb";
 
 const debug = createDebugger("agenda:cancel");
 
@@ -14,11 +14,14 @@ const debug = createDebugger("agenda:cancel");
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const cancel = async function (
   this: Agenda,
-  query: Filter<Document>
+  query: Filter<Document>,
+  session?: ClientSession
 ): Promise<number | undefined> {
   debug("attempting to cancel all Agenda jobs", query);
   try {
-    const { deletedCount } = await this._collection.deleteMany(query);
+    const { deletedCount } = await this._collection.deleteMany(query, {
+      session,
+    });
     debug("%s jobs cancelled", deletedCount);
     return deletedCount;
   } catch (error) {

@@ -1,3 +1,4 @@
+import { ClientSession } from "mongodb";
 import { Job } from ".";
 
 /**
@@ -5,7 +6,10 @@ import { Job } from ".";
  * @name Job#touch
  * @function
  */
-export const touch = async function (this: Job): Promise<Job> {
+export const touch = async function (
+  this: Job,
+  session?: ClientSession
+): Promise<Job> {
   this.attrs.lockedAt = new Date();
-  return this.save();
+  return this.save(session);
 };

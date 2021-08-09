@@ -1,5 +1,6 @@
 // @ts-expect-error
 import date from "date.js";
+import { ClientSession } from "mongodb";
 import { Job } from ".";
 
 /**
