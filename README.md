@@ -4,6 +4,7 @@
 <p align="center">
   A light-weight job scheduling library for Node.js
 </p>
+
 # Agenda offers
 
 - Minimal overhead. Agenda aims to keep its code base small.
