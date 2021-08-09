@@ -18,9 +18,12 @@
     "test": "npm run mocha",
     "lint": "eslint --cache --fix lib/**",
     "mocha": "USE_MONGODB=true mocha --reporter spec --timeout 8000 --exit -b",
-    "mocha-debug": "DEBUG=agenda:**,-agenda:internal:** mocha --reporter spec --timeout 8000 -b",
-    "mocha-debug-internal": "DEBUG=agenda:internal:** mocha --reporter spec --timeout 8000 -b",
-    "mocha-debug-all": "DEBUG=agenda:** mocha --reporter spec --timeout 8000 -b",
+    "premocha-debug": "npm run build",
+    "mocha-debug": "USE_MONGODB=true DEBUG=agenda:**,-agenda:internal:** mocha --reporter spec --timeout 8000 -b",
+    "premocha-debug-internal": "npm run build",
+    "mocha-debug-internal": "USE_MONGODB=true DEBUG=agenda:internal:** mocha --reporter spec --timeout 8000 -b",
+    "premocha-debug-all": "npm run build",
+    "mocha-debug-all": "USE_MONGODB=true DEBUG=agenda:** mocha --reporter spec --timeout 8000 -b",
     "postversion": "npm run docs",
     "predocs": "npm run build",
     "docs": "jsdoc --configure .jsdoc.json --verbose ./dist"
@@ -54,7 +57,7 @@
     "debug": "~4.3.0",
     "human-interval": "~2.0.0",
     "moment-timezone": "~0.5.27",
-    "mongodb": "^4.0.1"
+    "mongodb": "^4.1.0"
   },
   "devDependencies": {
     "@types/debug": "4.1.5",

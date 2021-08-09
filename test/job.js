@@ -916,8 +916,8 @@ describe("Job", () => {
         agenda.define("lock job", { lockLifetime: 50 }, async () => {
           runCount++;
 
-          if (runCount !== 1) {
-            expect(runCount).to.be(2);
+          if (runCount === 1) {
+            expect(runCount).to.be(1);
             await agenda.stop();
             return resolve();
           }
