@@ -10,7 +10,7 @@
 - Minimal overhead. Agenda aims to keep its code base small.
 - Mongo backed persistence layer.
 - Promises based API.
-- Scheduling with configurable priority, concurrency, and repeating.
+- Scheduling with configurable priority, concurrency, repeating and persistence of job results.
 - Scheduling via cron or human readable syntax.
 - Event backed job queue that you can hook into.
 - [Agenda-rest](https://github.com/agenda/agenda-rest): optional standalone REST API.
@@ -380,6 +380,7 @@ the following:
 - `priority`: `(lowest|low|normal|high|highest|number)` specifies the priority
   of the job. Higher priority jobs will run first. See the priority mapping
   below
+- `shouldSaveResult`: `boolean` flag that specifies whether the result of the job should also be stored in the database. Defaults to false
 
 Priority mapping:
 
@@ -709,6 +710,17 @@ the above priority table.
 job.priority("low");
 await job.save();
 ```
+
+### setShouldSaveResult(setShouldSaveResult)
+
+Specifies whether the result of the job should also be stored in the database. Defaults to false.
+
+```js
+job.setShouldSaveResult(true);
+await job.save();
+```
+
+The data returned by the job will be available on the `result` attribute after it succeeded and got retrieved again from the database, e.g. via `agenda.jobs(...)` or through the [success job event](#agenda-events)).
 
 ### unique(properties, [options])
 
