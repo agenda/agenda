@@ -28,7 +28,7 @@ export interface JobAttributes<
   /**
    * The record identity.
    */
-  _id?: mongodb.ObjectID;
+  _id?: mongodb.ObjectId;
 
   agenda: Agenda;
 
@@ -55,7 +55,7 @@ export interface JobAttributes<
   /**
    * Date/time the job was locked.
    */
-  lockedAt?: Date;
+  lockedAt?: Date | null;
 
   /**
    * The priority of the job.

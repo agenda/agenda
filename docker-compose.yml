@@ -10,6 +10,7 @@ services:
       - ./:/usr/src/app
     environment:
       - MONGODB_HOST=mongodb
+      - USE_MONGODB=true
     links:
       - mongodb
 

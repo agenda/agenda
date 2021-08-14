@@ -1,13 +1,13 @@
 name: Run Test
-on: [push]
+on: [push, pull_request, workflow_dispatch]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [10.x, 12.x, 14.x]
-        mongodb-version: [3.4, 3.6, 4.0, 4.2, 4.4]
+        node-version: [12.22, 14, 16]
+        mongodb-version: [3.4, 3.6, 4.0, 4.2, 4.4, 5.0]
     steps:
       - name: Git checkout
         uses: actions/checkout@v2
@@ -18,7 +18,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
 
       - name: Start MongoDB
-        uses: supercharge/mongodb-github-action@1.4.0
+        uses: supercharge/mongodb-github-action@1.6.0
         with:
           mongodb-version: ${{ matrix.mongodb-version }}
 
@@ -43,4 +43,7 @@ jobs:
         run: yarn test
         env:
           CI: true
+
+      - name: Docs
+        run: yarn docs
 

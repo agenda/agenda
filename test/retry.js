@@ -3,64 +3,37 @@
 const delay = require("delay");
 const { MongoClient } = require("mongodb");
 const { Agenda } = require("../dist");
+const getMongoCfg = require("./fixtures/mongo-connector");
 
-const mongoHost = process.env.MONGODB_HOST || "localhost";
-const mongoPort = process.env.MONGODB_PORT || "27017";
-const agendaDatabase = "agenda-test";
-const mongoCfg =
-  "mongodb://" + mongoHost + ":" + mongoPort + "/" + agendaDatabase;
+let mongoCfg;
 
 // Create agenda instances
 let agenda = null;
-let mongoDb = null;
 let mongoClient = null;
 
-const clearJobs = () => {
-  return mongoDb.collection("agendaJobs").deleteMany({});
-};
-
-const jobType = "do work";
-const jobProcessor = () => {};
-
 describe("Retry", () => {
-  beforeEach((done) => {
-    agenda = new Agenda(
-      {
-        db: {
-          address: mongoCfg,
-        },
+  beforeEach(async () => {
+    mongoCfg = await getMongoCfg();
+  });
+
+  beforeEach(async () => {
+    agenda = new Agenda({
+      db: {
+        address: mongoCfg,
       },
-      (error) => {
-        if (error) {
-          done(error);
-        }
+      processEvery: 100,
+    });
 
-        MongoClient.connect(
-          mongoCfg,
-          { useUnifiedTopology: true },
-          async (error, client) => {
-            mongoClient = client;
-            mongoDb = client.db(agendaDatabase);
+    await agenda.start();
 
-            await delay(50);
-            await clearJobs();
+    mongoClient = await MongoClient.connect(mongoCfg);
 
-            agenda.define("someJob", jobProcessor);
-            agenda.define("send email", jobProcessor);
-            agenda.define("some job", jobProcessor);
-            agenda.define(jobType, jobProcessor);
-
-            done();
-          }
-        );
-      }
-    );
+    await delay(5);
   });
 
   afterEach(async () => {
-    await delay(50);
+    await delay(5);
     await agenda.stop();
-    await clearJobs();
     await mongoClient.close();
     await agenda._db.close();
   });
@@ -68,7 +41,6 @@ describe("Retry", () => {
   it("should retry a job", async () => {
     let shouldFail = true;
 
-    agenda.processEvery(100); // Shave 5s off test runtime :grin:
     agenda.define("a job", (job, done) => {
       if (shouldFail) {
         shouldFail = false;

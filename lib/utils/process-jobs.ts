@@ -155,16 +155,14 @@ export const processJobs = async function (
 
     // Update / options for the MongoDB query
     const update = { $set: { lockedAt: now } };
-    const options = { returnOriginal: false };
 
     // Lock the job in MongoDB!
-    const resp = await self._collection.findOneAndUpdate(
-      criteria,
-      update,
-      options
-    );
+    const resp = await self._collection.findOneAndUpdate(criteria, update, {
+      returnDocument: "after",
+    });
 
     if (resp.value) {
+      // @ts-ignore
       const job = createJob(self, resp.value);
       debug(
         "found job [%s:%s] that can be locked on the fly",
@@ -309,7 +307,11 @@ export const processJobs = async function (
             );
             self._lockedJobs.splice(self._lockedJobs.indexOf(job), 1);
             jobDefinition.locked--;
-            jobProcessing();
+
+            // If you have few thousand jobs for one worker it would throw "RangeError: Maximum call stack size exceeded"
+            // every 5 minutes (using the default options).
+            // We need to utilise the setImmedaite() to break the call stack back to 0.
+            setImmediate(jobProcessing);
             return;
           }
 

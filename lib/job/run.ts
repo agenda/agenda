@@ -44,7 +44,7 @@ export const run = async function (this: Job): Promise<Job> {
         }
       }
 
-      this.attrs.lockedAt = undefined;
+      this.attrs.lockedAt = null;
 
       await this.save().catch((error: Error) => {
         debug(

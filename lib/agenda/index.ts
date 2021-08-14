@@ -1,12 +1,13 @@
-import humanInterval from "human-interval";
 import { EventEmitter } from "events";
+import humanInterval from "human-interval";
 import {
-  MongoClient,
-  Db as MongoDb,
+  AnyError,
   Collection,
+  Db as MongoDb,
+  MongoClient,
   MongoClientOptions,
 } from "mongodb";
-import { JobProcessingQueue } from "./job-processing-queue";
+import { Job } from "../job";
 import { cancel } from "./cancel";
 import { close } from "./close";
 import { create } from "./create";
@@ -16,7 +17,11 @@ import { defaultConcurrency } from "./default-concurrency";
 import { defaultLockLifetime } from "./default-lock-lifetime";
 import { defaultLockLimit } from "./default-lock-limit";
 import { define } from "./define";
+import { disable } from "./disable";
+import { enable } from "./enable";
 import { every } from "./every";
+import { findAndLockNextJob } from "./find-and-lock-next-job";
+import { JobProcessingQueue } from "./job-processing-queue";
 import { jobs } from "./jobs";
 import { lockLimit } from "./lock-limit";
 import { maxConcurrency } from "./max-concurrency";
@@ -30,8 +35,6 @@ import { schedule } from "./schedule";
 import { sort } from "./sort";
 import { start } from "./start";
 import { stop } from "./stop";
-import { findAndLockNextJob } from "./find-and-lock-next-job";
-import { Job } from "../job";
 
 export interface AgendaConfig {
   name?: string;
@@ -76,7 +79,7 @@ class Agenda extends EventEmitter {
   _defaultLockLifetime: any;
   _defaultLockLimit: any;
   _definitions: any;
-  _findAndLockNextJob: any;
+  _findAndLockNextJob = findAndLockNextJob;
   _indices: any;
   _isLockingOnTheFly: boolean;
   _isJobQueueFilling: Map<string, boolean>;
@@ -106,6 +109,8 @@ class Agenda extends EventEmitter {
   defaultLockLifetime!: typeof defaultLockLifetime;
   defaultLockLimit!: typeof defaultLockLimit;
   define!: typeof define;
+  disable!: typeof disable;
+  enable!: typeof enable;
   every!: typeof every;
   jobs!: typeof jobs;
   lockLimit!: typeof lockLimit;
@@ -128,7 +133,10 @@ class Agenda extends EventEmitter {
    */
   constructor(
     config: AgendaConfig = {},
-    cb?: (error: Error, collection: Collection<any> | null) => void
+    cb?: (
+      error: AnyError | undefined,
+      collection: Collection<any> | null
+    ) => void
   ) {
     super();
 
@@ -184,7 +192,6 @@ class Agenda extends EventEmitter {
   }
 }
 
-Agenda.prototype._findAndLockNextJob = findAndLockNextJob;
 Agenda.prototype.cancel = cancel;
 Agenda.prototype.close = close;
 Agenda.prototype.create = create;
@@ -194,6 +201,8 @@ Agenda.prototype.defaultConcurrency = defaultConcurrency;
 Agenda.prototype.defaultLockLifetime = defaultLockLifetime;
 Agenda.prototype.defaultLockLimit = defaultLockLimit;
 Agenda.prototype.define = define;
+Agenda.prototype.disable = disable;
+Agenda.prototype.enable = enable;
 Agenda.prototype.every = every;
 Agenda.prototype.jobs = jobs;
 Agenda.prototype.lockLimit = lockLimit;

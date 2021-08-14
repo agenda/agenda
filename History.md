@@ -2,7 +2,22 @@
 
 - _Contributions welcome!_ https://github.com/agenda/agenda/pulls
 
+- # 4.2.0 / 2021-08-09
+
+- fix: deprecation warning for collection.findOneAndUpdate ([#1338](https://github.com/agenda/agenda/pull/1338)) thanks @frobinsonj
+
+- # 4.2.0 / 2021-08-05
+
+- Feat: Add top level disable and enable ([#1109](https://github.com/agenda/agenda/pull/1109)) thanks @pdfowler
+- fix(history): match cron-parser pattern ([#1335](https://github.com/agenda/agenda/pull/1335)) thanks @dockleryxk
+- fix: "RangeError: Maximum call stack size exceeded" ([#1365](https://github.com/agenda/agenda/pull/1365)) thanks @koresar
+- fix: JobAttributes.lockedAt to allow null values ([#1340](https://github.com/agenda/agenda/pull/1340)) thanks @tjramage
 - Updated dependencies: `mongodb@3.6.6`, `lodash@4.17.21`, as well as various dev dependencies.
+- Added node 16 in tests ([#1314](https://github.com/agenda/agenda/pull/1086)) thanks @simison
+
+  # 4.1.3 / 2021-05-02
+
+- fix: export cjs and es (#1298) thanks @koresar
 
   # 4.1.2 / 2021-05-02
 
@@ -88,12 +103,12 @@
       ```
       * * * * * *
       | | | | | |
-      | | | | | +-- Year              (range: 1900-3000)
-      | | | | +---- Day of the Week   (range: 1-7, 1 standing for Monday)
-      | | | +------ Month of the Year (range: 1-12) NOTE: Difference here
-      | | +-------- Day of the Month  (range: 1-31)
-      | +---------- Hour              (range: 0-23)
-      +------------ Minute            (range: 0-59)
+      | | | | | +-- Day of the Week   (range: 0-7, 0 or 7 is Sunday)
+      | | | | +---- Month of the Year (range: 1-12) NOTE: Difference here
+      | | | +------ Day of the Month  (range: 1-31)
+      | | +-------- Hour              (range: 0-23)
+      | +---------- Minute            (range: 0-59)
+      +------------ Second            (range: 0-59, optional)
       ```
 
   # 3.1.0 / 2020-04-07

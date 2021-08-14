@@ -30,7 +30,7 @@ export const stop = async function (this: Agenda): Promise<void> {
       this._collection.updateMany(
         { _id: { $in: jobIds } },
         { $set: { lockedAt: null } },
-        (error: Error) => {
+        (error) => {
           if (error) {
             reject(error);
           }
