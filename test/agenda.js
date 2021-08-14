@@ -282,6 +282,10 @@ describe("Agenda", () => {
           10
         );
       });
+      it("takes shouldSaveResult option for the job", () => {
+        agenda.define("savedResultJob", { shouldSaveResult: true }, jobProcessor);
+        expect(agenda._definitions.savedResultJob).to.have.property("shouldSaveResult", true);
+      });
     });
 
     describe("every", () => {

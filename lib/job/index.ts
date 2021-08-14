@@ -13,6 +13,7 @@ import { isRunning } from "./is-running";
 import { save } from "./save";
 import { remove } from "./remove";
 import { touch } from "./touch";
+import { setShouldSaveResult } from "./set-shouldsaveresult";
 import { parsePriority } from "../utils";
 import { Agenda } from "../agenda";
 import { JobPriority } from "../agenda/define";
@@ -116,6 +117,16 @@ export interface JobAttributes<
    * Date/time the job was last modified.
    */
   lastModifiedBy?: string;
+
+  /**
+   * Should the return value of the job be persisted.
+   */
+  shouldSaveResult?: boolean;
+
+  /**
+   * Result of the finished job.
+   */
+  result?: unknown;
 }
 
 /**
@@ -150,6 +161,7 @@ class Job<T extends JobAttributesData = JobAttributesData> {
   save!: typeof save;
   remove!: typeof remove;
   touch!: typeof touch;
+  setShouldSaveResult!: typeof setShouldSaveResult;
 
   constructor(options: JobAttributes<T>) {
     const { agenda, type, nextRunAt, ...args } = options ?? {};
@@ -162,6 +174,9 @@ class Job<T extends JobAttributesData = JobAttributesData> {
       args.priority === undefined
         ? JobPriority.normal
         : parsePriority(args.priority);
+
+    // Set shouldSaveResult option
+    args.shouldSaveResult = args.shouldSaveResult || false
 
     // Set attrs to args
     const attrs: any = {};
@@ -199,5 +214,6 @@ Job.prototype.isRunning = isRunning;
 Job.prototype.save = save;
 Job.prototype.remove = remove;
 Job.prototype.touch = touch;
+Job.prototype.setShouldSaveResult = setShouldSaveResult;
 
 export { Job };

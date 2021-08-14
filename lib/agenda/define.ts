@@ -34,6 +34,11 @@ export interface DefineOptions {
    * first.
    */
   priority?: JobPriority;
+
+  /**
+   * Should the return value of the job be persisted
+   */
+  shouldSaveResult?: boolean;
 }
 
 export type Processor =
@@ -70,6 +75,7 @@ export const define = function (
       (options as DefineOptions).lockLifetime || this._defaultLockLifetime,
     running: 0,
     locked: 0,
+    shouldSaveResult: (options as DefineOptions).shouldSaveResult || false
   };
   debug(
     "job [%s] defined with following options: \n%O",

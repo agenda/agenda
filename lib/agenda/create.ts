@@ -16,6 +16,7 @@ export const create = function (this: Agenda, name: string, data: any): Job {
   const priority = this._definitions[name]
     ? this._definitions[name].priority
     : 0;
-  const job = new Job({ name, data, type: "normal", priority, agenda: this });
+  const shouldSaveResult = this._definitions[name] ? this._definitions[name].shouldSaveResult || false : false
+  const job = new Job({ name, data, type: "normal", priority, shouldSaveResult, agenda: this });
   return job;
 };
