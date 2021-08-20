@@ -131,8 +131,9 @@ export const run = async function (this: Job): Promise<Job> {
       }
     } catch (error) {
       await session?.abortTransaction();
-      session?.endSession();
       throw error;
+    } finally {
+      await session?.endSession();
     }
   });
 };
