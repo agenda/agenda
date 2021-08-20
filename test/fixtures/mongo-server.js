@@ -1,4 +1,7 @@
-const { MongoMemoryServer } = require("mongodb-memory-server");
+const {
+  MongoMemoryServer,
+  MongoMemoryReplSet,
+} = require("mongodb-memory-server");
 const debug = require("debug")("agenda:test:mongo-server");
 
 let connectionString;
@@ -6,7 +9,11 @@ let connectionString;
 let mongoServer;
 beforeEach(async () => {
   debug("beforeEach START");
-  mongoServer = await MongoMemoryServer.create({});
+  mongoServer = await MongoMemoryServer.create({
+    replSet: {
+      storageEngine: "wiredTiger",
+    },
+  });
   connectionString = mongoServer.getUri();
   debug('beforeEach END URI: "%s"', connectionString);
 });
