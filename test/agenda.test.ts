@@ -661,6 +661,43 @@ describe('Agenda', () => {
 
 	describe('process jobs', () => {
 		// eslint-disable-line prefer-arrow-callback
+		it('ensure there is no unhandledPromise on job timeouts', async () => {
+			const unhandledRejections: any[] = [];
+			const rejectionsHandler = error => unhandledRejections.push(error);
+			process.on('unhandledRejection', rejectionsHandler);
+
+			globalAgenda.define(
+				'very short timeout',
+				(_job, done) => {
+					setTimeout(() => {
+						done();
+					}, 10000);
+				},
+				{
+					lockLifetime: 100
+				}
+			);
+
+			let errorCalled = false;
+			globalAgenda.on('error', err => {
+				errorCalled = true;
+			});
+
+			globalAgenda.processEvery(100);
+			await globalAgenda.start();
+
+			// await globalAgenda.every('1 seconds', 'j0');
+			await globalAgenda.now('very short timeout');
+
+			await delay(500);
+
+			process.removeListener('unhandledRejection', rejectionsHandler);
+
+			expect(errorCalled).to.be.true;
+			expect(unhandledRejections).to.have.length(0);
+		}).timeout(10000);
+
+		// eslint-disable-line prefer-arrow-callback
 		it('should not cause unhandledRejection', async () => {
 			// This unit tests if for this bug [https://github.com/agenda/agenda/issues/884]
 			// which is not reproducible with default agenda config on shorter processEvery.
