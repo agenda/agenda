@@ -1,5 +1,4 @@
 import { MongoMemoryServer } from 'mongodb-memory-server';
-import * as mongo from 'mongodb';
 import { MongoClient } from 'mongodb';
 import * as debug from 'debug';
 
@@ -14,10 +13,10 @@ export interface IMockMongo {
 
 export async function mockMongo(): Promise<IMockMongo> {
 	const self: IMockMongo = {} as any;
-	self.mongod = new MongoMemoryServer();
-	const uri = await self.mongod.getUri();
+	self.mongod = await MongoMemoryServer.create();
+	const uri = self.mongod.getUri();
 	log('mongod started', uri);
-	self.mongo = await mongo.connect(uri, { useUnifiedTopology: true });
+	self.mongo = await MongoClient.connect(uri);
 	self.disconnect = function () {
 		self.mongod.stop();
 		log('mongod stopped');

@@ -103,7 +103,7 @@ export class JobProcessingQueue {
 		},
 		handledJobs: IJobParameters['_id'][]
 	): (JobWithId & { attrs: IJobParameters & { nextRunAt: Date } }) | undefined {
-		const next = ((Object.keys(this._queue) as unknown) as number[]).reverse().find(i => {
+		const next = (Object.keys(this._queue) as unknown as number[]).reverse().find(i => {
 			const def = this.agenda.definitions[this._queue[i].attrs.name];
 			const status = jobStatus[this._queue[i].attrs.name];
 

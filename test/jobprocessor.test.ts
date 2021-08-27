@@ -56,7 +56,7 @@ describe('JobProcessor', () => {
 			try {
 				await agenda.getRunningStats();
 				fail();
-			} catch (err) {
+			} catch (err: any) {
 				expect(err.message).to.be.equal('agenda not running!');
 			}
 		});

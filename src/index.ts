@@ -1,7 +1,8 @@
 import { EventEmitter } from 'events';
 import * as debug from 'debug';
 
-import type { Db, FilterQuery, MongoClientOptions, SortOptionObject } from 'mongodb';
+import type { Db, Filter, MongoClientOptions } from 'mongodb';
+import { SortDirection } from 'mongodb';
 import type { IJobDefinition } from './types/JobDefinition';
 import type { IAgendaConfig } from './types/AgendaConfig';
 import type { IDatabaseOptions, IDbConfig, IMongoOptions } from './types/DbOptions';
@@ -22,7 +23,7 @@ const DefaultOptions = {
 	defaultLockLimit: 0,
 	lockLimit: 0,
 	defaultLockLifetime: 10 * 60 * 1000,
-	sort: { nextRunAt: 1, priority: -1 }
+	sort: { nextRunAt: 1, priority: -1 } as const
 };
 
 /**
@@ -140,7 +141,7 @@ export class Agenda extends EventEmitter {
 	 * Default is { nextRunAt: 1, priority: -1 }
 	 * @param query
 	 */
-	sort(query: SortOptionObject<IJobParameters>): Agenda {
+	sort(query: { [key: string]: SortDirection }): Agenda {
 		log('Agenda.sort([Object])');
 		this.attrs.sort = query;
 		return this;
@@ -156,7 +157,7 @@ export class Agenda extends EventEmitter {
 	 * Cancels any jobs matching the passed MongoDB query, and removes them from the database.
 	 * @param query
 	 */
-	async cancel(query: FilterQuery<IJobParameters>): Promise<number> {
+	async cancel(query: Filter<IJobParameters>): Promise<number> {
 		log('attempting to cancel all Agenda jobs', query);
 		try {
 			const amountOfRemovedJobs = await this.db.removeJobs(query);
@@ -252,8 +253,8 @@ export class Agenda extends EventEmitter {
 	 * @param skip
 	 */
 	async jobs(
-		query: FilterQuery<IJobParameters> = {},
-		sort: FilterQuery<IJobParameters> = {},
+		query: Filter<IJobParameters> = {},
+		sort: Filter<IJobParameters> = {},
 		limit = 0,
 		skip = 0
 	): Promise<Job[]> {
@@ -346,7 +347,7 @@ export class Agenda extends EventEmitter {
 	 */
 	create(name: string): Job<void>;
 	create<DATA = unknown>(name: string, data: DATA): Job<DATA>;
-	create(name: string, data?: unknown): Job {
+	create(name: string, data?: unknown): Job<any> {
 		log('Agenda.create(%s, [Object])', name);
 		const priority = this.definitions[name] ? this.definitions[name].priority : 0;
 		const job = new Job(this, { name, data, type: 'normal', priority });
@@ -389,7 +390,7 @@ export class Agenda extends EventEmitter {
 		names: string | string[],
 		data?: unknown,
 		options?: { timezone?: string; skipImmediate?: boolean }
-	): Promise<Job | Job[]> {
+	): Promise<Job<any> | Job<any>[]> {
 		/**
 		 * Internal method to setup job that gets run every interval
 		 * @param {Number} interval run every X interval
@@ -470,7 +471,7 @@ export class Agenda extends EventEmitter {
 			job.schedule(new Date());
 			await job.save();
 
-			return job;
+			return job as Job<DATA | void>;
 		} catch (error) {
 			log('error trying to create a job for this exact moment');
 			throw error;

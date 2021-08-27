@@ -239,7 +239,7 @@ export class Job<DATA = unknown | void> {
 	async save(): Promise<Job> {
 		// ensure db connection is ready
 		await this.agenda.ready;
-		return this.agenda.db.saveJob(this);
+		return this.agenda.db.saveJob(this as Job);
 	}
 
 	/**
@@ -303,7 +303,7 @@ export class Job<DATA = unknown | void> {
 			} else {
 				this.attrs.nextRunAt = null;
 			}
-		} catch (error) {
+		} catch (error: any) {
 			this.attrs.nextRunAt = null;
 			this.fail(error);
 		}
@@ -337,7 +337,7 @@ export class Job<DATA = unknown | void> {
 				log('[%s:%s] process function being called', this.attrs.name, this.attrs._id);
 				await new Promise<void>((resolve, reject) => {
 					try {
-						const result = definition.fn(this, error => {
+						const result = definition.fn(this as Job, error => {
 							if (error) {
 								reject(error);
 								return;
@@ -362,7 +362,7 @@ export class Job<DATA = unknown | void> {
 			this.agenda.emit('success', this);
 			this.agenda.emit(`success:${this.attrs.name}`, this);
 			log('[%s:%s] has succeeded', this.attrs.name, this.attrs._id);
-		} catch (error) {
+		} catch (error: any) {
 			log('[%s:%s] unknown error occurred', this.attrs.name, this.attrs._id);
 
 			this.fail(error);

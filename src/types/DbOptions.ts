@@ -1,5 +1,4 @@
-import type { Db, MongoClientOptions, SortOptionObject } from 'mongodb';
-import type { IJobParameters } from './JobParameters';
+import type { Db, MongoClientOptions, SortDirection } from 'mongodb';
 
 export interface IDatabaseOptions {
 	db: {
@@ -18,5 +17,7 @@ export interface IMongoOptions {
 
 export interface IDbConfig {
 	ensureIndex?: boolean;
-	sort?: SortOptionObject<IJobParameters>;
+	sort?: {
+		[key: string]: SortDirection;
+	};
 }

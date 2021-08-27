@@ -29,7 +29,7 @@ const clearJobs = async () => {
 // Slow timeouts for Travis
 const jobTimeout = 500;
 const jobType = 'do work';
-const jobProcessor = () => { };
+const jobProcessor = () => {};
 
 describe('Job', () => {
 	beforeEach(async () => {
@@ -252,7 +252,7 @@ describe('Job', () => {
 			jobProto.computeNextRunAt.call(job);
 			expect(DateTime.fromJSDate(job.attrs.nextRunAt!).setZone('GMT').hour).to.equal(6);
 			expect(DateTime.fromJSDate(job.attrs.nextRunAt!).toJSDate().getDate()).to.equal(
-				DateTime.fromJSDate(job.attrs.lastRunAt!).plus({days: 1}).toJSDate().getDate()
+				DateTime.fromJSDate(job.attrs.lastRunAt!).plus({ days: 1 }).toJSDate().getDate()
 			);
 		});
 
@@ -266,7 +266,7 @@ describe('Job', () => {
 			jobProto.computeNextRunAt.call(job);
 			expect(DateTime.fromJSDate(job.attrs.nextRunAt!).setZone('GMT').hour).to.equal(6);
 			expect(DateTime.fromJSDate(job.attrs.nextRunAt!).toJSDate().getDate()).to.equal(
-				DateTime.fromJSDate(job.attrs.lastRunAt!).plus({day: 1}).toJSDate().getDate()
+				DateTime.fromJSDate(job.attrs.lastRunAt!).plus({ days: 1 }).toJSDate().getDate()
 			);
 		});
 
@@ -963,7 +963,7 @@ describe('Job', () => {
 		});
 
 		it('does not on-the-fly lock more than definition.lockLimit jobs', async () => {
-			agenda.define('lock job', (job, cb) => { }, { lockLimit: 1 }); // eslint-disable-line no-unused-vars
+			agenda.define('lock job', (job, cb) => {}, { lockLimit: 1 }); // eslint-disable-line no-unused-vars
 
 			await agenda.start();
 
@@ -977,11 +977,11 @@ describe('Job', () => {
 			agenda.lockLimit(1);
 			agenda.processEvery(200);
 
-			agenda.define('lock job', (job, cb) => { }); // eslint-disable-line no-unused-vars
+			agenda.define('lock job', (job, cb) => {}); // eslint-disable-line no-unused-vars
 
 			await agenda.start();
 
-			const when = DateTime.local().plus({millisecond: 300}).toJSDate();
+			const when = DateTime.local().plus({ milliseconds: 300 }).toJSDate();
 
 			await Promise.all([
 				agenda.schedule(when, 'lock job', { i: 1 }),
@@ -995,11 +995,11 @@ describe('Job', () => {
 		it('does not lock more than definition.lockLimit jobs during processing interval', async () => {
 			agenda.processEvery(200);
 
-			agenda.define('lock job', (job, cb) => { }, { lockLimit: 1 }); // eslint-disable-line no-unused-vars
+			agenda.define('lock job', (job, cb) => {}, { lockLimit: 1 }); // eslint-disable-line no-unused-vars
 
 			await agenda.start();
 
-			const when = DateTime.local().plus({millisecond: 300}).toJSDate();
+			const when = DateTime.local().plus({ milliseconds: 300 }).toJSDate();
 
 			await Promise.all([
 				agenda.schedule(when, 'lock job', { i: 1 }),
@@ -1199,7 +1199,7 @@ describe('Job', () => {
 		});
 
 		it('should support custom sort option', () => {
-			const sort = { foo: 1 };
+			const sort = { foo: 1 } as const;
 			const agendaSort = new Agenda({ sort });
 			expect(agendaSort.attrs.sort).to.eql(sort);
 		});
