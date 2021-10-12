@@ -23,7 +23,7 @@ export const stop = async function (this: Agenda): Promise<void> {
 
       if (jobIds.length === 0) {
         debug("no jobs to unlock");
-        resolve();
+        return resolve();
       }
 
       debug("about to unlock jobs with ids: %O", jobIds);
