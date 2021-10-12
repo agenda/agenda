@@ -22,26 +22,24 @@
 Since there are a few job queue solutions, here a table comparing them to help you use the one that
 better suits your needs.
 
-Agenda is great if you need a MongoDB job scheduler, but try **[Bree](https://jobscheduler.net)** if you need something simpler (built by a previous maintainer).
+| Feature          |      Bull       |   Bee    | Bree   | Agenda |
+| :--------------- | :-------------: | :------: | :------: | :----: |
+| Backend          |      redis      |  redis   |        | mongo  |
+| Priorities       |        ✓        |          |        |   ✓    |
+| Concurrency      |        ✓        |    ✓     |        |   ✓    |
+| Delayed jobs     |        ✓        |          |        |   ✓    |
+| Global events    |        ✓        |          |        |        |
+| Rate Limiter     |        ✓        |          |        |        |
+| Pause/Resume     |        ✓        |          |        |        |
+| Sandboxed worker |        ✓        |          |        |        |
+| Repeatable jobs  |        ✓        |          |        |   ✓    |
+| Atomic ops       |        ✓        |    ✓     |        |        |
+| Persistence      |        ✓        |    ✓     |        |   ✓    |
+| UI               |        ✓        |          |        |   ✓    |
+| REST API         |                 |          |        |   ✓    |
+| Optimized for    | Jobs / Messages | Messages | Jobs   |  Jobs  |
 
-| Feature          |      Bull       |   Bee    | Agenda |
-| :--------------- | :-------------: | :------: | :----: |
-| Backend          |      redis      |  redis   | mongo  |
-| Priorities       |        ✓        |          |   ✓    |
-| Concurrency      |        ✓        |    ✓     |   ✓    |
-| Delayed jobs     |        ✓        |          |   ✓    |
-| Global events    |        ✓        |          |        |
-| Rate Limiter     |        ✓        |          |        |
-| Pause/Resume     |        ✓        |          |        |
-| Sandboxed worker |        ✓        |          |        |
-| Repeatable jobs  |        ✓        |          |   ✓    |
-| Atomic ops       |        ✓        |    ✓     |        |
-| Persistence      |        ✓        |    ✓     |   ✓    |
-| UI               |        ✓        |          |   ✓    |
-| REST API         |                 |          |   ✓    |
-| Optimized for    | Jobs / Messages | Messages |  Jobs  |
-
-_Kudos for making the comparison chart goes to [Bull](https://www.npmjs.com/package/bull#feature-comparison) maintainers._
+_Kudos for making the original comparison chart goes to [Bull](https://www.npmjs.com/package/bull#feature-comparison) maintainers._
 
 # Installation
 
