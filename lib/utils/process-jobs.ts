@@ -4,6 +4,7 @@ import { Job } from "../job";
 import { Agenda } from "../agenda";
 
 const debug = createDebugger("agenda:internal:processJobs");
+const MAX_SIGNED_INTEGER = Math.pow(2, 31) - 1;
 
 /**
  * Process methods for jobs
@@ -240,8 +241,6 @@ export const processJobs = async function (
       self._isJobQueueFilling.delete(name);
     }
   }
-
-  const MAX_SIGNED_INTEGER = Math.pow(2, 31) - 1;
 
   /**
    * Internal method that processes any jobs in the local queue (array)
