@@ -241,6 +241,8 @@ export const processJobs = async function (
     }
   }
 
+  const MAX_SIGNED_INTEGER = Math.pow(2, 31) - 1;
+
   /**
    * Internal method that processes any jobs in the local queue (array)
    * @returns {undefined}
@@ -252,16 +254,17 @@ export const processJobs = async function (
     }
 
     // Store for all sorts of things
-    const now = new Date();
+    const now = Date.now();
 
     // Get the next job that is not blocked by concurrency
     const job = jobQueue.returnNextConcurrencyFreeJob(definitions);
+    const nextRunAt = !!job.attrs.nextRunAt && job.attrs.nextRunAt.getTime();
 
     debug("[%s:%s] about to process job", job.attrs.name, job.attrs._id);
 
     // If the 'nextRunAt' time is older than the current time, run the job
     // Otherwise, setTimeout that gets called at the time of 'nextRunAt'
-    if (!job.attrs.nextRunAt || job.attrs.nextRunAt <= now) {
+    if (!nextRunAt || nextRunAt <= now) {
       debug(
         "[%s:%s] nextRunAt is in the past, run the job immediately",
         job.attrs.name,
@@ -269,12 +272,12 @@ export const processJobs = async function (
       );
       runOrRetry();
     } else {
-      // @ts-expect-error linter complains about Date-arithmetic
-      const runIn = job.attrs.nextRunAt - now;
+      const runIn = Math.min(nextRunAt - now, MAX_SIGNED_INTEGER);
       debug(
-        "[%s:%s] nextRunAt is in the future, calling setTimeout(%d)",
+        "[%s:%s] nextRunAt is in the %s, calling setTimeout(%d)",
         job.attrs.name,
         job.attrs._id,
+        runIn >= MAX_SIGNED_INTEGER ? "FAR FUTURE" : "future",
         runIn
       );
       setTimeout(jobProcessing, runIn);
