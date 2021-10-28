@@ -60,6 +60,7 @@
   },
   "devDependencies": {
     "eslint": "^7.32.0",
+    "prettier": "^2.4.1",
     "@hokify/eslint-config": "^2.2.0",
     "@istanbuljs/nyc-config-typescript": "^1.0.1",
     "@types/chai": "^4.2.22",
