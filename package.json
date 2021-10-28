@@ -51,38 +51,39 @@
     "url": "https://github.com/hokify/agenda/issues"
   },
   "dependencies": {
-    "cron-parser": "^3.5.0",
+    "cron-parser": "^4.1.0",
     "date.js": "~0.3.3",
     "debug": "~4.3.2",
     "human-interval": "~2.0.1",
     "luxon": "^2.0.2",
-    "mongodb": "~4.1.1"
+    "mongodb": "~4.1.3"
   },
   "devDependencies": {
-    "@hokify/eslint-config": "^2.0.34",
+    "eslint": "^7.32.0",
+    "@hokify/eslint-config": "^2.2.0",
     "@istanbuljs/nyc-config-typescript": "^1.0.1",
-    "@types/chai": "^4.2.21",
+    "@types/chai": "^4.2.22",
     "@types/debug": "^4.1.7",
     "@types/human-interval": "^1.0.0",
-    "@types/luxon": "^2.0.1",
+    "@types/luxon": "^2.0.5",
     "@types/mocha": "^9.0.0",
-    "@types/node": "^16.7.2",
-    "@types/sinon": "^10.0.2",
+    "@types/node": "^16.11.6",
+    "@types/sinon": "^10.0.6",
     "better-docs": "^2.3.2",
     "blanket": "1.2.3",
     "chai": "^4.3.4",
     "coveralls": "3.1.1",
     "delay": "5.0.0",
     "jsdoc": "3.6.7",
-    "mocha": "9.1.0",
+    "mocha": "9.1.3",
     "mocha-lcov-reporter": "1.3.0",
-    "mongodb-memory-server": "^7.3.6",
+    "mongodb-memory-server": "^7.5.1",
     "nyc": "^15.1.0",
     "q": "1.5.1",
     "sinon": "11.1.2",
-    "standard-version": "^9.3.1",
-    "ts-node": "^10.2.1",
-    "typedoc": "^0.21.6",
-    "typescript": "^4.4.2"
+    "standard-version": "^9.3.2",
+    "ts-node": "^10.4.0",
+    "typedoc": "^0.22.7",
+    "typescript": "^4.4.4"
   }
 }
