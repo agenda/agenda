@@ -25,7 +25,7 @@
     "mocha-debug-internal": "DEBUG=agenda:internal:** mocha -r ts-node/register --reporter spec -b",
     "mocha-debug-all": "DEBUG=agenda:** mocha -r ts-node/register --reporter spec -b",
     "docs-jsdoc": "jsdoc --configure .jsdoc.json --verbose",
-    "docs": "typedoc --out docs/agenda/4.x --includes src/ --mode file"
+    "docs": "typedoc --out docs/agenda/6.x src/index.ts"
   },
   "config": {
     "blanket": {

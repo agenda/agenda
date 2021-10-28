@@ -8,6 +8,7 @@ title: Agenda — Lightweight job scheduling for Node.js
 
 ## Documentation
 
+- [v6.x.0](./agenda/6.x)
 - [v4.x.0](./agenda/4.x)
 - [v3.1.0](./agenda/3.1.0)
 - [v2.2.0](./agenda/2.2.0)
