@@ -87,6 +87,8 @@ export class JobProcessor {
 
 	private isLockingOnTheFly = false;
 
+	private isJobQueueFilling = new Map<string, boolean>();
+
 	private isRunning = true;
 
 	private processInterval?: ReturnType<typeof setInterval>;
@@ -211,19 +213,24 @@ export class JobProcessor {
 			return;
 		}
 
+		this.isLockingOnTheFly = true;
+
 		// Set that we are running this
 		try {
-			this.isLockingOnTheFly = true;
-
 			// Grab a job that needs to be locked
 			const job = this.jobsToLock.pop();
 
 			if (job) {
+				if (this.isJobQueueFilling.has(job.attrs.name)) {
+					log.extend('lockOnTheFly')('jobQueueFilling already running for: %s', job.attrs.name);
+					return;
+				}
+
 				// If locking limits have been hit, stop locking on the fly.
 				// Jobs that were waiting to be locked will be picked up during a
 				// future locking interval.
 				if (!this.shouldLock(job.attrs.name)) {
-					log.extend('lockOnTheFly')('lock limit hit for: [%s]', job.attrs.name);
+					log.extend('lockOnTheFly')('lock limit hit for: [%s:%S]', job.attrs.name, job.attrs._id);
 					this.jobsToLock = [];
 					return;
 				}
@@ -253,8 +260,9 @@ export class JobProcessor {
 					}
 
 					log.extend('lockOnTheFly')(
-						'found job [%s] that can be locked on the fly',
-						jobToEnqueue.attrs.name
+						'found job [%s:%s] that can be locked on the fly',
+						jobToEnqueue.attrs.name,
+						jobToEnqueue.attrs._id
 					);
 					this.updateStatus(jobToEnqueue.attrs.name, 'locked', +1);
 					this.lockedJobs.push(jobToEnqueue);
@@ -302,18 +310,20 @@ export class JobProcessor {
 	 * @returns {undefined}
 	 */
 	private async jobQueueFilling(name: string): Promise<void> {
-		// Don't lock because of a limit we have set (lockLimit, etc)
-		if (!this.shouldLock(name)) {
-			log.extend('jobQueueFilling')('lock limit reached in queue filling for [%s]', name);
-			return;
-		}
+		this.isJobQueueFilling.set(name, true);
 
-		// Set the date of the next time we are going to run _processEvery function
-		const now = new Date();
-		this.nextScanAt = new Date(now.valueOf() + this.processEvery);
-
-		// For this job name, find the next job to run and lock it!
 		try {
+			// Don't lock because of a limit we have set (lockLimit, etc)
+			if (!this.shouldLock(name)) {
+				log.extend('jobQueueFilling')('lock limit reached in queue filling for [%s]', name);
+				return;
+			}
+
+			// Set the date of the next time we are going to run _processEvery function
+			const now = new Date();
+			this.nextScanAt = new Date(now.valueOf() + this.processEvery);
+
+			// For this job name, find the next job to run and lock it!
 			const job = await this.findAndLockNextJob(name, this.agenda.definitions[name]);
 
 			// Still have the job?
@@ -354,6 +364,8 @@ export class JobProcessor {
 		} catch (error) {
 			log.extend('jobQueueFilling')('[%s] job lock failed while filling queue', name, error);
 			this.agenda.emit('error', error);
+		} finally {
+			this.isJobQueueFilling.delete(name);
 		}
 	}
 

@@ -2,6 +2,7 @@
 import * as delay from 'delay';
 import { Db } from 'mongodb';
 import { expect } from 'chai';
+import { fail } from 'assert';
 import { mockMongo } from './helpers/mock-mongodb';
 
 import { Agenda } from '../src';
@@ -660,6 +661,48 @@ describe('Agenda', () => {
 	});
 
 	describe('process jobs', () => {
+		// eslint-disable-line prefer-arrow-callback
+		it('do not run failed jobs again', async () => {
+			const unhandledRejections: any[] = [];
+			const rejectionsHandler = error => unhandledRejections.push(error);
+			process.on('unhandledRejection', rejectionsHandler);
+
+			let jprocesses = 0;
+
+			globalAgenda.define('failing job', async _job => {
+				console.log('FALING JOB');
+				jprocesses++;
+				throw new Error('failed');
+			});
+
+			let failCalled = false;
+			globalAgenda.on('fail:failing job', err => {
+				console.log('ERROR FAILING JOB', err);
+				failCalled = true;
+			});
+
+			let errorCalled = false;
+			globalAgenda.on('error', err => {
+				console.log('GLOBAL ERROR', err);
+
+				errorCalled = true;
+			});
+
+			globalAgenda.processEvery(100);
+			await globalAgenda.start();
+
+			await globalAgenda.now('failing job');
+
+			await delay(500);
+
+			process.removeListener('unhandledRejection', rejectionsHandler);
+
+			expect(jprocesses).to.be.equal(1);
+			expect(errorCalled).to.be.false;
+			expect(failCalled).to.be.true;
+			expect(unhandledRejections).to.have.length(0);
+		}).timeout(10000);
+
 		// eslint-disable-line prefer-arrow-callback
 		it('ensure there is no unhandledPromise on job timeouts', async () => {
 			const unhandledRejections: any[] = [];

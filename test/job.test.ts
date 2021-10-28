@@ -962,6 +962,30 @@ describe('Job', () => {
 			expect((await agenda.getRunningStats()).lockedJobs).to.equal(1);
 		});
 
+		it('does not on-the-fly lock more mixed jobs than agenda._lockLimit jobs', async () => {
+			agenda.lockLimit(1);
+
+			agenda.define('lock job', (job, cb) => {}); // eslint-disable-line no-unused-vars
+			agenda.define('lock job2', (job, cb) => {}); // eslint-disable-line no-unused-vars
+			agenda.define('lock job3', (job, cb) => {}); // eslint-disable-line no-unused-vars
+			agenda.define('lock job4', (job, cb) => {}); // eslint-disable-line no-unused-vars
+			agenda.define('lock job5', (job, cb) => {}); // eslint-disable-line no-unused-vars
+
+			await agenda.start();
+
+			await Promise.all([
+				agenda.now('lock job', { i: 1 }),
+				agenda.now('lock job5', { i: 2 }),
+				agenda.now('lock job4', { i: 3 }),
+				agenda.now('lock job3', { i: 4 }),
+				agenda.now('lock job2', { i: 5 })
+			]);
+
+			await delay(500);
+			expect((await agenda.getRunningStats()).lockedJobs).to.equal(1);
+			await agenda.stop();
+		});
+
 		it('does not on-the-fly lock more than definition.lockLimit jobs', async () => {
 			agenda.define('lock job', (job, cb) => {}, { lockLimit: 1 }); // eslint-disable-line no-unused-vars
 
