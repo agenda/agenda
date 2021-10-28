@@ -5,15 +5,6 @@
 <p align="center">
   A light-weight job scheduling library for Node.js
 </p>
-<p align="center">
-  <a href="http://travis-ci.org/hokify/agenda"><img src="https://api.travis-ci.org/hokify/agenda.svg?branch=master" alt="Build Status"></a>
-  <a href="https://david-dm.org/hokify/agenda"><img src="https://david-dm.org/hokify/agenda/status.svg" alt="dependencies Status"></a>
-  <a href="https://david-dm.org/hokify/agenda?type=dev"><img src="https://david-dm.org/hokify/agenda/dev-status.svg" alt="devDependencies Status"></a>
-  <a href="https://coveralls.io/github/hokify/agenda?branch=master"><img src="https://coveralls.io/repos/github/hokify/agenda/badge.svg?branch=master" alt="Coverage Status"></a>
-	<br>
-	<br>
-	<br>
-</p>
 
 # Fork
 This is a fork of agenda js, it differs from the original version in following points:
