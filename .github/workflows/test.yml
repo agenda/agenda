@@ -32,6 +32,8 @@ jobs:
           key: ${{ runner.os }}-build-agenda-${{ hashFiles('**/package-lock.lock') }}
           restore-keys: |
             ${{ runner.os }}-build-agenda-
+      - name: Update npm
+        run: npm -g install npm@latest
 
       - name: Install Packages
         run: npm install
