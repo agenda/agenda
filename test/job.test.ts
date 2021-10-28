@@ -1079,8 +1079,8 @@ describe('Job', () => {
 
 			await Promise.all([
 				agenda.schedule(new Date(now + 100), 'blocking', { i: 1 }),
-				agenda.schedule(new Date(now + 100), 'blocking', { i: 2 }),
-				agenda.schedule(new Date(now + 100), 'non-blocking', { i: 3 })
+				agenda.schedule(new Date(now + 101), 'blocking', { i: 2 }),
+				agenda.schedule(new Date(now + 102), 'non-blocking', { i: 3 })
 			]);
 
 			try {

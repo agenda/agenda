@@ -791,6 +791,6 @@ describe('Agenda', () => {
 			expect(j3processes).to.equal(1);
 
 			expect(unhandledRejections).to.have.length(0);
-		}).timeout(10000);
+		}).timeout(10500);
 	});
 });
