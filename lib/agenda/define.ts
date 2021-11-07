@@ -41,9 +41,9 @@ export interface DefineOptions {
   shouldSaveResult?: boolean;
 }
 
-export type Processor =
-  | ((job: Job) => Promise<void>)
-  | ((job: Job, done: () => void) => void);
+export type Processor<T> =
+  | ((job: Job<T>) => Promise<void>)
+  | ((job: Job<T>, done: () => void) => void);
 
 /**
  * Setup definition for job
@@ -57,8 +57,8 @@ export type Processor =
 export const define = function (
   this: Agenda,
   name: string,
-  options: DefineOptions | Processor,
-  processor?: Processor
+  options: DefineOptions | Processor<T>,
+  processor?: Processor<T>
 ): void {
   if (processor === undefined) {
     processor = options as Processor;
