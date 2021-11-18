@@ -1,0 +1,1 @@
+{"version":3,"file":"max-concurrency.js","sourceRoot":"","sources":["../../lib/agenda/max-concurrency.ts"],"names":[],"mappings":";;;;;;AAAA,kDAAmC;AAGnC,MAAM,KAAK,GAAG,eAAc,CAAC,uBAAuB,CAAC,CAAC;AAEtD;;;;;;GAMG;AACI,MAAM,cAAc,GAAG,UAE5B,WAAmB;IAEnB,KAAK,CAAC,2BAA2B,EAAE,WAAW,CAAC,CAAC;IAChD,IAAI,CAAC,eAAe,GAAG,WAAW,CAAC;IACnC,OAAO,IAAI,CAAC;AACd,CAAC,CAAC;AAPW,QAAA,cAAc,kBAOzB"}
