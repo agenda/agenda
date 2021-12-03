@@ -73,7 +73,7 @@ export class JobDbRepository {
 	}
 
 	async unlockJob(job: Job): Promise<void> {
-		// only unlock jobs which are not currently procsesed (nextRunAT is not null)
+		// only unlock jobs which are not currently processed (nextRunAT is not null)
 		await this.collection.updateOne(
 			{ _id: job.attrs._id, nextRunAt: { $ne: null } },
 			{ $unset: { lockedAt: true } }

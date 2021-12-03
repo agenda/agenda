@@ -256,6 +256,10 @@ export class Job<DATA = unknown | void> {
 			await this.fetchStatus();
 		}
 
+		return this.isExpired();
+	}
+
+	isExpired(): boolean {
 		const definition = this.agenda.definitions[this.attrs.name];
 
 		const lockDeadline = new Date(Date.now() - definition.lockLifetime);

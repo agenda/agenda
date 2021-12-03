@@ -334,7 +334,7 @@ export class JobProcessor {
 			if (job) {
 				if (job.attrs.name !== name) {
 					throw new Error(
-						`got different job name: ${job.attrs.name} (acutal) !== ${name} (expected)`
+						`got different job name: ${job.attrs.name} (actual) !== ${name} (expected)`
 					);
 				}
 
@@ -393,66 +393,71 @@ export class JobProcessor {
 				return;
 			}
 
-			log.extend('jobProcessing')(
-				'[%s:%s] there is a job to process (priority = %d)',
-				job.attrs.name,
-				job.attrs._id,
-				job.attrs.priority,
-				job.gotTimerToExecute
-			);
-
 			this.jobQueue.remove(job);
 
-			// If the 'nextRunAt' time is older than the current time, run the job
-			// Otherwise, setTimeout that gets called at the time of 'nextRunAt'
-			if (job.attrs.nextRunAt <= now) {
+			if (!job.isExpired()) {
+				// check if job has expired (and therefore probably got picked up again by another queue in the meantime)
+				// before it even has started to run
+
 				log.extend('jobProcessing')(
-					'[%s:%s] nextRunAt is in the past, run the job immediately',
+					'[%s:%s] there is a job to process (priority = %d)',
 					job.attrs.name,
-					job.attrs._id
+					job.attrs._id,
+					job.attrs.priority,
+					job.gotTimerToExecute
 				);
-				this.runOrRetry(job);
-			} else {
-				const runIn = job.attrs.nextRunAt.getTime() - now.getTime();
-				if (runIn > this.processEvery) {
-					// this job is not in the near future, remove it (it will be picked up later)
-					log.extend('runOrRetry')(
-						'[%s:%s] job is too far away, freeing it up',
+
+				// If the 'nextRunAt' time is older than the current time, run the job
+				// Otherwise, setTimeout that gets called at the time of 'nextRunAt'
+				if (job.attrs.nextRunAt <= now) {
+					log.extend('jobProcessing')(
+						'[%s:%s] nextRunAt is in the past, run the job immediately',
 						job.attrs.name,
 						job.attrs._id
 					);
-					let lockedJobIndex = this.lockedJobs.indexOf(job);
-					if (lockedJobIndex === -1) {
-						// lookup by id
-						lockedJobIndex = this.lockedJobs.findIndex(
-							j => j.attrs._id?.toString() === job.attrs._id?.toString()
-						);
-					}
-					if (lockedJobIndex === -1) {
-						throw new Error(`cannot find job ${job.attrs._id} in locked jobs queue?`);
-					}
-
-					this.lockedJobs.splice(lockedJobIndex, 1);
-					this.updateStatus(job.attrs.name, 'locked', -1);
+					this.runOrRetry(job);
 				} else {
-					log.extend('jobProcessing')(
-						'[%s:%s] nextRunAt is in the future, calling setTimeout(%d)',
-						job.attrs.name,
-						job.attrs._id,
-						runIn
-					);
-					// re add to queue (puts it at the right position in the queue)
-					this.jobQueue.insert(job);
-					// ensure every job gets a timer to run at the near future time (but also ensure this time is set only once)
-					if (!job.gotTimerToExecute) {
-						job.gotTimerToExecute = true;
-						setTimeout(
-							() => {
-								this.jobProcessing();
-							},
-							runIn > MAX_SAFE_32BIT_INTEGER ? MAX_SAFE_32BIT_INTEGER : runIn
-						); // check if runIn is higher than unsined 32 bit int, if so, use this time to recheck,
-						// because setTimeout will run in an overflow otherwise and reprocesses immediately
+					const runIn = job.attrs.nextRunAt.getTime() - now.getTime();
+					if (runIn > this.processEvery) {
+						// this job is not in the near future, remove it (it will be picked up later)
+						log.extend('runOrRetry')(
+							'[%s:%s] job is too far away, freeing it up',
+							job.attrs.name,
+							job.attrs._id
+						);
+						let lockedJobIndex = this.lockedJobs.indexOf(job);
+						if (lockedJobIndex === -1) {
+							// lookup by id
+							lockedJobIndex = this.lockedJobs.findIndex(
+								j => j.attrs._id?.toString() === job.attrs._id?.toString()
+							);
+						}
+						if (lockedJobIndex === -1) {
+							throw new Error(`cannot find job ${job.attrs._id} in locked jobs queue?`);
+						}
+
+						this.lockedJobs.splice(lockedJobIndex, 1);
+						this.updateStatus(job.attrs.name, 'locked', -1);
+					} else {
+						log.extend('jobProcessing')(
+							'[%s:%s] nextRunAt is in the future, calling setTimeout(%d)',
+							job.attrs.name,
+							job.attrs._id,
+							runIn
+						);
+						// re add to queue (puts it at the right position in the queue)
+						this.jobQueue.insert(job);
+						// ensure every job gets a timer to run at the near future time (but also ensure this time is set only once)
+						if (!job.gotTimerToExecute) {
+							job.gotTimerToExecute = true;
+							setTimeout(
+								() => {
+									this.jobProcessing();
+								},
+								runIn > MAX_SAFE_32BIT_INTEGER ? MAX_SAFE_32BIT_INTEGER : runIn
+							); // check if runIn is higher than unsined 32 bit int, if so, use this time to recheck,
+							// because setTimeout will run in an overflow otherwise and reprocesses immediately
+						}
 					}
 				}
 			}
@@ -508,7 +513,7 @@ export class JobProcessor {
 								return;
 							}
 
-							if (await job.isDead()) {
+							if (job.isExpired()) {
 								reject(
 									new Error(
 										`execution of '${job.attrs.name}' canceled, execution took more than ${
