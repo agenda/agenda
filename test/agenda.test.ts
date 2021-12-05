@@ -781,7 +781,7 @@ describe('Agenda', () => {
 			await globalAgenda.every('10 seconds', 'j2');
 			await globalAgenda.every('15 seconds', 'j3');
 
-			await delay(6000);
+			await delay(7000);
 
 			process.removeListener('unhandledRejection', rejectionsHandler);
 
