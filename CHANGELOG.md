@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [6.0.4](https://github.com/hokify/agenda/compare/v6.0.3...v6.0.4) (2021-12-05)
+
+
+### Bug Fixes
+
+* nextRunAt value can be null ([e39cfd0](https://github.com/hokify/agenda/commit/e39cfd089248a7a235cf69888c9714a99988a75f))
+
 ### [6.0.3](https://github.com/hokify/agenda/compare/v6.0.2...v6.0.3) (2021-12-03)
 
 
