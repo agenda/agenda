@@ -102,7 +102,7 @@ export class JobProcessingQueue {
 				| undefined;
 		},
 		handledJobs: IJobParameters['_id'][]
-	): (JobWithId & { attrs: IJobParameters & { nextRunAt: Date } }) | undefined {
+	): (JobWithId & { attrs: IJobParameters & { nextRunAt?: Date | null } }) | undefined {
 		const next = (Object.keys(this._queue) as unknown as number[]).reverse().find(i => {
 			const def = this.agenda.definitions[this._queue[i].attrs.name];
 			const status = jobStatus[this._queue[i].attrs.name];
@@ -116,11 +116,6 @@ export class JobProcessingQueue {
 				!handledJobs.includes(this._queue[i].attrs._id) &&
 				(!status || !def.concurrency || status.running < def.concurrency)
 			) {
-				if (!this._queue[i].attrs.nextRunAt) {
-					// eslint-disable-next-line no-console
-					console.log('this._queue[i]', this._queue[i].attrs);
-					throw new Error('no nextRunAt date');
-				}
 				return true;
 			}
 			return false;

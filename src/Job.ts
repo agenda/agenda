@@ -62,7 +62,7 @@ export class Job<DATA = unknown | void> {
 			...args,
 			// Set defaults if undefined
 			priority: parsePriority(args.priority),
-			nextRunAt: args.nextRunAt || new Date(),
+			nextRunAt: args.nextRunAt === undefined ? new Date() : args.nextRunAt,
 			type: args.type
 		};
 	}

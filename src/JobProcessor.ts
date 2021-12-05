@@ -409,7 +409,7 @@ export class JobProcessor {
 
 				// If the 'nextRunAt' time is older than the current time, run the job
 				// Otherwise, setTimeout that gets called at the time of 'nextRunAt'
-				if (job.attrs.nextRunAt <= now) {
+				if (!job.attrs.nextRunAt || job.attrs.nextRunAt <= now) {
 					log.extend('jobProcessing')(
 						'[%s:%s] nextRunAt is in the past, run the job immediately',
 						job.attrs.name,
