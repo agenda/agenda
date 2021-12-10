@@ -248,7 +248,7 @@ export class JobDbRepository {
 			{ _id: job.attrs._id },
 			{
 				$set: {
-					lockedAt: job.attrs.lockedAt,
+					lockedAt: (job.attrs.lockedAt && new Date(job.attrs.lockedAt)) || undefined,
 					nextRunAt: (job.attrs.nextRunAt && new Date(job.attrs.nextRunAt)) || undefined,
 					lastRunAt: (job.attrs.lastRunAt && new Date(job.attrs.lastRunAt)) || undefined,
 					progress: job.attrs.progress,
