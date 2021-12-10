@@ -282,7 +282,8 @@ export class Job<DATA = unknown | void> {
 		}
 		this.attrs.lockedAt = new Date();
 		this.attrs.progress = progress;
-		await this.save();
+
+		await this.agenda.db.saveJobState(this);
 	}
 
 	private computeNextRunAt() {
@@ -326,7 +327,7 @@ export class Job<DATA = unknown | void> {
 			this.attrs.lastRunAt.toISOString()
 		);
 		this.computeNextRunAt();
-		await this.save();
+		await this.agenda.db.saveJobState(this);
 
 		try {
 			this.agenda.emit('start', this);
@@ -376,7 +377,7 @@ export class Job<DATA = unknown | void> {
 			log('[%s:%s] has failed [%s]', this.attrs.name, this.attrs._id, error.message);
 		} finally {
 			this.attrs.lockedAt = undefined;
-			await this.save();
+			await this.agenda.db.saveJobState(this);
 			log('[%s:%s] was saved successfully to MongoDB', this.attrs.name, this.attrs._id);
 
 			this.agenda.emit('complete', this);

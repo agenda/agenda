@@ -243,6 +243,25 @@ export class JobDbRepository {
 		return job;
 	}
 
+	async saveJobState(job: Job<any>): Promise<void> {
+		await this.collection.updateOne(
+			{ _id: job.attrs._id },
+			{
+				$set: {
+					lockedAt: job.attrs.lockedAt,
+					nextRunAt: (job.attrs.nextRunAt && new Date(job.attrs.nextRunAt)) || undefined,
+					lastRunAt: (job.attrs.lastRunAt && new Date(job.attrs.lastRunAt)) || undefined,
+					progress: job.attrs.progress,
+					failReason: job.attrs.failReason,
+					failCount: job.attrs.failCount,
+					failedAt: job.attrs.failedAt && new Date(job.attrs.failedAt),
+					lastFinishedAt:
+						(job.attrs.lastFinishedAt && new Date(job.attrs.lastFinishedAt)) || undefined
+				}
+			}
+		);
+	}
+
 	/**
 	 * Save the properties on a job to MongoDB
 	 * @name Agenda#saveJob

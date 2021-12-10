@@ -318,6 +318,8 @@ describe('Agenda', () => {
 						.schedule('now')
 						.save();
 
+					await delay(100);
+
 					const job2 = await globalAgenda
 						.create('unique job', {
 							type: 'active',
