@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [6.0.5](https://github.com/hokify/agenda/compare/v6.0.4...v6.0.5) (2021-12-10)
+
+
+### Bug Fixes
+
+* give the test some more time ([e2cacb5](https://github.com/hokify/agenda/commit/e2cacb533b211ae28a3d4ee278918be4d0f897e9))
+* only update job state fields during job processing ([be8e51b](https://github.com/hokify/agenda/commit/be8e51b197f46d6bf2bf6d36ce7cdcbe6df72cfd))
+
 ### [6.0.4](https://github.com/hokify/agenda/compare/v6.0.3...v6.0.4) (2021-12-05)
 
 
