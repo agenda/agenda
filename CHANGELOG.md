@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [6.0.6](https://github.com/hokify/agenda/compare/v6.0.5...v6.0.6) (2021-12-10)
+
+
+### Bug Fixes
+
+* ensure locked at is processed as date ([3a5a0c4](https://github.com/hokify/agenda/commit/3a5a0c4123506001c4898020aa489eb8fd20c311))
+
 ### [6.0.5](https://github.com/hokify/agenda/compare/v6.0.4...v6.0.5) (2021-12-10)
 
 
