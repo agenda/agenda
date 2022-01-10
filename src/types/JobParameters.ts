@@ -26,7 +26,7 @@ export interface IJobParameters<DATA = unknown | void> {
 	progress?: number;
 
 	// unique query object
-	unique?: Filter<IJobParameters<DATA>>;
+	unique?: Filter<Omit<IJobParameters<DATA>, 'unique'>>;
 	uniqueOpts?: {
 		insertOnly: boolean;
 	};
