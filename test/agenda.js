@@ -230,6 +230,24 @@ describe("Agenda", () => {
         expect(agenda._sort).to.eql({ nextRunAt: -1 });
       });
     });
+    describe("defaultTimeout", () => {
+      it("returns itself", () => {
+        expect(agenda.defaultTimeout(1000)).to.be(agenda);
+      });
+      it("sets the default timeout", () => {
+        agenda.defaultTimeout(9999);
+        expect(agenda._defaultTimeout).to.be(9999);
+      });
+    });
+    describe("defaultFailOnTimeout", () => {
+      it("returns itself", () => {
+        expect(agenda.defaultFailOnTimeout(false)).to.be(agenda);
+      });
+      it("sets the defaultFailOnTimeout option", () => {
+        agenda.defaultFailOnTimeout(true);
+        expect(agenda._defaultFailOnTimeout).to.be(true);
+      });
+    });
   });
 
   describe("job methods", () => {
