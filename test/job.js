@@ -621,24 +621,6 @@ describe("Job", () => {
       const deletedJob = await agenda.jobs({ name: "failBoat3" });
       expect(deletedJob).to.have.length(0);
     });
-
-    it("handles timeout errors", async () => {
-      await agenda.processEvery(5);
-      job.attrs.name = "failBoat4";
-      await job.save();
-      agenda.define(
-        "failBoat4",
-        { timeout: 15, failOnTimeout: true },
-        async (job, cb) => {
-          await delay(100);
-          cb();
-        }
-      );
-
-      await job.run();
-
-      expect(job.attrs.failReason).to.be("failBoat4 timeout");
-    });
   });
 
   describe("touch", () => {
@@ -1302,7 +1284,7 @@ describe("Job", () => {
         expect(job.attrs.shouldSaveResult).to.be(true);
       });
       it("should set option via constructor", () => {
-        const job = new Job({ shouldSaveResult: true });
+        const job = new Job({shouldSaveResult: true});
         expect(job.attrs.shouldSaveResult).to.be(true);
       });
       it("returns the job", () => {
@@ -1320,7 +1302,7 @@ describe("Job", () => {
           await agenda.now("savedResultJob");
           await delay(jobTimeout);
           const result = await agenda.jobs({ name: "savedResultJob" });
-          expect(result[0].attrs.result).to.be(undefined);
+          expect(result[0].attrs.result).to.be(undefined)
         });
         it("should not save result if option is false", async () => {
           agenda.define("savedResultJob", {shouldSaveResult: false}, (job, cb) => {
@@ -1330,7 +1312,7 @@ describe("Job", () => {
           await agenda.now("savedResultJob");
           await delay(jobTimeout);
           const result = await agenda.jobs({ name: "savedResultJob" });
-          expect(result[0].attrs.result).to.be(undefined);
+          expect(result[0].attrs.result).to.be(undefined)
         });
         it("should save result if option is true", async () => {
           agenda.define("savedResultJob", {shouldSaveResult: true}, (job, cb) => {
@@ -1353,7 +1335,7 @@ describe("Job", () => {
           await agenda.now("savedResultJob");
           await delay(jobTimeout);
           const result = await agenda.jobs({ name: "savedResultJob" });
-          expect(result[0].attrs.result).to.be(undefined);
+          expect(result[0].attrs.result).to.be(undefined)
         });
         it("should not save result if option is false", async () => {
           agenda.define("savedResultJob", {shouldSaveResult: false}, async (job) => {
@@ -1363,7 +1345,7 @@ describe("Job", () => {
           await agenda.now("savedResultJob");
           await delay(jobTimeout);
           const result = await agenda.jobs({ name: "savedResultJob" });
-          expect(result[0].attrs.result).to.be(undefined);
+          expect(result[0].attrs.result).to.be(undefined)
         });
         it("should save result if option is true", async () => {
           agenda.define("savedResultJob", {shouldSaveResult: true}, async (job) => {
@@ -1385,7 +1367,7 @@ describe("Job", () => {
           await agenda.now("savedResultJob");
           await delay(jobTimeout);
           const result = await agenda.jobs({ name: "savedResultJob" });
-          expect(result[0].attrs.result).to.be(undefined);
+          expect(result[0].attrs.result).to.be(undefined)
         });
         it("should not save result if option is false", async () => {
           agenda.define("savedResultJob", {shouldSaveResult: false}, (job) => {
@@ -1395,10 +1377,10 @@ describe("Job", () => {
           await agenda.now("savedResultJob");
           await delay(jobTimeout);
           const result = await agenda.jobs({ name: "savedResultJob" });
-          expect(result[0].attrs.result).to.be(undefined);
+          expect(result[0].attrs.result).to.be(undefined)
         });
         it("should save result if option is true", async () => {
-          agenda.define("savedResultJob", { shouldSaveResult: true }, (job) => {
+          agenda.define("savedResultJob", {shouldSaveResult: true}, (job) => {
             return "job-result";
           });
           await agenda.start();
@@ -1409,7 +1391,7 @@ describe("Job", () => {
         });
       });
     });
-  });
+  })
 
   describe("Integration Tests", () => {
     describe(".every()", () => {
