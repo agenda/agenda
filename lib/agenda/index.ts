@@ -35,6 +35,8 @@ import { schedule } from "./schedule";
 import { sort } from "./sort";
 import { start } from "./start";
 import { stop } from "./stop";
+import { defaultTimeout } from "./default-timeout";
+import { defaultFailOnTimeout } from "./default-fail-on-timeout";
 
 export interface AgendaConfig {
   name?: string;
@@ -44,6 +46,8 @@ export interface AgendaConfig {
   lockLimit?: number;
   defaultLockLimit?: number;
   defaultLockLifetime?: number;
+  defaultTimeout?: number;
+  defaultFailOnTimeout?: boolean;
   sort?: any;
   mongo?: MongoDb;
   db?: {
@@ -73,6 +77,8 @@ export interface AgendaConfig {
  * @property {Boolean} _isLockingOnTheFly - true if 'lockingOnTheFly' is currently running. Prevent concurrent execution of this method.
  * @property {Map} _isJobQueueFilling - A map of jobQueues and if the 'jobQueueFilling' method is currently running for a given map. 'lockingOnTheFly' and 'jobQueueFilling' should not run concurrently for the same jobQueue. It can cause that lock limits aren't honored.
  * @property {Array} _jobsToLock
+ * @property {Number} _defaultTimeout
+ * @property {Boolean} _defaultFailOnTimeout
  */
 class Agenda extends EventEmitter {
   _defaultConcurrency: any;
@@ -99,6 +105,8 @@ class Agenda extends EventEmitter {
   _collection!: Collection;
   _nextScanAt: any;
   _processInterval: any;
+  _defaultTimeout: number;
+  _defaultFailOnTimeout: boolean;
 
   cancel!: typeof cancel;
   close!: typeof close;
@@ -125,6 +133,8 @@ class Agenda extends EventEmitter {
   sort!: typeof sort;
   start!: typeof start;
   stop!: typeof stop;
+  defaultTimeout!: typeof defaultTimeout;
+  defaultFailOnTimeout!: typeof defaultFailOnTimeout;
 
   /**
    * Constructs a new Agenda object.
@@ -152,6 +162,8 @@ class Agenda extends EventEmitter {
     this._lockedJobs = [];
     this._jobQueue = new JobProcessingQueue();
     this._defaultLockLifetime = config.defaultLockLifetime || 10 * 60 * 1000; // 10 minute default lockLifetime
+    this._defaultTimeout = config.defaultTimeout || 10 * 60 * 1000; // 10 minute default timeout
+    this._defaultFailOnTimeout = config.defaultFailOnTimeout || false;
     this._sort = config.sort || { nextRunAt: 1, priority: -1 };
     this._indices = {
       name: 1,
@@ -217,5 +229,7 @@ Agenda.prototype.schedule = schedule;
 Agenda.prototype.sort = sort;
 Agenda.prototype.start = start;
 Agenda.prototype.stop = stop;
+Agenda.prototype.defaultTimeout = defaultTimeout;
+Agenda.prototype.defaultFailOnTimeout = defaultFailOnTimeout;
 
 export { Agenda };

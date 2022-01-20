@@ -39,6 +39,16 @@ export interface DefineOptions {
    * Should the return value of the job be persisted
    */
   shouldSaveResult?: boolean;
+
+  /**
+   * Get the number of milliseconds the job can run.
+   */
+  timeout?: number;
+
+  /**
+   * Determine if the job should fail when it timeouts.
+   */
+  failOnTimeout?: boolean;
 }
 
 export type Processor =
@@ -75,7 +85,10 @@ export const define = function (
       (options as DefineOptions).lockLifetime || this._defaultLockLifetime,
     running: 0,
     locked: 0,
-    shouldSaveResult: (options as DefineOptions).shouldSaveResult || false
+    shouldSaveResult: (options as DefineOptions).shouldSaveResult || false,
+    timeout: (options as DefineOptions).timeout || this._defaultTimeout,
+    shouldFailOnTimeout:
+      (options as DefineOptions).failOnTimeout || this._defaultFailOnTimeout,
   };
   debug(
     "job [%s] defined with following options: \n%O",

@@ -25,6 +25,7 @@ export const run = async function (this: Job): Promise<Job> {
     this.computeNextRunAt();
     await this.save();
 
+    let timer: NodeJS.Timeout | null = null;
     let finished = false;
     const jobCallback = async (error?: Error, result?: unknown) => {
       // We don't want to complete the job multiple times
@@ -33,13 +34,16 @@ export const run = async function (this: Job): Promise<Job> {
       }
 
       finished = true;
+      if (timer) {
+        clearInterval(timer);
+      }
 
       if (error) {
         this.fail(error);
       } else {
         this.attrs.lastFinishedAt = new Date();
 
-        if(this.attrs.shouldSaveResult && result) {
+        if (this.attrs.shouldSaveResult && result) {
           this.attrs.result = result;
         }
       }
@@ -99,6 +103,17 @@ export const run = async function (this: Job): Promise<Job> {
           this.attrs._id
         );
         throw new Error("Undefined job");
+      }
+
+      if (definition.shouldFailOnTimeout) {
+        timer = setInterval(() => {
+          const jobFinishDeadline = new Date(
+            (this.attrs.lastRunAt as Date).valueOf() + definition.timeout
+          );
+          if (jobFinishDeadline < new Date()) {
+            jobCallback(new Error(`${this.attrs.name} timeout`));
+          }
+        }, agenda._processEvery);
       }
 
       if (definition.fn.length === 2) {
