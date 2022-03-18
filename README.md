@@ -1,13 +1,16 @@
-# Typescript rewrite of agendaJS
+# AgendaTS
+
+(full typed version of agendaJS)
 <p align="center">
-  <img src="https://cdn.jsdelivr.net/gh/agenda/agenda@master/agenda.svg" alt="Agenda" width="100" height="100">
+  <img src="https://cdn.jsdelivr.net/gh/hokify/agenda@master/agendats.png" alt="Agenda TS" width="100" height="100">
 </p>
 <p align="center">
   A light-weight job scheduling library for Node.js
 </p>
 
-# Fork
-This is a fork of agenda js, it differs from the original version in following points:
+This was originally a fork of agenda.js,
+it differs from the original version in following points:
+
 - Complete rewrite in Typescript (fully typed!)
 - mongodb4 driver
 - Supports mongoDB sharding by name
