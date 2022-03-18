@@ -154,7 +154,7 @@ agenda.define('send email report', async job => {
 
 # Full documentation
 
-See also https://hokify.github.io/agenda/agenda/4.x/index.html
+See also https://hokify.github.io/agenda/
 
 Agenda's basic control structure is an instance of an agenda. Agenda's are
 mapped to a database collection and load the jobs from within.
