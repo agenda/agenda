@@ -12,7 +12,7 @@ This was originally a fork of agenda.js,
 it differs from the original version in following points:
 
 - Complete rewrite in Typescript (fully typed!)
-- mongodb4 driver
+- mongodb4 driver (supports mongodb 5.x)
 - Supports mongoDB sharding by name
 - touch() can have an optional progress parameter (0-100)
 - Bugfixes and improvements for locking & job processing (concurrency, lockLimit,..)

@@ -2,7 +2,6 @@
 import * as delay from 'delay';
 import { Db } from 'mongodb';
 import { expect } from 'chai';
-import { fail } from 'assert';
 import { mockMongo } from './helpers/mock-mongodb';
 
 import { Agenda } from '../src';

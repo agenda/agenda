@@ -506,7 +506,7 @@ export class Agenda extends EventEmitter {
 	}
 
 	/**
-	 * Clear the interval that processes the jobs
+	 * Clear the interval that processes the jobs and unlocks all currently locked jobs
 	 */
 	async stop(): Promise<void> {
 		if (!this.jobProcessor) {
