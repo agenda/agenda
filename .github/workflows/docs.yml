@@ -1,26 +1,15 @@
 name: Run Test
-on: [push, pull_request, workflow_dispatch]
+on: [push, workflow_dispatch]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [14, 16, 17]
-        mongodb-version: [3.6, 4.4, 5.0]
     steps:
       - name: Git checkout
         uses: actions/checkout@v2
 
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js
         uses: actions/setup-node@v2
-        with:
-          node-version: ${{ matrix.node-version }}
-
-      - name: Start MongoDB
-        uses: supercharge/mongodb-github-action@1.6.0
-        with:
-          mongodb-version: ${{ matrix.mongodb-version }}
 
       - name: Cache node modules
         uses: actions/cache@v2
@@ -39,15 +28,5 @@ jobs:
       - name: Install Packages
         run: npm install
 
-      - name: Run Lint
-        run: npm run lint
-
-      - name: Build
-        run: npm run build
-        env:
-          CI: true
-
-      - name: Test
-        run: npm run test
-        env:
-          CI: true
+      - name: Docs
+        run: npm run docs
