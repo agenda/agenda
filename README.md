@@ -20,9 +20,10 @@ it differs from the original version in following points:
 - getRunningStats()
 - automatically waits for agenda to be connected before calling any database operations
 - uses a database abstraction layer behind the scene
-- does not create a database index by default, either run
+- does not create a database index by default, you can set `ensureIndex: true` when initializing Agenda
+or run manually:
 ```
-db.agendaJogs.ensureIndex({
+db.agendaJobs.ensureIndex({
     "name" : 1,
     "nextRunAt" : 1,
     "priority" : -1,
@@ -30,26 +31,6 @@ db.agendaJogs.ensureIndex({
     "disabled" : 1
 }, "findAndLockNextJobIndex")
 ```
-
-optional, but maybe relevant:
-for agendash2
-```
-db.agendaJogs.ensureIndex({
-    "nextRunAt" : -1,
-    "lastRunAt" : -1,
-    "lastFinishedAt" : -1
-}, "agendash2")
-```
-
-for faster sortings
-```
-db.agendaJogs.ensureIndex({
-    "name" : 1,
-    "disabled" : 1,
-    "lockedAt" : 1
-}, "findAndLockDeadJobs")
-```
- manually or set `ensureIndex: true` when initializing Agenda
 
 # Agenda offers
 
@@ -1092,6 +1073,26 @@ be extremely useful in debugging certain issues and is encouraged.
 #### "Multiple order-by items are not supported. Please specify a single order-by item."
 
 When running Agenda on Azure cosmosDB, you might run into this issue caused by Agenda's sort query used for finding and locking the next job. To fix this, you can pass [custom sort option](#sortquery): `sort: { nextRunAt: 1 }`
+
+# Performance
+It is recommended to set this index if you use agendash:
+```
+db.agendaJobs.ensureIndex({
+    "nextRunAt" : -1,
+    "lastRunAt" : -1,
+    "lastFinishedAt" : -1
+}, "agendash2")
+```
+
+If you have one job definition with thousand of instances, you can add this index to improve internal sorting query
+for faster sortings
+```
+db.agendaJobs.ensureIndex({
+    "name" : 1,
+    "disabled" : 1,
+    "lockedAt" : 1
+}, "findAndLockDeadJobs")
+```
 
 # Acknowledgements
 - Agenda was originally created by [@rschmukler](https://github.com/rschmukler).
