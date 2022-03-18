@@ -1068,7 +1068,7 @@ Fire up an instance that processes video-processing/image-processing jobs. Good 
 
 If you think you have encountered a bug, please feel free to report it here:
 
-[Submit Issue](https://github.com/agenda/agenda/issues/new)
+[Submit Issue](https://github.com/hokify/agenda/issues/new)
 
 Please provide us with as much details as possible such as:
 - Agenda version
@@ -1091,7 +1091,7 @@ be extremely useful in debugging certain issues and is encouraged.
 
 #### "Multiple order-by items are not supported. Please specify a single order-by item."
 
-When running Agenda on Azure cosmosDB, you might run into this issue caused by Agenda's sort query used for finding and locking the next job. To fix this, you can pass [custom sort option](https://github.com/agenda/agenda#sortquery): `sort: { nextRunAt: 1 }`
+When running Agenda on Azure cosmosDB, you might run into this issue caused by Agenda's sort query used for finding and locking the next job. To fix this, you can pass [custom sort option](#sortquery): `sort: { nextRunAt: 1 }`
 
 # Acknowledgements
 - Agenda was originally created by [@rschmukler](https://github.com/rschmukler).
