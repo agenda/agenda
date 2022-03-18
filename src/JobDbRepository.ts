@@ -357,7 +357,7 @@ export class JobDbRepository {
 
 			if (job.attrs.unique) {
 				// If we want the job to be unique, then we can upsert based on the 'unique' query object that was passed in
-				const query: Filter<IJobParameters<DATA>> = job.attrs.unique;
+				const query: Filter<Omit<IJobParameters<DATA>, 'unique'>> = job.attrs.unique;
 				query.name = props.name;
 				if (job.attrs.uniqueOpts?.insertOnly) {
 					update = { $setOnInsert: props };

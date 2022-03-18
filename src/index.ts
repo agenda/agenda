@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events';
 import * as debug from 'debug';
 
-import type { Db, Filter, MongoClientOptions } from 'mongodb';
+import type { Db, Filter, MongoClientOptions, Sort } from 'mongodb';
 import { SortDirection } from 'mongodb';
 import type { IJobDefinition } from './types/JobDefinition';
 import type { IAgendaConfig } from './types/AgendaConfig';
@@ -100,7 +100,9 @@ export class Agenda extends EventEmitter {
 			sort: config.sort || DefaultOptions.sort
 		};
 
-		this.ready = new Promise(resolve => this.once('ready', resolve));
+		this.ready = new Promise(resolve => {
+			this.once('ready', resolve);
+		});
 
 		if (this.hasDatabaseConfig(config)) {
 			this.db = new JobDbRepository(this, config);
@@ -254,7 +256,7 @@ export class Agenda extends EventEmitter {
 	 */
 	async jobs(
 		query: Filter<IJobParameters> = {},
-		sort: Filter<IJobParameters> = {},
+		sort: Sort = {},
 		limit = 0,
 		skip = 0
 	): Promise<Job[]> {
@@ -449,7 +451,7 @@ export class Agenda extends EventEmitter {
 		};
 
 		if (typeof names === 'string') {
-			log('Agenda.schedule(%s, %O, [%O], cb)', when, names);
+			log('Agenda.schedule(%s, %O, [%O])', when, names);
 			return createJob(names);
 		}
 

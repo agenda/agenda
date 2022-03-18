@@ -5,7 +5,6 @@ import { expect } from 'chai';
 import { DateTime } from 'luxon';
 import { Db } from 'mongodb';
 
-import * as Q from 'q';
 import * as delay from 'delay';
 import * as sinon from 'sinon';
 import { fail } from 'assert';
@@ -256,6 +255,20 @@ describe('Job', () => {
 			);
 		});
 
+		it('understands cron intervals with a vienna timezone with higher hours', () => {
+			const date = new Date('2015-01-01T06:01:00-00:00');
+			job.attrs.lastRunAt = date;
+			job.repeatEvery('0 16 * * *', {
+				timezone: 'Europe/Vienna'
+			});
+			const jobProto = Object.getPrototypeOf(job);
+			jobProto.computeNextRunAt.call(job);
+			expect(DateTime.fromJSDate(job.attrs.nextRunAt!).setZone('GMT').hour).to.equal(15);
+			expect(DateTime.fromJSDate(job.attrs.nextRunAt!).toJSDate().getDate()).to.equal(
+				DateTime.fromJSDate(job.attrs.lastRunAt!).toJSDate().getDate()
+			);
+		});
+
 		it('understands cron intervals with a timezone when last run is the same as the interval', () => {
 			const date = new Date('2015-01-01T06:00:00-00:00');
 			job.attrs.lastRunAt = date;
@@ -336,7 +349,7 @@ describe('Job', () => {
 
 			it('fails the job', () => {
 				expect(job.attrs.failReason).to.equal(
-					'failed to calculate nextRunAt due to invalid repeat interval'
+					'failed to calculate nextRunAt due to invalid repeat interval (asd): Error: Validation error, cannot resolve alias "asd"'
 				);
 			});
 		});
@@ -419,13 +432,12 @@ describe('Job', () => {
 
 		it('handles errors with q promises', async () => {
 			job.attrs.name = 'failBoat2';
-			agenda.define('failBoat2', (job, cb) => {
-				Q.delay(100)
-					.then(() => {
-						throw new Error('Zomg fail');
-					})
-					.fail(cb)
-					.done();
+			agenda.define('failBoat2', async (job, cb) => {
+				try {
+					throw new Error('Zomg fail');
+				} catch (err: any) {
+					cb(err);
+				}
 			});
 			await job.run();
 			expect(job.attrs.failReason).to.not.be.undefined;

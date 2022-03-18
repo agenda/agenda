@@ -478,15 +478,11 @@ describe('Agenda', () => {
 		describe('jobs', () => {
 			it('returns jobs', async () => {
 				await globalAgenda.create('test').save();
-				globalAgenda.jobs({}, async (err, c) => {
-					if (err) {
-						throw err;
-					}
+				const c = await globalAgenda.jobs({});
 
-					expect(c.length).to.not.equals(0);
-					expect(c[0]).to.to.be.an.instanceof(Job);
-					await clearJobs();
-				});
+				expect(c.length).to.not.equals(0);
+				expect(c[0]).to.to.be.an.instanceof(Job);
+				await clearJobs();
 			});
 		});
 
@@ -495,24 +491,17 @@ describe('Agenda', () => {
 				const job = globalAgenda.create('no definition');
 				await globalAgenda.stop();
 				await job.save();
-				globalAgenda.jobs(
-					{
-						name: 'no definition'
-					},
-					async (err, j) => {
-						if (err) {
-							throw err;
-						}
+				const j = await globalAgenda.jobs({
+					name: 'no definition'
+				});
 
-						expect(j).to.have.length(1);
-						await globalAgenda.purge();
-						const jAfterPurge = await globalAgenda.jobs({
-							name: 'no definition'
-						});
+				expect(j).to.have.length(1);
+				await globalAgenda.purge();
+				const jAfterPurge = await globalAgenda.jobs({
+					name: 'no definition'
+				});
 
-						expect(jAfterPurge).to.have.length(0);
-					}
-				);
+				expect(jAfterPurge).to.have.length(0);
 			});
 		});
 

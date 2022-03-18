@@ -33,6 +33,7 @@ export const computeFromInterval = (attrs: IJobParameters<any>): Date => {
 
 	let nextRunAt: Date | null = null;
 
+	let error;
 	if (typeof attrs.repeatInterval === 'string') {
 		try {
 			let cronTime = parseExpression(attrs.repeatInterval, cronOptions);
@@ -50,7 +51,9 @@ export const computeFromInterval = (attrs: IJobParameters<any>): Date => {
 			nextRunAt = nextDate;
 
 			// eslint-disable-next-line no-empty
-		} catch (error) {}
+		} catch (err) {
+			error = err;
+		}
 	}
 
 	if (isValidHumanInterval(attrs.repeatInterval)) {
@@ -68,7 +71,11 @@ export const computeFromInterval = (attrs: IJobParameters<any>): Date => {
 			attrs.name,
 			attrs._id
 		);
-		throw new Error('failed to calculate nextRunAt due to invalid repeat interval');
+		throw new Error(
+			`failed to calculate nextRunAt due to invalid repeat interval (${attrs.repeatInterval}): ${
+				error || 'no readable human interval'
+			}`
+		);
 	}
 
 	return nextRunAt;
