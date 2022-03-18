@@ -4,6 +4,7 @@ title: Agenda TS — Lightweight job scheduling for Node.js
 
 * [Changelog](https://github.com/hokify/agenda/blob/master/CHANGELOG.md#readme)
 * [Issues](https://github.com/hokify/agenda/issues)
+* [NPM](https://www.npmjs.com/package/@hokify/agenda)
 
 ## Documentation
 
