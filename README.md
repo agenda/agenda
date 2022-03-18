@@ -68,24 +68,22 @@ db.agendaJogs.ensureIndex({
 Since there are a few job queue solutions, here a table comparing them to help you use the one that
 better suits your needs.
 
-Agenda is great if you need a MongoDB job scheduler, but try **[Bree](https://jobscheduler.net)** if you need something simpler (built by a previous maintainer).
-
-| Feature         | Bull          | Bee | Agenda |
-| :-------------  |:-------------:|:---:|:------:|
-| Backend         | redis         |redis| mongo  |
-| Priorities      | ✓             |     |   ✓    |
-| Concurrency     | ✓             |  ✓  |   ✓    |
-| Delayed jobs    | ✓             |     |   ✓    |
-| Global events   | ✓             |     |        |
-| Rate Limiter    | ✓             |     |        |
-| Pause/Resume    | ✓             |     |        |
-| Sandboxed worker| ✓             |     |        |
-| Repeatable jobs | ✓             |     |   ✓    |
-| Atomic ops      | ✓             |  ✓  |        |
-| Persistence     | ✓             |  ✓  |   ✓    |
-| UI              | ✓             |     |   ✓    |
-| REST API        |               |     |   ✓    |
-| Optimized for   | Jobs / Messages | Messages | Jobs |
+| Feature         | Bull          | Bee | Agenda | AgendaTS |
+| :-------------  |:-------------:|:---:|:------:|:--------:|
+| Backend         | redis         |redis| mongo  |  mongo   |
+| Priorities      | ✓             |     |   ✓    |    ✓     |
+| Concurrency     | ✓             |  ✓  |   ✓    |    ✓     |
+| Delayed jobs    | ✓             |     |   ✓    |    ✓     |
+| Global events   | ✓             |     |        |          |
+| Rate Limiter    | ✓             |     |        |          |
+| Pause/Resume    | ✓             |     |        |    ~     |
+| Sandboxed worker| ✓             |     |        |          |
+| Repeatable jobs | ✓             |     |   ✓    |    ✓     |
+| Atomic ops      | ✓             |  ✓  |        |    ~     |
+| Persistence     | ✓             |  ✓  |   ✓    |    ✓     |
+| UI              | ✓             |     |   ✓    |    ✓     |
+| REST API        |               |     |   ✓    |    ✓     |
+| Optimized for   | Jobs / Messages | Messages | Jobs |   Jobs   |
 
 _Kudos for making the comparison chart goes to [Bull](https://www.npmjs.com/package/bull#feature-comparison) maintainers._
 
@@ -95,7 +93,7 @@ Install via NPM
 
     npm install @hokify/agenda
 
-You will also need a working [Mongo](https://www.mongodb.com/) database (v3+) to point it to.
+You will also need a working [Mongo](https://www.mongodb.com/) database (v4+) to point it to.
 
 # Example Usage
 
@@ -469,7 +467,7 @@ job in the database, even if that line is run multiple times. This lets you put
 it in a file that may get run multiple times, such as `webserver.js` which may
 reboot from time to time.
 
-`interval` can be a human-readable format `String`, a cron format `String`, or a `Number`.
+`interval` can be a human-readable format `String`, a [cron format](https://www.npmjs.com/package/cron-parser) `String`, or a `Number`.
 
 `data` is an optional argument that will be passed to the processing function
 under `job.attrs.data`.
@@ -641,7 +639,7 @@ with a call to `await job.save()` in order to persist the changes to the databas
 
 Specifies an `interval` on which the job should repeat. The job runs at the time of defining as well in configured intervals, that is "run _now_ and in intervals".
 
-`interval` can be a human-readable format `String`, a cron format `String`, or a `Number`.
+`interval` can be a human-readable format `String`, a [cron format](https://www.npmjs.com/package/cron-parser) `String`, or a `Number`.
 
 `options` is an optional argument containing:
 
