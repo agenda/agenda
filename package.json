@@ -11,7 +11,7 @@
     "dist"
   ],
   "engines": {
-    "node": ">=10.0.0"
+    "node": ">=14.0.0"
   },
   "scripts": {
     "release": "npm run build && standard-version",
@@ -45,7 +45,7 @@
     "scheduler",
     "runner"
   ],
-  "author": "Ryan Schmukler <ryan@slingingcode.com> (http://slingingcode.com/)",
+  "author": "Simon Tretter <simon.tretter@hokify.com>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/hokify/agenda/issues"
