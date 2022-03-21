@@ -256,12 +256,18 @@ export class JobDbRepository {
 
 		log('[job %s] save job state: \n%O', id, $set);
 
-		await this.collection.updateOne(
+		const result = await this.collection.updateOne(
 			{ _id: id, name: job.attrs.name },
 			{
 				$set
 			}
 		);
+
+		if (!result.acknowledged || result.matchedCount !== 1) {
+			throw new Error(
+				`job ${id} (name: ${job.attrs.name}) cannot be updated in the database, maybe it does not exist anymore?`
+			);
+		}
 	}
 
 	/**

@@ -377,8 +377,14 @@ export class Job<DATA = unknown | void> {
 			log('[%s:%s] has failed [%s]', this.attrs.name, this.attrs._id, error.message);
 		} finally {
 			this.attrs.lockedAt = undefined;
-			await this.agenda.db.saveJobState(this);
-			log('[%s:%s] was saved successfully to MongoDB', this.attrs.name, this.attrs._id);
+			try {
+				await this.agenda.db.saveJobState(this);
+				log('[%s:%s] was saved successfully to MongoDB', this.attrs.name, this.attrs._id);
+			} catch (err) {
+				// in case this fails, we ignore it
+				// this can e.g. happen if the job gets removed during the execution
+				log('[%s:%s] was not saved to MongoDB', this.attrs.name, this.attrs._id, err);
+			}
 
 			this.agenda.emit('complete', this);
 			this.agenda.emit(`complete:${this.attrs.name}`, this);

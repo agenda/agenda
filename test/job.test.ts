@@ -1601,4 +1601,44 @@ describe('Job', () => {
 
 		expect(await job.isRunning()).to.be.equal(true);
 	});
+
+	it('should not run job if is has been removed', async () => {
+		let executed = false;
+		agenda.define('test', async () => {
+			executed = true;
+		});
+
+		const job = new Job(agenda, {
+			name: 'test',
+			type: 'normal'
+		});
+		job.schedule('in 1 second');
+		await job.save();
+
+		await agenda.start();
+
+		// wait till it's locked (Picked up by the event processor)
+		const jobStarted = await agenda.db.getJobs({ name: 'test' });
+		expect(jobStarted[0].lockedAt).to.not.equal(null);
+
+		await job.remove();
+
+		let error;
+		const completed = new Promise<void>(resolve => {
+			agenda.on('error', err => {
+				error = err;
+				resolve();
+			});
+		});
+
+		await Promise.race([
+			new Promise(resolve => {
+				setTimeout(resolve, 1000);
+			}),
+			completed
+		]);
+
+		expect(executed).to.be.equal(false);
+		expect(error?.message).to.includes('(name: test) cannot be updated in the database');
+	});
 });
