@@ -14,7 +14,7 @@
 it differs from the original version in following points:</p>
 <ul>
 <li>Complete rewrite in Typescript (fully typed!)</li>
-<li>mongodb4 driver</li>
+<li>mongodb4 driver (supports mongodb 5.x)</li>
 <li>Supports mongoDB sharding by name</li>
 <li>touch() can have an optional progress parameter (0-100)</li>
 <li>Bugfixes and improvements for locking &amp; job processing (concurrency, lockLimit,..)</li>
@@ -22,18 +22,11 @@ it differs from the original version in following points:</p>
 <li>getRunningStats()</li>
 <li>automatically waits for agenda to be connected before calling any database operations</li>
 <li>uses a database abstraction layer behind the scene</li>
-<li>does not create a database index by default, either run<pre><code><span class="hl-0">db</span><span class="hl-1">.</span><span class="hl-0">agendaJogs</span><span class="hl-1">.</span><span class="hl-2">ensureIndex</span><span class="hl-1">({</span><br/><span class="hl-1">  </span><span class="hl-3">&quot;name&quot;</span><span class="hl-0"> :</span><span class="hl-1"> </span><span class="hl-4">1</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-3">&quot;nextRunAt&quot;</span><span class="hl-0"> :</span><span class="hl-1"> </span><span class="hl-4">1</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-3">&quot;priority&quot;</span><span class="hl-0"> :</span><span class="hl-1"> -</span><span class="hl-4">1</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-3">&quot;lockedAt&quot;</span><span class="hl-0"> :</span><span class="hl-1"> </span><span class="hl-4">1</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-3">&quot;disabled&quot;</span><span class="hl-0"> :</span><span class="hl-1"> </span><span class="hl-4">1</span><br/><span class="hl-1">}, </span><span class="hl-3">&quot;findAndLockNextJobIndex&quot;</span><span class="hl-1">)</span>
+<li>does not create a database index by default, you can set <code>ensureIndex: true</code> when initializing Agenda
+or run manually:<pre><code><span class="hl-0">db</span><span class="hl-1">.</span><span class="hl-0">agendaJobs</span><span class="hl-1">.</span><span class="hl-2">ensureIndex</span><span class="hl-1">({</span><br/><span class="hl-1">  </span><span class="hl-3">&quot;name&quot;</span><span class="hl-0"> :</span><span class="hl-1"> </span><span class="hl-4">1</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-3">&quot;nextRunAt&quot;</span><span class="hl-0"> :</span><span class="hl-1"> </span><span class="hl-4">1</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-3">&quot;priority&quot;</span><span class="hl-0"> :</span><span class="hl-1"> -</span><span class="hl-4">1</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-3">&quot;lockedAt&quot;</span><span class="hl-0"> :</span><span class="hl-1"> </span><span class="hl-4">1</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-3">&quot;disabled&quot;</span><span class="hl-0"> :</span><span class="hl-1"> </span><span class="hl-4">1</span><br/><span class="hl-1">}, </span><span class="hl-3">&quot;findAndLockNextJobIndex&quot;</span><span class="hl-1">)</span>
 </code></pre>
 </li>
 </ul>
-<p>optional, but maybe relevant:
-for agendash2</p>
-<pre><code><span class="hl-0">db</span><span class="hl-1">.</span><span class="hl-0">agendaJogs</span><span class="hl-1">.</span><span class="hl-2">ensureIndex</span><span class="hl-1">({</span><br/><span class="hl-1">    </span><span class="hl-3">&quot;nextRunAt&quot;</span><span class="hl-0"> :</span><span class="hl-1"> -</span><span class="hl-4">1</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-3">&quot;lastRunAt&quot;</span><span class="hl-0"> :</span><span class="hl-1"> -</span><span class="hl-4">1</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-3">&quot;lastFinishedAt&quot;</span><span class="hl-0"> :</span><span class="hl-1"> -</span><span class="hl-4">1</span><br/><span class="hl-1">}, </span><span class="hl-3">&quot;agendash2&quot;</span><span class="hl-1">)</span>
-</code></pre>
-<p>for faster sortings</p>
-<pre><code><span class="hl-0">db</span><span class="hl-1">.</span><span class="hl-0">agendaJogs</span><span class="hl-1">.</span><span class="hl-2">ensureIndex</span><span class="hl-1">({</span><br/><span class="hl-1">    </span><span class="hl-3">&quot;name&quot;</span><span class="hl-0"> :</span><span class="hl-1"> </span><span class="hl-4">1</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-3">&quot;disabled&quot;</span><span class="hl-0"> :</span><span class="hl-1"> </span><span class="hl-4">1</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-3">&quot;lockedAt&quot;</span><span class="hl-0"> :</span><span class="hl-1"> </span><span class="hl-4">1</span><br/><span class="hl-1">}, </span><span class="hl-3">&quot;findAndLockDeadJobs&quot;</span><span class="hl-1">)</span>
-</code></pre>
-<p> manually or set <code>ensureIndex: true</code> when initializing Agenda</p>
 
 <a href="#agenda-offers" id="agenda-offers" style="color: inherit; text-decoration: none;">
   <h1>Agenda offers</h1>
@@ -55,7 +48,6 @@ for agendash2</p>
 </a>
 <p>Since there are a few job queue solutions, here a table comparing them to help you use the one that
 better suits your needs.</p>
-<p>Agenda is great if you need a MongoDB job scheduler, but try <strong><a href="https://jobscheduler.net">Bree</a></strong> if you need something simpler (built by a previous maintainer).</p>
 <table>
 <thead>
 <tr>
@@ -63,6 +55,7 @@ better suits your needs.</p>
 <th align="center">Bull</th>
 <th align="center">Bee</th>
 <th align="center">Agenda</th>
+<th align="center">AgendaTS</th>
 </tr>
 </thead>
 <tbody><tr>
@@ -70,15 +63,18 @@ better suits your needs.</p>
 <td align="center">redis</td>
 <td align="center">redis</td>
 <td align="center">mongo</td>
+<td align="center">mongo</td>
 </tr>
 <tr>
 <td align="left">Priorities</td>
 <td align="center">✓</td>
 <td align="center"></td>
 <td align="center">✓</td>
+<td align="center">✓</td>
 </tr>
 <tr>
 <td align="left">Concurrency</td>
+<td align="center">✓</td>
 <td align="center">✓</td>
 <td align="center">✓</td>
 <td align="center">✓</td>
@@ -88,10 +84,12 @@ better suits your needs.</p>
 <td align="center">✓</td>
 <td align="center"></td>
 <td align="center">✓</td>
+<td align="center">✓</td>
 </tr>
 <tr>
 <td align="left">Global events</td>
 <td align="center">✓</td>
+<td align="center"></td>
 <td align="center"></td>
 <td align="center"></td>
 </tr>
@@ -100,16 +98,19 @@ better suits your needs.</p>
 <td align="center">✓</td>
 <td align="center"></td>
 <td align="center"></td>
+<td align="center"></td>
 </tr>
 <tr>
 <td align="left">Pause/Resume</td>
 <td align="center">✓</td>
 <td align="center"></td>
 <td align="center"></td>
+<td align="center">~</td>
 </tr>
 <tr>
 <td align="left">Sandboxed worker</td>
 <td align="center">✓</td>
+<td align="center"></td>
 <td align="center"></td>
 <td align="center"></td>
 </tr>
@@ -118,15 +119,18 @@ better suits your needs.</p>
 <td align="center">✓</td>
 <td align="center"></td>
 <td align="center">✓</td>
+<td align="center">✓</td>
 </tr>
 <tr>
 <td align="left">Atomic ops</td>
 <td align="center">✓</td>
 <td align="center">✓</td>
 <td align="center"></td>
+<td align="center">~</td>
 </tr>
 <tr>
 <td align="left">Persistence</td>
+<td align="center">✓</td>
 <td align="center">✓</td>
 <td align="center">✓</td>
 <td align="center">✓</td>
@@ -136,17 +140,20 @@ better suits your needs.</p>
 <td align="center">✓</td>
 <td align="center"></td>
 <td align="center">✓</td>
+<td align="center">✓</td>
 </tr>
 <tr>
 <td align="left">REST API</td>
 <td align="center"></td>
 <td align="center"></td>
 <td align="center">✓</td>
+<td align="center">✓</td>
 </tr>
 <tr>
 <td align="left">Optimized for</td>
 <td align="center">Jobs / Messages</td>
 <td align="center">Messages</td>
+<td align="center">Jobs</td>
 <td align="center">Jobs</td>
 </tr>
 </tbody></table>
@@ -158,7 +165,7 @@ better suits your needs.</p>
 <p>Install via NPM</p>
 <pre><code><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-0">install</span><span class="hl-1"> @</span><span class="hl-0">hokify</span><span class="hl-1">/</span><span class="hl-0">agenda</span>
 </code></pre>
-<p>You will also need a working <a href="https://www.mongodb.com/">Mongo</a> database (v3+) to point it to.</p>
+<p>You will also need a working <a href="https://www.mongodb.com/">Mongo</a> database (v4+) to point it to.</p>
 
 <a href="#example-usage" id="example-usage" style="color: inherit; text-decoration: none;">
   <h1>Example Usage</h1>
@@ -173,7 +180,7 @@ better suits your needs.</p>
 <a href="#full-documentation" id="full-documentation" style="color: inherit; text-decoration: none;">
   <h1>Full documentation</h1>
 </a>
-<p>See also <a href="https://hokify.github.io/agenda/agenda/4.x/index.html">https://hokify.github.io/agenda/agenda/4.x/index.html</a></p>
+<p>See also <a href="https://hokify.github.io/agenda/">https://hokify.github.io/agenda/</a></p>
 <p>Agenda&#39;s basic control structure is an instance of an agenda. Agenda&#39;s are
 mapped to a database collection and load the jobs from within.</p>
 
@@ -395,7 +402,7 @@ Every creates a job of type <code>single</code>, which means that it will only c
 job in the database, even if that line is run multiple times. This lets you put
 it in a file that may get run multiple times, such as <code>webserver.js</code> which may
 reboot from time to time.</p>
-<p><code>interval</code> can be a human-readable format <code>String</code>, a cron format <code>String</code>, or a <code>Number</code>.</p>
+<p><code>interval</code> can be a human-readable format <code>String</code>, a <a href="https://www.npmjs.com/package/cron-parser">cron format</a> <code>String</code>, or a <code>Number</code>.</p>
 <p><code>data</code> is an optional argument that will be passed to the processing function
 under <code>job.attrs.data</code>.</p>
 <p><code>options</code> is an optional argument that will be passed to <a href="#repeateveryinterval-options"><code>job.repeatEvery</code></a>.
@@ -520,7 +527,7 @@ with a call to <code>await job.save()</code> in order to persist the changes to 
   <h3>repeatEvery(interval, [options])</h3>
 </a>
 <p>Specifies an <code>interval</code> on which the job should repeat. The job runs at the time of defining as well in configured intervals, that is &quot;run <em>now</em> and in intervals&quot;.</p>
-<p><code>interval</code> can be a human-readable format <code>String</code>, a cron format <code>String</code>, or a <code>Number</code>.</p>
+<p><code>interval</code> can be a human-readable format <code>String</code>, a <a href="https://www.npmjs.com/package/cron-parser">cron format</a> <code>String</code>, or a <code>Number</code>.</p>
 <p><code>options</code> is an optional argument containing:</p>
 <p><code>options.timezone</code>: should be a string as accepted by <a href="https://momentjs.com/timezone/">moment-timezone</a> and is considered when using an interval in the cron string format.</p>
 <p><code>options.skipImmediate</code>: <code>true</code> | <code>false</code> (default) Setting this <code>true</code> will skip the immediate run. The first run will occur only in configured interval.</p>
@@ -754,7 +761,7 @@ but not wasting resources processing jobs.</p>
   <h1>Debugging Issues</h1>
 </a>
 <p>If you think you have encountered a bug, please feel free to report it here:</p>
-<p><a href="https://github.com/agenda/agenda/issues/new">Submit Issue</a></p>
+<p><a href="https://github.com/hokify/agenda/issues/new">Submit Issue</a></p>
 <p>Please provide us with as much details as possible such as:</p>
 <ul>
 <li>Agenda version</li>
@@ -768,8 +775,8 @@ but not wasting resources processing jobs.</p>
   <h4>To turn on logging, please set your DEBUG env variable like so:</h4>
 </a>
 <ul>
-<li>OSX: <code>DEBUG=&quot;agenda:*&quot; node index.js</code></li>
-<li>Linux: <code>DEBUG=&quot;agenda:*&quot; node index.js</code></li>
+<li>OSX: <code>DEBUG=&quot;agenda:*&quot; ts-node src/index.ts</code></li>
+<li>Linux: <code>DEBUG=&quot;agenda:*&quot; ts-node src/index.ts</code></li>
 <li>Windows CMD: <code>set DEBUG=agenda:*</code></li>
 <li>Windows PowerShell: <code>$env:DEBUG = &quot;agenda:*&quot;</code></li>
 </ul>
@@ -783,7 +790,18 @@ be extremely useful in debugging certain issues and is encouraged.</p>
 <a href="#quotmultiple-order-by-items-are-not-supported-please-specify-a-single-order-by-itemquot" id="quotmultiple-order-by-items-are-not-supported-please-specify-a-single-order-by-itemquot" style="color: inherit; text-decoration: none;">
   <h4>&quot;Multiple order-by items are not supported. Please specify a single order-by item.&quot;</h4>
 </a>
-<p>When running Agenda on Azure cosmosDB, you might run into this issue caused by Agenda&#39;s sort query used for finding and locking the next job. To fix this, you can pass <a href="https://github.com/agenda/agenda#sortquery">custom sort option</a>: <code>sort: { nextRunAt: 1 }</code></p>
+<p>When running Agenda on Azure cosmosDB, you might run into this issue caused by Agenda&#39;s sort query used for finding and locking the next job. To fix this, you can pass <a href="#sortquery">custom sort option</a>: <code>sort: { nextRunAt: 1 }</code></p>
+
+<a href="#performance" id="performance" style="color: inherit; text-decoration: none;">
+  <h1>Performance</h1>
+</a>
+<p>It is recommended to set this index if you use agendash:</p>
+<pre><code><span class="hl-0">db</span><span class="hl-1">.</span><span class="hl-0">agendaJobs</span><span class="hl-1">.</span><span class="hl-2">ensureIndex</span><span class="hl-1">({</span><br/><span class="hl-1">    </span><span class="hl-3">&quot;nextRunAt&quot;</span><span class="hl-0"> :</span><span class="hl-1"> -</span><span class="hl-4">1</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-3">&quot;lastRunAt&quot;</span><span class="hl-0"> :</span><span class="hl-1"> -</span><span class="hl-4">1</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-3">&quot;lastFinishedAt&quot;</span><span class="hl-0"> :</span><span class="hl-1"> -</span><span class="hl-4">1</span><br/><span class="hl-1">}, </span><span class="hl-3">&quot;agendash2&quot;</span><span class="hl-1">)</span>
+</code></pre>
+<p>If you have one job definition with thousand of instances, you can add this index to improve internal sorting query
+for faster sortings</p>
+<pre><code><span class="hl-0">db</span><span class="hl-1">.</span><span class="hl-0">agendaJobs</span><span class="hl-1">.</span><span class="hl-2">ensureIndex</span><span class="hl-1">({</span><br/><span class="hl-1">    </span><span class="hl-3">&quot;name&quot;</span><span class="hl-0"> :</span><span class="hl-1"> </span><span class="hl-4">1</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-3">&quot;disabled&quot;</span><span class="hl-0"> :</span><span class="hl-1"> </span><span class="hl-4">1</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-3">&quot;lockedAt&quot;</span><span class="hl-0"> :</span><span class="hl-1"> </span><span class="hl-4">1</span><br/><span class="hl-1">}, </span><span class="hl-3">&quot;findAndLockDeadJobs&quot;</span><span class="hl-1">)</span>
+</code></pre>
 
 <a href="#acknowledgements" id="acknowledgements" style="color: inherit; text-decoration: none;">
   <h1>Acknowledgements</h1>
@@ -791,7 +809,7 @@ be extremely useful in debugging certain issues and is encouraged.</p>
 <ul>
 <li>Agenda was originally created by <a href="https://github.com/rschmukler">@rschmukler</a>.</li>
 <li><a href="https://github.com/agenda/agendash">Agendash</a> was originally created by <a href="https://github.com/joeframbach">@joeframbach</a>.</li>
-<li>These days Agenda has a great community of <a href="https://github.com/agenda/agenda/graphs/contributors">contributors</a> around it. <a href="https://github.com/agenda/agenda/wiki">Join us!</a></li>
+<li>These days Agenda has a great community of <a href="https://github.com/hokify/agenda/graphs/contributors">contributors</a> around it. Join us!</li>
 </ul>
 
 <a href="#license" id="license" style="color: inherit; text-decoration: none;">
