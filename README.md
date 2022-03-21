@@ -1097,7 +1097,7 @@ db.agendaJobs.ensureIndex({
 # Acknowledgements
 - Agenda was originally created by [@rschmukler](https://github.com/rschmukler).
 - [Agendash](https://github.com/agenda/agendash) was originally created by [@joeframbach](https://github.com/joeframbach).
-- These days Agenda has a great community of [contributors](https://github.com/agenda/agenda/graphs/contributors) around it. [Join us!](https://github.com/agenda/agenda/wiki)
+- These days Agenda has a great community of [contributors](https://github.com/hokify/agenda/graphs/contributors) around it. Join us!
 
 # License
 [The MIT License](LICENSE.md)
