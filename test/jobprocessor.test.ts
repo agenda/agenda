@@ -71,13 +71,17 @@ describe('JobProcessor', () => {
 
 		it('shows the correct job status', async () => {
 			agenda.define('test', async () => {
-				await new Promise(resolve => setTimeout(resolve, 30000));
+				await new Promise(resolve => {
+					setTimeout(resolve, 30000);
+				});
 			});
 
 			agenda.now('test');
 			await agenda.start();
 
-			await new Promise(resolve => agenda.on('start:test', resolve));
+			await new Promise(resolve => {
+				agenda.on('start:test', resolve);
+			});
 
 			const status = await agenda.getRunningStats();
 			expect(status).to.have.property('jobStatus');
@@ -125,11 +129,15 @@ describe('JobProcessor', () => {
 		let shortOneFinished = false;
 
 		agenda.define('test long', async () => {
-			await new Promise(resolve => setTimeout(resolve, 1000));
+			await new Promise(resolve => {
+				setTimeout(resolve, 1000);
+			});
 		});
 		agenda.define('test short', async () => {
 			shortOneFinished = true;
-			await new Promise(resolve => setTimeout(resolve, 5));
+			await new Promise(resolve => {
+				setTimeout(resolve, 5);
+			});
 		});
 
 		await agenda.start();
@@ -139,14 +147,18 @@ describe('JobProcessor', () => {
 			agenda.now('test long');
 		}
 
-		await new Promise(resolve => setTimeout(resolve, 1000));
+		await new Promise(resolve => {
+			setTimeout(resolve, 1000);
+		});
 
 		// queue more short ones (they should complete first!)
 		for (let j = 0; j < 100; j += 1) {
 			agenda.now('test short');
 		}
 
-		await new Promise(resolve => setTimeout(resolve, 1000));
+		await new Promise(resolve => {
+			setTimeout(resolve, 1000);
+		});
 
 		expect(shortOneFinished).to.be.equal(true);
 	});
@@ -157,7 +169,9 @@ describe('JobProcessor', () => {
 			'test long',
 			async () => {
 				jobStarted = true;
-				await new Promise(resolve => setTimeout(resolve, 2500));
+				await new Promise(resolve => {
+					setTimeout(resolve, 2500);
+				});
 			},
 			{ lockLifetime: 500 }
 		);
@@ -186,7 +200,9 @@ describe('JobProcessor', () => {
 			'test long',
 			async job => {
 				for (let i = 0; i < 10; i += 1) {
-					await new Promise(resolve => setTimeout(resolve, 100));
+					await new Promise(resolve => {
+						setTimeout(resolve, 100);
+					});
 					await job.touch();
 				}
 			},
@@ -221,7 +237,9 @@ describe('JobProcessor', () => {
 			agenda.define(
 				`test job ${jobI}`,
 				async () => {
-					await new Promise(resolve => setTimeout(resolve, 5000));
+					await new Promise(resolve => {
+						setTimeout(resolve, 5000);
+					});
 				},
 				{ lockLifetime: 10000 }
 			);
@@ -240,7 +258,9 @@ describe('JobProcessor', () => {
 		const allJobsStarted = new Promise(async resolve => {
 			do {
 				runningJobs = (await agenda.getRunningStats()).runningJobs as number;
-				await new Promise(wait => setTimeout(wait, 50));
+				await new Promise(wait => {
+					setTimeout(wait, 50);
+				});
 			} while (runningJobs < 90); // @todo Why not 100?
 			resolve('all started');
 		});
@@ -248,9 +268,12 @@ describe('JobProcessor', () => {
 		expect(
 			await Promise.race([
 				allJobsStarted,
-				new Promise(resolve =>
-					setTimeout(() => resolve(`not all jobs started, currently running: ${runningJobs}`), 1500)
-				)
+				new Promise(resolve => {
+					setTimeout(
+						() => resolve(`not all jobs started, currently running: ${runningJobs}`),
+						1500
+					);
+				})
 			])
 		).to.equal('all started');
 	});

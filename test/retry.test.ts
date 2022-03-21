@@ -56,7 +56,7 @@ describe('Retry', () => {
 		let shouldFail = true;
 
 		agenda.processEvery(100); // Shave 5s off test runtime :grin:
-		agenda.define('a job', (job, done) => {
+		agenda.define('a job', (_job, done) => {
 			if (shouldFail) {
 				shouldFail = false;
 				return done(new Error('test failure'));
@@ -74,7 +74,9 @@ describe('Retry', () => {
 			job.schedule('now').save();
 		});
 
-		const successPromise = new Promise(resolve => agenda.on('success:a job', resolve));
+		const successPromise = new Promise(resolve => {
+      agenda.on('success:a job', resolve)
+    });
 
 		await agenda.now('a job');
 

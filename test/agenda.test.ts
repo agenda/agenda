@@ -661,21 +661,17 @@ describe('Agenda', () => {
 			let jprocesses = 0;
 
 			globalAgenda.define('failing job', async _job => {
-				console.log('FALING JOB');
 				jprocesses++;
 				throw new Error('failed');
 			});
 
 			let failCalled = false;
-			globalAgenda.on('fail:failing job', err => {
-				console.log('ERROR FAILING JOB', err);
+			globalAgenda.on('fail:failing job', _err => {
 				failCalled = true;
 			});
 
 			let errorCalled = false;
-			globalAgenda.on('error', err => {
-				console.log('GLOBAL ERROR', err);
-
+			globalAgenda.on('error', _err => {
 				errorCalled = true;
 			});
 

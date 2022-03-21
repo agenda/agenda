@@ -1,7 +1,7 @@
 {
 	"diff": true,
 	"spec": "./test/*.test.ts",
-	"require": ["source-map-support/register"],
+	"require": ["ts-node/register", "source-map-support/register"],
 	"extension": ["js", "ts"],
 	"package": "./package.json",
 	"recursive": true,
