@@ -220,6 +220,91 @@ describe("Agenda", () => {
           7777
         );
       });
+
+      describe('custom index', () => {
+        it('should create default index when custom index is not specified', async () => {
+          const collectionName = 'agenda_index_test';
+
+          const agenda2 = new Agenda({
+            db: {
+              address: mongoCfg,
+              collection: collectionName,
+            },
+          });
+
+          await agenda2._ready;
+
+          const collection = agenda2._mdb.collection(collectionName);
+
+          try {
+            const indexes = await collection.indexes();
+
+            const expectedIndex = {
+              "key": {
+                "name": 1,
+                "nextRunAt": 1,
+                "priority": -1,
+                "lockedAt": 1,
+                "disabled": 1
+              },
+              "name": "findAndLockNextJobIndex",
+            };
+
+            const index = indexes.find(index => index.name === expectedIndex.name);
+
+            expect(index).to.not.be(null);
+            expect(index.key).to.eql(expectedIndex.key);
+
+          } finally {
+            await agenda2._mdb.dropCollection(collectionName);
+            await agenda2.stop();
+            await agenda2.close();
+          }
+        });
+
+        it('should create custom index when it is specified', async () => {
+          const collectionName = 'agenda_index_test';
+
+          const agenda2 = new Agenda({
+            db: {
+              address: mongoCfg,
+              collection: collectionName,
+            },
+            index: {
+              name: 1,
+              disabled: 1,
+              nextRunAt: 1,
+            }
+          });
+
+          await agenda2._ready;
+
+          const collection = agenda2._mdb.collection(collectionName);
+
+          try {
+            const indexes = await collection.indexes();
+
+            const expectedIndex = {
+              "key": {
+                "name": 1,
+                "disabled": 1,
+                "nextRunAt": 1,
+              },
+              "name": "findAndLockNextJobIndex",
+            };
+
+            const index = indexes.find(index => index.name === expectedIndex.name);
+
+            expect(index).to.not.be(null);
+            expect(index.key).to.eql(expectedIndex.key);
+
+          } finally {
+            await agenda2._mdb.dropCollection(collectionName);
+            await agenda2.stop();
+            await agenda2.close();
+          }
+        });
+      });
     });
     describe("sort", () => {
       it("returns itself", () => {
