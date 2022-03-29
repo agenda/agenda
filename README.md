@@ -344,6 +344,23 @@ Takes a `query` which specifies the sort query to be used for finding and lockin
 
 By default it is `{ nextRunAt: 1, priority: -1 }`, which obeys a first in first out approach, with respect to priority.
 
+### index(object)
+
+Optional. Takes an object which specifies the index to create on the jobs collection.
+
+The default index is:
+```json
+{
+  name: 1,
+  nextRunAt: 1,
+  priority: -1,
+  lockedAt: 1,
+  disabled: 1
+}
+```
+
+It is recommended to use the default index. This optional configuration is meant to enable specific optimizations that might be required under specific use-cases.
+
 ## Agenda Events
 
 An instance of an agenda will emit the following events:
