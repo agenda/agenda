@@ -51,6 +51,7 @@ export interface AgendaConfig {
     collection?: string;
     options?: MongoClientOptions;
   };
+  index?: any,
 }
 
 /**
@@ -153,7 +154,7 @@ class Agenda extends EventEmitter {
     this._jobQueue = new JobProcessingQueue();
     this._defaultLockLifetime = config.defaultLockLifetime || 10 * 60 * 1000; // 10 minute default lockLifetime
     this._sort = config.sort || { nextRunAt: 1, priority: -1 };
-    this._indices = {
+    this._indices = config.index || {
       name: 1,
       ...this._sort,
       priority: -1,
