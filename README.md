@@ -349,24 +349,7 @@ By default it is `{ nextRunAt: 1, priority: -1 }`, which obeys a first in first 
 Optional. Disables the automatic creation of the default index on the jobs table.
 By default, Agenda creates an index to optimize its queries against Mongo while processing jobs.
 
-This is useful if you want to use your own index in a specific use-case
-
-### index(object)
-
-Optional. Takes an object which specifies the index to create on the jobs collection.
-
-The default index is:
-```json
-{
-  name: 1,
-  nextRunAt: 1,
-  priority: -1,
-  lockedAt: 1,
-  disabled: 1
-}
-```
-
-It is recommended to use the default index. This optional configuration is meant to enable specific optimizations that might be required under specific use-cases.
+This is useful if you want to use your own index in specific use-cases.
 
 ## Agenda Events
 
