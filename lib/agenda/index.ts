@@ -52,6 +52,7 @@ export interface AgendaConfig {
     options?: MongoClientOptions;
   };
   index?: any,
+  disableAutoIndex?: boolean;
 }
 
 /**
@@ -82,6 +83,7 @@ class Agenda extends EventEmitter {
   _definitions: any;
   _findAndLockNextJob = findAndLockNextJob;
   _indices: any;
+  _disableAutoIndex: boolean;
   _isLockingOnTheFly: boolean;
   _isJobQueueFilling: Map<string, boolean>;
   _jobQueue: JobProcessingQueue;
@@ -162,6 +164,7 @@ class Agenda extends EventEmitter {
       nextRunAt: 1,
       disabled: 1,
     };
+    this._disableAutoIndex = config.disableAutoIndex === true;
 
     this._isLockingOnTheFly = false;
     this._isJobQueueFilling = new Map<string, boolean>();

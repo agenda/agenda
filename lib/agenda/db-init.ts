@@ -18,6 +18,12 @@ export const dbInit = function (
 ): void {
   debug("init database collection using name [%s]", collection);
   this._collection = this._mdb.collection(collection);
+  if (this._disableAutoIndex) {
+    debug("skipping auto index creation");
+    this.emit("ready");
+    return;
+  }
+
   debug("attempting index creation");
   this._collection.createIndex(
     this._indices,
