@@ -221,6 +221,122 @@ describe("Agenda", () => {
         );
       });
     });
+
+    describe('disable auto index', () => {
+      it('should create default index when disableAutoIndex is not specified', async () => {
+        const collectionName = 'agenda_index_test';
+
+        const agenda2 = new Agenda({
+          db: {
+            address: mongoCfg,
+            collection: collectionName,
+          },
+        });
+
+        await agenda2._ready;
+
+        const collection = agenda2._mdb.collection(collectionName);
+
+        try {
+          const indexes = await collection.indexes();
+
+          const expectedIndex = {
+            "key": {
+              "name": 1,
+              "nextRunAt": 1,
+              "priority": -1,
+              "lockedAt": 1,
+              "disabled": 1
+            },
+            "name": "findAndLockNextJobIndex",
+          };
+
+          const index = indexes.find(index => index.name === expectedIndex.name);
+
+          expect(index).to.not.be(null);
+          expect(index.key).to.eql(expectedIndex.key);
+
+        } finally {
+          await agenda2._mdb.dropCollection(collectionName);
+          await agenda2.stop();
+          await agenda2.close();
+        }
+      });
+
+      it('should not create index when auto index is disabled', async () => {
+        const collectionName = 'agenda_index_test';
+
+        const agenda2 = new Agenda({
+          db: {
+            address: mongoCfg,
+            collection: collectionName,
+          },
+          disableAutoIndex: true,
+        });
+
+        await agenda2._ready;
+
+        const collection = agenda2._collection;
+
+        try {
+          // We need an operation on the collection to trigger its creation before we can access the indexes method.
+          // Current implementation of mmongodb driver throws an error as it query the indexes from the namespace which is de-coupled from the collection object itself.
+          await collection.insertOne({ name: 'test-job' });
+
+          const indexes = await collection.indexes();
+
+          const index = indexes.find(index => index.name === "findAndLockNextJobIndex");
+
+          expect(index).to.be(undefined);
+          expect(indexes.length).to.be(1);
+        } finally {
+          await agenda2._mdb.dropCollection(collectionName);
+          await agenda2.stop();
+          await agenda2.close();
+        }
+      });
+
+      it('should create an index when auto index is enabled', async () => {
+        const collectionName = 'agenda_index_test';
+
+        const agenda2 = new Agenda({
+          db: {
+            address: mongoCfg,
+            collection: collectionName,
+          },
+          disableAutoIndex: false,
+        });
+
+        await agenda2._ready;
+
+        const collection = agenda2._collection;
+
+        try {
+          // We need an operation on the collection to trigger its creation before we can access the indexes method.
+          // Current implementation of mmongodb driver throws an error as it query the indexes from the namespace which is de-coupled from the collection object itself.
+          await collection.insertOne({ name: 'test-job' });
+
+          const indexes = await collection.indexes();
+
+          const index = indexes.find(index => index.name === "findAndLockNextJobIndex");
+
+          const expectedIndex = {
+            "name": 1,
+            "nextRunAt": 1,
+            "priority": -1,
+            "lockedAt": 1,
+            "disabled": 1
+          };
+
+          expect(index.key).to.eql(expectedIndex);
+        } finally {
+          await agenda2._mdb.dropCollection(collectionName);
+          await agenda2.stop();
+          await agenda2.close();
+        }
+      });
+    });
+
     describe("sort", () => {
       it("returns itself", () => {
         expect(agenda.sort({ nextRunAt: 1, priority: -1 })).to.be(agenda);

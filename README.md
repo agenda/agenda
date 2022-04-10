@@ -344,6 +344,13 @@ Takes a `query` which specifies the sort query to be used for finding and lockin
 
 By default it is `{ nextRunAt: 1, priority: -1 }`, which obeys a first in first out approach, with respect to priority.
 
+### disableAutoIndex(boolean)
+
+Optional. Disables the automatic creation of the default index on the jobs table.
+By default, Agenda creates an index to optimize its queries against Mongo while processing jobs.
+
+This is useful if you want to use your own index in specific use-cases.
+
 ## Agenda Events
 
 An instance of an agenda will emit the following events:
