@@ -32,6 +32,9 @@ export interface IJobParameters<DATA = unknown | void> {
 	};
 
 	lastModifiedBy?: string;
+
+	/** forks a new node sub process for executing this job */
+	fork?: boolean;
 }
 
 export type TJobDatefield = keyof Pick<

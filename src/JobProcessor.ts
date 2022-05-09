@@ -374,7 +374,7 @@ export class JobProcessor {
 	 * handledJobs keeps list of already processed jobs
 	 * @returns {undefined}
 	 */
-	private jobProcessing(handledJobs: IJobParameters['_id'][] = []) {
+	private async jobProcessing(handledJobs: IJobParameters['_id'][] = []) {
 		// Ensure we have jobs
 		if (this.jobQueue.length === 0) {
 			return;
@@ -395,7 +395,7 @@ export class JobProcessor {
 
 			this.jobQueue.remove(job);
 
-			if (!job.isExpired()) {
+			if (!(await job.isExpired())) {
 				// check if job has expired (and therefore probably got picked up again by another queue in the meantime)
 				// before it even has started to run
 
@@ -513,7 +513,7 @@ export class JobProcessor {
 								return;
 							}
 
-							if (job.isExpired()) {
+							if (await job.isExpired()) {
 								reject(
 									new Error(
 										`execution of '${job.attrs.name}' canceled, execution took more than ${

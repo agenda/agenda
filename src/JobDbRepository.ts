@@ -54,6 +54,10 @@ export class JobDbRepository {
 		return !!(connectOptions as IDatabaseOptions)?.db?.address;
 	}
 
+	async getJobById(id: string) {
+		return this.collection.findOne({ _id: new ObjectId(id) });
+	}
+
 	async getJobs(
 		query: Filter<IJobParameters>,
 		sort: Sort = {},

@@ -23,7 +23,8 @@ const DefaultOptions = {
 	defaultLockLimit: 0,
 	lockLimit: 0,
 	defaultLockLifetime: 10 * 60 * 1000,
-	sort: { nextRunAt: 1, priority: -1 } as const
+	sort: { nextRunAt: 1, priority: -1 } as const,
+  forkHelper: 'dist/childWorker.js'
 };
 
 /**
@@ -32,9 +33,11 @@ const DefaultOptions = {
 export class Agenda extends EventEmitter {
 	readonly attrs: IAgendaConfig & IDbConfig;
 
+	public readonly forkedWorker?: boolean;
+  public readonly forkHelper?: string;
+
 	db: JobDbRepository;
-	// eslint-disable-next-line default-param-last
-	// private jobQueue: JobProcessingQueue;
+
 	// internally used
 	on(event: 'processJob', listener: (job: JobWithId) => void): this;
 
@@ -47,6 +50,10 @@ export class Agenda extends EventEmitter {
 	on(event: 'ready', listener: () => void): this;
 	on(event: 'error', listener: (error: Error) => void): this;
 	on(event: string, listener: (...args) => void): this {
+		if (this.forkedWorker) {
+			console.warn('calling on() during a forkedWorker has no effect!');
+			return this;
+		}
 		return super.on(event, listener);
 	}
 
@@ -60,6 +67,15 @@ export class Agenda extends EventEmitter {
 
 	isActiveJobProcessor(): boolean {
 		return !!this.jobProcessor;
+	}
+
+	async runForkedJob(name: string, jobId: string) {
+		const jobData = await this.db.getJobById(jobId);
+		if (!jobData) {
+			throw new Error('db entry not found');
+		}
+		const job = new Job(this, jobData);
+		await job.runJob();
 	}
 
 	async getRunningStats(fullDetails = false): Promise<IAgendaStatus> {
@@ -84,7 +100,7 @@ export class Agenda extends EventEmitter {
 			defaultLockLifetime?: number;
 			// eslint-disable-next-line @typescript-eslint/ban-types
 		} & (IDatabaseOptions | IMongoOptions | {}) &
-			IDbConfig = DefaultOptions,
+			IDbConfig & { forkHelper?: string; forkedWorker?: boolean } = DefaultOptions,
 		cb?: (error?: Error) => void
 	) {
 		super();
@@ -99,6 +115,9 @@ export class Agenda extends EventEmitter {
 			defaultLockLifetime: config.defaultLockLifetime || DefaultOptions.defaultLockLifetime, // 10 minute default lockLifetime
 			sort: config.sort || DefaultOptions.sort
 		};
+
+		this.forkedWorker = config.forkedWorker;
+    this.forkHelper = config.forkHelper;
 
 		this.ready = new Promise(resolve => {
 			this.once('ready', resolve);
