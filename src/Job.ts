@@ -389,14 +389,21 @@ export class Job<DATA = unknown | void> {
 						forkHelper.path,
 						[this.attrs.name, this.attrs._id!.toString(), location],
 						{
-							signal,
-							...forkHelper.options
+							...forkHelper.options,
+							signal
 						}
 					);
 
 					child.on('close', code => {
 						stillRunning = false;
 						if (code) {
+							console.info(
+								'fork parameters',
+								forkHelper,
+								this.attrs.name,
+								this.attrs._id,
+								location
+							);
 							const error = new Error(`child process exited with code: ${code}`);
 							console.warn(error.message);
 							reject(error);
