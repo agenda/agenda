@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [6.2.6](https://github.com/hokify/agenda/compare/v6.2.5...v6.2.6) (2022-05-10)
+
+
+### Bug Fixes
+
+* add fork paramters to console ([9f2e7fd](https://github.com/hokify/agenda/commit/9f2e7fd5351dd42a060059fcb03234afb1dd9d8a))
+
 ### [6.2.5](https://github.com/hokify/agenda/compare/v6.2.4...v6.2.5) (2022-05-10)
 
 
