@@ -255,7 +255,8 @@ export class Job<DATA = unknown | void> {
 	 */
 	async save(): Promise<Job> {
 		if (this.agenda.forkedWorker) {
-			console.warn('calling save() on a Job during a forkedWorker has no effect!');
+			const warning = new Error('calling save() on a Job during a forkedWorker has no effect!');
+			console.warn(warning.message, warning.stack);
 			return this as Job;
 		}
 		// ensure db connection is ready
@@ -359,7 +360,10 @@ export class Job<DATA = unknown | void> {
 			this.agenda.emit(`start:${this.attrs.name}`, this);
 			log('[%s:%s] starting job', this.attrs.name, this.attrs._id);
 
-			if (this.attrs.fork && this.agenda.forkHelper) {
+			if (this.attrs.fork) {
+				if (!this.agenda.forkHelper) {
+					throw new Error('no forkHelper specified, you need to set a path to a helper script');
+				}
 				const { forkHelper } = this.agenda;
 				const location =
 					Job.functionLocationCache[this.attrs.name] ||
@@ -375,9 +379,14 @@ export class Job<DATA = unknown | void> {
 
 				await new Promise<void>((resolve, reject) => {
 					let stillRunning = true;
-					const child = fork(forkHelper, [this.attrs.name, this.attrs._id!.toString(), location], {
-						signal
-					});
+					const child = fork(
+						forkHelper.path,
+						[this.attrs.name, this.attrs._id!.toString(), location],
+						{
+							signal,
+							...forkHelper.options
+						}
+					);
 
 					child.on('close', code => {
 						console.log(`child process exited with code ${code}`);

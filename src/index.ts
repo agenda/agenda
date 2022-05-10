@@ -3,6 +3,7 @@ import * as debug from 'debug';
 
 import type { Db, Filter, MongoClientOptions, Sort } from 'mongodb';
 import { SortDirection } from 'mongodb';
+import { ForkOptions } from 'child_process';
 import type { IJobDefinition } from './types/JobDefinition';
 import type { IAgendaConfig } from './types/AgendaConfig';
 import type { IDatabaseOptions, IDbConfig, IMongoOptions } from './types/DbOptions';
@@ -24,7 +25,7 @@ const DefaultOptions = {
 	lockLimit: 0,
 	defaultLockLifetime: 10 * 60 * 1000,
 	sort: { nextRunAt: 1, priority: -1 } as const,
-	forkHelper: 'dist/childWorker.js'
+	forkHelper: { path: 'dist/childWorker.js' }
 };
 
 /**
@@ -35,7 +36,10 @@ export class Agenda extends EventEmitter {
 
 	public readonly forkedWorker?: boolean;
 
-	public readonly forkHelper?: string;
+	public readonly forkHelper?: {
+		path: string;
+		options?: ForkOptions;
+	};
 
 	db: JobDbRepository;
 
@@ -51,8 +55,9 @@ export class Agenda extends EventEmitter {
 	on(event: 'ready', listener: () => void): this;
 	on(event: 'error', listener: (error: Error) => void): this;
 	on(event: string, listener: (...args) => void): this {
-		if (this.forkedWorker) {
-			console.warn('calling on() during a forkedWorker has no effect!');
+		if (this.forkedWorker && event !== 'ready') {
+			const warning = new Error('calling on() during a forkedWorker has no effect!');
+			console.warn(warning.message, warning.stack);
 			return this;
 		}
 		return super.on(event, listener);
@@ -101,7 +106,10 @@ export class Agenda extends EventEmitter {
 			defaultLockLifetime?: number;
 			// eslint-disable-next-line @typescript-eslint/ban-types
 		} & (IDatabaseOptions | IMongoOptions | {}) &
-			IDbConfig & { forkHelper?: string; forkedWorker?: boolean } = DefaultOptions,
+			IDbConfig & {
+				forkHelper?: { path: string; options?: ForkOptions };
+				forkedWorker?: boolean;
+			} = DefaultOptions,
 		cb?: (error?: Error) => void
 	) {
 		super();
