@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [6.2.2](https://github.com/hokify/agenda/compare/v6.2.1...v6.2.2) (2022-05-10)
+
+
+### Bug Fixes
+
+* allow passing forkMode to every ([ff274ba](https://github.com/hokify/agenda/commit/ff274babb98ed859625986a174bcc27d36346820))
+
 ### [6.2.1](https://github.com/hokify/agenda/compare/v6.2.0...v6.2.1) (2022-05-10)
 
 
