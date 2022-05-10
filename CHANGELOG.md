@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [6.2.4](https://github.com/hokify/agenda/compare/v6.2.3...v6.2.4) (2022-05-10)
+
+
+### Bug Fixes
+
+* check if abort controller is supported ([a00d611](https://github.com/hokify/agenda/commit/a00d611839e69318fe5e71cfa600a344c3dc6746))
+
 ### [6.2.3](https://github.com/hokify/agenda/compare/v6.2.2...v6.2.3) (2022-05-10)
 
 ### [6.2.2](https://github.com/hokify/agenda/compare/v6.2.1...v6.2.2) (2022-05-10)
