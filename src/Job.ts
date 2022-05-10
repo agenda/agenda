@@ -397,8 +397,9 @@ export class Job<DATA = unknown | void> {
 					child.on('close', code => {
 						stillRunning = false;
 						if (code) {
-							console.log(`child process exited with code ${code}`);
-							reject(code);
+							const error = new Error(`child process exited with code: ${code}`);
+							console.warn(error.message);
+							reject(error);
 						} else {
 							resolve();
 						}
