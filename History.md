@@ -1,12 +1,17 @@
 # Next
 
-- _Contributions welcome!_ https://github.com/agenda/agenda/pulls
+_Contributions welcome!_ https://github.com/agenda/agenda/pulls
 
-- # 4.2.0 / 2021-08-09
+  # [4.3.0](https://github.com/agenda/agenda/releases/tag/v4.3.0) / 2022-05-10
+
+- Feat: `disableAutoIndex`
+- Feat: `shouldSaveResult`
+
+  # 4.2.1 / 2021-08-09
 
 - fix: deprecation warning for collection.findOneAndUpdate ([#1338](https://github.com/agenda/agenda/pull/1338)) thanks @frobinsonj
 
-- # 4.2.0 / 2021-08-05
+  # 4.2.0 / 2021-08-05
 
 - Feat: Add top level disable and enable ([#1109](https://github.com/agenda/agenda/pull/1109)) thanks @pdfowler
 - fix(history): match cron-parser pattern ([#1335](https://github.com/agenda/agenda/pull/1335)) thanks @dockleryxk
