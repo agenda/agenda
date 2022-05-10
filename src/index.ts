@@ -427,9 +427,9 @@ export class Agenda extends EventEmitter {
 			const job = this.create(name, data);
 			job.attrs.type = 'single';
 			job.repeatEvery(interval, options);
-      if (options?.forkMode) {
-        job.forkMode(options.forkMode)
-      }
+			if (options?.forkMode) {
+				job.forkMode(options.forkMode);
+			}
 			await job.save();
 
 			return job;
