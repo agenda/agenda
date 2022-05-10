@@ -395,18 +395,22 @@ export class Job<DATA = unknown | void> {
 					);
 
 					child.on('close', code => {
-						console.log(`child process exited with code ${code}`);
 						stillRunning = false;
 						if (code) {
+							console.log(`child process exited with code ${code}`);
 							reject(code);
 						} else {
 							resolve();
 						}
 					});
 					child.on('message', message => {
-						console.log(`Message from child.js: ${message}`, JSON.stringify(message));
+						// console.log(`Message from child.js: ${message}`, JSON.stringify(message));
 						if (typeof message === 'string') {
-							reject(JSON.parse(message));
+							try {
+								reject(JSON.parse(message));
+							} catch (errJson) {
+								reject(message);
+							}
 						} else {
 							reject(message);
 						}

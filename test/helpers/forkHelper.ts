@@ -12,7 +12,6 @@ import { Agenda } from '../../src';
 	// initialize Agenda in "forkedWorker" mode
 	const agenda = new Agenda({ name: `subworker-${name}`, forkedWorker: true });
 	// connect agenda (but do not start it)
-	console.log('process.env.DB_CONNECTION', process.env.DB_CONNECTION);
 	await agenda.database(process.env.DB_CONNECTION!);
 
 	if (!name || !jobId) {
