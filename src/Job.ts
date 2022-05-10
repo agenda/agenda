@@ -125,6 +125,16 @@ export class Job<DATA = unknown | void> {
 	}
 
 	/**
+	 * if set, a job is forked via node child process and runs in a seperate/own
+	 * thread
+	 * @param enableForkMode
+	 */
+	forkMode(enableForkMode: boolean): this {
+		this.attrs.fork = enableForkMode;
+		return this;
+	}
+
+	/**
 	 * Prevents the job from running
 	 */
 	disable(): this {

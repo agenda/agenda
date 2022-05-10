@@ -24,7 +24,7 @@ const DefaultOptions = {
 	lockLimit: 0,
 	defaultLockLifetime: 10 * 60 * 1000,
 	sort: { nextRunAt: 1, priority: -1 } as const,
-  forkHelper: 'dist/childWorker.js'
+	forkHelper: 'dist/childWorker.js'
 };
 
 /**
@@ -34,7 +34,8 @@ export class Agenda extends EventEmitter {
 	readonly attrs: IAgendaConfig & IDbConfig;
 
 	public readonly forkedWorker?: boolean;
-  public readonly forkHelper?: string;
+
+	public readonly forkHelper?: string;
 
 	db: JobDbRepository;
 
@@ -69,7 +70,7 @@ export class Agenda extends EventEmitter {
 		return !!this.jobProcessor;
 	}
 
-	async runForkedJob(name: string, jobId: string) {
+	async runForkedJob(jobId: string) {
 		const jobData = await this.db.getJobById(jobId);
 		if (!jobData) {
 			throw new Error('db entry not found');
@@ -117,7 +118,7 @@ export class Agenda extends EventEmitter {
 		};
 
 		this.forkedWorker = config.forkedWorker;
-    this.forkHelper = config.forkHelper;
+		this.forkHelper = config.forkHelper;
 
 		this.ready = new Promise(resolve => {
 			this.once('ready', resolve);
