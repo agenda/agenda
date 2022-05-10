@@ -9,9 +9,6 @@ import { IJobParameters, datefields, TJobDatefield } from './types/JobParameters
 import { JobPriority, parsePriority } from './utils/priority';
 import { computeFromInterval, computeFromRepeatAt } from './utils/nextRunAt';
 
-const controller = new AbortController();
-const { signal } = controller;
-
 const log = debug('agenda:job');
 
 /**
@@ -376,9 +373,18 @@ export class Job<DATA = unknown | void> {
 					Job.functionLocationCache[this.attrs.name] = location;
 				}
 				// console.log('location', location);
+				let controller: AbortController | undefined;
+				let signal: AbortSignal | undefined;
+				if (typeof AbortController !== 'undefined') {
+					controller = new AbortController();
+					({ signal } = controller);
+				} else {
+					console.warn('AbortController not supported!');
+				}
 
 				await new Promise<void>((resolve, reject) => {
 					let stillRunning = true;
+
 					const child = fork(
 						forkHelper.path,
 						[this.attrs.name, this.attrs._id!.toString(), location],
@@ -410,7 +416,7 @@ export class Job<DATA = unknown | void> {
 					const checkCancel = () =>
 						setTimeout(() => {
 							if (this.canceled) {
-								controller.abort(); // Stops the child process
+								controller?.abort(); // Stops the child process
 							} else if (stillRunning) {
 								setTimeout(checkCancel, 10000);
 							}

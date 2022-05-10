@@ -6,7 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [14, 16, 17]
+        node-version: [14, 16, 18]
         mongodb-version: [3.6, 4.4, 5.0]
     steps:
       - name: Git checkout
