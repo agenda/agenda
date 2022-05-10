@@ -58,7 +58,7 @@ better suits your needs.
 | Global events   | ✓             |     |        |          |
 | Rate Limiter    | ✓             |     |        |          |
 | Pause/Resume    | ✓             |     |        |    ~     |
-| Sandboxed worker| ✓             |     |        |          |
+| Sandboxed worker| ✓             |     |        |    ✓      |
 | Repeatable jobs | ✓             |     |   ✓    |    ✓     |
 | Atomic ops      | ✓             |  ✓  |        |    ~     |
 | Persistence     | ✓             |  ✓  |   ✓    |    ✓     |
@@ -1092,6 +1092,95 @@ db.agendaJobs.ensureIndex({
     "disabled" : 1,
     "lockedAt" : 1
 }, "findAndLockDeadJobs")
+```
+
+# Sandboxed Worker - use child processes
+
+It's possible to start jobs in a child process, this helps for example for long running processes
+to seperate them from the main thread. For example if one process consumes too much memory and gets killed,
+it will not affect any others.
+To use this feature, several steps are required.
+1.) create a childWorker helper.
+The subrocess has a complete seperate context, so there are no database connections or anything else that can be shared.
+Therefore you have to ensure that all required connections and initializations are done here too. Furthermore
+you also have to load the correct job definition so that agenda nows what code it must execute. Therefore 3 parameters
+are passed to the childWorker: name, jobId and path to the job definition.
+
+Example file can look like this:
+
+childWorker.ts
+```ts
+import 'reflect-metadata';
+
+(async () => {
+	const mongooseConnection = /** connect to database */
+
+  /** do other required initializations */
+
+  // get process arguments (name, jobId and path to agenda definition file)
+	const [, , name, jobId, agendaDefinition] = process.argv;
+
+  // set fancy process title
+	process.title = `${process.title} (sub worker: ${name}/${jobId})`;
+
+  // initialize Agenda in "forkedWorker" mode
+	const agenda = new Agenda({ name: `subworker-${name}`, forkedWorker: true });
+	// connect agenda (but do not start it)
+	await agenda.mongo(mongooseConnection.db as any);
+
+	if (!name || !jobId) {
+		throw new Error(`invalid parameters: ${JSON.stringify(process.argv)}`);
+	}
+
+  // load job definition
+  /** in this case the file is for example ../some/path/definitions.js
+  with a content like:
+  export default (agenda: Agenda, definitionOnly = false) => {
+    agenda.define(
+      'some job',
+      async (notification: {
+        attrs: { data: { dealId: string; orderId: TypeObjectId<IOrder> } };
+      }) => {
+        // do something
+      }
+    );
+
+    if (!definitionOnly) {
+        // here you can create scheduled jobs or other things
+    }
+	});
+  */
+	if (agendaDefinition) {
+		const loadDefinition = await import(agendaDefinition);
+		(loadDefinition.default || loadDefinition)(agenda, true);
+	}
+
+  // run this job now
+	await agenda.runForkedJob(jobId);
+
+  // disconnect database and exit
+	process.exit(0);
+})().catch(err => {
+	console.error('err', err);
+	if (process.send) {
+		process.send(JSON.stringify(err));
+	}
+	process.exit(1);
+});
+
+```
+
+Ensure to only define job definitions during this step, otherwise you create some
+overhead (e.g. if you create new jobs inside the defintion files). That's why I call
+the defintion file with agenda and a second paramter that is set to true. If this
+parameter is true, I do not initialize any jobs (create jobs etc..)
+
+2.) to use this, you have to enable it on a job. Set forkMode to true:
+
+```ts
+const job = agenda.create('some job', {meep: 1});
+job.forkMode(true);
+await job.save();
 ```
 
 # Acknowledgements
