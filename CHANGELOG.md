@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [6.2.1](https://github.com/hokify/agenda/compare/v6.2.0...v6.2.1) (2022-05-10)
+
+
+### Bug Fixes
+
+* small code cleanups and new flag to toggle ([2a6e5fe](https://github.com/hokify/agenda/commit/2a6e5fe12e40447f1e30f1d53deb99c47ae92e68))
+
 ## [6.2.0](https://github.com/hokify/agenda/compare/v6.1.1...v6.2.0) (2022-05-09)
 
 
