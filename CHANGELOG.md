@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [6.2.5](https://github.com/hokify/agenda/compare/v6.2.4...v6.2.5) (2022-05-10)
+
+
+### Bug Fixes
+
+* improve exit code error message ([f1a5eb8](https://github.com/hokify/agenda/commit/f1a5eb816de789c64a65a44f9443f286c794caf6))
+
 ### [6.2.4](https://github.com/hokify/agenda/compare/v6.2.3...v6.2.4) (2022-05-10)
 
 
