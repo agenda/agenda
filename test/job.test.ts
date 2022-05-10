@@ -11,6 +11,7 @@ import { fail } from 'assert';
 import { Job } from '../src/Job';
 import { Agenda } from '../src';
 import { mockMongo } from './helpers/mock-mongodb';
+import someJobDefinition from './fixtures/someJobDefinition';
 
 // Create agenda instances
 let agenda: Agenda;
@@ -1640,5 +1641,136 @@ describe('Job', () => {
 
 		expect(executed).to.be.equal(false);
 		expect(error?.message).to.includes('(name: test) cannot be updated in the database');
+	});
+
+	describe('job fork mode', () => {
+		it('runs a job in fork mode', async () => {
+			const agendaFork = new Agenda({
+				mongo: mongoDb,
+				forkHelper: {
+					path: './test/helpers/forkHelper.ts',
+					options: {
+						env: { DB_CONNECTION: mongoCfg },
+						execArgv: ['-r', 'ts-node/register']
+					}
+				}
+			});
+
+			expect(agendaFork.forkHelper?.path).to.be.eq('./test/helpers/forkHelper.ts');
+
+			const job = agendaFork.create('some job');
+			job.forkMode(true);
+			job.schedule('now');
+			await job.save();
+
+			const jobData = await agenda.db.getJobById(job.attrs._id as any);
+
+			if (!jobData) {
+				throw new Error('job not found');
+			}
+
+			expect(jobData.fork).to.be.eq(true);
+
+			// initialize job definition (keep in a seperate file to have a easier fork mode implementation)
+			someJobDefinition(agendaFork);
+
+			await agendaFork.start();
+
+			do {
+				// console.log('.');
+				await delay(50);
+			} while (await job.isRunning());
+
+			const jobDataFinished = await agenda.db.getJobById(job.attrs._id as any);
+			expect(jobDataFinished?.lastFinishedAt).to.not.be.eq(undefined);
+			expect(jobDataFinished?.failReason).to.be.eq(null);
+			expect(jobDataFinished?.failCount).to.be.eq(null);
+		});
+
+		it('runs a job in fork mode, but let it fail', async () => {
+			const agendaFork = new Agenda({
+				mongo: mongoDb,
+				forkHelper: {
+					path: './test/helpers/forkHelper.ts',
+					options: {
+						env: { DB_CONNECTION: mongoCfg },
+						execArgv: ['-r', 'ts-node/register']
+					}
+				}
+			});
+
+			expect(agendaFork.forkHelper?.path).to.be.eq('./test/helpers/forkHelper.ts');
+
+			const job = agendaFork.create('some job', { failIt: 'error' });
+			job.forkMode(true);
+			job.schedule('now');
+			await job.save();
+
+			const jobData = await agenda.db.getJobById(job.attrs._id as any);
+
+			if (!jobData) {
+				throw new Error('job not found');
+			}
+
+			expect(jobData.fork).to.be.eq(true);
+
+			// initialize job definition (keep in a seperate file to have a easier fork mode implementation)
+			someJobDefinition(agendaFork);
+
+			await agendaFork.start();
+
+			do {
+				// console.log('.');
+				await delay(50);
+			} while (await job.isRunning());
+
+			const jobDataFinished = await agenda.db.getJobById(job.attrs._id as any);
+			expect(jobDataFinished?.lastFinishedAt).to.not.be.eq(undefined);
+			expect(jobDataFinished?.failReason).to.not.be.eq(null);
+			expect(jobDataFinished?.failCount).to.be.eq(1);
+		});
+
+		it('runs a job in fork mode, but let it die', async () => {
+			const agendaFork = new Agenda({
+				mongo: mongoDb,
+				forkHelper: {
+					path: './test/helpers/forkHelper.ts',
+					options: {
+						env: { DB_CONNECTION: mongoCfg },
+						execArgv: ['-r', 'ts-node/register']
+					}
+				}
+			});
+
+			expect(agendaFork.forkHelper?.path).to.be.eq('./test/helpers/forkHelper.ts');
+
+			const job = agendaFork.create('some job', { failIt: 'die' });
+			job.forkMode(true);
+			job.schedule('now');
+			await job.save();
+
+			const jobData = await agenda.db.getJobById(job.attrs._id as any);
+
+			if (!jobData) {
+				throw new Error('job not found');
+			}
+
+			expect(jobData.fork).to.be.eq(true);
+
+			// initialize job definition (keep in a seperate file to have a easier fork mode implementation)
+			someJobDefinition(agendaFork);
+
+			await agendaFork.start();
+
+			do {
+				// console.log('.');
+				await delay(50);
+			} while (await job.isRunning());
+
+			const jobDataFinished = await agenda.db.getJobById(job.attrs._id as any);
+			expect(jobDataFinished?.lastFinishedAt).to.not.be.eq(undefined);
+			expect(jobDataFinished?.failReason).to.not.be.eq(null);
+			expect(jobDataFinished?.failCount).to.be.eq(1);
+		});
 	});
 });
