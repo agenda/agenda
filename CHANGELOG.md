@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [6.2.8](https://github.com/hokify/agenda/compare/v6.2.7...v6.2.8) (2022-05-11)
+
+
+### Bug Fixes
+
+* use message bus instead of signal to cancel child ([fcec3a9](https://github.com/hokify/agenda/commit/fcec3a9bf43e36d4d3d81319ac71d1b3b01e16be))
+
 ### [6.2.7](https://github.com/hokify/agenda/compare/v6.2.6...v6.2.7) (2022-05-11)
 
 
