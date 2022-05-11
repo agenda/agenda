@@ -2,7 +2,6 @@ import * as date from 'date.js';
 import * as debug from 'debug';
 import { ObjectId } from 'mongodb';
 import { fork } from 'child_process';
-import * as getFunctionLocation from 'get-function-location';
 import type { Agenda } from './index';
 import type { DefinitionProcessor } from './types/JobDefinition';
 import { IJobParameters, datefields, TJobDatefield } from './types/JobParameters';
@@ -16,8 +15,6 @@ const log = debug('agenda:job');
  */
 export class Job<DATA = unknown | void> {
 	readonly attrs: IJobParameters<DATA>;
-
-	static functionLocationCache: { [key: string]: string } = {};
 
 	/** this flag is set to true, if a job got canceled (e.g. due to a timeout or other exception),
 	 * you can use it for long running tasks to periodically check if canceled is true,
@@ -362,16 +359,7 @@ export class Job<DATA = unknown | void> {
 					throw new Error('no forkHelper specified, you need to set a path to a helper script');
 				}
 				const { forkHelper } = this.agenda;
-				const location =
-					Job.functionLocationCache[this.attrs.name] ||
-					(await getFunctionLocation(this.agenda.definitions[this.attrs.name].fn)).source.replace(
-						/^file:\/\//,
-						''
-					);
 
-				if (!Job.functionLocationCache[this.attrs.name]) {
-					Job.functionLocationCache[this.attrs.name] = location;
-				}
 				// console.log('location', location);
 				let controller: AbortController | undefined;
 				let signal: AbortSignal | undefined;
@@ -387,7 +375,11 @@ export class Job<DATA = unknown | void> {
 
 					const child = fork(
 						forkHelper.path,
-						[this.attrs.name, this.attrs._id!.toString(), location],
+						[
+							this.attrs.name,
+							this.attrs._id!.toString(),
+							this.agenda.definitions[this.attrs.name].filePath || ''
+						],
 						{
 							...forkHelper.options,
 							signal
@@ -402,7 +394,7 @@ export class Job<DATA = unknown | void> {
 								forkHelper,
 								this.attrs.name,
 								this.attrs._id,
-								location
+								this.agenda.definitions[this.attrs.name].filePath
 							);
 							const error = new Error(`child process exited with code: ${code}`);
 							console.warn(error.message);

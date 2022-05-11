@@ -10,6 +10,7 @@ export interface IJobDefinition<DATA = unknown> {
 	/** how many jobs of this kind can run in parallel/simultanously per Agenda instance */
 	concurrency?: number;
 
+	filePath: string | undefined;
 	fn: DefinitionProcessor<DATA, void | ((error?: Error) => void)>;
 }
 

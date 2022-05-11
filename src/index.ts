@@ -14,6 +14,7 @@ import { JobDbRepository } from './JobDbRepository';
 import { JobPriority, parsePriority } from './utils/priority';
 import { JobProcessor } from './JobProcessor';
 import { calculateProcessEvery } from './utils/processEvery';
+import {getCallerFilePath} from "./utils/stack";
 
 const log = debug('agenda');
 
@@ -337,8 +338,12 @@ export class Agenda extends EventEmitter {
 		if (this.definitions[name]) {
 			log('overwriting already defined agenda job', name);
 		}
-		this.definitions[name] = {
+
+    const filePath = getCallerFilePath();
+
+    this.definitions[name] = {
 			fn: processor,
+      filePath,
 			concurrency: options?.concurrency || this.attrs.defaultConcurrency,
 			lockLimit: options?.lockLimit || this.attrs.defaultLockLimit,
 			priority: parsePriority(options?.priority),
