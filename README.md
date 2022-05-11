@@ -52,7 +52,7 @@ Since there are a few job queue solutions, here a table comparing them to help y
 better suits your needs.
 
 | Feature                    |      Bull       |   Bee    | Agenda | AgendaTS |
-|:---------------------------| :-------------: | :------: | :----: | :------: |
+| :------------------------- | :-------------: | :------: | :----: | :------: |
 | Backend                    |      redis      |  redis   | mongo  |  mongo   |
 | Priorities                 |        ✓        |          |   ✓    |    ✓     |
 | Concurrency                |        ✓        |    ✓     |   ✓    |    ✓     |
@@ -1148,6 +1148,14 @@ childWorker.ts
 ```ts
 import 'reflect-metadata';
 
+process.on('message', message => {
+  if (message === 'cancel') {
+    process.exit(2);
+  } else {
+    console.log('got message', message);
+  }
+});
+
 (async () => {
 	const mongooseConnection = /** connect to database */
 
@@ -1203,6 +1211,7 @@ import 'reflect-metadata';
 	}
 	process.exit(1);
 });
+
 
 ```
 

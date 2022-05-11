@@ -360,73 +360,68 @@ export class Job<DATA = unknown | void> {
 				}
 				const { forkHelper } = this.agenda;
 
-				// console.log('location', location);
-				let controller: AbortController | undefined;
-				let signal: AbortSignal | undefined;
-				if (typeof AbortController !== 'undefined') {
-					controller = new AbortController();
-					({ signal } = controller);
-				} else {
-					console.warn('AbortController not supported!');
-				}
-
-				await new Promise<void>((resolve, reject) => {
-					let stillRunning = true;
-
-					const child = fork(
-						forkHelper.path,
-						[
-							this.attrs.name,
-							this.attrs._id!.toString(),
-							this.agenda.definitions[this.attrs.name].filePath || ''
-						],
-						{
-							...forkHelper.options,
-							signal
-						}
-					);
-
-					child.on('close', code => {
-						stillRunning = false;
-						if (code) {
-							console.info(
-								'fork parameters',
-								forkHelper,
+				let stillRunning = true;
+				try {
+					await new Promise<void>((resolve, reject) => {
+						const child = fork(
+							forkHelper.path,
+							[
 								this.attrs.name,
-								this.attrs._id,
-								this.agenda.definitions[this.attrs.name].filePath
-							);
-							const error = new Error(`child process exited with code: ${code}`);
-							console.warn(error.message);
-							reject(error);
-						} else {
-							resolve();
-						}
-					});
-					child.on('message', message => {
-						// console.log(`Message from child.js: ${message}`, JSON.stringify(message));
-						if (typeof message === 'string') {
-							try {
-								reject(JSON.parse(message));
-							} catch (errJson) {
-								reject(message);
-							}
-						} else {
-							reject(message);
-						}
-					});
+								this.attrs._id!.toString(),
+								this.agenda.definitions[this.attrs.name].filePath || ''
+							],
+							forkHelper.options
+						);
 
-					// check if job is still alive
-					const checkCancel = () =>
-						setTimeout(() => {
-							if (this.canceled) {
-								controller?.abort(); // Stops the child process
-							} else if (stillRunning) {
-								setTimeout(checkCancel, 10000);
+						child.on('close', code => {
+							stillRunning = false;
+							if (code) {
+								console.info(
+									'fork parameters',
+									forkHelper,
+									this.attrs.name,
+									this.attrs._id,
+									this.agenda.definitions[this.attrs.name].filePath
+								);
+								const error = new Error(`child process exited with code: ${code}`);
+								console.warn(error.message);
+								reject(error);
+							} else {
+								resolve();
 							}
 						});
-					checkCancel();
-				});
+						child.on('message', message => {
+							// console.log(`Message from child.js: ${message}`, JSON.stringify(message));
+							if (typeof message === 'string') {
+								try {
+									reject(JSON.parse(message));
+								} catch (errJson) {
+									reject(message);
+								}
+							} else {
+								reject(message);
+							}
+						});
+
+						// check if job is still alive
+						const checkCancel = () =>
+							setTimeout(() => {
+								if (this.canceled) {
+									try {
+										child.send('cancel');
+										console.info('canceled child', this.attrs.name, this.attrs._id);
+									} catch (err) {
+										console.log('cannot send cancel to child');
+									}
+								} else if (stillRunning) {
+									setTimeout(checkCancel, 10000);
+								}
+							});
+						checkCancel();
+					});
+				} finally {
+					stillRunning = false;
+				}
 			} else {
 				await this.runJob();
 			}

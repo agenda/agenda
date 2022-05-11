@@ -1,5 +1,13 @@
 import { Agenda } from '../../src';
 
+process.on('message', message => {
+	if (message === 'cancel') {
+		process.exit(2);
+	} else {
+		console.log('got message', message);
+	}
+});
+
 (async () => {
 	/** do other required initializations */
 
