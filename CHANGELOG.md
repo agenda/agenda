@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [6.2.9](https://github.com/hokify/agenda/compare/v6.2.8...v6.2.9) (2022-05-20)
+
+
+### Bug Fixes
+
+* job timeout check and improve error handling for childs ([b365957](https://github.com/hokify/agenda/commit/b36595745e8b43939f9938b78af8d5a2e033b8fb))
+
 ### [6.2.8](https://github.com/hokify/agenda/compare/v6.2.7...v6.2.8) (2022-05-11)
 
 

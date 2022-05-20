@@ -1,6 +1,6 @@
 {
   "name": "@hokify/agenda",
-  "version": "6.2.8",
+  "version": "6.2.9",
   "description": "Light weight job scheduler for Node.js",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
