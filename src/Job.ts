@@ -1,7 +1,7 @@
 import * as date from 'date.js';
 import * as debug from 'debug';
 import { ObjectId } from 'mongodb';
-import { fork } from 'child_process';
+import { ChildProcess, fork } from 'child_process';
 import type { Agenda } from './index';
 import type { DefinitionProcessor } from './types/JobDefinition';
 import { IJobParameters, datefields, TJobDatefield } from './types/JobParameters';
@@ -20,7 +20,27 @@ export class Job<DATA = unknown | void> {
 	 * you can use it for long running tasks to periodically check if canceled is true,
 	 * also touch will check if and throws that the job got canceled
 	 */
-	canceled: Error | undefined;
+	private canceled?: Error | true;
+
+	getCanceledMessage() {
+		return typeof this.canceled === 'object'
+			? this.canceled?.message || this.canceled
+			: this.canceled;
+	}
+
+	private forkedChild?: ChildProcess;
+
+	cancel(error?: Error) {
+		this.canceled = error || true;
+		if (this.forkedChild) {
+			try {
+				this.forkedChild.send('cancel');
+				console.info('canceled child', this.attrs.name, this.attrs._id);
+			} catch (err) {
+				console.log('cannot send cancel to child');
+			}
+		}
+	}
 
 	/** internal variable to ensure a job does not set unlimited numbers of setTimeouts if the job is not processed
 	 * immediately */
@@ -266,12 +286,6 @@ export class Job<DATA = unknown | void> {
 	}
 
 	async isDead(): Promise<boolean> {
-		if (!this.byJobProcessor || this.attrs.fork) {
-			// we have no job definition, therfore we are not the job processor, but a client call
-			// so we get the real state from database
-			await this.fetchStatus();
-		}
-
 		return this.isExpired();
 	}
 
@@ -360,68 +374,47 @@ export class Job<DATA = unknown | void> {
 				}
 				const { forkHelper } = this.agenda;
 
-				let stillRunning = true;
-				try {
-					await new Promise<void>((resolve, reject) => {
-						const child = fork(
-							forkHelper.path,
-							[
+				await new Promise<void>((resolve, reject) => {
+					this.forkedChild = fork(
+						forkHelper.path,
+						[
+							this.attrs.name,
+							this.attrs._id!.toString(),
+							this.agenda.definitions[this.attrs.name].filePath || ''
+						],
+						forkHelper.options
+					);
+
+					let childError: any;
+					this.forkedChild.on('close', code => {
+						if (code) {
+							console.info(
+								'fork parameters',
+								forkHelper,
 								this.attrs.name,
-								this.attrs._id!.toString(),
-								this.agenda.definitions[this.attrs.name].filePath || ''
-							],
-							forkHelper.options
-						);
-
-						child.on('close', code => {
-							stillRunning = false;
-							if (code) {
-								console.info(
-									'fork parameters',
-									forkHelper,
-									this.attrs.name,
-									this.attrs._id,
-									this.agenda.definitions[this.attrs.name].filePath
-								);
-								const error = new Error(`child process exited with code: ${code}`);
-								console.warn(error.message);
-								reject(error);
-							} else {
-								resolve();
-							}
-						});
-						child.on('message', message => {
-							// console.log(`Message from child.js: ${message}`, JSON.stringify(message));
-							if (typeof message === 'string') {
-								try {
-									reject(JSON.parse(message));
-								} catch (errJson) {
-									reject(message);
-								}
-							} else {
-								reject(message);
-							}
-						});
-
-						// check if job is still alive
-						const checkCancel = () =>
-							setTimeout(() => {
-								if (this.canceled) {
-									try {
-										child.send('cancel');
-										console.info('canceled child', this.attrs.name, this.attrs._id);
-									} catch (err) {
-										console.log('cannot send cancel to child');
-									}
-								} else if (stillRunning) {
-									setTimeout(checkCancel, 10000);
-								}
-							});
-						checkCancel();
+								this.attrs._id,
+								this.agenda.definitions[this.attrs.name].filePath
+							);
+							const error = new Error(`child process exited with code: ${code}`);
+							console.warn(error.message);
+							reject(childError || error);
+						} else {
+							resolve();
+						}
 					});
-				} finally {
-					stillRunning = false;
-				}
+					this.forkedChild.on('message', message => {
+						// console.log(`Message from child.js: ${message}`, JSON.stringify(message));
+						if (typeof message === 'string') {
+							try {
+								childError = JSON.parse(message);
+							} catch (errJson) {
+								childError = message;
+							}
+						} else {
+							childError = message;
+						}
+					});
+				});
 			} else {
 				await this.runJob();
 			}
@@ -440,6 +433,7 @@ export class Job<DATA = unknown | void> {
 			this.agenda.emit(`fail:${this.attrs.name}`, error, this);
 			log('[%s:%s] has failed [%s]', this.attrs.name, this.attrs._id, error.message);
 		} finally {
+			this.forkedChild = undefined;
 			this.attrs.lockedAt = undefined;
 			try {
 				await this.agenda.db.saveJobState(this);

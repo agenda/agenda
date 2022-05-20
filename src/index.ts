@@ -14,7 +14,7 @@ import { JobDbRepository } from './JobDbRepository';
 import { JobPriority, parsePriority } from './utils/priority';
 import { JobProcessor } from './JobProcessor';
 import { calculateProcessEvery } from './utils/processEvery';
-import {getCallerFilePath} from "./utils/stack";
+import { getCallerFilePath } from './utils/stack';
 
 const log = debug('agenda');
 
@@ -339,11 +339,11 @@ export class Agenda extends EventEmitter {
 			log('overwriting already defined agenda job', name);
 		}
 
-    const filePath = getCallerFilePath();
+		const filePath = getCallerFilePath();
 
-    this.definitions[name] = {
+		this.definitions[name] = {
 			fn: processor,
-      filePath,
+			filePath,
 			concurrency: options?.concurrency || this.attrs.defaultConcurrency,
 			lockLimit: options?.lockLimit || this.attrs.defaultLockLimit,
 			priority: parsePriority(options?.priority),
@@ -538,7 +538,7 @@ export class Agenda extends EventEmitter {
 			this.attrs.processEvery
 		);
 
-		this.on('processJob', job => this.jobProcessor?.process(job));
+		this.on('processJob', this.jobProcessor.process);
 	}
 
 	/**
@@ -552,7 +552,7 @@ export class Agenda extends EventEmitter {
 
 		log('Agenda.stop called, clearing interval for processJobs()');
 
-		const lockedJobs = this.jobProcessor?.stop();
+		const lockedJobs = this.jobProcessor.stop();
 
 		log('Agenda._unlockJobs()');
 		const jobIds = lockedJobs?.map(job => job.attrs._id) || [];

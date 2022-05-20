@@ -51,25 +51,25 @@ export class JobProcessor {
 				? this.jobQueue.length
 				: this.jobQueue.getQueue().map(job => ({
 						...job.toJson(),
-						canceled: job.canceled?.message || job.canceled
+						canceled: job.getCanceledMessage()
 				  })),
 			runningJobs: !fullDetails
 				? this.runningJobs.length
 				: this.runningJobs.map(job => ({
 						...job.toJson(),
-						canceled: job.canceled?.message || job.canceled
+						canceled: job.getCanceledMessage()
 				  })),
 			lockedJobs: !fullDetails
 				? this.lockedJobs.length
 				: this.lockedJobs.map(job => ({
 						...job.toJson(),
-						canceled: job.canceled?.message || job.canceled
+						canceled: job.getCanceledMessage()
 				  })),
 			jobsToLock: !fullDetails
 				? this.jobsToLock.length
 				: this.jobsToLock.map(job => ({
 						...job.toJson(),
-						canceled: job.canceled?.message || job.canceled
+						canceled: job.getCanceledMessage()
 				  })),
 			isLockingOnTheFly: this.isLockingOnTheFly
 		};
@@ -499,6 +499,7 @@ export class JobProcessor {
 			this.runningJobs.push(job);
 			this.updateStatus(job.attrs.name, 'running', 1);
 
+			let jobIsRunning = true;
 			try {
 				log.extend('runOrRetry')('[%s:%s] processing job', job.attrs.name, job.attrs._id);
 
@@ -508,7 +509,7 @@ export class JobProcessor {
 					new Promise<void>((resolve, reject) => {
 						setTimeout(async () => {
 							// when job is not running anymore, just finish
-							if (!(await job.isRunning())) {
+							if (!jobIsRunning) {
 								resolve();
 								return;
 							}
@@ -547,8 +548,7 @@ export class JobProcessor {
 					);
 				}
 			} catch (error: any) {
-				// eslint-disable-next-line no-param-reassign
-				job.canceled = error;
+				job.cancel(error);
 				log.extend('runOrRetry')(
 					'[%s:%s] processing job failed',
 					job.attrs.name,
@@ -557,6 +557,8 @@ export class JobProcessor {
 				);
 				this.agenda.emit('error', error);
 			} finally {
+				jobIsRunning = false;
+
 				// Remove the job from the running queue
 				let runningJobIndex = this.runningJobs.indexOf(job);
 				if (runningJobIndex === -1) {
