@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [6.2.10](https://github.com/hokify/agenda/compare/v6.2.9...v6.2.10) (2022-05-23)
+
+
+### Bug Fixes
+
+* check if lockedAt has been resetted in the meantime ([aa5323b](https://github.com/hokify/agenda/commit/aa5323b5669453761e8a1ddd146df828e6b2b410))
+* improve errors for childs ([8e3b827](https://github.com/hokify/agenda/commit/8e3b8277d839c935e69f31a57177c7f79dbec836))
+
 ### [6.2.9](https://github.com/hokify/agenda/compare/v6.2.8...v6.2.9) (2022-05-20)
 
 
