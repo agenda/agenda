@@ -744,6 +744,7 @@ describe('Agenda', () => {
 			}); */
 
 			let j1processes = 0;
+
 			globalAgenda.define('j1', (_job, done) => {
 				j1processes += 1;
 				done();
@@ -766,7 +767,7 @@ describe('Agenda', () => {
 			await globalAgenda.every('10 seconds', 'j2');
 			await globalAgenda.every('15 seconds', 'j3');
 
-			await delay(5001);
+			await delay(3001);
 
 			process.removeListener('unhandledRejection', rejectionsHandler);
 

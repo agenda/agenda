@@ -538,7 +538,7 @@ export class Agenda extends EventEmitter {
 			this.attrs.processEvery
 		);
 
-		this.on('processJob', this.jobProcessor.process);
+		this.on('processJob', this.jobProcessor.process.bind(this.jobProcessor));
 	}
 
 	/**
@@ -562,7 +562,7 @@ export class Agenda extends EventEmitter {
 			await this.db.unlockJobs(jobIds);
 		}
 
-		this.off('processJob', this.jobProcessor.process);
+		this.off('processJob', this.jobProcessor.process.bind(this.jobProcessor));
 
 		this.jobProcessor = undefined;
 	}

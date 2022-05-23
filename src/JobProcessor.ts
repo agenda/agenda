@@ -121,7 +121,7 @@ export class JobProcessor {
 		// Make sure an interval has actually been set
 		// Prevents race condition with 'Agenda.stop' and already scheduled run
 		if (!this.isRunning) {
-			log.extend('process')('JobProcessor got stopped already, returning', this);
+			log.extend('process')('JobProcessor got stopped already, returning');
 			return;
 		}
 
@@ -482,8 +482,7 @@ export class JobProcessor {
 			// const a = new Error();
 			// console.log('STACK', a.stack);
 			log.extend('runOrRetry')(
-				'JobProcessor got stopped already while calling runOrRetry, returning!',
-				this
+				'JobProcessor got stopped already while calling runOrRetry, returning!'
 			);
 			return;
 		}
@@ -510,11 +509,22 @@ export class JobProcessor {
 						setTimeout(async () => {
 							// when job is not running anymore, just finish
 							if (!jobIsRunning) {
+								log.extend('runOrRetry')(
+									'[%s:%s] checkIfJobIsStillAlive detected job is not running anymore. stopping check.',
+									job.attrs.name,
+									job.attrs._id
+								);
 								resolve();
 								return;
 							}
 
 							if (await job.isExpired()) {
+								log.extend('runOrRetry')(
+									'[%s:%s] checkIfJobIsStillAlive detected an expired job, killing it.',
+									job.attrs.name,
+									job.attrs._id
+								);
+
 								reject(
 									new Error(
 										`execution of '${job.attrs.name}' canceled, execution took more than ${
@@ -526,6 +536,12 @@ export class JobProcessor {
 							}
 
 							if (!job.attrs.lockedAt) {
+								log.extend('runOrRetry')(
+									'[%s:%s] checkIfJobIsStillAlive detected a job without a lockedAt value, killing it.',
+									job.attrs.name,
+									job.attrs._id
+								);
+
 								reject(
 									new Error(
 										`execution of '${job.attrs.name}' canceled, no lockedAt date found. Ensure to call touch() for long running jobs to keep them alive.`
