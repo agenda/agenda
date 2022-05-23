@@ -396,8 +396,8 @@ export class Job<DATA = unknown | void> {
 								this.agenda.definitions[this.attrs.name].filePath
 							);
 							const error = new Error(`child process exited with code: ${code}`);
-							console.warn(error.message);
-							reject(childError || error);
+							console.warn(error.message, childError || this.canceled);
+							reject(childError || this.canceled || error);
 						} else {
 							resolve();
 						}
