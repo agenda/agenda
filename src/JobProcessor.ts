@@ -525,6 +525,15 @@ export class JobProcessor {
 								return;
 							}
 
+							if (!job.attrs.lockedAt) {
+								reject(
+									new Error(
+										`execution of '${job.attrs.name}' canceled, no lockedAt date found. Ensure to call touch() for long running jobs to keep them alive.`
+									)
+								);
+								return;
+							}
+
 							resolve(checkIfJobIsStillAlive());
 						}, Math.max(this.processEvery / 2, this.agenda.definitions[job.attrs.name].lockLifetime / 2));
 					});
