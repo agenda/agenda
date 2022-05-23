@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [6.2.11](https://github.com/hokify/agenda/compare/v6.2.10...v6.2.11) (2022-05-23)
+
+
+### Bug Fixes
+
+* bind correct context to process ([cf70739](https://github.com/hokify/agenda/commit/cf707396707b36d293eb99a79fbc618b75a54900))
+
 ### [6.2.10](https://github.com/hokify/agenda/compare/v6.2.9...v6.2.10) (2022-05-23)
 
 
