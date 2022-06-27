@@ -14,7 +14,7 @@ const debug = createDebugger("agenda:now");
 export const now = async function (
   this: Agenda,
   name: string,
-  data: any
+  data?: any
 ): Promise<Job> {
   debug("Agenda.now(%s, [Object])", name);
   try {
