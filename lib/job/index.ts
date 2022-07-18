@@ -65,7 +65,7 @@ export interface JobAttributes<
   /**
    * The job details.
    */
-  data?: T;
+  data: T;
 
   unique?: any;
   uniqueOpts?: {
