@@ -67,11 +67,27 @@ For Typescript, Webpack or other module imports, use `agenda/es` entrypoint:
 e.g.
 
 ```ts
-import { Agenda } from "agenda/es";
-```
+import Agenda, { Job, JobAttributesData } from 'agenda'
 
-**_NOTE_**: If you're migrating from `@types/agenda` you also should change imports to `agenda/es`.
-Instead of `import Agenda from 'agenda'` use `import Agenda from 'agenda/es'`.
+const mongoConnectionString = "mongodb://127.0.0.1/agenda";
+const agenda = new Agenda({ db: { address: mongoConnectionString } });
+
+interface CreateContact extends JobAttributesData {
+  contactDetails: Contact // app-specific type
+}
+
+agenda.define<CreateContact>('CREATE CONTACT', async (job: Job<CreateContact>) => {
+  const contactDetails = job.attrs.data.contactDetails; // type Contact
+})
+
+agenda.now<CreateContact>('CREATE CONTACT', {
+  contactDetails: {...} // required attr
+})
+
+agenda.schedule<CreateContact>('in 5 minutes', 'CREATE CONTACT', {
+  contactDetails: {...} // required attr
+})
+```
 
 # Example Usage
 
