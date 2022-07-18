@@ -1,6 +1,6 @@
 import createDebugger from "debug";
 import { Agenda } from ".";
-import { Job } from "../job";
+import { Job, JobAttributesData } from "../job";
 
 const debug = createDebugger("agenda:now");
 
@@ -11,10 +11,10 @@ const debug = createDebugger("agenda:now");
  * @param name name of job to schedule
  * @param data data to pass to job
  */
-export const now = async function (
+export const now = async function<T> (
   this: Agenda,
   name: string,
-  data: any
+  data: T extends JobAttributesData ? T : JobAttributesData
 ): Promise<Job> {
   debug("Agenda.now(%s, [Object])", name);
   try {
