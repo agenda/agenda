@@ -83,13 +83,8 @@ export const computeNextRunAt = function (this: Job): Job {
       }
 
       // If endDate is less than the nextDate, set nextDate to null to stop the job from running further
-      if (endDate) {
-        const endDateDate: Date = moment
-          .tz(moment(endDate).format("YYYY-MM-DD"), timezone!)
-          .toDate();
-        if (nextDate > endDateDate) {
-          nextDate = null;
-        }
+      if (endDate && nextDate > endDate) {
+        nextDate = null;
       }
 
       this.attrs.nextRunAt = nextDate;
