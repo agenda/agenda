@@ -1,5 +1,5 @@
 import createDebugger from "debug";
-import { Job } from "../job";
+import { Job, JobAttributesData } from "../job";
 import { Agenda } from ".";
 
 const debug = createDebugger("agenda:create");
@@ -11,7 +11,7 @@ const debug = createDebugger("agenda:create");
  * @param name name of job
  * @param data data to set for job
  */
-export const create = function (this: Agenda, name: string, data: any): Job {
+export const create = function<T extends JobAttributesData> (this: Agenda, name: string, data: T): Job {
   debug("Agenda.create(%s, [Object])", name);
   const priority = this._definitions[name]
     ? this._definitions[name].priority

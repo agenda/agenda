@@ -13,13 +13,13 @@ const debug = createDebugger("agenda:schedule");
  * @param data data to send to job
  * @returns job or jobs created
  */
-export function schedule<T>(this: Agenda, when: string | Date, names: string, data: T extends JobAttributesData ? T : JobAttributesData): Promise<Job>;
-export function schedule<T>(this: Agenda, when: string | Date, names: string[], data: T extends JobAttributesData ? T : JobAttributesData): Promise<Job[]>;
-export function schedule<T> (
+export function schedule<T extends JobAttributesData>(this: Agenda, when: string | Date, names: string, data: T): Promise<Job>;
+export function schedule<T extends JobAttributesData>(this: Agenda, when: string | Date, names: string[], data: T): Promise<Job[]>;
+export function schedule<T extends JobAttributesData> (
   this: Agenda,
   when: string | Date,
   names: string | string[],
-  data: T extends JobAttributesData ? T : any,
+  data: T,
 ): Promise<Job | Job[]> {
   /**
    * Internal method that creates a job with given date

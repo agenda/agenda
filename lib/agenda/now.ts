@@ -11,10 +11,10 @@ const debug = createDebugger("agenda:now");
  * @param name name of job to schedule
  * @param data data to pass to job
  */
-export const now = async function<T> (
+export const now = async function<T extends JobAttributesData> (
   this: Agenda,
   name: string,
-  data: T extends JobAttributesData ? T : JobAttributesData
+  data: T
 ): Promise<Job> {
   debug("Agenda.now(%s, [Object])", name);
   try {
