@@ -2,6 +2,7 @@
 import * as path from 'path';
 import * as cp from 'child_process';
 import { expect } from 'chai';
+import * as assert from 'node:assert/strict';
 import { DateTime } from 'luxon';
 import { Db } from 'mongodb';
 
@@ -1618,9 +1619,18 @@ describe('Job', () => {
 
 		await agenda.start();
 
+		let jobStarted;
+		let retried = 0;
 		// wait till it's locked (Picked up by the event processor)
-		const jobStarted = await agenda.db.getJobs({ name: 'test' });
-		expect(jobStarted[0].lockedAt).to.not.equal(null);
+		do {
+			jobStarted = await agenda.db.getJobs({ name: 'test' });
+			if (!jobStarted[0].lockedAt) {
+				delay(100);
+			}
+			retried++;
+		} while (!jobStarted[0].lockedAt || retried > 10);
+
+		expect(jobStarted[0].lockedAt).to.exist; // .equal(null);
 
 		await job.remove();
 
@@ -1633,14 +1643,17 @@ describe('Job', () => {
 		});
 
 		await Promise.race([
-			new Promise(resolve => {
-				setTimeout(resolve, 1000);
+			new Promise<void>(resolve => {
+				setTimeout(() => {
+					resolve();
+				}, 1000);
 			}),
 			completed
 		]);
 
 		expect(executed).to.be.equal(false);
-		expect(error?.message).to.includes('(name: test) cannot be updated in the database');
+		assert.ok(typeof error !== 'undefined');
+		expect(error.message).to.includes('(name: test) cannot be updated in the database');
 	});
 
 	describe('job fork mode', () => {
