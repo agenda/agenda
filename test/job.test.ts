@@ -2,7 +2,7 @@
 import * as path from 'path';
 import * as cp from 'child_process';
 import { expect } from 'chai';
-import * as assert from 'node:assert/strict';
+import * as assert from 'node:assert';
 import { DateTime } from 'luxon';
 import { Db } from 'mongodb';
 
