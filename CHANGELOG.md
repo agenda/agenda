@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [6.2.12](https://github.com/hokify/agenda/compare/v6.2.11...v6.2.12) (2022-08-02)
+
+
+### Bug Fixes
+
+* improve error message for on handler ([92d42ca](https://github.com/hokify/agenda/commit/92d42ca1e0e0267855c613348ec06a281204dc4b))
+
 ### [6.2.11](https://github.com/hokify/agenda/compare/v6.2.10...v6.2.11) (2022-05-23)
 
 
