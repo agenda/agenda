@@ -669,7 +669,7 @@ Specifies an `interval` on which the job should repeat. The job runs at the time
 
 `options.endDate`: `Date` the job should not repeat after the endDate. The job can run on the end-date itself, but not after that.
 
-`options.skipDays`: `humand readable string` ('2 days'). After each run, it will skip the duration of 'skipDays'
+`options.skipDays`: `human readable string` ('2 days'). After each run, it will skip the duration of 'skipDays'
 
 ```js
 job.repeatEvery("10 minutes");
