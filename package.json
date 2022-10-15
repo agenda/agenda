@@ -52,10 +52,13 @@
     "url": "https://github.com/agenda/agenda/issues"
   },
   "dependencies": {
+    "ansi-regex": "5.0.1",
     "cron-parser": "^3.0.0",
     "date.js": "~0.3.3",
     "debug": "~4.3.0",
     "human-interval": "~2.0.0",
+    "marked": "4.0.10",
+    "moment": "2.29.4",
     "moment-timezone": "~0.5.37",
     "mongodb": "^4.1.0"
   },
