@@ -35,6 +35,7 @@ import { schedule } from "./schedule";
 import { sort } from "./sort";
 import { start } from "./start";
 import { stop } from "./stop";
+import { drain } from './drain';
 
 export interface AgendaConfig {
   name?: string;
@@ -127,6 +128,7 @@ class Agenda extends EventEmitter {
   sort!: typeof sort;
   start!: typeof start;
   stop!: typeof stop;
+  drain!: typeof drain;
 
   /**
    * Constructs a new Agenda object.
@@ -220,5 +222,6 @@ Agenda.prototype.schedule = schedule;
 Agenda.prototype.sort = sort;
 Agenda.prototype.start = start;
 Agenda.prototype.stop = stop;
+Agenda.prototype.drain = drain;
 
 export { Agenda };
