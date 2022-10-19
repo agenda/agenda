@@ -2,6 +2,10 @@
 
 _Contributions welcome!_ https://github.com/agenda/agenda/pulls
 
+  # [4.4.0](https://github.com/agenda/agenda/releases/tag/v4.4.0) / 2022-10-19
+
+- Feat: Add `drain()` method for graceful process shutdowns ([#1488](https://github.com/agenda/agenda/pull/1488)) thanks @nmehmedrnd
+
   # [4.3.0](https://github.com/agenda/agenda/releases/tag/v4.3.0) / 2022-05-10
 
 - Feat: `disableAutoIndex`
