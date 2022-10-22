@@ -6,7 +6,9 @@
   "types": "dist/index.d.ts",
   "files": [
     "es.js",
-    "dist"
+    "dist",
+    "lib",
+    "tsconfig.json"
   ],
   "engines": {
     "node": ">=12.9.0"

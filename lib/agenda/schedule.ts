@@ -1,6 +1,6 @@
 import createDebugger from "debug";
 import { Agenda } from ".";
-import { Job } from "../job";
+import { Job, JobAttributesData } from "../job";
 
 const debug = createDebugger("agenda:schedule");
 
@@ -13,13 +13,13 @@ const debug = createDebugger("agenda:schedule");
  * @param data data to send to job
  * @returns job or jobs created
  */
-export function schedule(this: Agenda, when: string | Date, names: string, data: any): Promise<Job>;
-export function schedule(this: Agenda, when: string | Date, names: string[], data: any): Promise<Job[]>;
-export function schedule (
+export function schedule<T extends JobAttributesData>(this: Agenda, when: string | Date, names: string, data: T): Promise<Job>;
+export function schedule<T extends JobAttributesData>(this: Agenda, when: string | Date, names: string[], data: T): Promise<Job[]>;
+export function schedule<T extends JobAttributesData> (
   this: Agenda,
   when: string | Date,
   names: string | string[],
-  data: any
+  data: T,
 ): Promise<Job | Job[]> {
   /**
    * Internal method that creates a job with given date

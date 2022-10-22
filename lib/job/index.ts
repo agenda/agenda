@@ -19,6 +19,8 @@ import { Agenda } from "../agenda";
 import { JobPriority } from "../agenda/define";
 import * as mongodb from "mongodb";
 
+type Modify<T, R> = Omit<T, keyof R> & R
+
 export interface JobAttributesData {
   [key: string]: any;
 }
@@ -28,7 +30,7 @@ export interface JobAttributes<
   /**
    * The record identity.
    */
-  _id?: mongodb.ObjectId;
+  _id: mongodb.ObjectId;
 
   agenda: Agenda;
 
@@ -65,7 +67,7 @@ export interface JobAttributes<
   /**
    * The job details.
    */
-  data?: T;
+  data: T;
 
   unique?: any;
   uniqueOpts?: {
@@ -163,7 +165,7 @@ class Job<T extends JobAttributesData = JobAttributesData> {
   touch!: typeof touch;
   setShouldSaveResult!: typeof setShouldSaveResult;
 
-  constructor(options: JobAttributes<T>) {
+  constructor(options: Modify<JobAttributes<T>, { _id?: mongodb.ObjectId; }>) {
     const { agenda, type, nextRunAt, ...args } = options ?? {};
 
     // Save Agenda instance

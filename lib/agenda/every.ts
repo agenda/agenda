@@ -1,6 +1,6 @@
 import createDebugger from "debug";
 import { Agenda } from ".";
-import { Job } from "../job";
+import { Job, JobAttributesData } from "../job";
 import { JobOptions } from "../job/repeat-every";
 
 const debug = createDebugger("agenda:every");
@@ -15,11 +15,11 @@ const debug = createDebugger("agenda:every");
  * @param options - options to run job for
  * @returns Job/s created. Resolves when schedule fails or passes
  */
-export const every = async function (
+export const every = async function<T extends JobAttributesData> (
   this: Agenda,
   interval: string,
   names: string | string[],
-  data?: unknown,
+  data?: T,
   options?: JobOptions
 ): Promise<any> {
   /**
@@ -30,13 +30,13 @@ export const every = async function (
    * @param [options] options to run job for
    * @returns instance of job
    */
-  const createJob = async (
+  const createJob = async<T extends JobAttributesData> (
     interval: string,
     name: string,
-    data?: unknown,
+    data?: T,
     options?: JobOptions
   ): Promise<Job> => {
-    const job = this.create(name, data);
+    const job = this.create(name, data || {});
 
     job.attrs.type = "single";
     job.repeatEvery(interval, options);
@@ -54,7 +54,7 @@ export const every = async function (
   const createJobs = async (
     interval: string,
     names: string[],
-    data?: unknown,
+    data?: T,
     options?: JobOptions
   ): Promise<Job[] | undefined> => {
     try {
