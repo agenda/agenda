@@ -52,6 +52,7 @@ export const run = async function (this: Job): Promise<Job> {
           this.attrs.name,
           this.attrs._id
         );
+        finished = false;
         reject(error);
       });
       debug(
