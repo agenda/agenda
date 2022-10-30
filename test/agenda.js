@@ -222,9 +222,9 @@ describe("Agenda", () => {
       });
     });
 
-    describe('disable auto index', () => {
-      it('should create default index when disableAutoIndex is not specified', async () => {
-        const collectionName = 'agenda_index_test';
+    describe("disable auto index", () => {
+      it("should create default index when disableAutoIndex is not specified", async () => {
+        const collectionName = "agenda_index_test";
 
         const agenda2 = new Agenda({
           db: {
@@ -241,21 +241,22 @@ describe("Agenda", () => {
           const indexes = await collection.indexes();
 
           const expectedIndex = {
-            "key": {
-              "name": 1,
-              "nextRunAt": 1,
-              "priority": -1,
-              "lockedAt": 1,
-              "disabled": 1
+            key: {
+              name: 1,
+              nextRunAt: 1,
+              priority: -1,
+              lockedAt: 1,
+              disabled: 1,
             },
-            "name": "findAndLockNextJobIndex",
+            name: "findAndLockNextJobIndex",
           };
 
-          const index = indexes.find(index => index.name === expectedIndex.name);
+          const index = indexes.find(
+            (index) => index.name === expectedIndex.name
+          );
 
           expect(index).to.not.be(null);
           expect(index.key).to.eql(expectedIndex.key);
-
         } finally {
           await agenda2._mdb.dropCollection(collectionName);
           await agenda2.stop();
@@ -263,8 +264,8 @@ describe("Agenda", () => {
         }
       });
 
-      it('should not create index when auto index is disabled', async () => {
-        const collectionName = 'agenda_index_test';
+      it("should not create index when auto index is disabled", async () => {
+        const collectionName = "agenda_index_test";
 
         const agenda2 = new Agenda({
           db: {
@@ -281,11 +282,13 @@ describe("Agenda", () => {
         try {
           // We need an operation on the collection to trigger its creation before we can access the indexes method.
           // Current implementation of mmongodb driver throws an error as it query the indexes from the namespace which is de-coupled from the collection object itself.
-          await collection.insertOne({ name: 'test-job' });
+          await collection.insertOne({ name: "test-job" });
 
           const indexes = await collection.indexes();
 
-          const index = indexes.find(index => index.name === "findAndLockNextJobIndex");
+          const index = indexes.find(
+            (index) => index.name === "findAndLockNextJobIndex"
+          );
 
           expect(index).to.be(undefined);
           expect(indexes.length).to.be(1);
@@ -296,8 +299,8 @@ describe("Agenda", () => {
         }
       });
 
-      it('should create an index when auto index is enabled', async () => {
-        const collectionName = 'agenda_index_test';
+      it("should create an index when auto index is enabled", async () => {
+        const collectionName = "agenda_index_test";
 
         const agenda2 = new Agenda({
           db: {
@@ -314,18 +317,20 @@ describe("Agenda", () => {
         try {
           // We need an operation on the collection to trigger its creation before we can access the indexes method.
           // Current implementation of mmongodb driver throws an error as it query the indexes from the namespace which is de-coupled from the collection object itself.
-          await collection.insertOne({ name: 'test-job' });
+          await collection.insertOne({ name: "test-job" });
 
           const indexes = await collection.indexes();
 
-          const index = indexes.find(index => index.name === "findAndLockNextJobIndex");
+          const index = indexes.find(
+            (index) => index.name === "findAndLockNextJobIndex"
+          );
 
           const expectedIndex = {
-            "name": 1,
-            "nextRunAt": 1,
-            "priority": -1,
-            "lockedAt": 1,
-            "disabled": 1
+            name: 1,
+            nextRunAt: 1,
+            priority: -1,
+            lockedAt: 1,
+            disabled: 1,
           };
 
           expect(index.key).to.eql(expectedIndex);
@@ -399,8 +404,15 @@ describe("Agenda", () => {
         );
       });
       it("takes shouldSaveResult option for the job", () => {
-        agenda.define("savedResultJob", { shouldSaveResult: true }, jobProcessor);
-        expect(agenda._definitions.savedResultJob).to.have.property("shouldSaveResult", true);
+        agenda.define(
+          "savedResultJob",
+          { shouldSaveResult: true },
+          jobProcessor
+        );
+        expect(agenda._definitions.savedResultJob).to.have.property(
+          "shouldSaveResult",
+          true
+        );
       });
     });
 
@@ -547,18 +559,14 @@ describe("Agenda", () => {
             job2.attrs.nextRunAt.toISOString()
           );
 
-          mongoDb
+          const jobs = await mongoDb
             .collection("agendaJobs")
             .find({
               name: "unique job",
             })
-            .toArray((error, jobs) => {
-              if (error) {
-                throw error;
-              }
+            .toArray();
 
-              expect(jobs).to.have.length(1);
-            });
+          expect(jobs).to.have.length(1);
         });
 
         it("should not modify job when unique matches and insertOnly is set to true", async () => {
