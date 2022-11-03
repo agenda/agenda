@@ -559,8 +559,7 @@ describe("Agenda", () => {
             job2.attrs.nextRunAt.toISOString()
           );
 
-          const jobs = await mongoDb
-            .collection("agendaJobs")
+          const jobs = await agenda._collection
             .find({
               name: "unique job",
             })
@@ -610,8 +609,7 @@ describe("Agenda", () => {
             job2.attrs.nextRunAt.toISOString()
           );
 
-          mongoDb
-            .collection("agendaJobs")
+          agenda._collection
             .find({
               name: "unique job",
             })
@@ -658,8 +656,7 @@ describe("Agenda", () => {
             .schedule(time)
             .save();
 
-          mongoDb
-            .collection("agendaJobs")
+          agenda._collection
             .find({
               name: "unique job",
             })
