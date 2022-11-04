@@ -50,8 +50,8 @@ describe("find-and-lock-next-job", () => {
   });
 
   it("should find jobs without lockedAt property", async () => {
-    const collection = await mongoDb.collection("agendaJobs");
     const job = await agenda.create(jobType, {}).save();
+    const collection = agenda._collection;
     expect(job.attrs.lockedAt).to.equal(undefined);
     // The above line does not add `lockedAt` to DB. Nevertheless, let's delete it just in case.
     const { lastErrorObject } = await collection.findOneAndUpdate(
@@ -77,7 +77,7 @@ describe("find-and-lock-next-job", () => {
   });
 
   it("should find and rerun stuck jobs (with long ago lockedAt property)", async () => {
-    const collection = await mongoDb.collection("agendaJobs");
+    const collection = agenda._collection;
     const job = await agenda.create(jobType, {}).save();
     expect(job.attrs.lockedAt).to.equal(undefined);
     // The above line does not add `lockedAt` to DB. The below simulates a stuck job.
