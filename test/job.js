@@ -238,20 +238,21 @@ describe("Job", () => {
 
     describe("interval with startDate, endDate, skipDates", () => {
       it("sets interval with startDate in future", () => {
-        const futureDate = moment().add(7, "days");
-        const expectedFirstRunDate = moment().add(8, "days");
+        const futureDate = moment.utc().add(7, "days");
+        const expectedFirstRunDate = moment.utc().add(8, "days");
         expectedFirstRunDate.set({
           hour: 0,
           minute: 0,
           second: 0,
           millisecond: 0,
         });
-        job.repeatEvery("0 0 * * *", {
+        job.repeatEvery("0 0 * * *", { // Daily at midnight UTC
           startDate: futureDate.toDate(),
-        }); // Daily at midnight
+          timezone: "UTC", // This unit test fails in Australia if you comment out this line of code.
+        });
         job.computeNextRunAt();
-        expect(job.attrs.nextRunAt.getTime()).to.be(
-          expectedFirstRunDate.toDate().getTime()
+        expect(job.attrs.nextRunAt.toString()).to.equal(
+          expectedFirstRunDate.toDate().toString()
         );
       });
 
