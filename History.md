@@ -2,6 +2,14 @@
 
 _Contributions welcome!_ https://github.com/agenda/agenda/pulls
 
+  # [5.0.0](https://github.com/agenda/agenda/releases/tag/v5.0.0) / 2022-11-07
+
+## BREAKING
+
+- MongoDB 3.4 and 3.6 are not supported anymore. Only MongoDB v4.0 and above are supported.
+
+Otherwise, all the changes are minor: https://github.com/agenda/agenda/releases/tag/v5.0.0
+
   # [4.4.0](https://github.com/agenda/agenda/releases/tag/v4.4.0) / 2022-10-19
 
 - Feat: Add `drain()` method for graceful process shutdowns ([#1488](https://github.com/agenda/agenda/pull/1488)) thanks @nmehmedrnd
