@@ -45,10 +45,6 @@ _Kudos for making the comparison chart goes to [Bull](https://www.npmjs.com/pack
 
 # Installation
 
-### Notice
-
-In order to support new MongoDB 5.0 and mongodb node.js driver/package the next release (5.x.x) of Agenda will be major. The required node version will become >=12. The mongodb dependency version will become >=3.2.
-
 Install via NPM
 
     npm install agenda
