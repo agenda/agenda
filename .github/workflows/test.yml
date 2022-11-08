@@ -7,7 +7,7 @@ jobs:
     strategy:
       matrix:
         node-version: [14, 16, 18]
-        mongodb-version: [4.0, 4.2, 4.4, 5.0, 6.0]
+        mongodb-version: [3.6, 4.4, 5.0]
     steps:
       - name: Git checkout
         uses: actions/checkout@v2
@@ -29,21 +29,25 @@ jobs:
         with:
           # npm cache files are stored in `~/.npm` on Linux/macOS
           path: ~/.npm
-          key: ${{ runner.os }}-build-agenda-${{ hashFiles('**/yarn.lock') }}
+          key: ${{ runner.os }}-build-agenda-${{ hashFiles('**/package-lock.lock') }}
           restore-keys: |
             ${{ runner.os }}-build-agenda-
 
+      - name: Update npm
+        run: npm -g install npm@latest
+
       - name: Install Packages
-        run: yarn install
+        run: npm install
 
       - name: Run Lint
-        run: yarn lint
+        run: npm run lint
 
-      - name: Test
-        run: yarn test
+      - name: Build
+        run: npm run build
         env:
           CI: true
 
-      - name: Docs
-        run: yarn docs
-
+      - name: Test
+        run: npm run test
+        env:
+          CI: true
