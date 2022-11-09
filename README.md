@@ -1,6 +1,4 @@
-# AgendaTS
-
-(full typed version of agendaJS)
+# Agenda
 
 <p align="center">
   <img src="https://cdn.jsdelivr.net/gh/hokify/agenda@master/agendats.png" alt="Agenda TS" width="100" height="100">
@@ -51,24 +49,24 @@ db.agendaJobs.ensureIndex({
 Since there are a few job queue solutions, here a table comparing them to help you use the one that
 better suits your needs.
 
-| Feature                    |      Bull       |   Bee    | Agenda | AgendaTS |
-| :------------------------- | :-------------: | :------: | :----: | :------: |
-| Backend                    |      redis      |  redis   | mongo  |  mongo   |
-| Priorities                 |        ✓        |          |   ✓    |    ✓     |
-| Concurrency                |        ✓        |    ✓     |   ✓    |    ✓     |
-| Delayed jobs               |        ✓        |          |   ✓    |    ✓     |
-| Global events              |        ✓        |          |        |    ✓     |
-| Rate Limiter               |        ✓        |          |        |          |
-| Pause/Resume               |        ✓        |          |        |    ✓     |
-| Sandboxed worker           |        ✓        |          |        |    ✓     |
-| Repeatable jobs            |        ✓        |          |   ✓    |    ✓     |
-| Atomic ops                 |        ✓        |    ✓     |        |    ~     |
-| Persistence                |        ✓        |    ✓     |   ✓    |    ✓     |
-| UI                         |        ✓        |          |   ✓    |    ✓     |
-| REST API                   |                 |          |   ✓    |    ✓     |
-| Central (Scalable) Queue   |                 |          |        |    ✓     |
-| Supports long running jobs |                 |          |        |    ✓     |
-| Optimized for              | Jobs / Messages | Messages |  Jobs  |   Jobs   |
+| Feature                    |      Bull       |   Bee    | Agenda |
+| :------------------------- | :-------------: | :------: | :----: |
+| Backend                    |      redis      |  redis   | mongo  |
+| Priorities                 |        ✓        |          |   ✓    |
+| Concurrency                |        ✓        |    ✓     |   ✓    |
+| Delayed jobs               |        ✓        |          |   ✓    |
+| Global events              |        ✓        |          |   ✓    |
+| Rate Limiter               |        ✓        |          |        |
+| Pause/Resume               |        ✓        |          |   ✓    |
+| Sandboxed worker           |        ✓        |          |   ✓    |
+| Repeatable jobs            |        ✓        |          |   ✓    |
+| Atomic ops                 |        ✓        |    ✓     |   ~    |
+| Persistence                |        ✓        |    ✓     |   ✓    |
+| UI                         |        ✓        |          |   ✓    |
+| REST API                   |                 |          |   ✓    |
+| Central (Scalable) Queue   |                 |          |   ✓    |
+| Supports long running jobs |                 |          |   ✓    |
+| Optimized for              | Jobs / Messages | Messages |  Jobs  |
 
 _Kudos for making the comparison chart goes to [Bull](https://www.npmjs.com/package/bull#feature-comparison) maintainers._
 
@@ -197,7 +195,7 @@ Possible agenda config options:
 		collection: string;
 		address: string;
 		options: MongoClientOptions;
-	};
+	}
 	mongo: Db;
 }
 ```
