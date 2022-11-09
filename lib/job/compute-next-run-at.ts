@@ -18,7 +18,7 @@ export const computeNextRunAt = function (this: Job): Job {
   const timezone = this.attrs.repeatTimezone;
   const { repeatAt } = this.attrs;
   const previousNextRunAt = this.attrs.nextRunAt || new Date();
-  this.attrs.nextRunAt = undefined;
+  this.attrs.nextRunAt = null;
 
   const dateForTimezone = (date: Date): moment.Moment => {
     const mdate: moment.Moment = moment(date);
