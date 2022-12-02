@@ -1,0 +1,13 @@
+{
+	"diff": true,
+	"spec": "./test/*.test.ts",
+	"require": ["ts-node/register", "source-map-support/register"],
+	"extension": ["js", "ts"],
+	"package": "./package.json",
+	"recursive": true,
+	"reporter": "spec",
+	"slow": 75,
+	"timeout": 25000,
+	"ui": "bdd",
+	"exit": true
+}
