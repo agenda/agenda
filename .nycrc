@@ -1,0 +1,19 @@
+{
+	"extends": "@istanbuljs/nyc-config-typescript",
+	"all": false,
+	"include": [
+		"src"
+	],
+	"exclude": [
+		".eslintrc.js",
+		"index.js",
+		"docs",
+		"coverage",
+		"test"
+	],
+	"reporter": [
+		"text",
+		"lcov",
+		"text-summary"
+	]
+}
