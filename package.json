@@ -55,7 +55,7 @@
     "date.js": "~0.3.3",
     "debug": "~4.3.4",
     "human-interval": "~2.0.1",
-    "luxon": "^3.0.1",
+    "luxon": "^3.2.1",
     "mongodb": "^4.8.1"
   },
   "devDependencies": {
