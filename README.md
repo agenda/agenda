@@ -50,7 +50,7 @@ db.agendaJobs.ensureIndex({
 Since there are a few job queue solutions, here a table comparing them to help you use the one that
 better suits your needs.
 
-| Feature                    |      Bull       |   Bee    | Agenda |
+| Feature                    |      Bull       |   Bree    | Agenda |
 | :------------------------- | :-------------: | :------: | :----: |
 | Backend                    |      redis      |  redis   | mongo  |
 | Priorities                 |        ✓        |          |   ✓    |
