@@ -170,9 +170,9 @@ All configuration methods are chainable, meaning you can do something like:
 ```js
 const agenda = new Agenda();
 agenda
-  .database(...)
   .processEvery('3 minutes')
-  ...;
+  ...
+  .database(...); // Call it last because it returns a promise.
 ```
 
 Possible agenda config options:
