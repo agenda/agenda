@@ -566,6 +566,105 @@ describe('Agenda', () => {
 		});
 	});
 
+  describe('disable', () => {
+    beforeEach(async() => {
+      await Promise.all([
+        globalAgenda.create('sendEmail', {to: 'some guy'}).schedule('1 minute').save(),
+        globalAgenda.create('sendEmail', {from: 'some guy'}).schedule('1 minute').save(),
+        globalAgenda.create('some job').schedule('30 seconds').save()
+      ]);
+    });
+
+    it('disables all jobs', async() => {
+      const ct = await globalAgenda.disable({});
+
+      expect(ct).to.be(3);
+      const disabledJobs = await globalAgenda.jobs({});
+
+      expect(disabledJobs).to.have.length(3);
+      disabledJobs.map(x => expect(x.attrs.disabled).to.be(true));
+    });
+
+    it('disables jobs when queried by name', async() => {
+      const ct = await globalAgenda.disable({name: 'sendEmail'});
+
+      expect(ct).to.be(2);
+      const disabledJobs = await globalAgenda.jobs({name: 'sendEmail'});
+
+      expect(disabledJobs).to.have.length(2);
+      disabledJobs.map(x => expect(x.attrs.disabled).to.be(true));
+    });
+
+    it('disables jobs when queried by data', async() => {
+      const ct = await globalAgenda.disable({'data.from': 'some guy'});
+
+      expect(ct).to.be(1);
+      const disabledJobs = await globalAgenda.jobs({'data.from': 'some guy', disabled: true});
+
+      expect(disabledJobs).to.have.length(1);
+    });
+
+    it('does not modify `nextRunAt`', async() => {
+      const js = await globalAgenda.jobs({name: 'some job'});
+      const ct = await globalAgenda.disable({name: 'some job'});
+
+      expect(ct).to.be(1);
+      const disabledJobs = await globalAgenda.jobs({name: 'some job', disabled: true});
+
+      expect(disabledJobs[0].attrs.nextRunAt.toString()).to.be(js[0].attrs.nextRunAt.toString());
+    });
+  });
+
+  describe('enable', () => {
+    beforeEach(async() => {
+      await Promise.all([
+        globalAgenda.create('sendEmail', {to: 'some guy'}).schedule('1 minute').save(),
+        globalAgenda.create('sendEmail', {from: 'some guy'}).schedule('1 minute').save(),
+        globalAgenda.create('some job').schedule('30 seconds').save()
+      ]);
+    });
+
+    it('enables all jobs', async() => {
+      const ct = await globalAgenda.enable({});
+
+      expect(ct).to.be(3);
+      const enabledJobs = await globalAgenda.jobs({});
+
+      expect(enabledJobs).to.have.length(3);
+      enabledJobs.map(x => expect(x.attrs.disabled).to.be(false));
+    });
+
+    it('enables jobs when queried by name', async() => {
+      const ct = await globalAgenda.enable({name: 'sendEmail'});
+
+      expect(ct).to.be(2);
+      const enabledJobs = await globalAgenda.jobs({name: 'sendEmail'});
+
+      expect(enabledJobs).to.have.length(2);
+      enabledJobs.map(x => expect(x.attrs.disabled).to.be(false));
+    });
+
+    it('enables jobs when queried by data', async() => {
+      const ct = await globalAgenda.enable({'data.from': 'some guy'});
+
+      expect(ct).to.be(1);
+      const enabledJobs = await globalAgenda.jobs({'data.from': 'some guy', disabled: false});
+
+      expect(enabledJobs).to.have.length(1);
+    });
+
+    it('does not modify `nextRunAt`', async() => {
+      const js = await globalAgenda.jobs({name: 'some job'});
+      const ct = await globalAgenda.enable({name: 'some job'});
+
+      expect(ct).to.be(1);
+      const enabledJobs = await globalAgenda.jobs({name: 'some job', disabled: false});
+
+      expect(enabledJobs[0].attrs.nextRunAt.toString()).to.be(js[0].attrs.nextRunAt.toString());
+    });
+  });
+
+
 	describe('search', () => {
 		beforeEach(async () => {
 			await globalAgenda.create('jobA', 1).save();
