@@ -209,20 +209,15 @@ export class Agenda extends EventEmitter {
  */
 async disable (
   this: Agenda,
-  query: Filter<IJobParameters> = {}
+  query: Filter<IJobParameters>
 ): Promise<number> {
-  debug("attempting to disable all jobs matching query", query);
+  log('attempting to disable all jobs matching query: %o', query);
   try {
-    const { modifiedCount, matchedCount } = await this.db.collection.updateMany(query, {
-      $set: { disabled: true },
-    });
-    debug(`${modifiedCount} jobs disabled`);
-    if(matchedCount !== modifiedCount) {
-      debug(`WARN: ${matchedCount} jobs matched query but ${modifiedCount} were modified`);
-    }
+    const modifiedCount = await this.db.setJobsDisabled(query, true);
+    log(`${modifiedCount} jobs disabled`);
     return modifiedCount;
   } catch (error) {
-    debug("error trying to mark jobs as `disabled`");
+    log('error trying to mark jobs as `disabled`');
     throw error;
   }
 };
@@ -239,18 +234,13 @@ async enable (
   this: Agenda,
   query:  Filter<IJobParameters> = {}
 ): Promise<number> {
-  debug("attempting to enable all jobs matching query %o", query);
+  log('attempting to enable all jobs matching query %o', query);
   try {
-    const { modifiedCount, matchedCount } = await this.db.collection.updateMany(query, {
-      $set: { disabled: false },
-    }) as UpdateResult;
-    debug(`${modifiedCount} jobs enabled`);
-    if(matchedCount !== modifiedCount) {
-      debug(`WARN: ${matchedCount} jobs matched query but ${modifiedCount} were modified`);
-    }
+    const modifiedCount = await this.db.setJobsDisabled(query, false);
+    log(`${modifiedCount} jobs enabled`);
     return modifiedCount;
   } catch (error) {
-    debug("error trying to mark jobs as `enabled`");
+    log('error trying to mark jobs as `enabled`');
     throw error;
   }
 };

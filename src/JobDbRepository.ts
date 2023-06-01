@@ -88,10 +88,18 @@ export class JobDbRepository {
 	 * Internal method to unlock jobs so that they can be re-run
 	 */
 	async unlockJobs(jobIds: ObjectId[]): Promise<void> {
-		await this.collection.updateMany(
+		await this.updateMany(
 			{ _id: { $in: jobIds }, nextRunAt: { $ne: null } },
 			{ $unset: { lockedAt: true } }
 		);
+	}
+
+	/**
+	 * Internal method to toggle the `disabled` flag on jobs in the DB
+	 */
+	async setJobsDisabled(query: Filter<IJobParameters>, disabled: boolean): Promise<number> {
+		const result = await this.updateMany(query, { $set: { disabled }});
+		return result || 0;
 	}
 
 	async lockJob(job: JobWithId): Promise<IJobParameters | undefined> {
@@ -396,5 +404,26 @@ export class JobDbRepository {
 			log('processDbResult() received an error, job was not updated/created');
 			throw error;
 		}
+	}
+
+	/**
+	 * Internal method used to update multiple jobs with one call
+	 * @name JobDbRepository#updateMany
+	 * @function
+	 * @returns {Promise} the number of jobs updated in the DB
+	 */
+	private async updateMany(
+		query: Filter<IJobParameters>,
+		update: UpdateFilter<IJobParameters>
+	): Promise<number> {
+		const { modifiedCount, matchedCount } = await this.collection.updateMany(
+			query,
+			update
+		);
+		if(matchedCount !== modifiedCount) {
+		  log(`WARN: ${matchedCount} jobs matched query but ${modifiedCount} were modified`);
+		}
+
+		return modifiedCount;
 	}
 }
