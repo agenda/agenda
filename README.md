@@ -16,7 +16,7 @@ it differs from the original version in following points:
 - Supports mongoDB sharding by name
 - touch() can have an optional progress parameter (0-100)
 - Bugfixes and improvements for locking & job processing (concurrency, lockLimit,..)
-- Breaking change: define() config paramter moved from 2nd position to 3rd
+- Breaking change: define() config parameter moved from 2nd position to 3rd
 - getRunningStats()
 - automatically waits for agenda to be connected before calling any database operations
 - uses a database abstraction layer behind the scene
@@ -35,7 +35,7 @@ db.agendaJobs.ensureIndex({
 
 # Agenda offers
 
-- Minimal overhead. Agenda aims to keep its code base small.
+- Minimal overhead. Agenda aims to keep it's code base small.
 - Mongo backed persistence layer.
 - Promises based API.
 - Scheduling with configurable priority, concurrency, repeating and persistence of job results.
@@ -375,7 +375,7 @@ By default it is `{ nextRunAt: 1, priority: -1 }`, which obeys a first in first 
 ### disableAutoIndex(boolean)
 
 Optional. Disables the automatic creation of the default index on the jobs table.
-By default, Agenda creates an index to optimize its queries against Mongo while processing jobs.
+By default, Agenda creates an index to optimize it's queries against Mongo while processing jobs.
 
 This is useful if you want to use your own index in specific use-cases.
 
@@ -394,7 +394,7 @@ await agenda.start();
 
 ## Defining Job Processors
 
-Before you can use a job, you must define its processing behavior.
+Before you can use a job, you must define it's processing behavior.
 
 ### define(jobName, fn, [options])
 
@@ -908,7 +908,7 @@ Agenda itself does not have a web interface built in but we do offer stand-alone
 ### Mongo vs Redis
 
 The decision to use Mongo instead of Redis is intentional. Redis is often used for
-non-essential data (such as sessions) and without configuration doesn't
+non-essential data (such as sessions) and without proper configuration doesn't
 guarantee the same level of persistence as Mongo (should the server need to be
 restarted/crash).
 
