@@ -1148,7 +1148,13 @@ be extremely useful in debugging certain issues and is encouraged.
 
 #### "Multiple order-by items are not supported. Please specify a single order-by item."
 
-When running Agenda on Azure cosmosDB, you might run into this issue caused by Agenda's sort query used for finding and locking the next job. To fix this, you can pass [custom sort option](#sortquery): `sort: { nextRunAt: 1 }`
+When running Agenda on Azure CosmosDB, you might run into an issue caused by the Agenda sort query used for finding and locking the next job. 
+
+To fix this:
+1. Create an index on the agendaJobs collection for sorting by nextRunAt and priority.  
+`db.collection('agendaJobs').createIndex({ nextRunAt: 1, priority: -1 }, { name: 'findAndLockNextJobIndex_sort' })`
+2. Pass [custom sort option](#sortquery).  For example: 
+`agenda.sort({ nextRunAt: 1, priority: -1 }).start()`
 
 # Performance
 
