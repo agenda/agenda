@@ -353,7 +353,7 @@ export class Job<DATA = unknown | void> {
 	}
 
 	async run(): Promise<void> {
-		this.attrs.lastRunAt = new Date();
+		this.attrs.lastRunAt = this.attrs.nextRunAt || new Date();
 		log(
 			'[%s:%s] setting lastRunAt to: %s',
 			this.attrs.name,

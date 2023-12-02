@@ -24,7 +24,7 @@ export const computeFromInterval = (attrs: IJobParameters<any>): Date => {
 	const previousNextRunAt = attrs.nextRunAt || new Date();
 	log('[%s:%s] computing next run via interval [%s]', attrs.name, attrs._id, attrs.repeatInterval);
 
-	const lastRun = dateForTimezone(attrs.lastRunAt || new Date(), attrs.repeatTimezone);
+	const lastRun = dateForTimezone(attrs.lastRunAt || attrs.data.startTime || new Date(), attrs.repeatTimezone);
 
 	const cronOptions = {
 		currentDate: lastRun.toJSDate(),
@@ -86,7 +86,7 @@ export const computeFromInterval = (attrs: IJobParameters<any>): Date => {
  * @returns {undefined}
  */
 export function computeFromRepeatAt(attrs: IJobParameters<any>): Date {
-	const lastRun = attrs.lastRunAt || new Date();
+	const lastRun = attrs.lastRunAt || attrs.data.startTime || new Date();
 	const nextDate = date(attrs.repeatAt).valueOf();
 
 	// If you do not specify offset date for below test it will fail for ms
