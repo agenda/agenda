@@ -75,7 +75,7 @@ _Kudos for making the comparison chart goes to [Bull](https://www.npmjs.com/pack
 
 Install via NPM
 
-    npm install @hokify/agenda
+    npm install agenda
 
 You will also need a working [Mongo](https://www.mongodb.com/) database (v4+) to point it to.
 
