@@ -1,0 +1,16 @@
+name: Validate semantic release title
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+jobs:
+  validate-semantic-release-title:
+    runs-on: ubuntu-latest
+    name: Validate semantic release title
+    steps:
+      - uses: deepakputhraya/action-pr-title@master
+        with:
+          regex: '^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test):\s.*$'
+          prefix_case_sensitive: true # title prefix are case insensitive
+          min_length: 10 # Min length of the title
+          github_token: ${{ github.token }} # Default: ${{ github.token }}

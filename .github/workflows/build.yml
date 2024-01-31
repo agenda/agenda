@@ -1,9 +1,9 @@
-name: Test
+name: Build
 on: [push, pull_request, workflow_dispatch]
 
 jobs:
   build:
-    name: Test on Node.js ${{ matrix.node-version }} and MongoDB ${{ matrix.mongodb-version }}
+    name: Build on Node.js ${{ matrix.node-version }} and MongoDB ${{ matrix.mongodb-version }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -34,13 +34,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-build-agenda-
 
-      - name: Update npm
-        run: npm -g install npm@latest
-
       - name: Install Packages
         run: npm install
 
-      - name: Test
-        run: npm run test
+      - name: Build
+        run: npm run build
         env:
           CI: true

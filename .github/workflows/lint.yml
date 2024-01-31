@@ -1,9 +1,9 @@
-name: Test
+name: Lint
 on: [push, pull_request, workflow_dispatch]
 
 jobs:
   build:
-    name: Test on Node.js ${{ matrix.node-version }} and MongoDB ${{ matrix.mongodb-version }}
+    name: Lint on Node.js ${{ matrix.node-version }} and MongoDB ${{ matrix.mongodb-version }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -40,7 +40,5 @@ jobs:
       - name: Install Packages
         run: npm install
 
-      - name: Test
-        run: npm run test
-        env:
-          CI: true
+      - name: Run Lint
+        run: npm run lint
