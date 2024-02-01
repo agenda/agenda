@@ -3,6 +3,7 @@ import { Agenda } from ".";
 import { Job } from "../job";
 import { createJob } from "../utils";
 
+
 /**
  * Finds all jobs matching 'query'
  * @name Agenda#jobs
@@ -13,19 +14,19 @@ import { createJob } from "../utils";
  * @param [number] of documents to skip in MongoDB
  * @returns resolves when fails or passes
  */
-export const jobs = async function (
-  this: Agenda,
-  query: Filter<any> = {},
-  sort = {},
-  limit = 0,
-  skip = 0
+export async function jobs(
+    this: Agenda,
+    query: Filter<any> = {},
+    sort = {},
+    limit = 0,
+    skip = 0
 ): Promise<Job[]> {
-  const result = await this._collection
-    .find(query) // eslint-disable-line
-    .sort(sort)
-    .limit(limit)
-    .skip(skip)
-    .toArray();
+    const result = await this._collection
+        .find(query) // eslint-disable-line
+        .sort(sort)
+        .limit(limit)
+        .skip(skip)
+        .toArray();
 
-  return result.map((job: any) => createJob(this, job));
-};
+    return result.map((job: any) => createJob(this, job));
+}

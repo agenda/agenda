@@ -34,30 +34,27 @@ export const database = function (
 
   collection = collection || "agendaJobs";
 
-  MongoClient.connect(url, options, (error, client) => {
-    if (error) {
-      debug("error connecting to MongoDB using collection: [%s]", collection);
-      if (cb) {
-        cb(error, null);
-      } else {
-        throw error;
-      }
+    MongoClient.connect(url, options).then((client) => {
+        debug(
+            "successful connection to MongoDB using collection: [%s]",
+            collection
+        );
 
-      return;
-    }
+        if (client) {
+            this._db = client;
+            this._mdb = client.db();
+            this.db_init(collection, cb);
+        } else {
+            throw new Error("Mongo Client is undefined");
+        }
+        }).catch((error) => {
 
-    debug(
-      "successful connection to MongoDB using collection: [%s]",
-      collection
-    );
-
-    if (client) {
-      this._db = client;
-      this._mdb = client.db();
-      this.db_init(collection, cb);
-    } else {
-      throw new Error("Mongo Client is undefined");
-    }
-  });
+        debug("error connecting to MongoDB using collection: [%s]", collection);
+        if (cb) {
+            cb(error, null);
+        } else {
+            throw error;
+        }
+    });
   return this;
 };

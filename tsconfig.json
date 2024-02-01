@@ -1,7 +1,7 @@
 {
 	"compilerOptions": {
 		"outDir": "./dist",
-		"rootDir": "./src",
+		"rootDir": "./lib",
 
 		// target settings for node 10
 		"module": "commonjs",
@@ -12,6 +12,7 @@
 		// other best practice configs
 		"moduleResolution": "node",
 		"strict": true,
+        "esModuleInterop": true,
 		"noImplicitAny": false, // <-- get rid of this!
 		"removeComments": false, // <-- do not remove comments (needed for @deprecated notices etc)
 		"emitDecoratorMetadata": true,
@@ -24,5 +25,5 @@
 		"declaration": true
 	},
 	"exclude": ["node_modules", "**/__tests__"],
-	"include": ["./src"]
+	"include": ["./lib"]
 }

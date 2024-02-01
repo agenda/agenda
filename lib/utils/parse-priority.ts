@@ -1,37 +1,38 @@
 import { JobPriority } from "../agenda/define";
 
+
 /**
  * Internal method to turn priority into a number
  * @param priority string to parse into number
  */
-export const parsePriority = (priority: string | number): number => {
-  if (typeof priority === "number") {
-    return priority;
-  }
-
-  switch (priority) {
-    case "lowest": {
-      return JobPriority.lowest;
+export function parsePriority(priority: string | number): number {
+    if (typeof priority === 'number') {
+        return priority;
     }
 
-    case "low": {
-      return JobPriority.low;
-    }
+    switch (priority) {
+        case 'lowest': {
+            return JobPriority.lowest;
+        }
 
-    case "normal": {
-      return JobPriority.normal;
-    }
+        case 'low': {
+            return JobPriority.low;
+        }
 
-    case "high": {
-      return JobPriority.high;
-    }
+        case 'normal': {
+            return JobPriority.normal;
+        }
 
-    case "highest": {
-      return JobPriority.highest;
-    }
+        case 'high': {
+            return JobPriority.high;
+        }
 
-    default: {
-      return JobPriority.normal;
+        case 'highest': {
+            return JobPriority.highest;
+        }
+
+        default: {
+            return JobPriority.normal;
+        }
     }
-  }
-};
+}

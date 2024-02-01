@@ -7,8 +7,8 @@ const moment = require("moment-timezone");
 const { MongoClient } = require("mongodb");
 const delay = require("delay");
 const sinon = require("sinon");
-const { Job } = require("../dist/job");
-const { Agenda } = require("../dist");
+const { Job } = require("../lib/job");
+const { Agenda } = require("../lib");
 const getMongoCfg = require("./fixtures/mongo-connector");
 
 let mongoCfg;

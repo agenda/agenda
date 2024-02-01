@@ -76,4 +76,4 @@ export function schedule<T extends JobAttributesData> (
   }
 
   throw new TypeError("Name must be string or array of strings")
-};
+}

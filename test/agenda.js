@@ -3,9 +3,9 @@
 const expect = require("expect.js");
 const { MongoClient } = require("mongodb");
 const delay = require("delay");
-const { Job } = require("../dist/job");
-const { hasMongoProtocol } = require("../dist/agenda/has-mongo-protocol");
-const { Agenda } = require("../dist");
+const { Job } = require("../lib/job");
+const { hasMongoProtocol } = require("../lib/agenda/has-mongo-protocol");
+const { Agenda } = require("../lib");
 const debug = require("debug")("agenda:test");
 
 const getMongoCfg = require("./fixtures/mongo-connector");

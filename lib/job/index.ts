@@ -1,23 +1,23 @@
-import { toJson } from "./to-json";
-import { computeNextRunAt } from "./compute-next-run-at";
-import { repeatEvery } from "./repeat-every";
-import { repeatAt } from "./repeat-at";
-import { disable } from "./disable";
-import { enable } from "./enable";
-import { unique } from "./unique";
-import { schedule } from "./schedule";
-import { priority } from "./priority";
-import { fail } from "./fail";
-import { run } from "./run";
-import { isRunning } from "./is-running";
-import { save } from "./save";
-import { remove } from "./remove";
-import { touch } from "./touch";
-import { setShouldSaveResult } from "./set-shouldsaveresult";
-import { parsePriority } from "../utils";
-import { Agenda } from "../agenda";
-import { JobPriority } from "../agenda/define";
-import * as mongodb from "mongodb";
+import { toJson } from './to-json';
+import { computeNextRunAt } from './compute-next-run-at';
+import { repeatEvery } from './repeat-every';
+import { repeatAt } from './repeat-at';
+import { disable } from './disable';
+import { enable } from './enable';
+import { unique } from './unique';
+import { schedule } from './schedule';
+import { priority } from './priority';
+import { fail } from './fail';
+import { run } from './run';
+import { isRunning } from './is-running';
+import { save } from './save';
+import { remove } from './remove';
+import { touch } from './touch';
+import { setShouldSaveResult } from './set-shouldsaveresult';
+import { parsePriority } from '../utils';
+import { Agenda } from '../agenda';
+import { JobPriority } from '../agenda/define';
+import * as mongodb from 'mongodb';
 
 type Modify<T, R> = Omit<T, keyof R> & R
 
@@ -175,7 +175,7 @@ class Job<T extends JobAttributesData = JobAttributesData> {
     args.priority =
       args.priority === undefined
         ? JobPriority.normal
-        : parsePriority(args.priority);
+        : parsePriority(args?.priority);
 
     // Set shouldSaveResult option
     args.shouldSaveResult = args.shouldSaveResult || false
@@ -184,7 +184,6 @@ class Job<T extends JobAttributesData = JobAttributesData> {
     const attrs: any = {};
     for (const key in args) {
       if ({}.hasOwnProperty.call(args, key)) {
-        // @ts-expect-error
         attrs[key] = args[key];
       }
     }

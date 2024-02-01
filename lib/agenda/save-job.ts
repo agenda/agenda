@@ -1,8 +1,8 @@
-import createDebugger from "debug";
-import { ObjectId } from "mongodb";
-import { Agenda } from ".";
-import { Job } from "../job";
-import { processJobs } from "../utils";
+import createDebugger from 'debug';
+import { ObjectId } from 'mongodb';
+import { Agenda } from '.';
+import { Job } from '../job';
+import { processJobs } from '../utils';
 
 const debug = createDebugger("agenda:saveJob");
 
@@ -120,14 +120,14 @@ export const saveJob = async function (this: Agenda, job: Job): Promise<Job> {
         debug(
           "job has a scheduled nextRunAt time, protecting that field from upsert"
         );
-        // @ts-expect-error
+          // @ts-expect-error ignore
         protect.nextRunAt = props.nextRunAt;
         delete props.nextRunAt;
       }
 
       // If we have things to protect, set them in MongoDB using $setOnInsert
       if (Object.keys(protect).length > 0) {
-        // @ts-expect-error
+          // @ts-expect-error ignore
         update.$setOnInsert = protect;
       }
 
@@ -155,7 +155,7 @@ export const saveJob = async function (this: Agenda, job: Job): Promise<Job> {
       const query = job.attrs.unique;
       query.name = props.name;
       if (uniqueOpts?.insertOnly) {
-        // @ts-expect-error
+          // @ts-expect-error ignore
         update = { $setOnInsert: props };
       }
 

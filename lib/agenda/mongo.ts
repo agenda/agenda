@@ -1,6 +1,7 @@
 import { AnyError, Collection, Db } from "mongodb";
 import { Agenda } from ".";
 
+
 /**
  * Build method used to add MongoDB connection details
  * @name Agenda#mongo
@@ -9,13 +10,13 @@ import { Agenda } from ".";
  * @param [collection] name collection we want to use ('agendaJobs')
  * @param [cb] called when MongoDB connection fails or passes
  */
-export const mongo = function (
-  this: Agenda,
-  mdb: Db,
-  collection?: string,
-  cb?: (error: AnyError | undefined, collection: Collection<any> | null) => void
+export function mongo(
+    this: Agenda,
+    mdb: Db,
+    collection?: string,
+    cb?: (error: AnyError | undefined, collection: Collection<any> | null) => void
 ): Agenda {
-  this._mdb = mdb;
-  this.db_init(collection, cb);
-  return this;
-};
+    this._mdb = mdb;
+    this.db_init(collection, cb);
+    return this;
+}

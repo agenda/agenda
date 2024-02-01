@@ -3,7 +3,7 @@
 const expect = require("expect.js");
 const delay = require("delay");
 const { MongoClient } = require("mongodb");
-const { Agenda } = require("../dist");
+const { Agenda } = require("../lib");
 const getMongoCfg = require("./fixtures/mongo-connector");
 
 let mongoCfg;

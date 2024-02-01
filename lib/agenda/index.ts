@@ -76,7 +76,7 @@ export interface AgendaConfig {
  * @property {Map} _isJobQueueFilling - A map of jobQueues and if the 'jobQueueFilling' method is currently running for a given map. 'lockingOnTheFly' and 'jobQueueFilling' should not run concurrently for the same jobQueue. It can cause that lock limits aren't honored.
  * @property {Array} _jobsToLock
  */
-class Agenda extends EventEmitter {
+export default class Agenda extends EventEmitter {
   _defaultConcurrency: any;
   _defaultLockLifetime: any;
   _defaultLockLimit: any;
@@ -182,7 +182,7 @@ class Agenda extends EventEmitter {
       ); // @ts-expect-error // the documentation shows it should be correct: http://mongodb.github.io/node-mongodb-native/3.6/api/Db.html
       if (config.mongo.s && config.mongo.topology && config.mongo.topology.s) {
         this._mongoUseUnifiedTopology = Boolean(
-          // @ts-expect-error
+          // @ts-expect-error undocumented
           config.mongo.topology.s.options.useUnifiedTopology
         );
       }

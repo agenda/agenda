@@ -1,5 +1,6 @@
 import { Job } from ".";
 
+
 /**
  * A job is running if:
  * (lastRunAt exists AND lastFinishedAt does not exist)
@@ -9,21 +10,21 @@ import { Job } from ".";
  * @function
  * @returns Whether or not job is running at the moment (true for running)
  */
-export const isRunning = function (this: Job): boolean {
-  if (!this.attrs.lastRunAt) {
+export function isRunning(this: Job): boolean {
+    if (!this.attrs.lastRunAt) {
+        return false;
+    }
+
+    if (!this.attrs.lastFinishedAt) {
+        return true;
+    }
+
+    if (
+        this.attrs.lockedAt &&
+        this.attrs.lastRunAt.getTime() > this.attrs.lastFinishedAt.getTime()
+    ) {
+        return true;
+    }
+
     return false;
-  }
-
-  if (!this.attrs.lastFinishedAt) {
-    return true;
-  }
-
-  if (
-    this.attrs.lockedAt &&
-    this.attrs.lastRunAt.getTime() > this.attrs.lastFinishedAt.getTime()
-  ) {
-    return true;
-  }
-
-  return false;
-};
+}

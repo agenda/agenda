@@ -1,5 +1,6 @@
 import { Job } from "../job";
 
+
 /**
  * @class
  * @param {Object} args - Job Options

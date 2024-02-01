@@ -10,8 +10,8 @@ const debug = createDebugger("agenda:sort");
  * @function
  * @param query sort query object for MongoDB
  */
-export const sort = function (this: Agenda, query: any): Agenda {
-  debug("Agenda.sort([Object])");
-  this._sort = query;
-  return this;
-};
+export function sort(this: Agenda, query: any): Agenda {
+    debug('Agenda.sort([Object])');
+    this._sort = query;
+    return this;
+}

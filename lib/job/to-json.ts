@@ -1,4 +1,5 @@
-import { Job, JobAttributes } from ".";
+import { Job, JobAttributes } from '.';
+
 
 /**
  * Given a job, turn it into an object we can store in Mongo
@@ -6,31 +7,28 @@ import { Job, JobAttributes } from ".";
  * @function
  * @returns json object from Job
  */
-export const toJson = function (this: Job): Partial<JobAttributes> {
-  const attrs = this.attrs || {};
-  const result = {};
+export function toJson(this: Job): Partial<JobAttributes> {
+    const attrs = this.attrs || {};
+    const result = {};
 
-  for (const prop in attrs) {
-    if ({}.hasOwnProperty.call(attrs, prop)) {
-      // @ts-expect-error index signature missing
-      result[prop] = attrs[prop];
+    for (const prop in attrs) {
+        if ({}.hasOwnProperty.call(attrs, prop)) {
+            result[prop] = attrs[prop];
+        }
     }
-  }
 
-  const dates = [
-    "lastRunAt",
-    "lastFinishedAt",
-    "nextRunAt",
-    "failedAt",
-    "lockedAt",
-  ];
-  dates.forEach((d) => {
-    // @ts-expect-error index signature missing
-    if (result[d]) {
-      // @ts-expect-error index signature missing
-      result[d] = new Date(result[d]);
-    }
-  });
+    const dates = [
+        'lastRunAt',
+        'lastFinishedAt',
+        'nextRunAt',
+        'failedAt',
+        'lockedAt'
+    ];
+    dates.forEach((d) => {
+        if (result[d]) {
+            result[d] = new Date(result[d]);
+        }
+    });
 
-  return result;
-};
+    return result;
+}

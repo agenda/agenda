@@ -1,6 +1,6 @@
-// @ts-expect-error
-import date from "date.js";
-import { Job } from ".";
+import date from 'date.js';
+import { Job } from '.';
+
 
 /**
  * Schedules a job to run at specified time
@@ -8,8 +8,8 @@ import { Job } from ".";
  * @function
  * @param time schedule a job to run "then"
  */
-export const schedule = function (this: Job, time: string | Date): Job {
-  const d = new Date(time);
-  this.attrs.nextRunAt = Number.isNaN(d.getTime()) ? date(time) : d;
-  return this;
-};
+export function schedule(this: Job, time: string | Date): Job {
+    const d = new Date(time);
+    this.attrs.nextRunAt = Number.isNaN(d.getTime()) ? date(time) : d;
+    return this;
+}
