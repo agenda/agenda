@@ -1,4 +1,4 @@
-name: Run Docs
+name: Run Test
 on: [push, workflow_dispatch]
 
 jobs:
