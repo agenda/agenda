@@ -1,6 +1,6 @@
 {
   "name": "agenda",
-  "version": "5.0.0",
+  "version": "5.0.1",
   "description": "Light weight job scheduler for Node.js",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -56,7 +56,7 @@
     "debug": "~4.3.4",
     "human-interval": "~2.0.1",
     "luxon": "^3.2.1",
-    "mongodb": "^4.8.1"
+    "mongodb": "^6.4.0"
   },
   "devDependencies": {
     "eslint": "^8.21.0",
@@ -73,7 +73,7 @@
     "chai": "^4.3.6",
     "delay": "5.0.0",
     "mocha": "10.0.0",
-    "mongodb-memory-server": "^8.8.0",
+    "mongodb-memory-server": "^9.1.6",
     "nyc": "^15.1.0",
     "sinon": "14.0.0",
     "standard-version": "^9.5.0",
