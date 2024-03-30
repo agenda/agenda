@@ -16,7 +16,7 @@
   "scripts": {
     "release": "npm run build && standard-version",
     "prepublishOnly": "npm run build",
-    "postinstall": "npm run build",
+    "prepare": "npm run build",
     "build": "tsc",
     "test": "npm run mocha",
     "lint": "eslint src",
