@@ -133,7 +133,7 @@ export class JobDbRepository {
 		const JOB_PROCESS_WHERE_QUERY: Filter<IJobParameters /* Omit<IJobParameters, 'lockedAt'> & { lockedAt?: Date | null } */> =
 			{
 				name: jobName,
-				disabled: { $ne: true },
+				//disabled: { $ne: true },
 				$or: [
 					{
 						lockedAt: { $eq: null as any },
