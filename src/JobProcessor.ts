@@ -98,9 +98,11 @@ export class JobProcessor {
 		private maxConcurrency: number,
 		private totalLockLimit: number,
 		private processEvery: number
-	) {
-		log('creating interval to call processJobs every [%dms]', processEvery);
-		this.processInterval = setInterval(() => this.process(), processEvery);
+	) {}
+
+	start(): void {
+		log('creating interval to call processJobs every [%dms]', this.processEvery);
+		this.processInterval = setInterval(() => this.process(), this.processEvery);
 		this.process();
 	}
 

@@ -538,6 +538,7 @@ export class Agenda extends EventEmitter {
 			this.attrs.processEvery
 		);
 
+		this.jobProcessor.start();
 		this.on('processJob', this.jobProcessor.process.bind(this.jobProcessor));
 	}
 
