@@ -51,12 +51,12 @@
     "url": "https://github.com/hokify/agenda/issues"
   },
   "dependencies": {
-    "cron-parser": "^4.5.0",
+    "cron-parser": "^4.7.1",
     "date.js": "~0.3.3",
     "debug": "~4.3.4",
     "human-interval": "~2.0.1",
     "luxon": "^3.2.1",
-    "mongodb": "^4.8.1"
+    "mongodb": "^6.0.0"
   },
   "devDependencies": {
     "eslint": "^8.21.0",
