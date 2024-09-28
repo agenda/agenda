@@ -68,11 +68,14 @@ export const computeFromInterval = (attrs: IJobParameters<any>): Date => {
           const numberOfMonths = parseInt(monthsMatch[1], 10);
           const lastRunDate = new Date(lastRun.valueOf());
           const nextRunDate = new Date(lastRunDate);
-          // Add the number of months to the last run date
+          const dateOfMonth = nextRunDate.getDate()
+
           nextRunDate.setMonth(lastRunDate.getMonth() + numberOfMonths);
+          if(dateOfMonth !== nextRunDate.getDate()) {
+            nextRunDate.setDate(dateOfMonth)
+          }
           nextRunAt = nextRunDate;
         } else {
-          // Handling parsing error if the number of months isn't found
           console.error('Error parsing the number of months from repeatInterval');
           const intervalValue = humanInterval(attrs.repeatInterval) as number;
           nextRunAt = new Date(lastRun.valueOf() + intervalValue);
