@@ -60,8 +60,31 @@ export const computeFromInterval = (attrs: IJobParameters<any>): Date => {
 		if (!attrs.lastRunAt) {
 			nextRunAt = new Date(lastRun.valueOf());
 		} else {
-			const intervalValue = humanInterval(attrs.repeatInterval) as number;
-			nextRunAt = new Date(lastRun.valueOf() + intervalValue);
+      if(
+        attrs.repeatInterval.includes('month')
+      )  {
+        const monthsMatch = attrs.repeatInterval.match(/(\d+)\s*months?/);
+        if (monthsMatch) {
+          const numberOfMonths = parseInt(monthsMatch[1], 10);
+          const lastRunDate = new Date(lastRun.valueOf());
+          const nextRunDate = new Date(lastRunDate);
+          const dateOfMonth = nextRunDate.getDate()
+
+          nextRunDate.setMonth(lastRunDate.getMonth() + numberOfMonths);
+          if(dateOfMonth !== nextRunDate.getDate()) {
+            nextRunDate.setDate(dateOfMonth)
+          }
+          nextRunAt = nextRunDate;
+        } else {
+          console.error('Error parsing the number of months from repeatInterval');
+          const intervalValue = humanInterval(attrs.repeatInterval) as number;
+          nextRunAt = new Date(lastRun.valueOf() + intervalValue);
+        }
+      }
+        else {
+        const intervalValue = humanInterval(attrs.repeatInterval) as number;
+        nextRunAt = new Date(lastRun.valueOf() + intervalValue);
+      }
 		}
 	}
 
