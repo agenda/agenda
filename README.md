@@ -1180,7 +1180,7 @@ to seperate them from the main thread. For example if one process consumes too m
 it will not affect any others.
 To use this feature, several steps are required.
 1.) create a childWorker helper.
-The subrocess has a complete seperate context, so there are no database connections or anything else that can be shared.
+The subprocess has a complete seperate context, so there are no database connections or anything else that can be shared.
 Therefore you have to ensure that all required connections and initializations are done here too. Furthermore
 you also have to load the correct job definition so that agenda nows what code it must execute. Therefore 3 parameters
 are passed to the childWorker: name, jobId and path to the job definition.
