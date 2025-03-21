@@ -115,7 +115,7 @@ export class JobDbRepository {
 		const resp = await this.collection.findOneAndUpdate(
 			criteria as Filter<IJobParameters>,
 			update,
-			{ ...options, includeResultMetadata: true }
+			options
 		);
 
 		return resp?.value || undefined;
@@ -162,7 +162,7 @@ export class JobDbRepository {
 		const result = await this.collection.findOneAndUpdate(
 			JOB_PROCESS_WHERE_QUERY,
 			JOB_PROCESS_SET_QUERY,
-			{ ...JOB_RETURN_QUERY, includeResultMetadata: true }
+			JOB_RETURN_QUERY
 		);
 
 		return result.value || undefined;
@@ -313,7 +313,7 @@ export class JobDbRepository {
 				const result = await this.collection.findOneAndUpdate(
 					{ _id: id, name: props.name },
 					update,
-					{ returnDocument: 'after', includeResultMetadata: true }
+					{ returnDocument: 'after' }
 				);
 				return this.processDbResult(job, result.value as IJobParameters<DATA>);
 			}
@@ -352,8 +352,7 @@ export class JobDbRepository {
 					update,
 					{
 						upsert: true,
-						returnDocument: 'after',
-						includeResultMetadata: true
+						returnDocument: 'after'
 					}
 				);
 				log(
@@ -378,13 +377,12 @@ export class JobDbRepository {
 				log('calling findOneAndUpdate() with unique object as query: \n%O', query);
 				const result = await this.collection.findOneAndUpdate(query as IJobParameters, update, {
 					upsert: true,
-					returnDocument: 'after',
-					includeResultMetadata: true
+					returnDocument: 'after'
 				});
 				return this.processDbResult(job, result.value as IJobParameters<DATA>);
 			}
 
-			// If all else fails, the job does not exist yet, so we just insert it into MongoDB
+			// If all else fails, the job does not exist yet so we just insert it into MongoDB
 			log(
 				'using default behavior, inserting new job via insertOne() with props that were set: \n%O',
 				props
