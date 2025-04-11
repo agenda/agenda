@@ -1,6 +1,6 @@
 {
   "name": "@becodebg/agenda",
-  "version": "5.0.1",
+  "version": "5.0.3",
   "description": "Light weight job scheduler for Node.js",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
