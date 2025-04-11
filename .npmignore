@@ -5,6 +5,7 @@
 agenda.svg
 docs
 .nyc_output
+.npmrc
 coverage
 History.md
 Makefile

@@ -1,12 +1,9 @@
 {
-  "name": "agenda",
-  "version": "5.0.0",
+  "name": "@becodebg/agenda",
+  "version": "5.0.1",
   "description": "Light weight job scheduler for Node.js",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "publishConfig": {
-    "access": "public"
-  },
   "files": [
     "dist"
   ],
@@ -33,10 +30,6 @@
       "data-cover-never": "node_modules"
     }
   },
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/hokify/agenda"
-  },
   "keywords": [
     "job",
     "jobs",
@@ -45,11 +38,8 @@
     "scheduler",
     "runner"
   ],
-  "author": "Simon Tretter <simon.tretter@hokify.com>",
+  "author": "Runelab",
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/hokify/agenda/issues"
-  },
   "dependencies": {
     "cron-parser": "^4.5.0",
     "date.js": "~0.3.3",
