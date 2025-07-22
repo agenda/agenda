@@ -118,7 +118,7 @@ export class JobDbRepository {
 			options
 		);
 
-		return resp?.value || undefined;
+		return resp || undefined;
 	}
 
 	async getNextJobToRun(
@@ -165,7 +165,7 @@ export class JobDbRepository {
 			JOB_RETURN_QUERY
 		);
 
-		return result.value || undefined;
+		return result || undefined;
 	}
 
 	async connect(): Promise<void> {
@@ -315,7 +315,7 @@ export class JobDbRepository {
 					update,
 					{ returnDocument: 'after' }
 				);
-				return this.processDbResult(job, result.value as IJobParameters<DATA>);
+				return this.processDbResult(job, result as IJobParameters<DATA>);
 			}
 
 			if (props.type === 'single') {
@@ -355,14 +355,7 @@ export class JobDbRepository {
 						returnDocument: 'after'
 					}
 				);
-				log(
-					`findOneAndUpdate(${props.name}) with type "single" ${
-						result.lastErrorObject?.updatedExisting
-							? 'updated existing entry'
-							: 'inserted new entry'
-					}`
-				);
-				return this.processDbResult(job, result.value as IJobParameters<DATA>);
+				return this.processDbResult(job, result as IJobParameters<DATA>);
 			}
 
 			if (job.attrs.unique) {
@@ -379,7 +372,7 @@ export class JobDbRepository {
 					upsert: true,
 					returnDocument: 'after'
 				});
-				return this.processDbResult(job, result.value as IJobParameters<DATA>);
+				return this.processDbResult(job, result as IJobParameters<DATA>);
 			}
 
 			// If all else fails, the job does not exist yet so we just insert it into MongoDB

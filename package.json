@@ -56,11 +56,9 @@
     "debug": "~4.3.4",
     "human-interval": "~2.0.1",
     "luxon": "^3.2.1",
-    "mongodb": "^4.8.1"
+    "mongodb": "6.17"
   },
   "devDependencies": {
-    "eslint": "^8.21.0",
-    "prettier": "^2.7.1",
     "@hokify/eslint-config": "^2.3.2",
     "@istanbuljs/nyc-config-typescript": "^1.0.2",
     "@types/chai": "^4.3.1",
@@ -72,9 +70,11 @@
     "@types/sinon": "^10.0.13",
     "chai": "^4.3.6",
     "delay": "5.0.0",
+    "eslint": "^8.21.0",
     "mocha": "10.0.0",
-    "mongodb-memory-server": "^8.8.0",
+    "mongodb-memory-server": "^10.1.4",
     "nyc": "^15.1.0",
+    "prettier": "^2.7.1",
     "sinon": "14.0.0",
     "standard-version": "^9.5.0",
     "ts-node": "^10.9.1",

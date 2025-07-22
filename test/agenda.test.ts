@@ -337,18 +337,14 @@ describe('Agenda', () => {
 						job2.attrs.nextRunAt!.toISOString()
 					);
 
-					mongoDb
+					const jobs = await mongoDb
 						.collection('agendaJobs')
 						.find({
 							name: 'unique job'
 						})
-						.toArray((err, jobs) => {
-							if (err) {
-								throw err;
-							}
+						.toArray()
 
-							expect(jobs).to.have.length(1);
-						});
+					expect(jobs).to.have.length(1);
 				});
 
 				it('should not modify job when unique matches and insertOnly is set to true', async () => {
@@ -390,18 +386,13 @@ describe('Agenda', () => {
 
 					expect(job1.attrs.nextRunAt!.toISOString()).to.equal(job2.attrs.nextRunAt!.toISOString());
 
-					mongoDb
+					const jobs = await mongoDb
 						.collection('agendaJobs')
 						.find({
 							name: 'unique job'
 						})
-						.toArray((err, jobs) => {
-							if (err) {
-								throw err;
-							}
-
-							expect(jobs).to.have.length(1);
-						});
+						.toArray();
+						expect(jobs).to.have.length(1);
 				});
 			});
 
@@ -438,18 +429,13 @@ describe('Agenda', () => {
 						.schedule(time)
 						.save();
 
-					mongoDb
+					const jobs = await mongoDb
 						.collection('agendaJobs')
 						.find({
 							name: 'unique job'
 						})
-						.toArray((err, jobs) => {
-							if (err) {
-								throw err;
-							}
-
-							expect(jobs).to.have.length(2);
-						});
+						.toArray();
+						expect(jobs).to.have.length(2);
 				});
 			});
 		});
