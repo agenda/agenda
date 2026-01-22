@@ -1,4 +1,4 @@
- 
+
 import path from 'node:path';
 import cp from 'node:child_process';
 import { expect, describe, it, beforeEach, afterEach } from 'vitest';
@@ -758,7 +758,7 @@ describe('Job', () => {
 
 		it('clears locks on stop', async () => {
 			agenda.define('longRunningJob', (_job, _cb) => {
-				 
+
 				// Job never finishes
 			});
 			agenda.every('10 seconds', 'longRunningJob');
@@ -995,7 +995,7 @@ describe('Job', () => {
 
 			agenda.define('lock job', (_job, _cb) => {
 				/* this job nevers finishes */
-			});  
+			});
 
 			await agenda.start();
 
@@ -1010,11 +1010,11 @@ describe('Job', () => {
 		it('does not on-the-fly lock more mixed jobs than agenda._lockLimit jobs', async () => {
 			agenda.lockLimit(1);
 
-			agenda.define('lock job', (_job, _cb) => {});  
-			agenda.define('lock job2', (_job, _cb) => {});  
-			agenda.define('lock job3', (_job, _cb) => {});  
-			agenda.define('lock job4', (_job, _cb) => {});  
-			agenda.define('lock job5', (_job, _cb) => {});  
+			agenda.define('lock job', (_job, _cb) => {});
+			agenda.define('lock job2', (_job, _cb) => {});
+			agenda.define('lock job3', (_job, _cb) => {});
+			agenda.define('lock job4', (_job, _cb) => {});
+			agenda.define('lock job5', (_job, _cb) => {});
 
 			await agenda.start();
 
@@ -1032,7 +1032,7 @@ describe('Job', () => {
 		});
 
 		it('does not on-the-fly lock more than definition.lockLimit jobs', async () => {
-			agenda.define('lock job', (_job, _cb) => {}, { lockLimit: 1 });  
+			agenda.define('lock job', (_job, _cb) => {}, { lockLimit: 1 });
 
 			await agenda.start();
 
@@ -1046,7 +1046,7 @@ describe('Job', () => {
 			agenda.lockLimit(1);
 			agenda.processEvery(200);
 
-			agenda.define('lock job', (_job, _cb) => {});  
+			agenda.define('lock job', (_job, _cb) => {});
 
 			await agenda.start();
 
@@ -1064,7 +1064,7 @@ describe('Job', () => {
 		it('does not lock more than definition.lockLimit jobs during processing interval', async () => {
 			agenda.processEvery(200);
 
-			agenda.define('lock job', (_job, _cb) => {}, { lockLimit: 1 });  
+			agenda.define('lock job', (_job, _cb) => {}, { lockLimit: 1 });
 
 			await agenda.start();
 
@@ -1131,7 +1131,7 @@ describe('Job', () => {
 			try {
 				const results: number[] = await Promise.race([
 					checkResultsPromise,
-					 
+
 					new Promise<number[]>((_, reject) => {
 						setTimeout(() => {
 							reject(`not processed`);
@@ -1173,7 +1173,7 @@ describe('Job', () => {
 			try {
 				const results: number[] = await Promise.race([
 					checkResultsPromise,
-					 
+
 					new Promise<number[]>((_, reject) => {
 						setTimeout(() => {
 							reject(`not processed`);
@@ -1224,7 +1224,7 @@ describe('Job', () => {
 			try {
 				const { times, priorities } = await Promise.race<any>([
 					checkResultsPromise,
-					 
+
 					new Promise<any>((_, reject) => {
 						setTimeout(() => {
 							reject(`not processed`);
@@ -1269,7 +1269,7 @@ describe('Job', () => {
 			try {
 				const results = await Promise.race([
 					checkResultsPromise,
-					 
+
 					new Promise((_, reject) => {
 						setTimeout(() => {
 							reject(`not processed`);
