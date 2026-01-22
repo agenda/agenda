@@ -23,7 +23,7 @@ describe('Retry', () => {
 	beforeEach(async () => {
 		if (!mongoDb) {
 			const mockedMongo = await mockMongo();
-			mongoDb = mockedMongo.mongo.db();
+			mongoDb = mockedMongo.db;
 		}
 
 		return new Promise(resolve => {

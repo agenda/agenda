@@ -24,7 +24,7 @@ describe('JobProcessor', () => {
 		if (!mongoDb) {
 			const mockedMongo = await mockMongo();
 			// mongoCfg = mockedMongo.uri;
-			mongoDb = mockedMongo.mongo.db();
+			mongoDb = mockedMongo.db;
 		}
 
 		return new Promise(resolve => {

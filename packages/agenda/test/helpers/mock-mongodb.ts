@@ -1,28 +1,39 @@
-import { MongoMemoryServer } from 'mongodb-memory-server';
-import { MongoClient } from 'mongodb';
+import { Db, MongoClient } from 'mongodb';
 import debug from 'debug';
+import { randomUUID } from 'crypto';
 
 const log = debug('agenda:mock-mongodb');
 
 export interface IMockMongo {
-	disconnect: () => void;
+	disconnect: () => Promise<void>;
 	mongo: MongoClient;
-	mongod: MongoMemoryServer;
 	uri: string;
+	db: Db;
 }
 
 export async function mockMongo(): Promise<IMockMongo> {
-	const self: IMockMongo = {} as any;
-	self.mongod = await MongoMemoryServer.create();
-	const uri = self.mongod.getUri();
-	log('mongod started', uri);
-	self.mongo = await MongoClient.connect(uri);
-	self.disconnect = function () {
-		self.mongod.stop();
-		log('mongod stopped');
-		self.mongo.close();
-	};
-	self.uri = uri;
+	const baseUri = process.env.MONGO_URI;
+	if (!baseUri) {
+		throw new Error('MONGO_URI not set. Ensure global setup is configured.');
+	}
 
-	return self;
+	// Use unique database per test suite to avoid interference
+	const dbName = `agenda_test_${randomUUID().replace(/-/g, '')}`;
+	// Build URI with database name (ensure single slash before db name)
+	const uri = `${baseUri.replace(/\/$/, '')}/${dbName}`;
+	log('connecting to mongod with db', dbName);
+	const mongo = await MongoClient.connect(uri);
+	const db = mongo.db(dbName);
+
+	return {
+		uri,
+		db,
+		mongo,
+		disconnect: async () => {
+			// Drop the test database to clean up
+			await db.dropDatabase();
+			await mongo.close();
+			log('mongo client closed, db dropped:', dbName);
+		}
+	};
 }
