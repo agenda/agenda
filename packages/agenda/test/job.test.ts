@@ -1,7 +1,6 @@
  
 import path from 'node:path';
 import cp from 'node:child_process';
-import assert from 'node:assert';
 import { expect, describe, it, beforeEach, afterEach } from 'vitest';
 import { DateTime } from 'luxon';
 import { Db } from 'mongodb';
@@ -1574,10 +1573,8 @@ describe('Job', () => {
 		job.schedule('now');
 		await job.save();
 
-		let error: Error | undefined;
 		const errorPromise = new Promise<void>(resolve => {
-			isolatedAgenda.on('error', err => {
-				error = err;
+			isolatedAgenda.on('error', () => {
 				resolve();
 			});
 		});
