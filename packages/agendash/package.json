@@ -1,0 +1,17 @@
+{
+  "name": "@agenda/agendash",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Placeholder for Agendash dashboard integration",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "agenda": "workspace:*"
+  }
+}

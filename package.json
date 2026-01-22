@@ -1,84 +1,24 @@
 {
-  "name": "agenda",
-  "version": "5.0.0",
-  "description": "Light weight job scheduler for Node.js",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "publishConfig": {
-    "access": "public"
-  },
-  "files": [
-    "dist"
-  ],
+  "name": "agenda-monorepo",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.15.4",
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   },
   "scripts": {
-    "release": "npm run build && standard-version",
-    "prepublishOnly": "npm run build",
-    "build": "tsc",
-    "test": "npm run mocha",
-    "lint": "eslint src",
-    "lint-fix": "eslint src --fix",
-    "mocha": "mocha --reporter spec -b",
-    "mocha-coverage": "nyc mocha --reporter spec -b",
-    "mocha-debug": "DEBUG=agenda:**,-agenda:internal:** mocha --reporter spec -b",
-    "mocha-debug-internal": "DEBUG=agenda:internal:** mocha --reporter spec -b",
-    "mocha-debug-all": "DEBUG=agenda:** mocha --reporter spec -b",
-    "docs": "typedoc --out docs/agenda/6.x src/index.ts"
-  },
-  "config": {
-    "blanket": {
-      "pattern": "lib",
-      "data-cover-never": "node_modules"
-    }
-  },
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/hokify/agenda"
-  },
-  "keywords": [
-    "job",
-    "jobs",
-    "cron",
-    "delayed",
-    "scheduler",
-    "runner"
-  ],
-  "author": "Simon Tretter <simon.tretter@hokify.com>",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/hokify/agenda/issues"
-  },
-  "dependencies": {
-    "cron-parser": "^4.5.0",
-    "date.js": "~0.3.3",
-    "debug": "~4.3.4",
-    "human-interval": "~2.0.1",
-    "luxon": "^3.2.1",
-    "mongodb": "^4.8.1"
+    "build": "pnpm -r run build",
+    "test": "pnpm -r run test",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "devDependencies": {
-    "eslint": "^8.21.0",
-    "prettier": "^2.7.1",
-    "@hokify/eslint-config": "^2.3.2",
-    "@istanbuljs/nyc-config-typescript": "^1.0.2",
-    "@types/chai": "^4.3.1",
-    "@types/debug": "^4.1.7",
-    "@types/human-interval": "^1.0.0",
-    "@types/luxon": "^3.0.0",
-    "@types/mocha": "^9.1.1",
-    "@types/node": "^18.6.3",
-    "@types/sinon": "^10.0.13",
-    "chai": "^4.3.6",
-    "delay": "5.0.0",
-    "mocha": "10.0.0",
-    "mongodb-memory-server": "^8.8.0",
-    "nyc": "^15.1.0",
-    "sinon": "14.0.0",
-    "standard-version": "^9.5.0",
-    "ts-node": "^10.9.1",
-    "typedoc": "^0.23.10",
-    "typescript": "^4.7.4"
+    "@eslint/js": "^9.18.0",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^10.0.1",
+    "globals": "^15.14.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.21.0"
   }
 }
