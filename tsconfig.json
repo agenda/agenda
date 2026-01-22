@@ -2,6 +2,7 @@
   "files": [],
   "references": [
     { "path": "packages/agenda" },
-    { "path": "packages/agendash" }
+    { "path": "packages/agendash" },
+    { "path": "packages/agenda-rest" }
   ]
 }

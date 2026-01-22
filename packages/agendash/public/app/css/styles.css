@@ -1,0 +1,237 @@
+:root{
+  --secondary: #ffffff;
+  --primary: #2b2b2b;
+  --warning: rgb(255, 94, 0);
+  --pill-own-time: #00b7ff;
+}
+* {
+   font-family: 'Roboto', sans-serif;
+}
+.tittle {
+  font-family: 'Days One', sans-serif;
+  font-size: 22px;
+}
+.logo{
+  margin-bottom: 12px;
+}
+
+/* width */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  background-color: rgb(202, 202, 202);
+  box-shadow: inset 0 0 5px rgb(211, 211, 211);
+  border-radius: 10px;
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: rgb(65, 65, 65);
+  border-radius: 10px;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: #000000;
+}
+
+body {
+  overflow-y: hidden;
+}
+
+.sidebar, main {
+  max-height: calc(100vh - 45px);
+  overflow-y: scroll;
+}
+
+.joblist {
+  overflow-y: scroll;
+}
+.sortable{
+  float: right
+}
+.sortableinactive{
+  float: right;
+  opacity: 0.2;
+}
+.table-headers, .table-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.popupmessage{
+  width: 60vw;
+  position: absolute;
+  top: 30px;
+  right: 10px;
+  z-index: 999999;
+}
+code {
+  padding: 5px;
+  background-color: #eeeeee;
+}
+.action-btn{
+  margin: 0px;
+  padding: 1px 2px;
+  cursor: pointer;
+}
+.action-btn:hover{
+  color: var(--warning-secondary);
+}
+.oi{
+  top:0px !important;
+}
+.pill-own {
+  padding: 3px 3px;
+  font-size: 10px;
+  color: var(--secondary);
+  border-radius: 3px;
+}
+.pill-big-own {
+  padding: 2px 2px;
+  font-size: 13px;
+  max-height: 23px;
+  color: var(--secondary);
+  border-radius: 3px;
+}
+.progress{
+  height: 5px;
+}
+.md-custom {
+  font-size: 21px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.mybtn{
+  cursor: pointer;
+}
+.mybtn:hover{
+  background-color: rgb(218, 218, 218);
+}
+
+.pill-own span {
+  line-height: 12px;
+  font-size: 10px;
+  font-style: normal;
+}
+.IcoInButton{
+  font-size: 13px;
+  margin: 0 2px;
+}
+
+.job-detail-dialog {
+  max-width: calc(100vw - 1.75rem * 2);
+}
+.modal-body > * {
+  flex: 0 1 auto;
+}
+.modal-body {
+  display: flex;
+  flex-flow: column;
+  max-height: calc(100vh - 195px);
+}
+
+.json-editor {
+  flex: 1 1 auto;
+}
+.card-responsive-title-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.card-responsive-name {
+  font-weight: 500;
+  line-height: 1.2;
+  font-size: 1.25rem;
+}
+.card-responsive-status-title {
+  color: grey;
+  font-size: 14px;
+  text-align: center;
+}
+.card-responsive-checkbox {
+  width: 22px;
+  height: 22px;
+}
+.material-icons-size {
+  font-size: 25px;
+}
+.pill-own-card {
+  display: flex;
+  align-items: center;
+  padding: 6px 10px
+}
+.pill-own-card-info {
+  font-size: 12px!important;
+  text-align: center;
+}
+@media (min-width: 768px) {
+  .col-md-10 {
+    flex: 0 0 70%;
+    max-width: 70%;
+  }
+  .col-md-2 {
+    flex: 0 0 30%;
+    max-width: 30%;
+  }
+}
+@media (min-width: 1150px) {
+  .col-md-10 {
+    flex: 0 0 80%;
+    max-width: 80%;
+  }
+  .col-md-2 {
+    flex: 0 0 20%;
+    max-width: 20%;
+  }
+}
+
+/* The sidebar menu */
+.sidebar-collapse {
+  height: 100%;
+  width: 0;
+  position: fixed;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  background-color: white;
+  padding-top: 45px;
+  transition: 0.5s;
+}
+.sidebar-collapse a {
+  padding: 8px 8px 8px 32px;
+  text-decoration: none;
+  font-size: 25px;
+  color: #818181;
+  display: block;
+  transition: 0.3s;
+}
+.sidebar-collapse a:hover {
+  color: #f1f1f1;
+}
+.sidebar-collapse .closebtn {
+  position: absolute;
+  top: -10px;
+  right: 25px;
+  font-size: 36px;
+  margin-left: 50px;
+}
+.slidebar-container-button {
+  position: absolute;
+  left: 85%;
+}
+.openbtn {
+  font-size: 23px;
+  cursor: pointer;
+  background-color: #343a40;
+  color: white;
+  padding: 5px 0 0 0;
+  border: none;
+}
+
+.pill-withoutIcon {
+  padding: 3px 8px;
+}
