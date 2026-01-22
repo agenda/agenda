@@ -1,8 +1,29 @@
-name: Run Test
+name: CI
 on: [push, pull_request, workflow_dispatch]
 
 jobs:
-  build:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Install Packages
+        run: pnpm install
+
+      - name: Run Lint
+        run: pnpm lint
+
+  test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -29,15 +50,8 @@ jobs:
       - name: Install Packages
         run: pnpm install
 
-      - name: Run Lint
-        run: pnpm lint
-
       - name: Build
         run: pnpm build
-        env:
-          CI: true
 
       - name: Test
         run: pnpm test
-        env:
-          CI: true
