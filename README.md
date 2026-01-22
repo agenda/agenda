@@ -12,6 +12,7 @@ This was originally a fork of agenda.js,
 it differs from the original version in following points:
 
 - Complete rewrite in Typescript (fully typed!)
+- **Pluggable database driver** - MongoDB by default, but you can implement your own (see [Custom Database Driver](docs/custom-database-driver.md))
 - mongodb4 driver (supports mongodb 5.x)
 - Supports mongoDB sharding by name
 - touch() can have an optional progress parameter (0-100)
@@ -19,7 +20,6 @@ it differs from the original version in following points:
 - Breaking change: define() config paramter moved from 2nd position to 3rd
 - getRunningStats()
 - automatically waits for agenda to be connected before calling any database operations
-- uses a database abstraction layer behind the scene
 - does not create a database index by default, you can set `ensureIndex: true` when initializing Agenda
   or run manually:
 
@@ -92,8 +92,8 @@ const agenda = new Agenda({ db: { address: mongoConnectionString } });
 // or pass additional connection options:
 // const agenda = new Agenda({db: {address: mongoConnectionString, collection: 'jobCollectionName', options: {ssl: true}}});
 
-// or pass in an existing mongodb-native MongoClient instance
-// const agenda = new Agenda({mongo: myMongoClient});
+// or pass in an existing mongodb-native Db instance
+// const agenda = new Agenda({mongo: myMongoDb});
 
 agenda.define('delete old users', async job => {
 	await User.remove({ lastLogIn: { $lt: twoDaysAgo } });
@@ -165,16 +165,6 @@ mapped to a database collection and load the jobs from within.
 
 ## Configuring an agenda
 
-All configuration methods are chainable, meaning you can do something like:
-
-```js
-const agenda = new Agenda();
-agenda
-  .database(...)
-  .processEvery('3 minutes')
-  ...;
-```
-
 Possible agenda config options:
 
 ```ts
@@ -188,12 +178,16 @@ Possible agenda config options:
 	defaultLockLifetime: number;
 	ensureIndex: boolean;
 	sort: SortOptionObject<IJobParameters>;
+	// MongoDB via connection string (default driver)
 	db: {
 		collection: string;
 		address: string;
 		options: MongoClientOptions;
 	}
+	// MongoDB via existing connection (default driver)
 	mongo: Db;
+	// Custom database driver (see docs/custom-database-driver.md)
+	repository: IJobRepository;
 }
 ```
 
@@ -210,18 +204,11 @@ agenda.processEvery('3 days and 4 hours');
 agenda.processEvery('3 days, 4 hours and 36 seconds');
 ```
 
-### database(url, [collectionName], [MongoClientOptions])
+### Database Configuration
 
-Specifies the database at the `url` specified. If no collection name is given,
-`agendaJobs` is used.
+Agenda uses MongoDB by default. Configure the database connection during instantiation:
 
-By default `useNewUrlParser` and `useUnifiedTopology` is set to `true`,
-
-```js
-agenda.database('localhost:27017/agenda-test', 'agendaJobs');
-```
-
-You can also specify it during instantiation.
+**Via connection string:**
 
 ```js
 const agenda = new Agenda({
@@ -229,22 +216,22 @@ const agenda = new Agenda({
 });
 ```
 
-Agenda will emit a `ready` event (see [Agenda Events](#agenda-events)) when properly connected to the database.
-It is safe to call `agenda.start()` without waiting for this event, as this is handled internally.
-If you're using the `db` options, or call `database`, then you may still need to listen for `ready` before saving jobs.
-
-### mongo(dbInstance, [collectionName])
-
-Use an existing mongodb-native MongoClient/Db instance. This can help consolidate connections to a
-database. You can instead use `.database` to have agenda handle connecting for you.
-
-You can also specify it during instantiation:
+**Via existing MongoDB connection:**
 
 ```js
 const agenda = new Agenda({ mongo: mongoClientInstance.db('agenda-test') });
 ```
 
-Note that MongoClient.connect() returns a mongoClientInstance since [node-mongodb-native 3.0.0](https://github.com/mongodb/node-mongodb-native/blob/master/CHANGES_3.0.0.md), while it used to return a dbInstance that could then be directly passed to agenda.
+**Via custom database driver:**
+
+You can use a different database by implementing the `IJobRepository` interface. See [Custom Database Driver](docs/custom-database-driver.md) for details.
+
+```js
+const agenda = new Agenda({ repository: myCustomRepository });
+```
+
+Agenda will emit a `ready` event (see [Agenda Events](#agenda-events)) when properly connected to the database.
+It is safe to call `agenda.start()` without waiting for this event, as this is handled internally.
 
 ### name(name)
 
@@ -1212,9 +1199,13 @@ process.on('message', message => {
 	process.title = `${process.title} (sub worker: ${name}/${jobId})`;
 
   // initialize Agenda in "forkedWorker" mode
-	const agenda = new Agenda({ name: `subworker-${name}`, forkedWorker: true });
-	// connect agenda (but do not start it)
-	await agenda.mongo(mongooseConnection.db as any);
+	const agenda = new Agenda({
+		name: `subworker-${name}`,
+		forkedWorker: true,
+		mongo: mongooseConnection.db as any
+	});
+	// wait for db connection
+	await agenda.ready;
 
 	if (!name || !jobId) {
 		throw new Error(`invalid parameters: ${JSON.stringify(process.argv)}`);

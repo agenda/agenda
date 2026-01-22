@@ -18,9 +18,13 @@ process.on('message', message => {
 	process.title = `${process.title} (sub worker: ${name}/${jobId})`;
 
 	// initialize Agenda in "forkedWorker" mode
-	const agenda = new Agenda({ name: `subworker-${name}`, forkedWorker: true });
-	// connect agenda (but do not start it)
-	await agenda.database(process.env.DB_CONNECTION!);
+	const agenda = new Agenda({
+		name: `subworker-${name}`,
+		forkedWorker: true,
+		db: { address: process.env.DB_CONNECTION! }
+	});
+	// wait for db connection
+	await agenda.ready;
 
 	if (!name || !jobId) {
 		throw new Error(`invalid parameters: ${JSON.stringify(process.argv)}`);

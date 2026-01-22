@@ -238,7 +238,7 @@ export class JobProcessor {
 				}
 
 				// Lock the job in MongoDB!
-				const resp = await this.agenda.db.lockJob(job);
+				const resp = await this.agenda.db.lockJob(job.attrs);
 
 				if (resp) {
 					if (job.attrs.name !== resp.name) {
@@ -255,7 +255,7 @@ export class JobProcessor {
 							'lock limit reached while job was locked in database. Releasing lock on [%s]',
 							jobToEnqueue.attrs.name
 						);
-						this.agenda.db.unlockJob(jobToEnqueue);
+						this.agenda.db.unlockJob(jobToEnqueue.attrs);
 
 						this.jobsToLock = [];
 						return;
@@ -346,7 +346,7 @@ export class JobProcessor {
 						'lock limit reached before job was returned. Releasing lock on [%s]',
 						name
 					);
-					this.agenda.db.unlockJob(job);
+					this.agenda.db.unlockJob(job.attrs);
 					return;
 				}
 

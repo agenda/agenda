@@ -221,16 +221,16 @@ export class Job<DATA = unknown | void> {
 	}
 
 	private async fetchStatus(): Promise<void> {
-		const dbJob = await this.agenda.db.getJobs({ _id: this.attrs._id });
-		if (!dbJob || dbJob.length === 0) {
+		const result = await this.agenda.db.queryJobs({ id: this.attrs._id?.toString() });
+		if (!result.jobs || result.jobs.length === 0) {
 			// @todo: should we just return false instead? a finished job could have been removed from database,
 			// and then this would throw...
 			throw new Error(`job with id ${this.attrs._id} not found in database`);
 		}
 
-		this.attrs.lastRunAt = dbJob[0].lastRunAt;
-		this.attrs.lockedAt = dbJob[0].lockedAt;
-		this.attrs.lastFinishedAt = dbJob[0].lastFinishedAt;
+		this.attrs.lastRunAt = result.jobs[0].lastRunAt;
+		this.attrs.lockedAt = result.jobs[0].lockedAt;
+		this.attrs.lastFinishedAt = result.jobs[0].lastFinishedAt;
 	}
 
 	/**
@@ -276,14 +276,20 @@ export class Job<DATA = unknown | void> {
 		}
 		// ensure db connection is ready
 		await this.agenda.ready;
-		return this.agenda.db.saveJob(this as Job);
+		const result = await this.agenda.db.saveJob(this.toJson());
+		// Update attrs from result
+		this.attrs._id = result._id;
+		this.attrs.nextRunAt = result.nextRunAt;
+		// Emit processJob event for immediate processing check
+		this.agenda.emit('processJob', this);
+		return this as Job;
 	}
 
 	/**
 	 * Remove the job from database
 	 */
 	remove(): Promise<number> {
-		return this.agenda.cancel({ _id: this.attrs._id });
+		return this.agenda.cancel({ id: this.attrs._id });
 	}
 
 	async isDead(): Promise<boolean> {
@@ -320,7 +326,7 @@ export class Job<DATA = unknown | void> {
 		this.attrs.lockedAt = new Date();
 		this.attrs.progress = progress;
 
-		await this.agenda.db.saveJobState(this);
+		await this.agenda.db.saveJobState(this.attrs);
 	}
 
 	private computeNextRunAt() {
@@ -362,7 +368,7 @@ export class Job<DATA = unknown | void> {
 			this.attrs.lastRunAt.toISOString()
 		);
 		this.computeNextRunAt();
-		await this.agenda.db.saveJobState(this);
+		await this.agenda.db.saveJobState(this.attrs);
 
 		try {
 			this.agenda.emit('start', this);
@@ -437,7 +443,7 @@ export class Job<DATA = unknown | void> {
 			this.forkedChild = undefined;
 			this.attrs.lockedAt = undefined;
 			try {
-				await this.agenda.db.saveJobState(this);
+				await this.agenda.db.saveJobState(this.attrs);
 				log('[%s:%s] was saved successfully to MongoDB', this.attrs.name, this.attrs._id);
 			} catch (err) {
 				// in case this fails, we ignore it

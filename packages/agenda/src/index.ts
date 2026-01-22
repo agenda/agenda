@@ -1,14 +1,19 @@
 import { EventEmitter } from 'events';
 import debug from 'debug';
 
-import type { Db, Filter, MongoClientOptions, Sort } from 'mongodb';
 import { SortDirection } from 'mongodb';
 import { ForkOptions } from 'child_process';
 import type { IJobDefinition } from './types/JobDefinition.js';
 import type { IAgendaConfig } from './types/AgendaConfig.js';
-import type { IDatabaseOptions, IDbConfig, IMongoOptions } from './types/DbOptions.js';
+import type { IDatabaseOptions, IDbConfig, IMongoOptions, IRepositoryOptions } from './types/DbOptions.js';
+import type { IJobRepository } from './types/JobRepository.js';
 import type { IAgendaStatus } from './types/AgendaStatus.js';
-import type { IJobParameters } from './types/JobParameters.js';
+import type {
+	IJobsQueryOptions,
+	IJobsResult,
+	IJobsOverview
+} from './types/JobQuery.js';
+import type { IRemoveJobsOptions } from './types/JobRepository.js';
 import { Job, JobWithId } from './Job.js';
 import { JobDbRepository } from './JobDbRepository.js';
 import { JobPriority, parsePriority } from './utils/priority.js';
@@ -42,7 +47,7 @@ export class Agenda extends EventEmitter {
 		options?: ForkOptions;
 	};
 
-	db!: JobDbRepository;
+	db!: IJobRepository;
 
 	// internally used
 	on(event: 'processJob', listener: (job: JobWithId) => void): this;
@@ -106,7 +111,7 @@ export class Agenda extends EventEmitter {
 			defaultLockLimit?: number;
 			lockLimit?: number;
 			defaultLockLifetime?: number;
-			} & (IDatabaseOptions | IMongoOptions | object) &
+			} & (IDatabaseOptions | IMongoOptions | IRepositoryOptions | object) &
 			IDbConfig & {
 				forkHelper?: { path: string; options?: ForkOptions };
 				forkedWorker?: boolean;
@@ -133,7 +138,12 @@ export class Agenda extends EventEmitter {
 			this.once('ready', resolve);
 		});
 
-		if (this.hasDatabaseConfig(config)) {
+		if (this.hasRepositoryConfig(config)) {
+			// Use custom repository implementation
+			this.db = config.repository;
+			this.db.connect().then(() => this.emit('ready'));
+		} else if (this.hasDatabaseConfig(config)) {
+			// Use built-in MongoDB repository
 			this.db = new JobDbRepository(this, config);
 			this.db.connect();
 		}
@@ -141,30 +151,6 @@ export class Agenda extends EventEmitter {
 		if (cb) {
 			this.ready.then(() => cb());
 		}
-	}
-
-	/**
-	 * Connect to the spec'd MongoDB server and database.
-	 */
-	async database(
-		address: string,
-		collection?: string,
-		options?: MongoClientOptions
-	): Promise<Agenda> {
-		this.db = new JobDbRepository(this, { db: { address, collection, options } });
-		await this.db.connect();
-		return this;
-	}
-
-	/**
-	 * Use existing mongo connectino to pass into agenda
-	 * @param mongo
-	 * @param collection
-	 */
-	async mongo(mongo: Db, collection?: string): Promise<Agenda> {
-		this.db = new JobDbRepository(this, { mongo, db: { collection } });
-		await this.db.connect();
-		return this;
 	}
 
 	/**
@@ -178,6 +164,10 @@ export class Agenda extends EventEmitter {
 		return this;
 	}
 
+	private hasRepositoryConfig(config: unknown): config is IRepositoryOptions {
+		return !!(config as IRepositoryOptions)?.repository;
+	}
+
 	private hasDatabaseConfig(
 		config: unknown
 	): config is (IDatabaseOptions | IMongoOptions) & IDbConfig {
@@ -185,13 +175,13 @@ export class Agenda extends EventEmitter {
 	}
 
 	/**
-	 * Cancels any jobs matching the passed MongoDB query, and removes them from the database.
-	 * @param query
+	 * Cancels any jobs matching the passed options, and removes them from the database.
+	 * @param options Options for which jobs to cancel
 	 */
-	async cancel(query: Filter<IJobParameters>): Promise<number> {
-		log('attempting to cancel all Agenda jobs', query);
+	async cancel(options: IRemoveJobsOptions): Promise<number> {
+		log('attempting to cancel all Agenda jobs', options);
 		try {
-			const amountOfRemovedJobs = await this.db.removeJobs(query);
+			const amountOfRemovedJobs = await this.db.removeJobs(options);
 			log('%s jobs cancelled', amountOfRemovedJobs);
 			return amountOfRemovedJobs;
 		} catch (error) {
@@ -277,21 +267,24 @@ export class Agenda extends EventEmitter {
 	}
 
 	/**
-	 * Finds all jobs matching 'query'
-	 * @param query
-	 * @param sort
-	 * @param limit
-	 * @param skip
+	 * Query jobs with database-agnostic options.
+	 * Returns jobs with computed states and supports filtering by state.
+	 *
+	 * @param options - Query options (name, state, search, pagination)
+	 * @returns Jobs with computed states and total count
 	 */
-	async jobs(
-		query: Filter<IJobParameters> = {},
-		sort: Sort = {},
-		limit = 0,
-		skip = 0
-	): Promise<Job[]> {
-		const result = await this.db.getJobs(query, sort, limit, skip);
+	async queryJobs(options?: IJobsQueryOptions): Promise<IJobsResult> {
+		return this.db.queryJobs(options);
+	}
 
-		return result.map(job => new Job(this, job));
+	/**
+	 * Get overview statistics for jobs grouped by name.
+	 * Returns counts of jobs in each state for each job name.
+	 *
+	 * @returns Array of job overviews with state counts
+	 */
+	async getJobsOverview(): Promise<IJobsOverview[]> {
+		return this.db.getJobsOverview();
 	}
 
 	/**
@@ -301,7 +294,7 @@ export class Agenda extends EventEmitter {
 	async purge(): Promise<number> {
 		const definedNames = Object.keys(this.definitions);
 		log('Agenda.purge(%o)', definedNames);
-		return this.cancel({ name: { $not: { $in: definedNames } } });
+		return this.cancel({ notNames: definedNames });
 	}
 
 	/**
@@ -577,3 +570,7 @@ export * from './types/JobParameters.js';
 export * from './types/DbOptions.js';
 
 export * from './Job.js';
+
+export * from './types/JobQuery.js';
+
+export * from './types/JobRepository.js';
