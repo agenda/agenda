@@ -75,7 +75,7 @@ _Kudos for making the comparison chart goes to [Bull](https://www.npmjs.com/pack
 
 Install via NPM
 
-    npm install @hokify/agenda
+    npm install agenda
 
 You will also need a working [Mongo](https://www.mongodb.com/) database (v4+) to point it to.
 
@@ -141,7 +141,7 @@ agenda.define(
 
 # Full documentation
 
-See also https://hokify.github.io/agenda/
+See also https://agenda.github.io/agenda/
 
 Agenda's basic control structure is an instance of an agenda. Agenda's are
 mapped to a database collection and load the jobs from within.
@@ -1124,7 +1124,7 @@ Fire up an instance that processes video-processing/image-processing jobs. Good 
 
 If you think you have encountered a bug, please feel free to report it here:
 
-[Submit Issue](https://github.com/hokify/agenda/issues/new)
+[Submit Issue](https://github.com/agenda/agenda/issues/new)
 
 Please provide us with as much details as possible such as:
 
@@ -1276,7 +1276,7 @@ await job.save();
 
 - Agenda was originally created by [@rschmukler](https://github.com/rschmukler).
 - [Agendash](https://github.com/agenda/agendash) was originally created by [@joeframbach](https://github.com/joeframbach).
-- These days Agenda has a great community of [contributors](https://github.com/hokify/agenda/graphs/contributors) around it. Join us!
+- These days Agenda has a great community of [contributors](https://github.com/agenda/agenda/graphs/contributors) around it. Join us!
 
 # License
 
