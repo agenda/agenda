@@ -10,7 +10,8 @@
   "excludeExternals": true,
   "navigationLinks": {
     "GitHub": "https://github.com/agenda/agenda",
-    "npm": "https://www.npmjs.com/package/agenda"
+    "npm": "https://www.npmjs.com/package/agenda",
+    "v4.x Docs": "./4.x/"
   },
   "githubPages": true,
   "plugin": [],

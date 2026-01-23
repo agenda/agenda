@@ -39,6 +39,9 @@ jobs:
       - name: Generate documentation
         run: pnpm run docs:build
 
+      - name: Copy legacy docs
+        run: cp -r docs-legacy/* docs-site/
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
