@@ -442,7 +442,7 @@ export class Job<DATA = unknown | void> {
 
 			this.agenda.emit('fail', error, this);
 			this.agenda.emit(`fail:${this.attrs.name}`, error, this);
-			log('[%s:%s] has failed [%s]', this.attrs.name, this.attrs._id, error.message);
+			log('[%s:%s] has failed [%s]', this.attrs.name, this.attrs._id, (error as Error).message);
 		} finally {
 			this.forkedChild = undefined;
 			this.attrs.lockedAt = undefined;
