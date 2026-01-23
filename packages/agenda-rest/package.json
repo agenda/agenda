@@ -1,7 +1,7 @@
 {
-  "name": "agendash",
+  "name": "agenda-rest",
   "version": "6.0.0-pre",
-  "description": "Dashboard for Agenda job scheduler",
+  "description": "REST API for Agenda job scheduling",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -11,12 +11,15 @@
       "import": "./dist/index.js"
     }
   },
+  "bin": {
+    "agenda-rest": "./bin/agenda-rest.js"
+  },
   "publishConfig": {
     "access": "public"
   },
   "files": [
     "dist",
-    "public"
+    "bin"
   ],
   "engines": {
     "node": ">=18.0.0"
@@ -24,7 +27,8 @@
   "scripts": {
     "build": "tsc -b",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "start": "node bin/agenda-rest.js"
   },
   "repository": {
     "type": "git",
@@ -32,43 +36,24 @@
   },
   "keywords": [
     "agenda",
-    "dashboard",
+    "rest",
+    "api",
     "job",
-    "scheduler",
-    "admin"
+    "scheduler"
   ],
   "license": "MIT",
-  "peerDependencies": {
-    "agenda": "workspace:*"
-  },
-  "optionalDependencies": {
-    "express": "^4.18.0 || ^5.0.0",
-    "koa": "^2.14.0",
-    "koa-router": "^12.0.0 || ^13.0.0",
-    "koa-static": "^5.0.0",
-    "koa-bodyparser": "^4.4.0",
-    "fastify": "^4.0.0 || ^5.0.0",
-    "@fastify/static": "^6.0.0 || ^7.0.0 || ^8.0.0",
-    "@hapi/hapi": "^21.0.0",
-    "@hapi/inert": "^7.0.0"
-  },
-  "devDependencies": {
-    "@types/express": "^4.17.21",
-    "@types/koa": "^2.15.0",
-    "@types/koa-bodyparser": "^4.3.12",
-    "@types/koa-router": "^7.4.8",
-    "@types/koa-static": "^4.0.4",
-    "@types/node": "^22.0.0",
+  "dependencies": {
     "agenda": "workspace:*",
-    "express": "^4.21.2",
-    "fastify": "^5.0.0",
-    "@fastify/static": "^8.0.0",
-    "@hapi/hapi": "^21.0.0",
-    "@hapi/inert": "^7.0.0",
     "koa": "^2.15.0",
     "koa-bodyparser": "^4.4.0",
     "koa-router": "^13.0.0",
-    "koa-static": "^5.0.0",
+    "commander": "^12.0.0"
+  },
+  "devDependencies": {
+    "@types/koa": "^2.15.0",
+    "@types/koa-bodyparser": "^4.3.12",
+    "@types/koa-router": "^7.4.8",
+    "@types/node": "^22.0.0",
     "mongodb": "^6.12.0",
     "mongodb-memory-server": "^10.0.0",
     "supertest": "^7.0.0",
