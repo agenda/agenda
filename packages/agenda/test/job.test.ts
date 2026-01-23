@@ -992,8 +992,9 @@ describe('Job', () => {
 			expect(history).to.contain(3);
 		});
 
-		it('does not on-the-fly lock more than agenda._lockLimit jobs', async () => {
+		it('does not lock more than agenda._lockLimit jobs', async () => {
 			agenda.lockLimit(1);
+			agenda.processEvery(100);
 
 			agenda.define('lock job', (_job, _cb) => {
 				/* this job nevers finishes */
@@ -1003,14 +1004,15 @@ describe('Job', () => {
 
 			await Promise.all([agenda.now('lock job', { i: 1 }), agenda.now('lock job', { i: 2 })]);
 
-			// give it some time to get picked up
-			await delay(200);
+			// Wait for the process interval to pick up the jobs
+			await delay(500);
 
 			expect((await agenda.getRunningStats()).lockedJobs).to.equal(1);
 		});
 
-		it('does not on-the-fly lock more mixed jobs than agenda._lockLimit jobs', async () => {
+		it('does not lock more mixed jobs than agenda._lockLimit jobs', async () => {
 			agenda.lockLimit(1);
+			agenda.processEvery(100);
 
 			agenda.define('lock job', (_job, _cb) => {});
 			agenda.define('lock job2', (_job, _cb) => {});
@@ -1033,7 +1035,8 @@ describe('Job', () => {
 			await agenda.stop();
 		});
 
-		it('does not on-the-fly lock more than definition.lockLimit jobs', async () => {
+		it('does not lock more than definition.lockLimit jobs', async () => {
+			agenda.processEvery(100);
 			agenda.define('lock job', (_job, _cb) => {}, { lockLimit: 1 });
 
 			await agenda.start();

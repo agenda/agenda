@@ -97,15 +97,6 @@ describe('JobProcessor', () => {
 			}
 		});
 
-		it('shows isLockingOnTheFly', async () => {
-			await agenda.start();
-
-			const status = await agenda.getRunningStats();
-			expect(status).to.have.property('isLockingOnTheFly');
-			expect(status.isLockingOnTheFly).to.be.a('boolean');
-			expect(status.isLockingOnTheFly).to.be.equal(false);
-		});
-
 		it('shows queueName', async () => {
 			await agenda.start();
 
@@ -148,16 +139,17 @@ describe('JobProcessor', () => {
 		}
 
 		await new Promise(resolve => {
-			setTimeout(resolve, 1000);
+			setTimeout(resolve, 1500);
 		});
 
-		// queue more short ones (they should complete first!)
+		// queue more short ones (they will be picked up on next process interval)
 		for (let j = 0; j < 100; j += 1) {
 			agenda.now('test short');
 		}
 
+		// Wait for the next process interval to pick up and run the short jobs
 		await new Promise(resolve => {
-			setTimeout(resolve, 1000);
+			setTimeout(resolve, 2000);
 		});
 
 		expect(shortOneFinished).to.be.equal(true);

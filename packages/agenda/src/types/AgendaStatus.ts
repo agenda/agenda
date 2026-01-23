@@ -25,6 +25,4 @@ export interface IAgendaStatus {
 	queuedJobs: number | IJobParameters[];
 	runningJobs: number | IJobParameters[];
 	lockedJobs: number | IJobParameters[];
-	jobsToLock: number | IJobParameters[];
-	isLockingOnTheFly: boolean;
 }

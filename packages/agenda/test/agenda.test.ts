@@ -724,7 +724,7 @@ describe('Agenda', () => {
 		it('should not cause unhandledRejection', async () => {
 			// This unit tests if for this bug [https://github.com/agenda/agenda/issues/884]
 			// which is not reproducible with default agenda config on shorter processEvery.
-			// Thus we set the test timeout to 10000, and the delay below to 6000.
+			// Thus we set the test timeout to 15000, and the delay below to 6000.
 
 			const unhandledRejections: any[] = [];
 			const rejectionsHandler = error => unhandledRejections.push(error);
@@ -754,6 +754,9 @@ describe('Agenda', () => {
 			globalAgenda.define('j3', async _job => {
 				j3processes += 1;
 			});
+
+			// Set a faster processEvery so jobs are picked up in time
+			globalAgenda.processEvery(500);
 			await globalAgenda.start();
 
 			// await globalAgenda.every('1 seconds', 'j0');
@@ -761,7 +764,7 @@ describe('Agenda', () => {
 			await globalAgenda.every('10 seconds', 'j2');
 			await globalAgenda.every('15 seconds', 'j3');
 
-			await delay(3001);
+			await delay(6000);
 
 			process.removeListener('unhandledRejection', rejectionsHandler);
 
@@ -771,6 +774,6 @@ describe('Agenda', () => {
 			expect(j3processes).to.equal(1);
 
 			expect(unhandledRejections).to.have.length(0);
-		}, 10500);
+		}, 15000);
 	});
 });

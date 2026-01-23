@@ -280,8 +280,12 @@ export class Job<DATA = unknown | void> {
 		// Update attrs from result
 		this.attrs._id = result._id;
 		this.attrs.nextRunAt = result.nextRunAt;
-		// Emit processJob event for immediate processing check
-		this.agenda.emit('processJob', this);
+
+		// Publish notification for real-time processing if channel is configured
+		if (this.agenda.hasNotificationChannel()) {
+			await this.agenda.publishJobNotification(this);
+		}
+
 		return this as Job;
 	}
 

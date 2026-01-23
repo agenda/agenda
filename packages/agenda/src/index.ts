@@ -5,7 +5,9 @@ import { SortDirection } from 'mongodb';
 import { ForkOptions } from 'child_process';
 import type { IJobDefinition } from './types/JobDefinition.js';
 import type { IAgendaConfig } from './types/AgendaConfig.js';
-import type { IDatabaseOptions, IDbConfig, IMongoOptions, IRepositoryOptions } from './types/DbOptions.js';
+import type { IDatabaseOptions, IDbConfig, IMongoOptions, IRepositoryOptions, INotificationOptions } from './types/DbOptions.js';
+import type { INotificationChannel, IJobNotification } from './types/NotificationChannel.js';
+import type { JobId } from './types/JobParameters.js';
 import type { IJobRepository } from './types/JobRepository.js';
 import type { IAgendaStatus } from './types/AgendaStatus.js';
 import type {
@@ -49,8 +51,7 @@ export class Agenda extends EventEmitter {
 
 	db!: IJobRepository;
 
-	// internally used
-	on(event: 'processJob', listener: (job: JobWithId) => void): this;
+	private notificationChannel?: INotificationChannel;
 
 	on(event: 'fail', listener: (error: Error, job: JobWithId) => void): this;
 	on(event: 'success', listener: (job: JobWithId) => void): this;
@@ -112,7 +113,8 @@ export class Agenda extends EventEmitter {
 			lockLimit?: number;
 			defaultLockLifetime?: number;
 			} & (IDatabaseOptions | IMongoOptions | IRepositoryOptions | object) &
-			IDbConfig & {
+			IDbConfig &
+			INotificationOptions & {
 				forkHelper?: { path: string; options?: ForkOptions };
 				forkedWorker?: boolean;
 			} = DefaultOptions,
@@ -133,6 +135,7 @@ export class Agenda extends EventEmitter {
 
 		this.forkedWorker = config.forkedWorker;
 		this.forkHelper = config.forkHelper;
+		this.notificationChannel = (config as INotificationOptions).notificationChannel;
 
 		this.ready = new Promise(resolve => {
 			this.once('ready', resolve);
@@ -264,6 +267,55 @@ export class Agenda extends EventEmitter {
 		log('Agenda.defaultLockLifetime(%d)', ms);
 		this.attrs.defaultLockLifetime = ms;
 		return this;
+	}
+
+	/**
+	 * Set a notification channel for real-time job notifications
+	 * @param channel - The notification channel implementation
+	 */
+	notifyVia(channel: INotificationChannel): Agenda {
+		if (this.jobProcessor) {
+			throw new Error(
+				'job processor is already running, you need to set notificationChannel before calling start'
+			);
+		}
+		log('Agenda.notifyVia([INotificationChannel])');
+		this.notificationChannel = channel;
+		return this;
+	}
+
+	/**
+	 * Check if a notification channel is configured
+	 */
+	hasNotificationChannel(): boolean {
+		return !!this.notificationChannel;
+	}
+
+	/**
+	 * Publish a job notification to the notification channel
+	 * @internal
+	 */
+	async publishJobNotification(job: Job): Promise<void> {
+		if (!this.notificationChannel) {
+			return;
+		}
+
+		const notification: IJobNotification = {
+			jobId: job.attrs._id as JobId,
+			jobName: job.attrs.name,
+			nextRunAt: job.attrs.nextRunAt,
+			priority: job.attrs.priority,
+			timestamp: new Date(),
+			source: this.attrs.name || undefined
+		};
+
+		try {
+			await this.notificationChannel.publish(notification);
+			log('published job notification for [%s:%s]', job.attrs.name, job.attrs._id);
+		} catch (error) {
+			log('failed to publish job notification for [%s:%s]', job.attrs.name, job.attrs._id, error);
+			this.emit('error', error);
+		}
 	}
 
 	/**
@@ -524,14 +576,19 @@ export class Agenda extends EventEmitter {
 			return;
 		}
 
+		// Connect notification channel if configured
+		if (this.notificationChannel) {
+			log('Agenda.start connecting notification channel');
+			await this.notificationChannel.connect();
+		}
+
 		this.jobProcessor = new JobProcessor(
 			this,
 			this.attrs.maxConcurrency,
 			this.attrs.lockLimit,
-			this.attrs.processEvery
+			this.attrs.processEvery,
+			this.notificationChannel
 		);
-
-		this.on('processJob', this.jobProcessor.process.bind(this.jobProcessor));
 	}
 
 	/**
@@ -555,7 +612,11 @@ export class Agenda extends EventEmitter {
 			await this.db.unlockJobs(jobIds);
 		}
 
-		this.off('processJob', this.jobProcessor.process.bind(this.jobProcessor));
+		// Disconnect notification channel if configured
+		if (this.notificationChannel) {
+			log('Agenda.stop disconnecting notification channel');
+			await this.notificationChannel.disconnect();
+		}
 
 		this.jobProcessor = undefined;
 	}
@@ -574,3 +635,7 @@ export * from './Job.js';
 export * from './types/JobQuery.js';
 
 export * from './types/JobRepository.js';
+
+export * from './types/NotificationChannel.js';
+
+export * from './notifications/index.js';

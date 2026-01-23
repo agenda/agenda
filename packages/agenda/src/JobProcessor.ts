@@ -4,6 +4,7 @@ import type { IAgendaJobStatus, IAgendaStatus } from './types/AgendaStatus.js';
 import type { IJobDefinition } from './types/JobDefinition.js';
 import type { Agenda, JobWithId } from './index.js';
 import type { IJobParameters } from './types/JobParameters.js';
+import type { INotificationChannel, IJobNotification } from './types/NotificationChannel.js';
 import { Job } from './Job.js';
 import { JobProcessingQueue } from './JobProcessingQueue.js';
 
@@ -65,14 +66,7 @@ export class JobProcessor {
 				: this.lockedJobs.map(job => ({
 						...job.toJson(),
 						canceled: job.getCanceledMessage()
-				  })),
-			jobsToLock: !fullDetails
-				? this.jobsToLock.length
-				: this.jobsToLock.map(job => ({
-						...job.toJson(),
-						canceled: job.getCanceledMessage()
-				  })),
-			isLockingOnTheFly: this.isLockingOnTheFly
+				  }))
 		};
 	}
 
@@ -84,26 +78,36 @@ export class JobProcessor {
 
 	private lockedJobs: JobWithId[] = [];
 
-	private jobsToLock: JobWithId[] = [];
-
-	private isLockingOnTheFly = false;
-
 	private isJobQueueFilling = new Map<string, boolean>();
 
 	private isRunning = true;
 
 	private processInterval?: ReturnType<typeof setInterval>;
 
+	private notificationChannel?: INotificationChannel;
+
+	private notificationUnsubscribe?: () => void;
+
 	constructor(
 		private agenda: Agenda,
 		private maxConcurrency: number,
 		private totalLockLimit: number,
-		private processEvery: number
+		private processEvery: number,
+		notificationChannel?: INotificationChannel
 	) {
+		this.notificationChannel = notificationChannel;
 		this.jobQueue = new JobProcessingQueue(this.agenda);
 		log('creating interval to call processJobs every [%dms]', processEvery);
 		this.processInterval = setInterval(() => this.process(), processEvery);
 		this.process();
+
+		// Subscribe to job notifications for real-time processing
+		if (this.notificationChannel) {
+			log('subscribing to notification channel');
+			this.notificationUnsubscribe = this.notificationChannel.subscribe(
+				this.handleNotification.bind(this)
+			);
+		}
 	}
 
 	stop(): JobWithId[] {
@@ -115,11 +119,57 @@ export class JobProcessor {
 			this.processInterval = undefined;
 		}
 
+		// Unsubscribe from notifications
+		if (this.notificationUnsubscribe) {
+			log.extend('stop')('unsubscribing from notification channel');
+			this.notificationUnsubscribe();
+			this.notificationUnsubscribe = undefined;
+		}
+
 		return this.lockedJobs;
 	}
 
+	/**
+	 * Handle incoming job notification - triggers immediate processing
+	 */
+	private async handleNotification(notification: IJobNotification): Promise<void> {
+		if (!this.isRunning) {
+			log.extend('handleNotification')('JobProcessor not running, ignoring notification');
+			return;
+		}
+
+		// Only process notifications for jobs we have definitions for
+		if (!this.agenda.definitions[notification.jobName]) {
+			log.extend('handleNotification')(
+				'no definition for job [%s], ignoring notification',
+				notification.jobName
+			);
+			return;
+		}
+
+		// Check if the job should run soon (within the next scan interval)
+		if (notification.nextRunAt && notification.nextRunAt > this.nextScanAt) {
+			log.extend('handleNotification')(
+				'job [%s:%s] nextRunAt is after nextScanAt, will be picked up by regular scan',
+				notification.jobName,
+				notification.jobId
+			);
+			return;
+		}
+
+		log.extend('handleNotification')(
+			'received notification for job [%s:%s], triggering immediate queue fill',
+			notification.jobName,
+			notification.jobId
+		);
+
+		// Fill the queue for this job type and process
+		await this.jobQueueFilling(notification.jobName);
+		this.jobProcessing();
+	}
+
 	// processJobs
-	async process(extraJob?: JobWithId): Promise<void> {
+	async process(): Promise<void> {
 		// Make sure an interval has actually been set
 		// Prevents race condition with 'Agenda.stop' and already scheduled run
 		if (!this.isRunning) {
@@ -127,32 +177,16 @@ export class JobProcessor {
 			return;
 		}
 
-		// Determine whether or not we have a direct process call!
-		if (!extraJob) {
-			log.extend('process')('starting to process jobs');
+		log.extend('process')('starting to process jobs');
 
-			// Go through each jobName set in 'Agenda.process' and fill the queue with the next jobs
-			await Promise.all(
-				Object.keys(this.agenda.definitions).map(async jobName => {
-					log.extend('process')('queuing up job to process: [%s]', jobName);
-					await this.jobQueueFilling(jobName);
-				})
-			);
-			this.jobProcessing();
-		} else if (
-			this.agenda.definitions[extraJob.attrs.name] &&
-			// If the extraJob would have been processed in an older scan, process the job immediately
-			extraJob.attrs.nextRunAt &&
-			extraJob.attrs.nextRunAt < this.nextScanAt
-		) {
-			log.extend('process')(
-				'[%s:%s] job would have ran by nextScanAt, processing the job immediately',
-				extraJob.attrs.name
-			);
-			// Add the job to list of jobs to lock and then lock it immediately!
-			this.jobsToLock.push(extraJob);
-			await this.lockOnTheFly();
-		}
+		// Go through each jobName set in 'Agenda.process' and fill the queue with the next jobs
+		await Promise.all(
+			Object.keys(this.agenda.definitions).map(async jobName => {
+				log.extend('process')('queuing up job to process: [%s]', jobName);
+				await this.jobQueueFilling(jobName);
+			})
+		);
+		this.jobProcessing();
 	}
 
 	/**
@@ -194,93 +228,6 @@ export class JobProcessor {
 	 */
 	private enqueueJob(job: Job): void {
 		this.jobQueue.insert(job);
-	}
-
-	/**
-	 * Internal method that will lock a job and store it on MongoDB
-	 * This method is called when we immediately start to process a job without using the process interval
-	 * We do this because sometimes jobs are scheduled but will be run before the next process time
-	 * @returns {undefined}
-	 */
-	async lockOnTheFly(): Promise<void> {
-		// Already running this? Return
-		if (this.isLockingOnTheFly) {
-			log.extend('lockOnTheFly')('already running, returning');
-			return;
-		}
-
-		// Don't have any jobs to run? Return
-		if (this.jobsToLock.length === 0) {
-			log.extend('lockOnTheFly')('no jobs to current lock on the fly, returning');
-			return;
-		}
-
-		this.isLockingOnTheFly = true;
-
-		// Set that we are running this
-		try {
-			// Grab a job that needs to be locked
-			const job = this.jobsToLock.pop();
-
-			if (job) {
-				if (this.isJobQueueFilling.has(job.attrs.name)) {
-					log.extend('lockOnTheFly')('jobQueueFilling already running for: %s', job.attrs.name);
-					return;
-				}
-
-				// If locking limits have been hit, stop locking on the fly.
-				// Jobs that were waiting to be locked will be picked up during a
-				// future locking interval.
-				if (!this.shouldLock(job.attrs.name)) {
-					log.extend('lockOnTheFly')('lock limit hit for: [%s:%S]', job.attrs.name, job.attrs._id);
-					this.jobsToLock = [];
-					return;
-				}
-
-				// Lock the job in MongoDB!
-				const resp = await this.agenda.db.lockJob(job.attrs);
-
-				if (resp) {
-					if (job.attrs.name !== resp.name) {
-						throw new Error(
-							`got different job name: ${resp.name} (actual) !== ${job.attrs.name} (expected)`
-						);
-					}
-
-					const jobToEnqueue = new Job(this.agenda, resp, true) as JobWithId;
-
-					// Before en-queing job make sure we haven't exceed our lock limits
-					if (!this.shouldLock(jobToEnqueue.attrs.name)) {
-						log.extend('lockOnTheFly')(
-							'lock limit reached while job was locked in database. Releasing lock on [%s]',
-							jobToEnqueue.attrs.name
-						);
-						this.agenda.db.unlockJob(jobToEnqueue.attrs);
-
-						this.jobsToLock = [];
-						return;
-					}
-
-					log.extend('lockOnTheFly')(
-						'found job [%s:%s] that can be locked on the fly',
-						jobToEnqueue.attrs.name,
-						jobToEnqueue.attrs._id
-					);
-					this.updateStatus(jobToEnqueue.attrs.name, 'locked', +1);
-					this.lockedJobs.push(jobToEnqueue);
-					this.enqueueJob(jobToEnqueue);
-					this.jobProcessing();
-				} else {
-					log.extend('lockOnTheFly')('cannot lock job [%s] on the fly', job.attrs.name);
-				}
-			}
-		} finally {
-			// Mark lock on fly is done for now
-			this.isLockingOnTheFly = false;
-		}
-
-		// Re-run in case anything is in the queue
-		await this.lockOnTheFly();
 	}
 
 	private async findAndLockNextJob(
