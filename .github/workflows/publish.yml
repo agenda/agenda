@@ -17,13 +17,13 @@ jobs:
       id-token: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 24
           registry-url: 'https://registry.npmjs.org'
@@ -35,10 +35,19 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Check for pre-release mode
+        id: prerelease
+        run: |
+          if [ -f .changeset/pre.json ]; then
+            echo "tag=$(jq -r '.tag' .changeset/pre.json)" >> $GITHUB_OUTPUT
+          else
+            echo "tag=" >> $GITHUB_OUTPUT
+          fi
+
       - name: Create Release Pull Request or Publish
         uses: changesets/action@v1
         with:
-          publish: pnpm changeset publish
+          publish: pnpm changeset publish ${{ steps.prerelease.outputs.tag && format('--tag {0}', steps.prerelease.outputs.tag) || '' }}
           version: pnpm changeset version
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
