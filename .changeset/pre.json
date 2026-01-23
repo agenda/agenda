@@ -1,0 +1,10 @@
+{
+  "mode": "pre",
+  "tag": "alpha",
+  "initialVersions": {
+    "agenda": "6.0.0-pre",
+    "agenda-rest": "6.0.0-pre",
+    "agendash": "6.0.0-pre"
+  },
+  "changesets": []
+}
