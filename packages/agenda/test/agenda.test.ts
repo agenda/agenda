@@ -88,16 +88,11 @@ describe('Agenda', () => {
 				expect(hasMongoProtocol(`localhost/agenda-test`)).to.equal(false);
 			});
 		});
-		describe('mongo', () => {
-			it('sets the _db directly', () => {
-				const agenda = new Agenda();
-				agenda.mongo(mongoDb);
+		describe('mongo config', () => {
+			it('sets the db when passing mongo in constructor', async () => {
+				const agenda = new Agenda({ mongo: mongoDb });
+				await agenda.ready;
 				expect(agenda.db).to.not.equal(undefined);
-			});
-
-			it('returns itself', async () => {
-				const agenda = new Agenda();
-				expect(await agenda.mongo(mongoDb)).to.equal(agenda);
 			});
 		});
 
@@ -251,22 +246,22 @@ describe('Agenda', () => {
 					// Give the saves a little time to propagate
 					await delay(jobTimeout);
 
-					const res = await globalAgenda.jobs({ name: 'shouldBeSingleJob' });
+					const res = (await globalAgenda.queryJobs({ name: 'shouldBeSingleJob' })).jobs;
 					expect(res).to.have.length(1);
 				});
 				it('should not run immediately if options.skipImmediate is true', async () => {
 					const jobName = 'send email';
 					await globalAgenda.every('5 minutes', jobName, {}, { skipImmediate: true });
-					const job = (await globalAgenda.jobs({ name: jobName }))[0];
-					const nextRunAt = job.attrs.nextRunAt!.getTime();
+					const job = (await globalAgenda.queryJobs({ name: jobName })).jobs[0];
+					const nextRunAt = job.nextRunAt!.getTime();
 					const now = new Date().getTime();
 					expect(nextRunAt - now > 0).to.equal(true);
 				});
 				it('should run immediately if options.skipImmediate is false', async () => {
 					const jobName = 'send email';
 					await globalAgenda.every('5 minutes', jobName, {}, { skipImmediate: false });
-					const job = (await globalAgenda.jobs({ name: jobName }))[0];
-					const nextRunAt = job.attrs.nextRunAt!.getTime();
+					const job = (await globalAgenda.queryJobs({ name: jobName })).jobs[0];
+					const nextRunAt = job.nextRunAt!.getTime();
 					const now = new Date().getTime();
 					expect(nextRunAt - now <= 0).to.equal(true);
 				});
@@ -475,13 +470,13 @@ describe('Agenda', () => {
 			});
 		});
 
-		describe('jobs', () => {
+		describe('queryJobs', () => {
 			it('returns jobs', async () => {
 				await globalAgenda.create('test').save();
-				const c = await globalAgenda.jobs({});
+				const result = await globalAgenda.queryJobs();
 
-				expect(c.length).to.not.equals(0);
-				expect(c[0]).to.to.be.an.instanceof(Job);
+				expect(result.jobs.length).to.not.equals(0);
+				expect(result.jobs[0]).to.have.property('name');
 				await clearJobs();
 			});
 		});
@@ -491,15 +486,15 @@ describe('Agenda', () => {
 				const job = globalAgenda.create('no definition');
 				await globalAgenda.stop();
 				await job.save();
-				const j = await globalAgenda.jobs({
+				const j = (await globalAgenda.queryJobs({
 					name: 'no definition'
-				});
+				})).jobs;
 
 				expect(j).to.have.length(1);
 				await globalAgenda.purge();
-				const jAfterPurge = await globalAgenda.jobs({
+				const jAfterPurge = (await globalAgenda.queryJobs({
 					name: 'no definition'
-				});
+				})).jobs;
 
 				expect(jAfterPurge).to.have.length(0);
 			});
@@ -535,33 +530,33 @@ describe('Agenda', () => {
 		});
 
 		it('should cancel a job', async () => {
-			const j = await globalAgenda.jobs({ name: 'jobA' });
+			const j = (await globalAgenda.queryJobs({ name: 'jobA' })).jobs;
 			expect(j).to.have.length(2);
 
 			await globalAgenda.cancel({ name: 'jobA' });
-			const job = await globalAgenda.jobs({ name: 'jobA' });
+			const job = (await globalAgenda.queryJobs({ name: 'jobA' })).jobs;
 
 			expect(job).to.have.length(0);
 		});
 
 		it('should cancel multiple jobs', async () => {
-			const jobs1 = await globalAgenda.jobs({ name: { $in: ['jobA', 'jobB'] } });
+			const jobs1 = (await globalAgenda.queryJobs({ names: ['jobA', 'jobB'] })).jobs;
 			expect(jobs1).to.have.length(3);
 			await globalAgenda.cancel({ name: { $in: ['jobA', 'jobB'] } });
 
-			const jobs2 = await globalAgenda.jobs({ name: { $in: ['jobA', 'jobB'] } });
+			const jobs2 = (await globalAgenda.queryJobs({ names: ['jobA', 'jobB'] })).jobs;
 			expect(jobs2).to.have.length(0);
 		});
 
 		it('should cancel jobs only if the data matches', async () => {
-			const jobs1 = await globalAgenda.jobs({ name: 'jobA', data: 'someData' });
+			const jobs1 = (await globalAgenda.queryJobs({ name: 'jobA', data: 'someData' })).jobs;
 			expect(jobs1).to.have.length(1);
 			await globalAgenda.cancel({ name: 'jobA', data: 'someData' });
 
-			const jobs2 = await globalAgenda.jobs({ name: 'jobA', data: 'someData' });
+			const jobs2 = (await globalAgenda.queryJobs({ name: 'jobA', data: 'someData' })).jobs;
 			expect(jobs2).to.have.length(0);
 
-			const jobs3 = await globalAgenda.jobs({ name: 'jobA' });
+			const jobs3 = (await globalAgenda.queryJobs({ name: 'jobA' })).jobs;
 			expect(jobs3).to.have.length(1);
 		});
 	});
@@ -578,17 +573,17 @@ describe('Agenda', () => {
 		});
 
 		it('should limit jobs', async () => {
-			const results = await globalAgenda.jobs({ name: 'jobA' }, {}, 2);
+			const results = (await globalAgenda.queryJobs({ name: 'jobA', limit: 2 })).jobs;
 			expect(results).to.have.length(2);
 		});
 
 		it('should skip jobs', async () => {
-			const results = await globalAgenda.jobs({ name: 'jobA' }, {}, 2, 2);
+			const results = (await globalAgenda.queryJobs({ name: 'jobA', limit: 2, skip: 2 })).jobs;
 			expect(results).to.have.length(1);
 		});
 
 		it('should sort jobs', async () => {
-			const results = await globalAgenda.jobs({ name: 'jobA' }, { data: -1 });
+			const results = (await globalAgenda.queryJobs({ name: 'jobA', sort: { data: -1 } })).jobs;
 
 			expect(results).to.have.length(3);
 
@@ -596,9 +591,9 @@ describe('Agenda', () => {
 			const job2 = results[1];
 			const job3 = results[2];
 
-			expect(job1.attrs.data).to.equal(3);
-			expect(job2.attrs.data).to.equal(2);
-			expect(job3.attrs.data).to.equal(1);
+			expect(job1.data).to.equal(3);
+			expect(job2.data).to.equal(2);
+			expect(job3.data).to.equal(1);
 		});
 	});
 

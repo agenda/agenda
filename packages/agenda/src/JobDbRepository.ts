@@ -10,19 +10,35 @@ import {
 	Sort,
 	UpdateFilter
 } from 'mongodb';
-import type { Job, JobWithId } from './Job.js';
 import type { Agenda } from './index.js';
 import type { IDatabaseOptions, IDbConfig, IMongoOptions } from './types/DbOptions.js';
-import type { IJobParameters } from './types/JobParameters.js';
+import type { IJobParameters, JobId } from './types/JobParameters.js';
+import { toJobId } from './types/JobParameters.js';
+import type {
+	IJobsQueryOptions,
+	IJobsResult,
+	IJobsOverview,
+	IJobWithState,
+	IJobsSort
+} from './types/JobQuery.js';
+import { computeJobState } from './types/JobQuery.js';
+import type { IJobRepository, IRemoveJobsOptions } from './types/JobRepository.js';
 import { hasMongoProtocol } from './utils/hasMongoProtocol.js';
 
 const log = debug('agenda:db');
 
 /**
- * @class
+ * Internal MongoDB document type with ObjectId for _id
+ * This is what's actually stored in MongoDB, separate from the public IJobParameters interface
  */
-export class JobDbRepository {
-	collection!: Collection<IJobParameters>;
+type MongoJobDocument = Omit<IJobParameters, '_id'> & { _id?: ObjectId };
+
+/**
+ * @class
+ * MongoDB implementation of IJobRepository
+ */
+export class JobDbRepository implements IJobRepository {
+	collection!: Collection<MongoJobDocument>;
 
 	constructor(
 		private agenda: Agenda,
@@ -54,32 +70,190 @@ export class JobDbRepository {
 		return !!(connectOptions as IDatabaseOptions)?.db?.address;
 	}
 
-	async getJobById(id: string) {
-		return this.collection.findOne({ _id: new ObjectId(id) });
+	async getJobById(id: string): Promise<IJobParameters | null> {
+		const doc = await this.collection.findOne({ _id: new ObjectId(id) });
+		if (!doc) return null;
+		// Convert MongoDB ObjectId to JobId
+		return {
+			...doc,
+			_id: toJobId(doc._id.toHexString())
+		};
 	}
 
-	async getJobs(
-		query: Filter<IJobParameters>,
-		sort: Sort = {},
-		limit = 0,
-		skip = 0
-	): Promise<IJobParameters[]> {
-		return this.collection.find(query).sort(sort).limit(limit).skip(skip).toArray();
+	/**
+	 * Convert generic sort options to MongoDB sort
+	 */
+	private toMongoSort(sort?: IJobsSort): Sort {
+		if (!sort) {
+			return { nextRunAt: -1, lastRunAt: -1 };
+		}
+		const mongoSort: Record<string, 1 | -1> = {};
+		if (sort.nextRunAt !== undefined) mongoSort.nextRunAt = sort.nextRunAt;
+		if (sort.lastRunAt !== undefined) mongoSort.lastRunAt = sort.lastRunAt;
+		if (sort.lastFinishedAt !== undefined) mongoSort.lastFinishedAt = sort.lastFinishedAt;
+		if (sort.priority !== undefined) mongoSort.priority = sort.priority;
+		if (sort.name !== undefined) mongoSort.name = sort.name;
+		if (sort.data !== undefined) mongoSort.data = sort.data;
+		return Object.keys(mongoSort).length > 0 ? mongoSort : { nextRunAt: -1, lastRunAt: -1 };
 	}
 
-	async removeJobs(query: Filter<IJobParameters>): Promise<number> {
-		const result = await this.collection.deleteMany(query);
-		return result.deletedCount || 0;
+	/**
+	 * Query jobs with database-agnostic options.
+	 * Handles state computation and filtering internally.
+	 */
+	async queryJobs(options: IJobsQueryOptions = {}): Promise<IJobsResult> {
+		const { name, names, state, id, ids, search, data, includeDisabled = true, sort, skip = 0, limit = 0 } = options;
+		const now = new Date();
+
+		// Build MongoDB query from options
+		const query: Filter<MongoJobDocument> = {};
+
+		if (name) {
+			query.name = name;
+		} else if (names && names.length > 0) {
+			query.name = { $in: names };
+		}
+
+		if (id) {
+			try {
+				query._id = new ObjectId(id);
+			} catch {
+				return { jobs: [], total: 0 };
+			}
+		} else if (ids && ids.length > 0) {
+			try {
+				query._id = { $in: ids.map(i => new ObjectId(i)) };
+			} catch {
+				return { jobs: [], total: 0 };
+			}
+		}
+
+		if (search) {
+			query.name = { $regex: search, $options: 'i' };
+		}
+
+		if (data !== undefined) {
+			query.data = data as IJobParameters['data'];
+		}
+
+		if (!includeDisabled) {
+			query.disabled = { $ne: true };
+		}
+
+		// Fetch jobs
+		const allJobs = await this.collection
+			.find(query)
+			.sort(this.toMongoSort(sort))
+			.toArray();
+
+		// Compute states and filter by state if specified
+		let jobsWithState: IJobWithState[] = allJobs
+			.map(job => ({
+				...job,
+				_id: toJobId(job._id!.toHexString()),
+				state: computeJobState(job as unknown as IJobParameters, now)
+			}))
+			.filter(job => !state || job.state === state);
+
+		// Apply pagination after state filtering
+		const total = jobsWithState.length;
+		if (limit > 0) {
+			jobsWithState = jobsWithState.slice(skip, skip + limit);
+		} else if (skip > 0) {
+			jobsWithState = jobsWithState.slice(skip);
+		}
+
+		return { jobs: jobsWithState, total };
+	}
+
+	/**
+	 * Get overview statistics for jobs grouped by name.
+	 * Returns counts of jobs in each state for each job name.
+	 */
+	async getJobsOverview(): Promise<IJobsOverview[]> {
+		const now = new Date();
+		const names = await this.getDistinctJobNames();
+
+		const overviews = await Promise.all(
+			names.map(async name => {
+				const jobs = await this.collection.find({ name }).toArray();
+				const overview: IJobsOverview = {
+					name,
+					total: jobs.length,
+					running: 0,
+					scheduled: 0,
+					queued: 0,
+					completed: 0,
+					failed: 0,
+					repeating: 0
+				};
+
+				for (const job of jobs) {
+					const state = computeJobState(job as unknown as IJobParameters, now);
+					overview[state]++;
+				}
+
+				return overview;
+			})
+		);
+
+		return overviews;
+	}
+
+	/**
+	 * Get all distinct job names
+	 */
+	async getDistinctJobNames(): Promise<string[]> {
+		return this.collection.distinct('name');
 	}
 
 	async getQueueSize(): Promise<number> {
 		return this.collection.countDocuments({ nextRunAt: { $lt: new Date() } });
 	}
 
-	async unlockJob(job: Job): Promise<void> {
-		// only unlock jobs which are not currently processed (nextRunAT is not null)
+	async removeJobs(options: IRemoveJobsOptions): Promise<number> {
+		const query: Filter<MongoJobDocument> = {};
+
+		if (options.id) {
+			try {
+				query._id = new ObjectId(options.id.toString());
+			} catch {
+				return 0;
+			}
+		} else if (options.ids && options.ids.length > 0) {
+			try {
+				query._id = { $in: options.ids.map(id => new ObjectId(id.toString())) };
+			} catch {
+				return 0;
+			}
+		}
+
+		if (options.name) {
+			query.name = options.name;
+		} else if (options.names && options.names.length > 0) {
+			query.name = { $in: options.names };
+		} else if (options.notNames && options.notNames.length > 0) {
+			query.name = { $nin: options.notNames };
+		}
+
+		if (options.data !== undefined) {
+			query.data = options.data as IJobParameters['data'];
+		}
+
+		// If no criteria provided, don't delete anything
+		if (Object.keys(query).length === 0) {
+			return 0;
+		}
+
+		const result = await this.collection.deleteMany(query);
+		return result.deletedCount || 0;
+	}
+
+	async unlockJob(job: IJobParameters): Promise<void> {
+		if (!job._id) return;
+		// only unlock jobs which are not currently processed (nextRunAt is not null)
 		await this.collection.updateOne(
-			{ _id: job.attrs._id, nextRunAt: { $ne: null } },
+			{ _id: new ObjectId(job._id.toString()), nextRunAt: { $ne: null } },
 			{ $unset: { lockedAt: true } }
 		);
 	}
@@ -87,25 +261,29 @@ export class JobDbRepository {
 	/**
 	 * Internal method to unlock jobs so that they can be re-run
 	 */
-	async unlockJobs(jobIds: ObjectId[]): Promise<void> {
+	async unlockJobs(jobIds: (JobId | string)[]): Promise<void> {
+		if (jobIds.length === 0) return;
+		const objectIds = jobIds.map(id => new ObjectId(id.toString()));
 		await this.collection.updateMany(
-			{ _id: { $in: jobIds }, nextRunAt: { $ne: null } },
+			{ _id: { $in: objectIds }, nextRunAt: { $ne: null } },
 			{ $unset: { lockedAt: true } }
 		);
 	}
 
-	async lockJob(job: JobWithId): Promise<IJobParameters | undefined> {
+	async lockJob(job: IJobParameters): Promise<IJobParameters | undefined> {
+		if (!job._id) return undefined;
+
 		// Query to run against collection to see if we need to lock it
-		const criteria: Filter<Omit<IJobParameters, 'lockedAt'> & { lockedAt?: Date | null }> = {
-			_id: job.attrs._id,
-			name: job.attrs.name,
-			lockedAt: null,
-			nextRunAt: job.attrs.nextRunAt,
+		const criteria: Filter<MongoJobDocument> = {
+			_id: new ObjectId(job._id.toString()),
+			name: job.name,
+			lockedAt: null as unknown as Date,
+			nextRunAt: job.nextRunAt,
 			disabled: { $ne: true }
 		};
 
 		// Update / options for the MongoDB query
-		const update: UpdateFilter<IJobParameters> = { $set: { lockedAt: new Date() } };
+		const update: UpdateFilter<MongoJobDocument> = { $set: { lockedAt: new Date() } };
 		const options: FindOneAndUpdateOptions = {
 			returnDocument: 'after',
 			sort: this.connectOptions.sort
@@ -113,12 +291,18 @@ export class JobDbRepository {
 
 		// Lock the job in MongoDB!
 		const result = await this.collection.findOneAndUpdate(
-			criteria as Filter<IJobParameters>,
+			criteria,
 			update,
 			options
 		);
 
-		return result ?? undefined;
+		if (!result) return undefined;
+
+		// Convert MongoDB ObjectId to JobId
+		return {
+			...result,
+			_id: toJobId(result._id.toHexString())
+		};
 	}
 
 	async getNextJobToRun(
@@ -130,7 +314,7 @@ export class JobDbRepository {
 		/**
 		 * Query used to find job to run
 		 */
-		const JOB_PROCESS_WHERE_QUERY: Filter<IJobParameters> = {
+		const JOB_PROCESS_WHERE_QUERY: Filter<MongoJobDocument> = {
 			name: jobName,
 			disabled: { $ne: true },
 			$or: [
@@ -147,7 +331,7 @@ export class JobDbRepository {
 		/**
 		 * Query used to set a job as locked
 		 */
-		const JOB_PROCESS_SET_QUERY: UpdateFilter<IJobParameters> = { $set: { lockedAt: now } };
+		const JOB_PROCESS_SET_QUERY: UpdateFilter<MongoJobDocument> = { $set: { lockedAt: now } };
 
 		/**
 		 * Query used to affect what gets returned
@@ -164,7 +348,13 @@ export class JobDbRepository {
 			JOB_RETURN_QUERY
 		);
 
-		return result ?? undefined;
+		if (!result) return undefined;
+
+		// Convert MongoDB ObjectId to JobId
+		return {
+			...result,
+			_id: toJobId(result._id.toHexString())
+		};
 	}
 
 	async connect(): Promise<void> {
@@ -222,45 +412,36 @@ export class JobDbRepository {
 		return client.db();
 	}
 
-	private processDbResult<DATA = unknown | void>(
-		job: Job<DATA>,
-		res?: IJobParameters<DATA> | null
-	): Job<DATA> {
-		log(
-			'processDbResult() called with success, checking whether to process job immediately or not'
-		);
-
-		// We have a result from the above calls
-		if (res) {
-			// Grab ID and nextRunAt from MongoDB and store it as an attribute on Job
-			job.attrs._id = res._id;
-			job.attrs.nextRunAt = res.nextRunAt;
-
-			// check if we should process the job immediately
-			this.agenda.emit('processJob', job);
-		}
-
-		// Return the Job instance
-		return job;
+	/**
+	 * Convert MongoDB document to IJobParameters with JobId
+	 */
+	private toJobParameters<DATA = unknown>(doc: MongoJobDocument & { _id: ObjectId }): IJobParameters<DATA> {
+		return {
+			...doc,
+			_id: toJobId(doc._id.toHexString())
+		} as IJobParameters<DATA>;
 	}
 
-	async saveJobState(job: Job<unknown>): Promise<void> {
-		const id = job.attrs._id;
+	async saveJobState(job: IJobParameters): Promise<void> {
+		if (!job._id) {
+			throw new Error('Cannot save job state without job ID');
+		}
+		const id = new ObjectId(job._id.toString());
 		const $set = {
-			lockedAt: (job.attrs.lockedAt && new Date(job.attrs.lockedAt)) || undefined,
-			nextRunAt: (job.attrs.nextRunAt && new Date(job.attrs.nextRunAt)) || undefined,
-			lastRunAt: (job.attrs.lastRunAt && new Date(job.attrs.lastRunAt)) || undefined,
-			progress: job.attrs.progress,
-			failReason: job.attrs.failReason,
-			failCount: job.attrs.failCount,
-			failedAt: job.attrs.failedAt && new Date(job.attrs.failedAt),
-			lastFinishedAt: (job.attrs.lastFinishedAt && new Date(job.attrs.lastFinishedAt)) || undefined
+			lockedAt: (job.lockedAt && new Date(job.lockedAt)) || undefined,
+			nextRunAt: (job.nextRunAt && new Date(job.nextRunAt)) || undefined,
+			lastRunAt: (job.lastRunAt && new Date(job.lastRunAt)) || undefined,
+			progress: job.progress,
+			failReason: job.failReason,
+			failCount: job.failCount,
+			failedAt: job.failedAt && new Date(job.failedAt),
+			lastFinishedAt: (job.lastFinishedAt && new Date(job.lastFinishedAt)) || undefined
 		};
 
-		log('[job %s] save job state: \n%O', id, $set);
+		log('[job %s] save job state: \n%O', job._id, $set);
 
 		const result = await this.collection.updateOne(
-			{ _id: id, name: job.attrs.name },
+			{ _id: id, name: job.name },
 			{
 				$set
 			}
@@ -268,65 +449,62 @@ export class JobDbRepository {
 
 		if (!result.acknowledged || result.matchedCount !== 1) {
 			throw new Error(
-				`job ${id} (name: ${job.attrs.name}) cannot be updated in the database, maybe it does not exist anymore?`
+				`job ${job._id} (name: ${job.name}) cannot be updated in the database, maybe it does not exist anymore?`
 			);
 		}
 	}
 
 	/**
-	 * Save the properties on a job to MongoDB
-	 * @name Agenda#saveJob
-	 * @function
-	 * @param {Job} job job to save into MongoDB
-	 * @returns {Promise} resolves when job is saved or errors
+	 * Save a job to the database (insert or update)
+	 * @param job Job parameters to save
+	 * @returns The saved job parameters with ID
 	 */
-	async saveJob<DATA = unknown | void>(job: Job<DATA>): Promise<Job<DATA>> {
+	async saveJob<DATA = unknown>(job: IJobParameters<DATA>): Promise<IJobParameters<DATA>> {
 		try {
 			log('attempting to save a job');
 
-			// Grab information needed to save job but that we don't want to persist in MongoDB
-			const id = job.attrs._id;
+			// Extract the ID and unique fields (not persisted directly)
+			const { _id, unique, uniqueOpts, ...props } = job;
 
-			// Store job as JSON and remove props we don't want to store from object
-			// _id, unique, uniqueOpts
-			// eslint-disable-next-line @typescript-eslint/no-unused-vars
-			const { _id, unique, uniqueOpts, ...props } = {
-				...job.toJson(),
-				// Store name of agenda queue as last modifier in job data
+			// Add lastModifiedBy
+			const propsWithModifier = {
+				...props,
 				lastModifiedBy: this.agenda.attrs.name
 			};
 
-			log('[job %s] set job props: \n%O', id, props);
+			log('[job %s] set job props: \n%O', _id, propsWithModifier);
 
 			// Grab current time and set default query options for MongoDB
 			const now = new Date();
-			const protect: Partial<IJobParameters> = {};
-			let update: UpdateFilter<IJobParameters> = { $set: props };
+			const protect: Partial<MongoJobDocument> = {};
+			let update: UpdateFilter<MongoJobDocument> = { $set: propsWithModifier };
 			log('current time stored as %s', now.toISOString());
 
 			// If the job already had an ID, then update the properties of the job
-			// i.e, who last modified it, etc
-			if (id) {
-				// Update the job and process the resulting data'
+			if (_id) {
 				log('job already has _id, calling findOneAndUpdate() using _id as query');
 				const result = await this.collection.findOneAndUpdate(
-					{ _id: id, name: props.name },
+					{ _id: new ObjectId(_id.toString()), name: props.name },
 					update,
 					{ returnDocument: 'after' }
 				);
-				return this.processDbResult(job, result as IJobParameters<DATA> | null);
+				if (!result) {
+					// Job was removed, return original data unchanged
+					log('job %s was not found for update, returning original data', _id);
+					return job;
+				}
+				return this.toJobParameters(result as MongoJobDocument & { _id: ObjectId });
 			}
 
 			if (props.type === 'single') {
 				// Job type set to 'single' so...
 				log('job with type of "single" found');
 
-				// If the nextRunAt time is older than the current time, "protect" that property, meaning, don't change
-				// a scheduled job's next run time!
+				// If the nextRunAt time is older than the current time, "protect" that property
 				if (props.nextRunAt && props.nextRunAt <= now) {
 					log('job has a scheduled nextRunAt time, protecting that field from upsert');
 					protect.nextRunAt = props.nextRunAt;
-					delete (props as Partial<IJobParameters>).nextRunAt;
+					delete (propsWithModifier as Partial<MongoJobDocument>).nextRunAt;
 				}
 
 				// If we have things to protect, set them in MongoDB using $setOnInsert
@@ -334,15 +512,8 @@ export class JobDbRepository {
 					update.$setOnInsert = protect;
 				}
 
-				// Try an upsert
-				log(
-					`calling findOneAndUpdate(${props.name}) with job name and type of "single" as query`,
-					await this.collection.findOne({
-						name: props.name,
-						type: 'single'
-					})
-				);
-				// this call ensure a job of this name can only exists once
+				// Try an upsert - ensures only one job of this name exists
+				log(`calling findOneAndUpdate(${props.name}) with job name and type of "single" as query`);
 				const result = await this.collection.findOneAndUpdate(
 					{
 						name: props.name,
@@ -354,41 +525,38 @@ export class JobDbRepository {
 						returnDocument: 'after'
 					}
 				);
-				log(
-					`findOneAndUpdate(${props.name}) with type "single" completed`
-				);
-				return this.processDbResult(job, result as IJobParameters<DATA> | null);
+				log(`findOneAndUpdate(${props.name}) with type "single" completed`);
+				return this.toJobParameters(result as MongoJobDocument & { _id: ObjectId });
 			}
 
-			if (job.attrs.unique) {
-				// If we want the job to be unique, then we can upsert based on the 'unique' query object that was passed in
-				const query: Filter<Omit<IJobParameters<DATA>, 'unique'>> = job.attrs.unique;
+			if (unique) {
+				// Upsert based on the 'unique' query object
+				const query: Filter<MongoJobDocument> = { ...unique } as Filter<MongoJobDocument>;
 				query.name = props.name;
-				if (job.attrs.uniqueOpts?.insertOnly) {
-					update = { $setOnInsert: props };
+				if (uniqueOpts?.insertOnly) {
+					update = { $setOnInsert: propsWithModifier };
 				}
 
-				// Use the 'unique' query object to find an existing job or create a new one
 				log('calling findOneAndUpdate() with unique object as query: \n%O', query);
-				const result = await this.collection.findOneAndUpdate(query as IJobParameters, update, {
+				const result = await this.collection.findOneAndUpdate(query, update, {
 					upsert: true,
 					returnDocument: 'after'
 				});
-				return this.processDbResult(job, result as IJobParameters<DATA> | null);
+				return this.toJobParameters(result as MongoJobDocument & { _id: ObjectId });
 			}
 
-			// If all else fails, the job does not exist yet so we just insert it into MongoDB
+			// Insert new job
 			log(
 				'using default behavior, inserting new job via insertOne() with props that were set: \n%O',
-				props
+				propsWithModifier
 			);
-			const result = await this.collection.insertOne(props);
-			return this.processDbResult(job, {
+			const result = await this.collection.insertOne(propsWithModifier as MongoJobDocument);
+			return this.toJobParameters({
 				_id: result.insertedId,
-				...props
-			} as IJobParameters<DATA>);
+				...propsWithModifier
+			} as MongoJobDocument & { _id: ObjectId });
 		} catch (error) {
-			log('processDbResult() received an error, job was not updated/created');
+			log('saveJob() received an error, job was not updated/created');
 			throw error;
 		}
 	}

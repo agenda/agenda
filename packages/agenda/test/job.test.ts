@@ -1,9 +1,9 @@
- 
+
 import path from 'node:path';
 import cp from 'node:child_process';
 import { expect, describe, it, beforeEach, afterEach } from 'vitest';
 import { DateTime } from 'luxon';
-import { Db } from 'mongodb';
+import { Db, ObjectId } from 'mongodb';
 
 import delay from 'delay';
 import sinon from 'sinon';
@@ -367,7 +367,7 @@ describe('Job', () => {
 			const resultSaved = await mongoDb
 				.collection('agendaJobs')
 				.find({
-					_id: job.attrs._id
+					_id: new ObjectId(job.attrs._id!.toString())
 				})
 				.toArray();
 
@@ -377,7 +377,7 @@ describe('Job', () => {
 			const resultDeleted = await mongoDb
 				.collection('agendaJobs')
 				.find({
-					_id: job.attrs._id
+					_id: new ObjectId(job.attrs._id!.toString())
 				})
 				.toArray();
 
@@ -588,16 +588,18 @@ describe('Job', () => {
 			agenda.define('failBoat3', async (_job, cb) => {
 				// Explicitly find the job again,
 				// so we have a new job object
-				const jobs = await agenda.jobs({ name: 'failBoat3' });
+				const jobs = (await agenda.queryJobs({ name: 'failBoat3' })).jobs;
 				expect(jobs).to.have.length(1);
-				await jobs[0].remove();
+				// We need to get the actual Job object to call remove()
+				const jobToRemove = new Job(agenda, jobs[0]);
+				await jobToRemove.remove();
 				cb();
 			});
 
 			await job.run();
 
 			// Expect the deleted job to not exist in the database
-			const deletedJob = await agenda.jobs({ name: 'failBoat3' });
+			const deletedJob = (await agenda.queryJobs({ name: 'failBoat3' })).jobs;
 			expect(deletedJob).to.have.length(0);
 		});
 	});
@@ -681,7 +683,7 @@ describe('Job', () => {
 			await j.remove();
 			await j.save();
 
-			const jobs = await agenda.jobs({ name: 'another job' });
+			const jobs = (await agenda.queryJobs({ name: 'another job' })).jobs;
 			expect(jobs).to.have.length(0);
 		});
 
@@ -758,7 +760,7 @@ describe('Job', () => {
 
 		it('clears locks on stop', async () => {
 			agenda.define('longRunningJob', (_job, _cb) => {
-				 
+
 				// Job never finishes
 			});
 			agenda.every('10 seconds', 'longRunningJob');
@@ -766,10 +768,10 @@ describe('Job', () => {
 
 			await agenda.start();
 			await delay(jobTimeout);
-			const jobStarted = await agenda.db.getJobs({ name: 'longRunningJob' });
+			const jobStarted = (await agenda.queryJobs({ name: 'longRunningJob' })).jobs;
 			expect(jobStarted[0].lockedAt).to.not.equal(null);
 			await agenda.stop();
-			const job = await agenda.db.getJobs({ name: 'longRunningJob' });
+			const job = (await agenda.queryJobs({ name: 'longRunningJob' })).jobs;
 			expect(job[0].lockedAt).to.equal(undefined);
 		});
 
@@ -995,7 +997,7 @@ describe('Job', () => {
 
 			agenda.define('lock job', (_job, _cb) => {
 				/* this job nevers finishes */
-			});  
+			});
 
 			await agenda.start();
 
@@ -1010,11 +1012,11 @@ describe('Job', () => {
 		it('does not on-the-fly lock more mixed jobs than agenda._lockLimit jobs', async () => {
 			agenda.lockLimit(1);
 
-			agenda.define('lock job', (_job, _cb) => {});  
-			agenda.define('lock job2', (_job, _cb) => {});  
-			agenda.define('lock job3', (_job, _cb) => {});  
-			agenda.define('lock job4', (_job, _cb) => {});  
-			agenda.define('lock job5', (_job, _cb) => {});  
+			agenda.define('lock job', (_job, _cb) => {});
+			agenda.define('lock job2', (_job, _cb) => {});
+			agenda.define('lock job3', (_job, _cb) => {});
+			agenda.define('lock job4', (_job, _cb) => {});
+			agenda.define('lock job5', (_job, _cb) => {});
 
 			await agenda.start();
 
@@ -1032,7 +1034,7 @@ describe('Job', () => {
 		});
 
 		it('does not on-the-fly lock more than definition.lockLimit jobs', async () => {
-			agenda.define('lock job', (_job, _cb) => {}, { lockLimit: 1 });  
+			agenda.define('lock job', (_job, _cb) => {}, { lockLimit: 1 });
 
 			await agenda.start();
 
@@ -1046,7 +1048,7 @@ describe('Job', () => {
 			agenda.lockLimit(1);
 			agenda.processEvery(200);
 
-			agenda.define('lock job', (_job, _cb) => {});  
+			agenda.define('lock job', (_job, _cb) => {});
 
 			await agenda.start();
 
@@ -1064,7 +1066,7 @@ describe('Job', () => {
 		it('does not lock more than definition.lockLimit jobs during processing interval', async () => {
 			agenda.processEvery(200);
 
-			agenda.define('lock job', (_job, _cb) => {}, { lockLimit: 1 });  
+			agenda.define('lock job', (_job, _cb) => {}, { lockLimit: 1 });
 
 			await agenda.start();
 
@@ -1131,7 +1133,7 @@ describe('Job', () => {
 			try {
 				const results: number[] = await Promise.race([
 					checkResultsPromise,
-					 
+
 					new Promise<number[]>((_, reject) => {
 						setTimeout(() => {
 							reject(`not processed`);
@@ -1173,7 +1175,7 @@ describe('Job', () => {
 			try {
 				const results: number[] = await Promise.race([
 					checkResultsPromise,
-					 
+
 					new Promise<number[]>((_, reject) => {
 						setTimeout(() => {
 							reject(`not processed`);
@@ -1224,7 +1226,7 @@ describe('Job', () => {
 			try {
 				const { times, priorities } = await Promise.race<any>([
 					checkResultsPromise,
-					 
+
 					new Promise<any>((_, reject) => {
 						setTimeout(() => {
 							reject(`not processed`);
@@ -1269,7 +1271,7 @@ describe('Job', () => {
 			try {
 				const results = await Promise.race([
 					checkResultsPromise,
-					 
+
 					new Promise((_, reject) => {
 						setTimeout(() => {
 							reject(`not processed`);
@@ -1313,7 +1315,7 @@ describe('Job', () => {
 
 			await agenda.start();
 
-			await agenda.jobs({ name: 'everyRunTest1' });
+			await agenda.queryJobs({ name: 'everyRunTest1' });
 			await delay(jobTimeout);
 			expect(counter).to.equal(2);
 
@@ -1335,7 +1337,7 @@ describe('Job', () => {
 			await agenda.start();
 
 			await delay(jobTimeout);
-			const result = await agenda.jobs({ name: 'everyRunTest2' });
+			const result = (await agenda.queryJobs({ name: 'everyRunTest2' })).jobs;
 
 			expect(result).to.have.length(1);
 			await agenda.stop();
@@ -1416,7 +1418,7 @@ describe('Job', () => {
 				await agenda.start();
 
 				await delay(jobTimeout);
-				await agenda.jobs({ name: 'everyDisabledTest' });
+				await agenda.queryJobs({ name: 'everyDisabledTest' });
 				expect(counter).to.equal(0);
 				await agenda.stop();
 			});

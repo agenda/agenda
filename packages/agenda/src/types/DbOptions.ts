@@ -1,4 +1,5 @@
 import type { Db, MongoClientOptions, SortDirection } from 'mongodb';
+import type { IJobRepository } from './JobRepository.js';
 
 export interface IDatabaseOptions {
 	db: {
@@ -13,6 +14,13 @@ export interface IMongoOptions {
 		collection?: string;
 	};
 	mongo: Db;
+}
+
+/**
+ * Option to pass a custom repository implementation
+ */
+export interface IRepositoryOptions {
+	repository: IJobRepository;
 }
 
 export interface IDbConfig {
