@@ -1,6 +1,6 @@
 import { expect, describe, it, beforeEach, afterEach } from 'vitest';
 import { Db } from 'mongodb';
-import { Agenda, InMemoryNotificationChannel } from '../src';
+import { Agenda, MongoBackend, InMemoryNotificationChannel, IJobNotification, toJobId } from '../src';
 import { mockMongo } from './helpers/mock-mongodb';
 
 let agenda: Agenda;
@@ -33,7 +33,7 @@ describe('Notification Channel', () => {
 	describe('InMemoryNotificationChannel', () => {
 		it('should publish and receive notifications', async () => {
 			const channel = new InMemoryNotificationChannel();
-			const receivedNotifications: any[] = [];
+			const receivedNotifications: IJobNotification[] = [];
 
 			await channel.connect();
 			expect(channel.state).to.equal('connected');
@@ -43,7 +43,7 @@ describe('Notification Channel', () => {
 			});
 
 			await channel.publish({
-				jobId: 'test-id' as any,
+				jobId: toJobId('test-id'),
 				jobName: 'test-job',
 				nextRunAt: new Date(),
 				priority: 0,
@@ -62,21 +62,21 @@ describe('Notification Channel', () => {
 
 			try {
 				await channel.publish({
-					jobId: 'test-id' as any,
+					jobId: toJobId('test-id'),
 					jobName: 'test-job',
 					nextRunAt: new Date(),
 					priority: 0,
 					timestamp: new Date()
 				});
 				expect.fail('Should have thrown');
-			} catch (error: any) {
-				expect(error.message).to.equal('Cannot publish: channel not connected');
+			} catch (error) {
+				expect((error as Error).message).to.equal('Cannot publish: channel not connected');
 			}
 		});
 
 		it('should allow unsubscribing', async () => {
 			const channel = new InMemoryNotificationChannel();
-			const receivedNotifications: any[] = [];
+			const receivedNotifications: IJobNotification[] = [];
 
 			await channel.connect();
 
@@ -85,7 +85,7 @@ describe('Notification Channel', () => {
 			});
 
 			await channel.publish({
-				jobId: 'test-id' as any,
+				jobId: toJobId('test-id'),
 				jobName: 'test-job-1',
 				nextRunAt: new Date(),
 				priority: 0,
@@ -98,7 +98,7 @@ describe('Notification Channel', () => {
 			unsubscribe();
 
 			await channel.publish({
-				jobId: 'test-id' as any,
+				jobId: toJobId('test-id'),
 				jobName: 'test-job-2',
 				nextRunAt: new Date(),
 				priority: 0,
@@ -117,7 +117,7 @@ describe('Notification Channel', () => {
 			const channel = new InMemoryNotificationChannel();
 
 			agenda = new Agenda({
-				mongo: mongoDb,
+				backend: new MongoBackend({ mongo: mongoDb }),
 				notificationChannel: channel
 			});
 
@@ -127,7 +127,7 @@ describe('Notification Channel', () => {
 		it('should accept notification channel via notifyVia method', async () => {
 			const channel = new InMemoryNotificationChannel();
 
-			agenda = new Agenda({ mongo: mongoDb });
+			agenda = new Agenda({ backend: new MongoBackend({ mongo: mongoDb }) });
 			expect(agenda.hasNotificationChannel()).to.equal(false);
 
 			agenda.notifyVia(channel);
@@ -137,15 +137,15 @@ describe('Notification Channel', () => {
 		it('should throw when setting notification channel after start', async () => {
 			const channel = new InMemoryNotificationChannel();
 
-			agenda = new Agenda({ mongo: mongoDb });
+			agenda = new Agenda({ backend: new MongoBackend({ mongo: mongoDb }) });
 			agenda.define('test', async () => {});
 			await agenda.start();
 
 			try {
 				agenda.notifyVia(channel);
 				expect.fail('Should have thrown');
-			} catch (error: any) {
-				expect(error.message).to.contain('job processor is already running');
+			} catch (error) {
+				expect((error as Error).message).to.contain('job processor is already running');
 			}
 		});
 
@@ -153,7 +153,7 @@ describe('Notification Channel', () => {
 			const channel = new InMemoryNotificationChannel();
 
 			agenda = new Agenda({
-				mongo: mongoDb,
+				backend: new MongoBackend({ mongo: mongoDb }),
 				notificationChannel: channel
 			});
 
@@ -175,7 +175,7 @@ describe('Notification Channel', () => {
 
 			// Create agenda with long processEvery but with notification channel
 			agenda = new Agenda({
-				mongo: mongoDb,
+				backend: new MongoBackend({ mongo: mongoDb }),
 				processEvery: 10000, // 10 seconds - way longer than our test
 				notificationChannel: channel
 			});

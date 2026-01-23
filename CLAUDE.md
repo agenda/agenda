@@ -23,10 +23,10 @@ pnpm test
 pnpm --filter agenda test
 
 # Run single test file
-pnpm --filter agenda exec mocha test/job.test.ts
+pnpm --filter agenda exec vitest run test/job.test.ts
 
 # Run tests matching a pattern
-pnpm --filter agenda exec mocha --grep "pattern"
+pnpm --filter agenda exec vitest run --grep "pattern"
 
 # Debug with agenda logging
 DEBUG=agenda:**,-agenda:internal:** pnpm --filter agenda test
@@ -44,9 +44,13 @@ pnpm lint:fix                    # ESLint with auto-fix
 ```
 Agenda (packages/agenda/src/index.ts)    # Main class, extends EventEmitter
 ├── JobProcessor                          # Handles job execution loop and concurrency
-├── JobDbRepository                       # MongoDB data layer abstraction
+├── MongoBackend                          # MongoDB backend implementation
+│   └── JobDbRepository                   # MongoDB data layer abstraction
 ├── Job                                   # Individual job with lifecycle methods
-└── JobProcessingQueue                    # Priority queue for pending jobs
+├── JobProcessingQueue                    # Priority queue for pending jobs
+└── notifications/                        # Pluggable notification channel system
+    ├── BaseNotificationChannel           # Abstract base with reconnection logic
+    └── InMemoryNotificationChannel       # In-memory implementation for testing
 ```
 
 ### Source Structure
@@ -54,12 +58,22 @@ Agenda (packages/agenda/src/index.ts)    # Main class, extends EventEmitter
 - `packages/agenda/src/index.ts` - Agenda class: configuration, job definition, scheduling API
 - `packages/agenda/src/Job.ts` - Job class: save, remove, run, touch, schedule methods
 - `packages/agenda/src/JobProcessor.ts` - Processing loop, locking, concurrent execution
+- `packages/agenda/src/backends/MongoBackend.ts` - MongoDB backend implementation
 - `packages/agenda/src/JobDbRepository.ts` - MongoDB operations abstraction
 - `packages/agenda/src/JobProcessingQueue.ts` - Priority-based job queue
 - `packages/agenda/src/types/` - TypeScript interfaces (AgendaConfig, JobDefinition, JobParameters)
 - `packages/agenda/src/utils/` - Helpers for priority parsing, interval calculation, date handling
 
 ### Key Patterns
+
+**Pluggable Backend System**: Agenda uses a backend interface (`IAgendaBackend`) that provides:
+- Storage (required): via `IJobRepository`
+- Notifications (optional): via `INotificationChannel`
+
+This allows:
+- MongoDB only (default): Storage with polling-based job processing
+- MongoDB + Redis: MongoDB for storage, Redis for real-time notifications
+- PostgreSQL: Single backend providing both storage AND notifications (LISTEN/NOTIFY)
 
 **Event-Driven Architecture**: Agenda emits events for job lifecycle:
 - `start`, `complete`, `success`, `fail` (with job-specific variants like `start:jobName`)
@@ -84,9 +98,10 @@ Tests use mongodb-memory-server for isolation. Test helper at `packages/agenda/t
 
 ```typescript
 import { mockMongo } from './helpers/mock-mongodb';
+import { Agenda, MongoBackend } from 'agenda';
 
-const { mongo, disconnect } = await mockMongo();
-const agenda = new Agenda({ mongo: mongo.db() });
+const { db, disconnect } = await mockMongo();
+const agenda = new Agenda({ backend: new MongoBackend({ mongo: db }) });
 // ... tests
 disconnect();
 ```
@@ -99,8 +114,31 @@ disconnect();
   defaultConcurrency: 5,        // Per-job concurrency
   maxConcurrency: 20,           // Global max running jobs
   defaultLockLifetime: 600000,  // 10 minutes
-  sort: { nextRunAt: 1, priority: -1 }
 }
+```
+
+## Basic Usage
+
+```typescript
+import { Agenda, MongoBackend } from 'agenda';
+
+// Create agenda with MongoDB backend
+const agenda = new Agenda({
+  backend: new MongoBackend({ address: 'mongodb://localhost/agenda' })
+});
+
+// Or with existing connection
+const agenda = new Agenda({
+  backend: new MongoBackend({ mongo: existingDb })
+});
+
+// Define and run jobs
+agenda.define('myJob', async (job) => {
+  console.log('Running job:', job.attrs.name);
+});
+
+await agenda.start();
+await agenda.every('5 minutes', 'myJob');
 ```
 
 ## Database Index
@@ -126,3 +164,86 @@ DEBUG=agenda:* pnpm test        # All agenda logs
 DEBUG=agenda:job pnpm test      # Job-specific logs
 DEBUG=agenda:jobProcessor pnpm test  # Processor logs
 ```
+
+## Notification Channel (Real-Time Job Processing)
+
+By default, Agenda uses periodic polling (`processEvery`) to check for new jobs. For real-time job processing across multiple processes, you can configure a notification channel.
+
+### Architecture
+
+```
+Thread 1 (API/Scheduler)          Thread 2 (Worker)
+├── job.save()                    ├── agenda.start()
+│   └── notificationChannel       ├── notificationChannel.subscribe()
+│       .publish({jobId})  ─────> │   handleNotification()
+│                                 │   └── jobQueueFilling()
+│                                 │   └── jobProcessing()
+```
+
+### Usage
+
+```typescript
+// Without notifications (default) - uses periodic polling only
+const agenda = new Agenda({
+  backend: new MongoBackend({ mongo: db })
+});
+
+// With in-memory notifications (single process, testing)
+import { Agenda, MongoBackend, InMemoryNotificationChannel } from 'agenda';
+
+const agenda = new Agenda({
+  backend: new MongoBackend({ mongo: db }),
+  notificationChannel: new InMemoryNotificationChannel()
+});
+
+// Or via fluent API
+const agenda = new Agenda({ backend: new MongoBackend({ mongo: db }) })
+  .notifyVia(new InMemoryNotificationChannel());
+
+// Unified backend with notifications (e.g., PostgreSQL with LISTEN/NOTIFY)
+const agenda = new Agenda({
+  backend: new PostgresBackend({ connectionString: 'postgres://...' })
+  // PostgresBackend provides both repository AND notificationChannel
+});
+```
+
+### Implementing Custom Backends/Channels
+
+For distributed setups, implement `IAgendaBackend` and optionally `INotificationChannel`:
+
+```typescript
+import { IAgendaBackend, BaseNotificationChannel, IJobNotification } from 'agenda';
+
+class RedisNotificationChannel extends BaseNotificationChannel {
+  async connect(): Promise<void> {
+    // Connect to Redis
+    this.setState('connected');
+  }
+
+  async disconnect(): Promise<void> {
+    // Disconnect from Redis
+    this.setState('disconnected');
+  }
+
+  async publish(notification: IJobNotification): Promise<void> {
+    // Publish to Redis channel
+    await this.redis.publish(this.config.channelName, JSON.stringify(notification));
+  }
+}
+
+// Use with MongoDB storage
+const agenda = new Agenda({
+  backend: new MongoBackend({ mongo: db }),
+  notificationChannel: new RedisNotificationChannel()
+});
+```
+
+### Key Types
+
+- `IAgendaBackend` - Interface for backend implementations (storage + optional notifications)
+- `IJobRepository` - Interface for storage operations
+- `INotificationChannel` - Interface for notification channel implementations
+- `IJobNotification` - Payload sent when a job is saved (jobId, jobName, nextRunAt, priority)
+- `BaseNotificationChannel` - Abstract base class with state management and reconnection logic
+- `InMemoryNotificationChannel` - In-memory implementation for testing/single-process
+- `MongoBackend` - Default MongoDB backend implementation

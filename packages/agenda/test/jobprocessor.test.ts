@@ -3,7 +3,7 @@ import { fail } from 'node:assert';
 import { expect, describe, it, beforeEach, afterEach } from 'vitest';
 
 import { Db } from 'mongodb';
-import { Agenda } from '../src';
+import { Agenda, MongoBackend } from '../src';
 import { mockMongo } from './helpers/mock-mongodb';
 
 // Create agenda instances
@@ -30,7 +30,7 @@ describe('JobProcessor', () => {
 		return new Promise(resolve => {
 			agenda = new Agenda(
 				{
-					mongo: mongoDb,
+					backend: new MongoBackend({ mongo: mongoDb }),
 					maxConcurrency: 4,
 					defaultConcurrency: 1,
 					lockLimit: 15,
@@ -56,8 +56,8 @@ describe('JobProcessor', () => {
 			try {
 				await agenda.getRunningStats();
 				fail();
-			} catch (err: any) {
-				expect(err.message).to.be.equal('agenda not running!');
+			} catch (err) {
+				expect((err as Error).message).to.be.equal('agenda not running!');
 			}
 		});
 

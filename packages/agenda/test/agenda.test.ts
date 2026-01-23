@@ -5,7 +5,7 @@ import { Db } from 'mongodb';
 import { expect, describe, it, beforeEach, afterEach } from 'vitest';
 import { mockMongo } from './helpers/mock-mongodb';
 
-import { Agenda } from '../src';
+import { Agenda, MongoBackend } from '../src';
 import { hasMongoProtocol } from '../src/utils/hasMongoProtocol';
 import { Job } from '../src/Job';
 
@@ -38,7 +38,7 @@ describe('Agenda', () => {
 		return new Promise(resolve => {
 			globalAgenda = new Agenda(
 				{
-					mongo: mongoDb
+					backend: new MongoBackend({ mongo: mongoDb })
 				},
 				async () => {
 					await delay(50);
@@ -69,7 +69,7 @@ describe('Agenda', () => {
 
 	describe('configuration methods', () => {
 		it('sets the _db directly when passed as an option', () => {
-			const agendaDb = new Agenda({ mongo: mongoDb });
+			const agendaDb = new Agenda({ backend: new MongoBackend({ mongo: mongoDb }) });
 			expect(agendaDb.db).to.not.equal(undefined);
 		});
 	});
@@ -90,7 +90,7 @@ describe('Agenda', () => {
 		});
 		describe('mongo config', () => {
 			it('sets the db when passing mongo in constructor', async () => {
-				const agenda = new Agenda({ mongo: mongoDb });
+				const agenda = new Agenda({ backend: new MongoBackend({ mongo: mongoDb }) });
 				await agenda.ready;
 				expect(agenda.db).to.not.equal(undefined);
 			});
@@ -600,8 +600,7 @@ describe('Agenda', () => {
 	describe('ensureIndex findAndLockNextJobIndex', () => {
 		it('ensureIndex-Option false does not create index findAndLockNextJobIndex', async () => {
 			const agenda = new Agenda({
-				mongo: mongoDb,
-				ensureIndex: false
+				backend: new MongoBackend({ mongo: mongoDb, ensureIndex: false })
 			});
 
 			agenda.define('someJob', jobProcessor);
@@ -614,8 +613,7 @@ describe('Agenda', () => {
 
 		it('ensureIndex-Option true does create index findAndLockNextJobIndex', async () => {
 			const agenda = new Agenda({
-				mongo: mongoDb,
-				ensureIndex: true
+				backend: new MongoBackend({ mongo: mongoDb, ensureIndex: true })
 			});
 
 			agenda.define('someJob', jobProcessor);
@@ -629,16 +627,14 @@ describe('Agenda', () => {
 
 		it('creating two agenda-instances with ensureIndex-Option true does not throw an error', async () => {
 			const agenda = new Agenda({
-				mongo: mongoDb,
-				ensureIndex: true
+				backend: new MongoBackend({ mongo: mongoDb, ensureIndex: true })
 			});
 
 			agenda.define('someJob', jobProcessor);
 			await agenda.create('someJob', 1).save();
 
 			const secondAgenda = new Agenda({
-				mongo: mongoDb,
-				ensureIndex: true
+				backend: new MongoBackend({ mongo: mongoDb, ensureIndex: true })
 			});
 
 			secondAgenda.define('someJob', jobProcessor);
@@ -649,8 +645,8 @@ describe('Agenda', () => {
 	describe('process jobs', () => {
 		 
 		it('do not run failed jobs again', async () => {
-			const unhandledRejections: any[] = [];
-			const rejectionsHandler = error => unhandledRejections.push(error);
+			const unhandledRejections: unknown[] = [];
+			const rejectionsHandler = (error: unknown) => unhandledRejections.push(error);
 			process.on('unhandledRejection', rejectionsHandler);
 
 			let jprocesses = 0;
@@ -686,8 +682,8 @@ describe('Agenda', () => {
 		}, 10000);
 
 		it('ensure there is no unhandledPromise on job timeouts', async () => {
-			const unhandledRejections: any[] = [];
-			const rejectionsHandler = error => unhandledRejections.push(error);
+			const unhandledRejections: unknown[] = [];
+			const rejectionsHandler = (error: unknown) => unhandledRejections.push(error);
 			process.on('unhandledRejection', rejectionsHandler);
 
 			globalAgenda.define(
@@ -726,8 +722,8 @@ describe('Agenda', () => {
 			// which is not reproducible with default agenda config on shorter processEvery.
 			// Thus we set the test timeout to 15000, and the delay below to 6000.
 
-			const unhandledRejections: any[] = [];
-			const rejectionsHandler = error => unhandledRejections.push(error);
+			const unhandledRejections: unknown[] = [];
+			const rejectionsHandler = (error: unknown) => unhandledRejections.push(error);
 			process.on('unhandledRejection', rejectionsHandler);
 
 			/*

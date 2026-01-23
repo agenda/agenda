@@ -521,15 +521,15 @@ export class JobProcessor {
 						`callback already called - job ${job.attrs.name} already marked complete`
 					);
 				}
-			} catch (error: any) {
-				job.cancel(error);
+			} catch (error) {
+				job.cancel(error instanceof Error ? error : undefined);
 				log.extend('runOrRetry')(
 					'[%s:%s] processing job failed',
 					job.attrs.name,
 					job.attrs._id,
 					error
 				);
-				this.agenda.emit('error', error);
+				this.agenda.emit('error', error instanceof Error ? error : new Error(String(error)));
 			} finally {
 				jobIsRunning = false;
 

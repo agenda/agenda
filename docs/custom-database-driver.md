@@ -1,41 +1,98 @@
-# Custom Database Driver
+# Custom Backend Driver
 
-Agenda v6 introduces a database-agnostic repository interface (`IJobRepository`), allowing you to use databases other than MongoDB.
+Agenda v6 introduces a pluggable backend system (`IAgendaBackend`), allowing you to use databases other than MongoDB and optionally provide real-time notifications.
 
-## Default Driver
+## Architecture
 
-By default, Agenda uses MongoDB via the built-in `JobDbRepository`. You can configure it using:
+A backend provides:
+- **Storage** (required): Via `IJobRepository` interface
+- **Notifications** (optional): Via `INotificationChannel` interface
+
+This allows:
+1. **MongoDB only** (default): Storage with polling-based job processing
+2. **MongoDB + Redis**: MongoDB for storage, Redis pub/sub for real-time notifications
+3. **PostgreSQL with LISTEN/NOTIFY**: Single backend providing both storage AND notifications
+
+## Default Backend: MongoBackend
+
+By default, Agenda uses MongoDB via the built-in `MongoBackend`:
 
 ```typescript
-import { Agenda } from 'agenda';
+import { Agenda, MongoBackend } from 'agenda';
 
 // Via connection string
 const agenda = new Agenda({
-  db: { address: 'mongodb://localhost/agenda' }
+  backend: new MongoBackend({ address: 'mongodb://localhost/agenda' })
 });
 
 // Via existing MongoDB connection
 import { MongoClient } from 'mongodb';
 const client = await MongoClient.connect('mongodb://localhost');
 const agenda = new Agenda({
-  mongo: client.db('agenda')
+  backend: new MongoBackend({ mongo: client.db('agenda') })
 });
 ```
 
-## Custom Database Driver
+## Custom Backend
 
-To use a different database, implement the `IJobRepository` interface and pass it to Agenda:
+To use a different database, implement the `IAgendaBackend` interface:
 
 ```typescript
-import { Agenda, IJobRepository } from 'agenda';
+import { Agenda, IAgendaBackend, IJobRepository, INotificationChannel } from 'agenda';
 
-class PostgresRepository implements IJobRepository {
-  // Implement all required methods...
+class PostgresBackend implements IAgendaBackend {
+  readonly repository: IJobRepository;
+  readonly notificationChannel?: INotificationChannel;
+
+  constructor(config: { connectionString: string }) {
+    this.repository = new PostgresRepository(config);
+    // Optional: provide LISTEN/NOTIFY based notifications
+    this.notificationChannel = new PostgresNotificationChannel(config);
+  }
+
+  async connect(): Promise<void> {
+    // Connect to PostgreSQL
+  }
+
+  async disconnect(): Promise<void> {
+    // Disconnect from PostgreSQL
+  }
 }
 
 const agenda = new Agenda({
-  repository: new PostgresRepository()
+  backend: new PostgresBackend({ connectionString: 'postgres://...' })
 });
+```
+
+## IAgendaBackend Interface
+
+```typescript
+interface IAgendaBackend {
+  /**
+   * The job repository for storage operations.
+   * Required - every backend must provide storage.
+   */
+  readonly repository: IJobRepository;
+
+  /**
+   * Optional notification channel for real-time job notifications.
+   * If provided, Agenda will use this for immediate job processing.
+   * If not provided, Agenda falls back to periodic polling.
+   */
+  readonly notificationChannel?: INotificationChannel;
+
+  /**
+   * Connect to the backend.
+   * Called when Agenda is initialized.
+   */
+  connect(): Promise<void>;
+
+  /**
+   * Disconnect from the backend.
+   * Called when agenda.stop() is invoked.
+   */
+  disconnect(): Promise<void>;
+}
 ```
 
 ## IJobRepository Interface
@@ -118,6 +175,33 @@ interface IJobRepository {
 }
 ```
 
+## INotificationChannel Interface
+
+For real-time job notifications:
+
+```typescript
+interface INotificationChannel {
+  readonly state: NotificationChannelState;
+  connect(): Promise<void>;
+  disconnect(): Promise<void>;
+  subscribe(handler: NotificationHandler): () => void;
+  publish(notification: IJobNotification): Promise<void>;
+  on(event: 'stateChange' | 'error', listener: Function): this;
+  off(event: 'stateChange' | 'error', listener: Function): this;
+}
+
+type NotificationChannelState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'error';
+
+interface IJobNotification {
+  jobId: JobId;
+  jobName: string;
+  nextRunAt: Date | null;
+  priority: number;
+  timestamp: Date;
+  source?: string;
+}
+```
+
 ## Supporting Types
 
 ### JobId
@@ -194,7 +278,7 @@ type JobState = 'running' | 'scheduled' | 'queued' | 'completed' | 'failed' | 'r
 
 ## Implementation Notes
 
-When implementing a custom repository:
+When implementing a custom backend:
 
 1. **Job IDs**: Use `JobId` (a branded string) for all job identifiers. Convert from your database's native ID format at the repository boundary.
 
@@ -206,69 +290,63 @@ When implementing a custom repository:
 
 3. **Locking**: Implement atomic lock operations to prevent duplicate job execution in distributed environments.
 
-4. **Connection**: The `connect()` method should establish the database connection and emit a `'ready'` event when complete.
+4. **Upserts**: The `saveJob()` method must handle both inserts (no `_id`) and updates (has `_id`), as well as `unique` constraints and `type: 'single'` jobs.
 
-5. **Upserts**: The `saveJob()` method must handle both inserts (no `_id`) and updates (has `_id`), as well as `unique` constraints and `type: 'single'` jobs.
+5. **Notifications**: If your database supports real-time notifications (like PostgreSQL LISTEN/NOTIFY), implement `INotificationChannel` and provide it via `notificationChannel`.
 
-## Example: In-Memory Repository (for testing)
+## Example: PostgreSQL Backend with LISTEN/NOTIFY
 
 ```typescript
 import {
+  IAgendaBackend,
   IJobRepository,
-  IJobParameters,
-  IJobsQueryOptions,
-  IJobsResult,
-  IJobsOverview,
-  IRemoveJobsOptions,
-  JobId,
-  toJobId,
-  computeJobState
+  INotificationChannel,
+  BaseNotificationChannel,
+  IJobNotification
 } from 'agenda';
 
-class InMemoryRepository implements IJobRepository {
-  private jobs: Map<string, IJobParameters> = new Map();
-  private idCounter = 0;
+class PostgresRepository implements IJobRepository {
+  // Implement all repository methods...
+}
+
+class PostgresNotificationChannel extends BaseNotificationChannel {
+  async connect(): Promise<void> {
+    // Subscribe to LISTEN notifications
+    this.setState('connected');
+  }
+
+  async disconnect(): Promise<void> {
+    // UNLISTEN
+    this.setState('disconnected');
+  }
+
+  async publish(notification: IJobNotification): Promise<void> {
+    // NOTIFY with job data
+  }
+}
+
+class PostgresBackend implements IAgendaBackend {
+  readonly repository: IJobRepository;
+  readonly notificationChannel: INotificationChannel;
+
+  constructor(config: { connectionString: string }) {
+    this.repository = new PostgresRepository(config);
+    this.notificationChannel = new PostgresNotificationChannel(config);
+  }
 
   async connect(): Promise<void> {
-    // No-op for in-memory
+    await this.repository.connect();
+    await this.notificationChannel.connect();
   }
 
-  async saveJob<DATA>(job: IJobParameters<DATA>): Promise<IJobParameters<DATA>> {
-    if (!job._id) {
-      job._id = toJobId(String(++this.idCounter));
-    }
-    this.jobs.set(job._id, job as IJobParameters);
-    return job;
+  async disconnect(): Promise<void> {
+    await this.notificationChannel.disconnect();
+    // Close database connection
   }
-
-  async getJobById(id: string): Promise<IJobParameters | null> {
-    return this.jobs.get(id) || null;
-  }
-
-  async queryJobs(options: IJobsQueryOptions = {}): Promise<IJobsResult> {
-    let jobs = Array.from(this.jobs.values());
-
-    if (options.name) {
-      jobs = jobs.filter(j => j.name === options.name);
-    }
-
-    const now = new Date();
-    const jobsWithState = jobs.map(job => ({
-      ...job,
-      _id: job._id!,
-      state: computeJobState(job, now)
-    }));
-
-    if (options.state) {
-      return {
-        jobs: jobsWithState.filter(j => j.state === options.state),
-        total: jobsWithState.length
-      };
-    }
-
-    return { jobs: jobsWithState, total: jobs.length };
-  }
-
-  // ... implement remaining methods
 }
+
+// Usage
+const agenda = new Agenda({
+  backend: new PostgresBackend({ connectionString: 'postgres://...' })
+});
 ```

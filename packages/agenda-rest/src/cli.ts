@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
-import { Agenda } from 'agenda';
+import { Agenda, MongoBackend } from 'agenda';
 import { createServer } from './server.js';
 import type { Server } from 'http';
 
@@ -30,10 +30,10 @@ program
 
 		// Create Agenda instance
 		const agenda = new Agenda({
-			db: {
+			backend: new MongoBackend({
 				address: options.uri,
 				collection: options.collection
-			}
+			})
 		});
 
 		// Wait for connection

@@ -355,9 +355,9 @@ export class Job<DATA = unknown | void> {
 			} else {
 				this.attrs.nextRunAt = null;
 			}
-		} catch (error: any) {
+		} catch (error) {
 			this.attrs.nextRunAt = null;
-			this.fail(error);
+			this.fail(error as Error);
 		}
 
 		return this;
@@ -396,7 +396,7 @@ export class Job<DATA = unknown | void> {
 						forkHelper.options
 					);
 
-					let childError: any;
+					let childError: unknown;
 					this.forkedChild.on('close', code => {
 						if (code) {
 							console.info(
@@ -435,10 +435,10 @@ export class Job<DATA = unknown | void> {
 			this.agenda.emit('success', this);
 			this.agenda.emit(`success:${this.attrs.name}`, this);
 			log('[%s:%s] has succeeded', this.attrs.name, this.attrs._id);
-		} catch (error: any) {
+		} catch (error) {
 			log('[%s:%s] unknown error occurred', this.attrs.name, this.attrs._id);
 
-			this.fail(error);
+			this.fail(error as Error);
 
 			this.agenda.emit('fail', error, this);
 			this.agenda.emit(`fail:${this.attrs.name}`, error, this);
