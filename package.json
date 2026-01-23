@@ -12,7 +12,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "changeset": "changeset",
-    "docs": "typedoc"
+    "docs:build": "typedoc"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.12",
