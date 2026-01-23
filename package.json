@@ -10,9 +10,11 @@
     "build": "pnpm -r run build",
     "test": "pnpm -r run test",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "changeset": "changeset"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.27.12",
     "@eslint/js": "^9.18.0",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
