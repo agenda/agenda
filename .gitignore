@@ -3,6 +3,7 @@ node_modules/
 
 # Build outputs
 dist/
+docs-site/
 *.tsbuildinfo
 
 # IDE

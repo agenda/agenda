@@ -11,10 +11,12 @@
     "test": "pnpm -r run test",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "changeset": "changeset"
+    "changeset": "changeset",
+    "docs": "typedoc"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.12",
+    "typedoc": "^0.28.0",
     "@eslint/js": "^9.18.0",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
