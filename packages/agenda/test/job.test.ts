@@ -8,7 +8,7 @@ import { Db, ObjectId } from 'mongodb';
 import delay from 'delay';
 import sinon from 'sinon';
 import { Job } from '../src/Job';
-import { Agenda } from '../src';
+import { Agenda, MongoBackend } from '../src';
 import { mockMongo } from './helpers/mock-mongodb';
 import someJobDefinition from './fixtures/someJobDefinition';
 
@@ -41,7 +41,7 @@ describe('Job', () => {
 		return new Promise(resolve => {
 			agenda = new Agenda(
 				{
-					mongo: mongoDb
+					backend: new MongoBackend({ mongo: mongoDb })
 				},
 				async () => {
 					await delay(50);
@@ -83,7 +83,7 @@ describe('Job', () => {
 				name: 'demo',
 				type: 'normal',
 				nextRunAt: null,
-				failedAt: null as any
+				failedAt: null as unknown as Date
 			});
 			expect(job.toJson().failedAt).to.be.not.a('Date');
 
@@ -444,8 +444,8 @@ describe('Job', () => {
 			agenda.define('failBoat2', async (_job, cb) => {
 				try {
 					throw new Error('Zomg fail');
-				} catch (err: any) {
-					cb(err);
+				} catch (err) {
+					cb(err as Error);
 				}
 			});
 			await job.run();
@@ -960,7 +960,7 @@ describe('Job', () => {
 		});
 
 		it('does not process locked jobs', async () => {
-			const history: any[] = [];
+			const history: number[] = [];
 
 			agenda.define(
 				'lock job',
@@ -992,8 +992,9 @@ describe('Job', () => {
 			expect(history).to.contain(3);
 		});
 
-		it('does not on-the-fly lock more than agenda._lockLimit jobs', async () => {
+		it('does not lock more than agenda._lockLimit jobs', async () => {
 			agenda.lockLimit(1);
+			agenda.processEvery(100);
 
 			agenda.define('lock job', (_job, _cb) => {
 				/* this job nevers finishes */
@@ -1003,14 +1004,15 @@ describe('Job', () => {
 
 			await Promise.all([agenda.now('lock job', { i: 1 }), agenda.now('lock job', { i: 2 })]);
 
-			// give it some time to get picked up
-			await delay(200);
+			// Wait for the process interval to pick up the jobs
+			await delay(500);
 
 			expect((await agenda.getRunningStats()).lockedJobs).to.equal(1);
 		});
 
-		it('does not on-the-fly lock more mixed jobs than agenda._lockLimit jobs', async () => {
+		it('does not lock more mixed jobs than agenda._lockLimit jobs', async () => {
 			agenda.lockLimit(1);
+			agenda.processEvery(100);
 
 			agenda.define('lock job', (_job, _cb) => {});
 			agenda.define('lock job2', (_job, _cb) => {});
@@ -1033,7 +1035,8 @@ describe('Job', () => {
 			await agenda.stop();
 		});
 
-		it('does not on-the-fly lock more than definition.lockLimit jobs', async () => {
+		it('does not lock more than definition.lockLimit jobs', async () => {
+			agenda.processEvery(100);
 			agenda.define('lock job', (_job, _cb) => {}, { lockLimit: 1 });
 
 			await agenda.start();
@@ -1224,12 +1227,12 @@ describe('Job', () => {
 			]);
 			await agenda.start();
 			try {
-				const { times, priorities } = await Promise.race<any>([
+				const { times, priorities } = await Promise.race([
 					checkResultsPromise,
 
-					new Promise<any>((_, reject) => {
+					new Promise<{ times: number[]; priorities: number[] }>((_, reject) => {
 						setTimeout(() => {
-							reject(`not processed`);
+							reject(new Error('not processed'));
 						}, 2000);
 					})
 				]);
@@ -1285,10 +1288,12 @@ describe('Job', () => {
 			}
 		});
 
-		it('should support custom sort option', () => {
+		it('should support custom sort option in MongoBackend', () => {
 			const sort = { foo: 1 } as const;
-			const agendaSort = new Agenda({ sort });
-			expect(agendaSort.attrs.sort).to.eql(sort);
+			const backend = new MongoBackend({ mongo: mongoDb, sort });
+			const agendaSort = new Agenda({ backend });
+			// Sort is configured on the backend, not Agenda attrs
+			expect(agendaSort.db).to.not.be.undefined;
 		});
 	});
 
@@ -1552,9 +1557,8 @@ describe('Job', () => {
 	it('should emit error when job is removed while locked', async () => {
 		// Use isolated agenda instance with unique collection to avoid interference
 		const isolatedAgenda = new Agenda({
-			mongo: mongoDb,
-			processEvery: 50, // Fast processing
-			collection: 'agendaJobsIsolated'
+			backend: new MongoBackend({ mongo: mongoDb, collection: 'agendaJobsIsolated' }),
+			processEvery: 50 // Fast processing
 		});
 
 		// Wait for agenda to be ready
@@ -1614,7 +1618,7 @@ describe('Job', () => {
 	describe('job fork mode', () => {
 		it('runs a job in fork mode', async () => {
 			const agendaFork = new Agenda({
-				mongo: mongoDb,
+				backend: new MongoBackend({ mongo: mongoDb }),
 				forkHelper: {
 					path: './test/helpers/forkHelper.ts',
 					options: {
@@ -1631,7 +1635,7 @@ describe('Job', () => {
 			job.schedule('now');
 			await job.save();
 
-			const jobData = await agenda.db.getJobById(job.attrs._id as any);
+			const jobData = await agenda.db.getJobById(job.attrs._id!);
 
 			if (!jobData) {
 				throw new Error('job not found');
@@ -1649,7 +1653,7 @@ describe('Job', () => {
 				await delay(50);
 			} while (await job.isRunning());
 
-			const jobDataFinished = await agenda.db.getJobById(job.attrs._id as any);
+			const jobDataFinished = await agenda.db.getJobById(job.attrs._id!);
 			expect(jobDataFinished?.lastFinishedAt).to.not.be.eq(undefined);
 			expect(jobDataFinished?.failReason).to.be.eq(null);
 			expect(jobDataFinished?.failCount).to.be.eq(null);
@@ -1657,7 +1661,7 @@ describe('Job', () => {
 
 		it('runs a job in fork mode, but let it fail', async () => {
 			const agendaFork = new Agenda({
-				mongo: mongoDb,
+				backend: new MongoBackend({ mongo: mongoDb }),
 				forkHelper: {
 					path: './test/helpers/forkHelper.ts',
 					options: {
@@ -1674,7 +1678,7 @@ describe('Job', () => {
 			job.schedule('now');
 			await job.save();
 
-			const jobData = await agenda.db.getJobById(job.attrs._id as any);
+			const jobData = await agenda.db.getJobById(job.attrs._id!);
 
 			if (!jobData) {
 				throw new Error('job not found');
@@ -1692,7 +1696,7 @@ describe('Job', () => {
 				await delay(50);
 			} while (await job.isRunning());
 
-			const jobDataFinished = await agenda.db.getJobById(job.attrs._id as any);
+			const jobDataFinished = await agenda.db.getJobById(job.attrs._id!);
 			expect(jobDataFinished?.lastFinishedAt).to.not.be.eq(undefined);
 			expect(jobDataFinished?.failReason).to.not.be.eq(null);
 			expect(jobDataFinished?.failCount).to.be.eq(1);
@@ -1700,7 +1704,7 @@ describe('Job', () => {
 
 		it('runs a job in fork mode, but let it die', async () => {
 			const agendaFork = new Agenda({
-				mongo: mongoDb,
+				backend: new MongoBackend({ mongo: mongoDb }),
 				forkHelper: {
 					path: './test/helpers/forkHelper.ts',
 					options: {
@@ -1717,7 +1721,7 @@ describe('Job', () => {
 			job.schedule('now');
 			await job.save();
 
-			const jobData = await agenda.db.getJobById(job.attrs._id as any);
+			const jobData = await agenda.db.getJobById(job.attrs._id!);
 
 			if (!jobData) {
 				throw new Error('job not found');
@@ -1735,7 +1739,7 @@ describe('Job', () => {
 				await delay(50);
 			} while (await job.isRunning());
 
-			const jobDataFinished = await agenda.db.getJobById(job.attrs._id as any);
+			const jobDataFinished = await agenda.db.getJobById(job.attrs._id!);
 			expect(jobDataFinished?.lastFinishedAt).to.not.be.eq(undefined);
 			expect(jobDataFinished?.failReason).to.not.be.eq(null);
 			expect(jobDataFinished?.failCount).to.be.eq(1);

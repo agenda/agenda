@@ -5,7 +5,10 @@ import { SortDirection } from 'mongodb';
 import { ForkOptions } from 'child_process';
 import type { IJobDefinition } from './types/JobDefinition.js';
 import type { IAgendaConfig } from './types/AgendaConfig.js';
-import type { IDatabaseOptions, IDbConfig, IMongoOptions, IRepositoryOptions } from './types/DbOptions.js';
+import type { IDbConfig } from './types/DbOptions.js';
+import type { IAgendaBackend } from './types/AgendaBackend.js';
+import type { INotificationChannel, IJobNotification } from './types/NotificationChannel.js';
+import type { JobId } from './types/JobParameters.js';
 import type { IJobRepository } from './types/JobRepository.js';
 import type { IAgendaStatus } from './types/AgendaStatus.js';
 import type {
@@ -15,7 +18,6 @@ import type {
 } from './types/JobQuery.js';
 import type { IRemoveJobsOptions } from './types/JobRepository.js';
 import { Job, JobWithId } from './Job.js';
-import { JobDbRepository } from './JobDbRepository.js';
 import { JobPriority, parsePriority } from './utils/priority.js';
 import { JobProcessor } from './JobProcessor.js';
 import { calculateProcessEvery } from './utils/processEvery.js';
@@ -35,6 +37,38 @@ const DefaultOptions = {
 };
 
 /**
+ * Agenda configuration options
+ */
+export interface IAgendaOptions {
+	/** Unified backend for storage and optionally notifications */
+	backend: IAgendaBackend;
+	/** Name to identify this agenda instance */
+	name?: string;
+	/** Default number of concurrent jobs per job type */
+	defaultConcurrency?: number;
+	/** How often to poll for new jobs (string like '5 seconds' or milliseconds) */
+	processEvery?: string | number;
+	/** Maximum number of concurrent jobs globally */
+	maxConcurrency?: number;
+	/** Default max locked jobs per job type */
+	defaultLockLimit?: number;
+	/** Global max locked jobs */
+	lockLimit?: number;
+	/** Default lock lifetime in milliseconds */
+	defaultLockLifetime?: number;
+	/** Fork helper configuration for sandboxed workers */
+	forkHelper?: { path: string; options?: ForkOptions };
+	/** Whether this is a forked worker instance */
+	forkedWorker?: boolean;
+	/**
+	 * Override notification channel from backend.
+	 * Use this to mix storage from one system with notifications from another.
+	 * e.g., MongoDB storage + Redis notifications
+	 */
+	notificationChannel?: INotificationChannel;
+}
+
+/**
  * @class
  */
 export class Agenda extends EventEmitter {
@@ -47,10 +81,11 @@ export class Agenda extends EventEmitter {
 		options?: ForkOptions;
 	};
 
-	db!: IJobRepository;
+	private backend: IAgendaBackend;
 
-	// internally used
-	on(event: 'processJob', listener: (job: JobWithId) => void): this;
+	db: IJobRepository;
+
+	private notificationChannel?: INotificationChannel;
 
 	on(event: 'fail', listener: (error: Error, job: JobWithId) => void): this;
 	on(event: 'success', listener: (job: JobWithId) => void): this;
@@ -99,25 +134,10 @@ export class Agenda extends EventEmitter {
 	}
 
 	/**
-	 * @param {Object} config - Agenda Config
-	 * @param {Function} cb - Callback after Agenda has started and connected to mongo
+	 * @param config - Agenda configuration with backend
+	 * @param cb - Optional callback after Agenda is ready
 	 */
-	constructor(
-		config: {
-			name?: string;
-			defaultConcurrency?: number;
-			processEvery?: string | number;
-			maxConcurrency?: number;
-			defaultLockLimit?: number;
-			lockLimit?: number;
-			defaultLockLifetime?: number;
-			} & (IDatabaseOptions | IMongoOptions | IRepositoryOptions | object) &
-			IDbConfig & {
-				forkHelper?: { path: string; options?: ForkOptions };
-				forkedWorker?: boolean;
-			} = DefaultOptions,
-		cb?: (error?: Error) => void
-	) {
+	constructor(config: IAgendaOptions, cb?: (error?: Error) => void) {
 		super();
 
 		this.attrs = {
@@ -127,26 +147,27 @@ export class Agenda extends EventEmitter {
 			maxConcurrency: config.maxConcurrency || DefaultOptions.maxConcurrency,
 			defaultLockLimit: config.defaultLockLimit || DefaultOptions.defaultLockLimit,
 			lockLimit: config.lockLimit || DefaultOptions.lockLimit,
-			defaultLockLifetime: config.defaultLockLifetime || DefaultOptions.defaultLockLifetime, // 10 minute default lockLifetime
-			sort: config.sort || DefaultOptions.sort
+			defaultLockLifetime: config.defaultLockLifetime || DefaultOptions.defaultLockLifetime,
+			sort: DefaultOptions.sort
 		};
 
 		this.forkedWorker = config.forkedWorker;
 		this.forkHelper = config.forkHelper;
 
+		// Store backend and get repository
+		this.backend = config.backend;
+		this.db = config.backend.repository;
+
+		// Notification channel priority: explicit config > backend's channel
+		this.notificationChannel = config.notificationChannel ?? config.backend.notificationChannel;
+
+		// Ready promise resolves when backend is connected
 		this.ready = new Promise(resolve => {
 			this.once('ready', resolve);
 		});
 
-		if (this.hasRepositoryConfig(config)) {
-			// Use custom repository implementation
-			this.db = config.repository;
-			this.db.connect().then(() => this.emit('ready'));
-		} else if (this.hasDatabaseConfig(config)) {
-			// Use built-in MongoDB repository
-			this.db = new JobDbRepository(this, config);
-			this.db.connect();
-		}
+		// Connect the backend
+		this.backend.connect().then(() => this.emit('ready'));
 
 		if (cb) {
 			this.ready.then(() => cb());
@@ -162,16 +183,6 @@ export class Agenda extends EventEmitter {
 		log('Agenda.sort([Object])');
 		this.attrs.sort = query;
 		return this;
-	}
-
-	private hasRepositoryConfig(config: unknown): config is IRepositoryOptions {
-		return !!(config as IRepositoryOptions)?.repository;
-	}
-
-	private hasDatabaseConfig(
-		config: unknown
-	): config is (IDatabaseOptions | IMongoOptions) & IDbConfig {
-		return !!((config as IDatabaseOptions)?.db?.address || (config as IMongoOptions)?.mongo);
 	}
 
 	/**
@@ -264,6 +275,55 @@ export class Agenda extends EventEmitter {
 		log('Agenda.defaultLockLifetime(%d)', ms);
 		this.attrs.defaultLockLifetime = ms;
 		return this;
+	}
+
+	/**
+	 * Set a notification channel for real-time job notifications
+	 * @param channel - The notification channel implementation
+	 */
+	notifyVia(channel: INotificationChannel): Agenda {
+		if (this.jobProcessor) {
+			throw new Error(
+				'job processor is already running, you need to set notificationChannel before calling start'
+			);
+		}
+		log('Agenda.notifyVia([INotificationChannel])');
+		this.notificationChannel = channel;
+		return this;
+	}
+
+	/**
+	 * Check if a notification channel is configured
+	 */
+	hasNotificationChannel(): boolean {
+		return !!this.notificationChannel;
+	}
+
+	/**
+	 * Publish a job notification to the notification channel
+	 * @internal
+	 */
+	async publishJobNotification(job: Job): Promise<void> {
+		if (!this.notificationChannel) {
+			return;
+		}
+
+		const notification: IJobNotification = {
+			jobId: job.attrs._id as JobId,
+			jobName: job.attrs.name,
+			nextRunAt: job.attrs.nextRunAt,
+			priority: job.attrs.priority,
+			timestamp: new Date(),
+			source: this.attrs.name || undefined
+		};
+
+		try {
+			await this.notificationChannel.publish(notification);
+			log('published job notification for [%s:%s]', job.attrs.name, job.attrs._id);
+		} catch (error) {
+			log('failed to publish job notification for [%s:%s]', job.attrs.name, job.attrs._id, error);
+			this.emit('error', error);
+		}
 	}
 
 	/**
@@ -375,6 +435,7 @@ export class Agenda extends EventEmitter {
 	 */
 	create(name: string): Job<void>;
 	create<DATA = unknown>(name: string, data: DATA): Job<DATA>;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	create(name: string, data?: unknown): Job<any> {
 		log('Agenda.create(%s, [Object])', name);
 		const priority = this.definitions[name] ? this.definitions[name].priority : 0;
@@ -418,7 +479,8 @@ export class Agenda extends EventEmitter {
 		names: string | string[],
 		data?: unknown,
 		options?: { timezone?: string; skipImmediate?: boolean; forkMode?: boolean }
-	): Promise<Job<any> | Job<any>[]> {
+	): // eslint-disable-next-line @typescript-eslint/no-explicit-any
+	Promise<Job<any> | Job<any>[]> {
 		/**
 		 * Internal method to setup job that gets run every interval
 		 * @param {Number} interval run every X interval
@@ -524,14 +586,19 @@ export class Agenda extends EventEmitter {
 			return;
 		}
 
+		// Connect notification channel if configured
+		if (this.notificationChannel) {
+			log('Agenda.start connecting notification channel');
+			await this.notificationChannel.connect();
+		}
+
 		this.jobProcessor = new JobProcessor(
 			this,
 			this.attrs.maxConcurrency,
 			this.attrs.lockLimit,
-			this.attrs.processEvery
+			this.attrs.processEvery,
+			this.notificationChannel
 		);
-
-		this.on('processJob', this.jobProcessor.process.bind(this.jobProcessor));
 	}
 
 	/**
@@ -555,7 +622,15 @@ export class Agenda extends EventEmitter {
 			await this.db.unlockJobs(jobIds);
 		}
 
-		this.off('processJob', this.jobProcessor.process.bind(this.jobProcessor));
+		// Disconnect notification channel if configured
+		if (this.notificationChannel) {
+			log('Agenda.stop disconnecting notification channel');
+			await this.notificationChannel.disconnect();
+		}
+
+		// Disconnect the backend
+		log('Agenda.stop disconnecting backend');
+		await this.backend.disconnect();
 
 		this.jobProcessor = undefined;
 	}
@@ -574,3 +649,11 @@ export * from './Job.js';
 export * from './types/JobQuery.js';
 
 export * from './types/JobRepository.js';
+
+export * from './types/NotificationChannel.js';
+
+export * from './types/AgendaBackend.js';
+
+export * from './notifications/index.js';
+
+export * from './backends/index.js';

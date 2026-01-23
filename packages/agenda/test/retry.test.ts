@@ -3,7 +3,7 @@ import delay from 'delay';
 import { describe, it, beforeEach, afterEach } from 'vitest';
 import { mockMongo } from './helpers/mock-mongodb';
 
-import { Agenda } from '../src';
+import { Agenda, MongoBackend } from '../src';
 
 // agenda instances
 let agenda: Agenda;
@@ -29,7 +29,7 @@ describe('Retry', () => {
 		return new Promise(resolve => {
 			agenda = new Agenda(
 				{
-					mongo: mongoDb
+					backend: new MongoBackend({ mongo: mongoDb })
 				},
 				async () => {
 					await delay(50);

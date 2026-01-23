@@ -8,20 +8,27 @@
   A light-weight job scheduling library for Node.js
 </p>
 
-This was originally a fork of agenda.js,
-it differs from the original version in following points:
+> **Migrating from v5?** See the [Migration Guide](docs/migration-guide-v6.md) for all breaking changes.
 
-- Complete rewrite in Typescript (fully typed!)
-- **Pluggable database driver** - MongoDB by default, but you can implement your own (see [Custom Database Driver](docs/custom-database-driver.md))
-- mongodb4 driver (supports mongodb 5.x)
-- Supports mongoDB sharding by name
-- touch() can have an optional progress parameter (0-100)
-- Bugfixes and improvements for locking & job processing (concurrency, lockLimit,..)
-- Breaking change: define() config paramter moved from 2nd position to 3rd
-- getRunningStats()
-- automatically waits for agenda to be connected before calling any database operations
-- does not create a database index by default, you can set `ensureIndex: true` when initializing Agenda
-  or run manually:
+## What's New in v6
+
+- **ESM-only** - Modern ES modules (Node.js 18+)
+- **Pluggable backend system** - New `IAgendaBackend` interface for storage and notifications
+- **Real-time notifications** - Optional notification channels for instant job processing
+- **MongoDB 6 driver** - Updated to latest MongoDB driver
+- **Monorepo** - Now includes `agenda`, `agendash`, and `agenda-rest` packages
+
+## Key Features
+
+- Complete rewrite in TypeScript (fully typed!)
+- **Pluggable backend** - MongoDB by default, implement your own (see [Custom Backend Driver](docs/custom-database-driver.md))
+- **Real-time notifications** - Use Redis, PostgreSQL LISTEN/NOTIFY, or custom pub/sub
+- MongoDB 6 driver support
+- `touch()` with optional progress parameter (0-100)
+- `getRunningStats()` for monitoring
+- Fork mode for sandboxed job execution
+- Automatic connection handling
+- Does not create indexes by default - set `ensureIndex: true` or run manually:
 
 ```
 db.agendaJobs.ensureIndex({
@@ -82,18 +89,23 @@ You will also need a working [Mongo](https://www.mongodb.com/) database (v4+) to
 # Example Usage
 
 ```js
+import { Agenda, MongoBackend } from 'agenda';
+
 const mongoConnectionString = 'mongodb://127.0.0.1/agenda';
 
-const agenda = new Agenda({ db: { address: mongoConnectionString } });
+const agenda = new Agenda({
+	backend: new MongoBackend({ address: mongoConnectionString })
+});
 
 // Or override the default collection name:
-// const agenda = new Agenda({db: {address: mongoConnectionString, collection: 'jobCollectionName'}});
-
-// or pass additional connection options:
-// const agenda = new Agenda({db: {address: mongoConnectionString, collection: 'jobCollectionName', options: {ssl: true}}});
+// const agenda = new Agenda({
+//   backend: new MongoBackend({ address: mongoConnectionString, collection: 'jobCollectionName' })
+// });
 
 // or pass in an existing mongodb-native Db instance
-// const agenda = new Agenda({mongo: myMongoDb});
+// const agenda = new Agenda({
+//   backend: new MongoBackend({ mongo: myMongoDb })
+// });
 
 agenda.define('delete old users', async job => {
 	await User.remove({ lastLogIn: { $lt: twoDaysAgo } });
@@ -148,7 +160,9 @@ mapped to a database collection and load the jobs from within.
 
 ## Table of Contents
 
+- [Migration Guide (v5 to v6)](docs/migration-guide-v6.md)
 - [Configuring an agenda](#configuring-an-agenda)
+  - [Real-Time Notifications](#real-time-notifications)
 - [Agenda Events](#agenda-events)
 - [Defining job processors](#defining-job-processors)
 - [Creating jobs](#creating-jobs)
@@ -169,25 +183,43 @@ Possible agenda config options:
 
 ```ts
 {
-	name: string;
-	defaultConcurrency: number;
-	processEvery: number;
-	maxConcurrency: number;
-	defaultLockLimit: number;
-	lockLimit: number;
-	defaultLockLifetime: number;
-	ensureIndex: boolean;
-	sort: SortOptionObject<IJobParameters>;
-	// MongoDB via connection string (default driver)
-	db: {
-		collection: string;
-		address: string;
-		options: MongoClientOptions;
-	}
-	// MongoDB via existing connection (default driver)
-	mongo: Db;
-	// Custom database driver (see docs/custom-database-driver.md)
-	repository: IJobRepository;
+	// Required: Backend for storage (and optionally notifications)
+	backend: IAgendaBackend;
+	// Optional: Override notification channel from backend
+	notificationChannel?: INotificationChannel;
+	// Agenda instance name (used in lastModifiedBy field)
+	name?: string;
+	// Job processing options
+	defaultConcurrency?: number;
+	processEvery?: string | number;
+	maxConcurrency?: number;
+	defaultLockLimit?: number;
+	lockLimit?: number;
+	defaultLockLifetime?: number;
+	// Fork mode options
+	forkHelper?: { path: string; options?: ForkOptions };
+	forkedWorker?: boolean;
+}
+```
+
+**MongoBackend config options:**
+
+```ts
+{
+	// MongoDB connection string
+	address?: string;
+	// Or existing MongoDB database instance
+	mongo?: Db;
+	// Collection name (default: 'agendaJobs')
+	collection?: string;
+	// MongoDB client options
+	options?: MongoClientOptions;
+	// Create indexes on connect (default: false)
+	ensureIndex?: boolean;
+	// Sort order for job queries
+	sort?: { [key: string]: SortDirection };
+	// Name for lastModifiedBy field
+	name?: string;
 }
 ```
 
@@ -204,34 +236,118 @@ agenda.processEvery('3 days and 4 hours');
 agenda.processEvery('3 days, 4 hours and 36 seconds');
 ```
 
-### Database Configuration
+### Backend Configuration
 
-Agenda uses MongoDB by default. Configure the database connection during instantiation:
+Agenda uses a pluggable backend system. The backend provides storage and optionally real-time notifications.
 
-**Via connection string:**
+**Using MongoBackend (default):**
 
 ```js
+import { Agenda, MongoBackend } from 'agenda';
+
+// Via connection string
 const agenda = new Agenda({
-	db: { address: 'localhost:27017/agenda-test', collection: 'agendaJobs' }
+	backend: new MongoBackend({ address: 'mongodb://localhost:27017/agenda-test' })
+});
+
+// Via existing MongoDB connection
+const agenda = new Agenda({
+	backend: new MongoBackend({ mongo: mongoClientInstance.db('agenda-test') })
+});
+
+// With custom collection name
+const agenda = new Agenda({
+	backend: new MongoBackend({
+		address: 'mongodb://localhost:27017/agenda-test',
+		collection: 'myJobs'
+	})
 });
 ```
 
-**Via existing MongoDB connection:**
+**Custom backend:**
+
+You can implement a custom backend (e.g., PostgreSQL) by implementing the `IAgendaBackend` interface. See [Custom Database Driver](docs/custom-database-driver.md) for details.
 
 ```js
-const agenda = new Agenda({ mongo: mongoClientInstance.db('agenda-test') });
+const agenda = new Agenda({ backend: myCustomBackend });
 ```
 
-**Via custom database driver:**
-
-You can use a different database by implementing the `IJobRepository` interface. See [Custom Database Driver](docs/custom-database-driver.md) for details.
-
-```js
-const agenda = new Agenda({ repository: myCustomRepository });
-```
-
-Agenda will emit a `ready` event (see [Agenda Events](#agenda-events)) when properly connected to the database.
+Agenda will emit a `ready` event (see [Agenda Events](#agenda-events)) when properly connected to the backend.
 It is safe to call `agenda.start()` without waiting for this event, as this is handled internally.
+
+### Real-Time Notifications
+
+By default, Agenda uses periodic polling (controlled by `processEvery`) to check for new jobs. For faster job processing in distributed environments, you can configure a notification channel that triggers immediate job processing when jobs are created or updated.
+
+**Using the built-in InMemoryNotificationChannel (single process):**
+
+```js
+import { Agenda, MongoBackend, InMemoryNotificationChannel } from 'agenda';
+
+const agenda = new Agenda({
+	backend: new MongoBackend({ mongo: db }),
+	processEvery: '30 seconds', // Fallback polling interval
+	notificationChannel: new InMemoryNotificationChannel()
+});
+```
+
+**Using the fluent API:**
+
+```js
+const channel = new InMemoryNotificationChannel();
+const agenda = new Agenda({ backend: new MongoBackend({ mongo: db }) })
+	.notifyVia(channel);
+```
+
+The `InMemoryNotificationChannel` is useful for testing and single-process deployments. For multi-process or distributed deployments, you can implement custom notification channels using Redis pub/sub, PostgreSQL LISTEN/NOTIFY, or other messaging systems.
+
+**Unified backend with notifications:**
+
+A backend can provide both storage AND notifications. For example, a PostgreSQL backend could use LISTEN/NOTIFY:
+
+```js
+// PostgresBackend implements both repository and notificationChannel
+const agenda = new Agenda({
+	backend: new PostgresBackend({ connectionString: 'postgres://...' })
+	// No need for separate notificationChannel - PostgresBackend provides it!
+});
+```
+
+**Mixing backends (storage from one system, notifications from another):**
+
+```js
+// MongoDB for storage, Redis for notifications
+const agenda = new Agenda({
+	backend: new MongoBackend({ mongo: db }),
+	notificationChannel: new RedisNotificationChannel({ url: 'redis://...' })
+});
+```
+
+**Implementing a custom notification channel:**
+
+Extend `BaseNotificationChannel` or implement `INotificationChannel`:
+
+```ts
+import { BaseNotificationChannel, IJobNotification } from 'agenda';
+
+class RedisNotificationChannel extends BaseNotificationChannel {
+	async connect(): Promise<void> {
+		// Connect to Redis
+		this.setState('connected');
+	}
+
+	async disconnect(): Promise<void> {
+		// Disconnect from Redis
+		this.setState('disconnected');
+	}
+
+	async publish(notification: IJobNotification): Promise<void> {
+		// Publish to Redis channel
+	}
+}
+```
+
+The notification channel is automatically connected when `agenda.start()` is called and disconnected when `agenda.stop()` is called.
 
 ### name(name)
 

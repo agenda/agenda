@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
-import { Agenda } from 'agenda';
+import { Agenda, MongoBackend } from 'agenda';
 import { createServer } from '../src/server.js';
 import { mockMongo, IMockMongo } from './helpers/mock-mongodb.js';
 import type Koa from 'koa';
@@ -12,7 +12,7 @@ describe('Agenda REST API', () => {
 
 	beforeEach(async () => {
 		mongo = await mockMongo();
-		agenda = new Agenda({ mongo: mongo.db });
+		agenda = new Agenda({ backend: new MongoBackend({ mongo: mongo.db }) });
 		await agenda.ready;
 		await agenda.start();
 

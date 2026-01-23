@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
-import { Agenda } from 'agenda';
+import { Agenda, MongoBackend } from 'agenda';
 import { createExpressMiddleware } from '../src/middlewares/express.js';
 import { mockMongo, IMockMongo } from './helpers/mock-mongodb.js';
 
@@ -12,7 +12,7 @@ describe('Express Middleware', () => {
 
 	beforeEach(async () => {
 		mongo = await mockMongo();
-		agenda = new Agenda({ mongo: mongo.db });
+		agenda = new Agenda({ backend: new MongoBackend({ mongo: mongo.db }) });
 		await agenda.ready;
 
 		// Define a test job

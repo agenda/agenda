@@ -3,7 +3,7 @@ import { fail } from 'node:assert';
 import { expect, describe, it, beforeEach, afterEach } from 'vitest';
 
 import { Db } from 'mongodb';
-import { Agenda } from '../src';
+import { Agenda, MongoBackend } from '../src';
 import { mockMongo } from './helpers/mock-mongodb';
 
 // Create agenda instances
@@ -30,7 +30,7 @@ describe('JobProcessor', () => {
 		return new Promise(resolve => {
 			agenda = new Agenda(
 				{
-					mongo: mongoDb,
+					backend: new MongoBackend({ mongo: mongoDb }),
 					maxConcurrency: 4,
 					defaultConcurrency: 1,
 					lockLimit: 15,
@@ -56,8 +56,8 @@ describe('JobProcessor', () => {
 			try {
 				await agenda.getRunningStats();
 				fail();
-			} catch (err: any) {
-				expect(err.message).to.be.equal('agenda not running!');
+			} catch (err) {
+				expect((err as Error).message).to.be.equal('agenda not running!');
 			}
 		});
 
@@ -95,15 +95,6 @@ describe('JobProcessor', () => {
 				expect(status.jobStatus.test.config.priority).to.be.equal(0);
 				expect(status.jobStatus.test.config.lockLimit).to.be.equal(6);
 			}
-		});
-
-		it('shows isLockingOnTheFly', async () => {
-			await agenda.start();
-
-			const status = await agenda.getRunningStats();
-			expect(status).to.have.property('isLockingOnTheFly');
-			expect(status.isLockingOnTheFly).to.be.a('boolean');
-			expect(status.isLockingOnTheFly).to.be.equal(false);
 		});
 
 		it('shows queueName', async () => {
@@ -148,16 +139,17 @@ describe('JobProcessor', () => {
 		}
 
 		await new Promise(resolve => {
-			setTimeout(resolve, 1000);
+			setTimeout(resolve, 1500);
 		});
 
-		// queue more short ones (they should complete first!)
+		// queue more short ones (they will be picked up on next process interval)
 		for (let j = 0; j < 100; j += 1) {
 			agenda.now('test short');
 		}
 
+		// Wait for the next process interval to pick up and run the short jobs
 		await new Promise(resolve => {
-			setTimeout(resolve, 1000);
+			setTimeout(resolve, 2000);
 		});
 
 		expect(shortOneFinished).to.be.equal(true);

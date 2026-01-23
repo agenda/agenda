@@ -1,4 +1,4 @@
-import { Agenda } from '../../src';
+import { Agenda, MongoBackend } from '../../src';
 
 process.on('message', message => {
 	if (message === 'cancel') {
@@ -19,9 +19,9 @@ process.on('message', message => {
 
 	// initialize Agenda in "forkedWorker" mode
 	const agenda = new Agenda({
+		backend: new MongoBackend({ address: process.env.DB_CONNECTION! }),
 		name: `subworker-${name}`,
-		forkedWorker: true,
-		db: { address: process.env.DB_CONNECTION! }
+		forkedWorker: true
 	});
 	// wait for db connection
 	await agenda.ready;

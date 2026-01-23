@@ -10,8 +10,7 @@ import {
 	Sort,
 	UpdateFilter
 } from 'mongodb';
-import type { Agenda } from './index.js';
-import type { IDatabaseOptions, IDbConfig, IMongoOptions } from './types/DbOptions.js';
+import type { IDbConfig } from './types/DbOptions.js';
 import type { IJobParameters, JobId } from './types/JobParameters.js';
 import { toJobId } from './types/JobParameters.js';
 import type {
@@ -34,40 +33,41 @@ const log = debug('agenda:db');
 type MongoJobDocument = Omit<IJobParameters, '_id'> & { _id?: ObjectId };
 
 /**
+ * Configuration options for JobDbRepository
+ */
+export interface IJobDbRepositoryConfig extends IDbConfig {
+	/** MongoDB connection string */
+	db?: { address: string; collection?: string; options?: MongoClientOptions };
+	/** Existing MongoDB database instance */
+	mongo?: Db;
+	/** Name to set as lastModifiedBy on jobs */
+	name?: string;
+}
+
+/**
  * @class
  * MongoDB implementation of IJobRepository
  */
 export class JobDbRepository implements IJobRepository {
 	collection!: Collection<MongoJobDocument>;
 
-	constructor(
-		private agenda: Agenda,
-		private connectOptions: (IDatabaseOptions | IMongoOptions) & IDbConfig
-	) {
+	constructor(private connectOptions: IJobDbRepositoryConfig) {
 		this.connectOptions.sort = this.connectOptions.sort || { nextRunAt: 1, priority: -1 };
 	}
 
 	private async createConnection(): Promise<Db> {
 		const { connectOptions } = this;
-		if (this.hasDatabaseConfig(connectOptions)) {
+		if (connectOptions.db?.address) {
 			log('using database config', connectOptions);
 			return this.database(connectOptions.db.address, connectOptions.db.options);
 		}
 
-		if (this.hasMongoConnection(connectOptions)) {
+		if (connectOptions.mongo) {
 			log('using passed in mongo connection');
 			return connectOptions.mongo;
 		}
 
 		throw new Error('invalid db config, or db config not found');
-	}
-
-	private hasMongoConnection(connectOptions: unknown): connectOptions is IMongoOptions {
-		return !!(connectOptions as IMongoOptions)?.mongo;
-	}
-
-	private hasDatabaseConfig(connectOptions: unknown): connectOptions is IDatabaseOptions {
-		return !!(connectOptions as IDatabaseOptions)?.db?.address;
 	}
 
 	async getJobById(id: string): Promise<IJobParameters | null> {
@@ -394,8 +394,6 @@ export class JobDbRepository implements IJobRepository {
 				throw error;
 			}
 		}
-
-		this.agenda.emit('ready');
 	}
 
 	private async database(url: string, options?: MongoClientOptions) {
@@ -469,7 +467,7 @@ export class JobDbRepository implements IJobRepository {
 			// Add lastModifiedBy
 			const propsWithModifier = {
 				...props,
-				lastModifiedBy: this.agenda.attrs.name
+				lastModifiedBy: this.connectOptions.name
 			};
 
 			log('[job %s] set job props: \n%O', _id, propsWithModifier);
