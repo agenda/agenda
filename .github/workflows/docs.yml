@@ -2,7 +2,7 @@ name: Deploy Documentation
 
 on:
   push:
-    branches: [master]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -37,7 +37,7 @@ jobs:
         run: pnpm build
 
       - name: Generate documentation
-        run: pnpm docs
+        run: pnpm run docs:build
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
