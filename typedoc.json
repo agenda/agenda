@@ -1,0 +1,18 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["packages/agenda/src/index.ts"],
+  "out": "docs-site",
+  "name": "Agenda",
+  "readme": "packages/agenda/README.md",
+  "includeVersion": true,
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "excludeExternals": true,
+  "navigationLinks": {
+    "GitHub": "https://github.com/agenda/agenda",
+    "npm": "https://www.npmjs.com/package/agenda"
+  },
+  "githubPages": true,
+  "plugin": [],
+  "tsconfig": "packages/agenda/tsconfig.json"
+}
