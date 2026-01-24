@@ -165,7 +165,10 @@ export class PostgresNotificationChannel extends BaseNotificationChannel {
 		const payload = this.serializeNotification(notification);
 		log('publishing notification: %s', payload);
 
-		await this.pool.query(`NOTIFY "${this.config.channelName}", $1`, [payload]);
+		// NOTIFY doesn't support parameterized queries, so we must escape the payload
+		// PostgreSQL escapes single quotes by doubling them
+		const escapedPayload = payload.replace(/'/g, "''");
+		await this.pool.query(`NOTIFY "${this.config.channelName}", '${escapedPayload}'`);
 	}
 
 	/**
