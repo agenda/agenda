@@ -11,7 +11,7 @@
   "navigationLinks": {
     "GitHub": "https://github.com/agenda/agenda",
     "npm": "https://www.npmjs.com/package/agenda",
-    "v3.x Docs": "./3.x/"
+    "v4.x Docs": "./4.x/"
   },
   "githubPages": true,
   "plugin": [],
