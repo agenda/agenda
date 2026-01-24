@@ -25,7 +25,13 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:debug": "DEBUG=agenda:**,-agenda:internal:** vitest run"
+    "test:debug": "DEBUG=agenda:**,-agenda:internal:** vitest run",
+    "test:postgres": "POSTGRES_TEST_URL=postgresql://agenda:agenda@localhost:5432/agenda_test vitest run",
+    "test:postgres:watch": "POSTGRES_TEST_URL=postgresql://agenda:agenda@localhost:5432/agenda_test vitest",
+    "docker:up": "docker compose up -d --wait",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "test:docker": "npm run docker:up && npm run test:postgres; npm run docker:down"
   },
   "repository": {
     "type": "git",

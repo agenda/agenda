@@ -159,11 +159,34 @@ for (const sql of getCreateIndexesSQL(tableName)) {
 
 ## Testing
 
-Tests require a PostgreSQL database. Set the connection string via environment variable:
+Tests require a PostgreSQL database. The easiest way is to use Docker:
 
 ```bash
-POSTGRES_TEST_URL=postgresql://postgres:postgres@localhost:5432/agenda_test pnpm test
+# Start PostgreSQL container and run tests
+pnpm test:docker
+
+# Or manually:
+pnpm docker:up        # Start PostgreSQL container
+pnpm test:postgres    # Run tests
+pnpm docker:down      # Stop container
 ```
+
+You can also use an existing PostgreSQL database:
+
+```bash
+POSTGRES_TEST_URL=postgresql://user:pass@localhost:5432/agenda_test pnpm test
+```
+
+### Available Scripts
+
+| Script | Description |
+|--------|-------------|
+| `pnpm test` | Run tests (skips PostgreSQL tests if no database) |
+| `pnpm test:postgres` | Run tests with local Docker PostgreSQL |
+| `pnpm test:docker` | Start container, run tests, stop container |
+| `pnpm docker:up` | Start PostgreSQL container |
+| `pnpm docker:down` | Stop PostgreSQL container |
+| `pnpm docker:logs` | View container logs |
 
 ## Requirements
 
