@@ -24,12 +24,16 @@ const log = debug('agenda:postgres:backend');
  *   })
  * });
  *
- * // Or using an existing pool
+ * // Or using an existing pool (e.g., shared with your app)
+ * // The pool will NOT be closed when Agenda disconnects
  * import { Pool } from 'pg';
  * const pool = new Pool({ connectionString: '...' });
+ *
  * const agenda = new Agenda({
  *   backend: new PostgresBackend({ pool })
  * });
+ *
+ * // Your app can continue using the pool after agenda.stop()
  *
  * agenda.define('myJob', async (job) => {
  *   console.log('Running job:', job.attrs.name);
