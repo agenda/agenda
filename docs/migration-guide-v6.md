@@ -520,6 +520,46 @@ const agenda = new Agenda({
 
 ---
 
+## Official Backend Packages
+
+Agenda v6 now offers official backend packages for PostgreSQL and Redis:
+
+| Package | Backend | Install |
+|---------|---------|---------|
+| `agenda` | MongoDB (built-in) | `npm install agenda` |
+| `@agenda.js/postgres-backend` | PostgreSQL + LISTEN/NOTIFY | `npm install @agenda.js/postgres-backend` |
+| `@agenda.js/redis-backend` | Redis + Pub/Sub | `npm install @agenda.js/redis-backend` |
+
+**PostgreSQL example:**
+
+```javascript
+import { Agenda } from 'agenda';
+import { PostgresBackend } from '@agenda.js/postgres-backend';
+
+const agenda = new Agenda({
+  backend: new PostgresBackend({
+    connectionString: 'postgresql://user:pass@localhost:5432/mydb'
+  })
+});
+```
+
+**Redis example:**
+
+```javascript
+import { Agenda } from 'agenda';
+import { RedisBackend } from '@agenda.js/redis-backend';
+
+const agenda = new Agenda({
+  backend: new RedisBackend({
+    connectionString: 'redis://localhost:6379'
+  })
+});
+```
+
+These backends provide both storage AND real-time notifications out of the box.
+
+---
+
 ## Additional Resources
 
 - [Custom Backend Driver Documentation](./custom-database-driver.md)

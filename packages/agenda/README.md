@@ -110,7 +110,41 @@ const agenda = new Agenda({
 });
 ```
 
-For production, implement a Redis or other pub/sub channel. See [documentation](https://github.com/agenda/agenda#real-time-notifications).
+For production, use one of the official backend packages that include real-time notifications:
+
+## Official Backend Packages
+
+| Package | Backend | Notifications |
+|---------|---------|---------------|
+| `agenda` | MongoDB (built-in) | Polling only (or add custom channel) |
+| [`@agenda.js/postgres-backend`](https://www.npmjs.com/package/@agenda.js/postgres-backend) | PostgreSQL | LISTEN/NOTIFY |
+| [`@agenda.js/redis-backend`](https://www.npmjs.com/package/@agenda.js/redis-backend) | Redis | Pub/Sub |
+
+**PostgreSQL example:**
+
+```javascript
+import { Agenda } from 'agenda';
+import { PostgresBackend } from '@agenda.js/postgres-backend';
+
+const agenda = new Agenda({
+  backend: new PostgresBackend({
+    connectionString: 'postgresql://user:pass@localhost:5432/mydb'
+  })
+});
+```
+
+**Redis example:**
+
+```javascript
+import { Agenda } from 'agenda';
+import { RedisBackend } from '@agenda.js/redis-backend';
+
+const agenda = new Agenda({
+  backend: new RedisBackend({
+    connectionString: 'redis://localhost:6379'
+  })
+});
+```
 
 ## API Overview
 
@@ -181,12 +215,12 @@ agenda.on('fail:send email', (err, job) => { /* ... */ });
 
 ## Custom Backend
 
-Implement `IAgendaBackend` to use a different database:
+For databases other than MongoDB, PostgreSQL, or Redis, implement `IAgendaBackend`:
 
 ```javascript
 import { IAgendaBackend, IJobRepository } from 'agenda';
 
-class PostgresBackend implements IAgendaBackend {
+class SQLiteBackend implements IAgendaBackend {
   readonly repository: IJobRepository;
   readonly notificationChannel = undefined; // Or implement INotificationChannel
 
@@ -195,7 +229,7 @@ class PostgresBackend implements IAgendaBackend {
 }
 
 const agenda = new Agenda({
-  backend: new PostgresBackend({ connectionString: 'postgres://...' })
+  backend: new SQLiteBackend({ path: './jobs.db' })
 });
 ```
 
@@ -210,6 +244,11 @@ See [Custom Backend Driver](https://github.com/agenda/agenda/blob/main/docs/cust
 
 ## Related Packages
 
+**Official Backend Packages:**
+- [@agenda.js/postgres-backend](https://www.npmjs.com/package/@agenda.js/postgres-backend) - PostgreSQL backend with LISTEN/NOTIFY
+- [@agenda.js/redis-backend](https://www.npmjs.com/package/@agenda.js/redis-backend) - Redis backend with Pub/Sub
+
+**Tools:**
 - [agendash](https://www.npmjs.com/package/agendash) - Web dashboard for Agenda
 - [agenda-rest](https://www.npmjs.com/package/agenda-rest) - REST API for Agenda
 

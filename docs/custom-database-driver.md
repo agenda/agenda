@@ -2,6 +2,42 @@
 
 Agenda v6 introduces a pluggable backend system (`IAgendaBackend`), allowing you to use databases other than MongoDB and optionally provide real-time notifications.
 
+## Official Backend Packages
+
+Before implementing a custom backend, check if an official package already exists:
+
+| Package | Backend | Notifications | Install |
+|---------|---------|---------------|---------|
+| `agenda` | MongoDB | Polling (or custom) | `npm install agenda` |
+| `@agenda.js/postgres-backend` | PostgreSQL | LISTEN/NOTIFY | `npm install @agenda.js/postgres-backend` |
+| `@agenda.js/redis-backend` | Redis | Pub/Sub | `npm install @agenda.js/redis-backend` |
+
+**PostgreSQL:**
+```typescript
+import { Agenda } from 'agenda';
+import { PostgresBackend } from '@agenda.js/postgres-backend';
+
+const agenda = new Agenda({
+  backend: new PostgresBackend({
+    connectionString: 'postgresql://user:pass@localhost:5432/mydb'
+  })
+});
+```
+
+**Redis:**
+```typescript
+import { Agenda } from 'agenda';
+import { RedisBackend } from '@agenda.js/redis-backend';
+
+const agenda = new Agenda({
+  backend: new RedisBackend({
+    connectionString: 'redis://localhost:6379'
+  })
+});
+```
+
+If you need a different database (SQLite, MySQL, etc.), continue reading to learn how to implement a custom backend.
+
 ## Architecture
 
 A backend provides:
@@ -294,59 +330,65 @@ When implementing a custom backend:
 
 5. **Notifications**: If your database supports real-time notifications (like PostgreSQL LISTEN/NOTIFY), implement `INotificationChannel` and provide it via `notificationChannel`.
 
-## Example: PostgreSQL Backend with LISTEN/NOTIFY
+## Example: SQLite Backend
+
+Here's an example structure for implementing a SQLite backend:
 
 ```typescript
 import {
   IAgendaBackend,
   IJobRepository,
-  INotificationChannel,
   BaseNotificationChannel,
   IJobNotification
 } from 'agenda';
 
-class PostgresRepository implements IJobRepository {
-  // Implement all repository methods...
+class SQLiteRepository implements IJobRepository {
+  // Implement all repository methods using better-sqlite3 or similar...
 }
 
-class PostgresNotificationChannel extends BaseNotificationChannel {
+// Optional: For multi-process setups, implement a notification channel
+class SQLiteNotificationChannel extends BaseNotificationChannel {
+  // Could use file-based notifications, IPC, or external pub/sub
   async connect(): Promise<void> {
-    // Subscribe to LISTEN notifications
     this.setState('connected');
   }
 
   async disconnect(): Promise<void> {
-    // UNLISTEN
     this.setState('disconnected');
   }
 
   async publish(notification: IJobNotification): Promise<void> {
-    // NOTIFY with job data
+    // Publish notification to other processes
   }
 }
 
-class PostgresBackend implements IAgendaBackend {
+class SQLiteBackend implements IAgendaBackend {
   readonly repository: IJobRepository;
-  readonly notificationChannel: INotificationChannel;
+  readonly notificationChannel?: INotificationChannel;
 
-  constructor(config: { connectionString: string }) {
-    this.repository = new PostgresRepository(config);
-    this.notificationChannel = new PostgresNotificationChannel(config);
+  constructor(config: { path: string }) {
+    this.repository = new SQLiteRepository(config);
+    // Notification channel is optional for single-process apps
   }
 
   async connect(): Promise<void> {
     await this.repository.connect();
-    await this.notificationChannel.connect();
   }
 
   async disconnect(): Promise<void> {
-    await this.notificationChannel.disconnect();
     // Close database connection
   }
 }
 
 // Usage
 const agenda = new Agenda({
-  backend: new PostgresBackend({ connectionString: 'postgres://...' })
+  backend: new SQLiteBackend({ path: './jobs.db' })
 });
 ```
+
+## Reference Implementations
+
+For complete implementation examples, see the source code of the official backend packages:
+
+- **PostgreSQL**: [@agenda.js/postgres-backend](https://github.com/agenda/agenda/tree/main/packages/postgres-backend)
+- **Redis**: [@agenda.js/redis-backend](https://github.com/agenda/agenda/tree/main/packages/redis-backend)

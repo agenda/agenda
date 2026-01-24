@@ -57,9 +57,9 @@ db.agendaJobs.ensureIndex({
 Since there are a few job queue solutions, here a table comparing them to help you use the one that
 better suits your needs.
 
-| Feature                    |      Bull       |   Bee    | Agenda |
-| :------------------------- | :-------------: | :------: | :----: |
-| Backend                    |      redis      |  redis   | mongo  |
+| Feature                    |      Bull       |   Bee    |         Agenda          |
+| :------------------------- | :-------------: | :------: | :---------------------: |
+| Backend                    |      redis      |  redis   | mongo, postgres, redis  |
 | Priorities                 |        ✓        |          |   ✓    |
 | Concurrency                |        ✓        |    ✓     |   ✓    |
 | Delayed jobs               |        ✓        |          |   ✓    |
@@ -84,7 +84,15 @@ Install via NPM
 
     npm install agenda
 
-You will also need a working [Mongo](https://www.mongodb.com/) database (v4+) to point it to.
+**For MongoDB (default):** You will need a working [MongoDB](https://www.mongodb.com/) database (v4+).
+
+**For PostgreSQL:** Install the official PostgreSQL backend:
+
+    npm install @agenda.js/postgres-backend
+
+**For Redis:** Install the official Redis backend:
+
+    npm install @agenda.js/redis-backend
 
 # Example Usage
 
@@ -264,9 +272,45 @@ const agenda = new Agenda({
 });
 ```
 
+**Using PostgresBackend:**
+
+```bash
+npm install @agenda.js/postgres-backend
+```
+
+```js
+import { Agenda } from 'agenda';
+import { PostgresBackend } from '@agenda.js/postgres-backend';
+
+const agenda = new Agenda({
+	backend: new PostgresBackend({
+		connectionString: 'postgresql://user:pass@localhost:5432/mydb'
+	})
+});
+// PostgresBackend provides both storage AND real-time notifications via LISTEN/NOTIFY
+```
+
+**Using RedisBackend:**
+
+```bash
+npm install @agenda.js/redis-backend
+```
+
+```js
+import { Agenda } from 'agenda';
+import { RedisBackend } from '@agenda.js/redis-backend';
+
+const agenda = new Agenda({
+	backend: new RedisBackend({
+		connectionString: 'redis://localhost:6379'
+	})
+});
+// RedisBackend provides both storage AND real-time notifications via Pub/Sub
+```
+
 **Custom backend:**
 
-You can implement a custom backend (e.g., PostgreSQL) by implementing the `IAgendaBackend` interface. See [Custom Database Driver](docs/custom-database-driver.md) for details.
+You can implement a custom backend by implementing the `IAgendaBackend` interface. See [Custom Database Driver](docs/custom-database-driver.md) for details.
 
 ```js
 const agenda = new Agenda({ backend: myCustomBackend });
@@ -1008,20 +1052,19 @@ Agenda itself does not have a web interface built in but we do offer stand-alone
 
 <a href="https://raw.githubusercontent.com/agenda/agendash/master/job-details.png"><img src="https://raw.githubusercontent.com/agenda/agendash/master/job-details.png" style="max-width:100%" alt="Agendash interface"></a>
 
-### Mongo vs Redis
+### Choosing a Backend
 
-The decision to use Mongo instead of Redis is intentional. Redis is often used for
-non-essential data (such as sessions) and without configuration doesn't
-guarantee the same level of persistence as Mongo (should the server need to be
-restarted/crash).
+Agenda v6 supports multiple storage backends. Choose based on your infrastructure:
 
-Agenda decides to focus on persistence without requiring special configuration
-of Redis (thereby degrading the performance of the Redis server on non-critical
-data, such as sessions).
+| Backend | Package | Best For |
+|---------|---------|----------|
+| **MongoDB** | Built-in (`agenda`) | Default choice, excellent for most use cases. Strong consistency, flexible queries. |
+| **PostgreSQL** | `@agenda.js/postgres-backend` | Teams already using PostgreSQL. LISTEN/NOTIFY provides real-time notifications without additional infrastructure. |
+| **Redis** | `@agenda.js/redis-backend` | High-throughput scenarios. Fast Pub/Sub notifications. Configure persistence for durability. |
 
-Ultimately if enough people want a Redis driver instead of Mongo, I will write
-one. (Please open an issue requesting it). For now, Agenda decided to focus on
-guaranteed persistence.
+**MongoDB** remains the default and most battle-tested backend. **PostgreSQL** is great when you want to consolidate on a single database. **Redis** offers the lowest latency for job notifications but requires proper persistence configuration (RDB/AOF) for durability.
+
+See [Backend Configuration](#backend-configuration) for setup details.
 
 ### Spawning / forking processes
 
