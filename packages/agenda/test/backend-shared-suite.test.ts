@@ -5,7 +5,7 @@
  * that the MongoDB backend correctly implements all interfaces.
  */
 
-import { describe, beforeAll, afterAll } from 'vitest';
+import { beforeAll, afterAll } from 'vitest';
 import { Db } from 'mongodb';
 import { JobDbRepository } from '../src/JobDbRepository';
 import { InMemoryNotificationChannel } from '../src';

@@ -23,8 +23,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import type { IJobRepository, IJobParameters, JobId } from '../../src';
-import { toJobId, computeJobState } from '../../src';
+import type { IJobRepository, IJobParameters } from '../../src';
 
 export interface RepositoryTestConfig {
 	/** Name for the test suite */
