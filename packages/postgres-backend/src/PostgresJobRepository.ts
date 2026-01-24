@@ -29,6 +29,7 @@ const log = debug('agenda:postgres:repository');
  */
 export class PostgresJobRepository implements IJobRepository {
 	private pool: Pool;
+	private ownPool: boolean;
 	private tableName: string;
 	private name?: string;
 	private ensureSchema: boolean;
@@ -40,13 +41,19 @@ export class PostgresJobRepository implements IJobRepository {
 		this.ensureSchema = config.ensureSchema ?? true;
 		this.sort = config.sort || { nextRunAt: 1, priority: -1 };
 
-		// Create pool from config
-		if (config.connectionString) {
+		// Use existing pool or create a new one
+		if (config.pool) {
+			// Use existing pool (won't be closed on disconnect)
+			this.pool = config.pool;
+			this.ownPool = false;
+		} else if (config.connectionString) {
 			this.pool = new Pool({ connectionString: config.connectionString });
-		} else if (config.pool) {
-			this.pool = new Pool(config.pool);
+			this.ownPool = true;
+		} else if (config.poolConfig) {
+			this.pool = new Pool(config.poolConfig);
+			this.ownPool = true;
 		} else {
-			throw new Error('PostgresBackend requires connectionString or pool config');
+			throw new Error('PostgresBackend requires pool, connectionString, or poolConfig');
 		}
 	}
 
@@ -94,7 +101,10 @@ export class PostgresJobRepository implements IJobRepository {
 
 	async disconnect(): Promise<void> {
 		log('disconnecting from PostgreSQL');
-		await this.pool.end();
+		// Only close the pool if we created it
+		if (this.ownPool) {
+			await this.pool.end();
+		}
 	}
 
 	/**

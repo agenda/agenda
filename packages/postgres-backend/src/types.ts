@@ -1,4 +1,4 @@
-import type { PoolConfig } from 'pg';
+import type { Pool, PoolConfig } from 'pg';
 
 /**
  * Configuration options for PostgresBackend
@@ -7,8 +7,11 @@ export interface IPostgresBackendConfig {
 	/** PostgreSQL connection string (e.g., 'postgresql://user:pass@host:5432/db') */
 	connectionString?: string;
 
-	/** PostgreSQL pool configuration (alternative to connectionString) */
-	pool?: PoolConfig;
+	/** PostgreSQL pool configuration (creates a new pool) */
+	poolConfig?: PoolConfig;
+
+	/** Existing PostgreSQL pool instance (will not be closed on disconnect) */
+	pool?: Pool;
 
 	/** Table name for jobs (default: 'agenda_jobs') */
 	tableName?: string;

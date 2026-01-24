@@ -17,10 +17,18 @@ const log = debug('agenda:postgres:backend');
  * import { Agenda } from 'agenda';
  * import { PostgresBackend } from '@agenda.js/postgres-backend';
  *
+ * // Using connection string
  * const agenda = new Agenda({
  *   backend: new PostgresBackend({
  *     connectionString: 'postgresql://user:pass@localhost:5432/mydb'
  *   })
+ * });
+ *
+ * // Or using an existing pool
+ * import { Pool } from 'pg';
+ * const pool = new Pool({ connectionString: '...' });
+ * const agenda = new Agenda({
+ *   backend: new PostgresBackend({ pool })
  * });
  *
  * agenda.define('myJob', async (job) => {
