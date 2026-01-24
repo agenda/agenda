@@ -35,8 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [20, 24]
-        mongodb-version: ['6.0', '7.0', '8.0']
+        node-version: [18, 24]
     steps:
       - name: Git checkout
         uses: actions/checkout@v4
@@ -44,16 +43,11 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
 
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'pnpm'
-
-      - name: Start MongoDB
-        uses: supercharge/mongodb-github-action@1.12.1
-        with:
-          mongodb-version: ${{ matrix.mongodb-version }}
 
       - name: Install Packages
         run: pnpm install

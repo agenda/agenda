@@ -3,6 +3,7 @@
   "references": [
     { "path": "packages/agenda" },
     { "path": "packages/agendash" },
-    { "path": "packages/agenda-rest" }
+    { "path": "packages/agenda-rest" },
+    { "path": "packages/postgres-backend" }
   ]
 }
