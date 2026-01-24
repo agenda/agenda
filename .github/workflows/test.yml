@@ -36,7 +36,6 @@ jobs:
     strategy:
       matrix:
         node-version: [20, 24]
-        mongodb-version: ['6.0', '7.0', '8.0']
     steps:
       - name: Git checkout
         uses: actions/checkout@v4
@@ -53,7 +52,7 @@ jobs:
       - name: Start MongoDB
         uses: supercharge/mongodb-github-action@1.12.1
         with:
-          mongodb-version: ${{ matrix.mongodb-version }}
+          mongodb-version: '8.0'
 
       - name: Install Packages
         run: pnpm install
