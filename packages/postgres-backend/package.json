@@ -1,0 +1,63 @@
+{
+  "name": "@agenda.js/postgres-backend",
+  "version": "1.0.0-pre",
+  "description": "PostgreSQL backend for Agenda job scheduler with LISTEN/NOTIFY support",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:debug": "DEBUG=agenda:**,-agenda:internal:** vitest run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/agenda/agenda"
+  },
+  "keywords": [
+    "agenda",
+    "job",
+    "scheduler",
+    "postgresql",
+    "postgres",
+    "pg",
+    "listen",
+    "notify"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/agenda/agenda/issues"
+  },
+  "dependencies": {
+    "debug": "^4.4.0",
+    "pg": "^8.13.0"
+  },
+  "peerDependencies": {
+    "agenda": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/debug": "^4.1.12",
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.11.0",
+    "@vitest/coverage-v8": "^3.1.0",
+    "agenda": "workspace:*",
+    "vitest": "^3.1.0"
+  }
+}
