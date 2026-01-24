@@ -44,10 +44,40 @@ A backend provides:
 - **Storage** (required): Via `IJobRepository` interface
 - **Notifications** (optional): Via `INotificationChannel` interface
 
-This allows:
+### Backend Capabilities
+
+| Backend | Storage | Notifications | Notes |
+|---------|:-------:|:-------------:|-------|
+| **MongoDB** (`MongoBackend`) | ✅ | ❌ | Storage only. Combine with external notification channel for real-time. |
+| **PostgreSQL** (`PostgresBackend`) | ✅ | ✅ | Full backend. Uses LISTEN/NOTIFY for notifications. |
+| **Redis** (`RedisBackend`) | ✅ | ✅ | Full backend. Uses Pub/Sub for notifications. |
+| **InMemoryNotificationChannel** | ❌ | ✅ | Notifications only. For single-process/testing. |
+
+### Common Configurations
+
 1. **MongoDB only** (default): Storage with polling-based job processing
-2. **MongoDB + Redis**: MongoDB for storage, Redis pub/sub for real-time notifications
-3. **PostgreSQL with LISTEN/NOTIFY**: Single backend providing both storage AND notifications
+2. **MongoDB + Redis notifications**: MongoDB for storage, Redis Pub/Sub for real-time notifications
+3. **MongoDB + PostgreSQL notifications**: MongoDB for storage, PostgreSQL LISTEN/NOTIFY for notifications
+4. **PostgreSQL unified**: Single backend providing both storage AND notifications
+5. **Redis unified**: Single backend providing both storage AND notifications
+
+### Mixing Storage and Notification Backends
+
+You can use MongoDB for storage while using a different system for real-time notifications:
+
+```typescript
+import { Agenda, MongoBackend } from 'agenda';
+import { RedisBackend } from '@agenda.js/redis-backend';
+
+// MongoDB for storage + Redis for real-time notifications
+const redisBackend = new RedisBackend({ connectionString: 'redis://localhost:6379' });
+const agenda = new Agenda({
+  backend: new MongoBackend({ mongo: db }),
+  notificationChannel: redisBackend.notificationChannel
+});
+```
+
+This is useful when you want MongoDB's proven durability and flexible queries for job storage, but need faster real-time notifications across multiple processes.
 
 ## Default Backend: MongoBackend
 

@@ -1064,6 +1064,44 @@ Agenda v6 supports multiple storage backends. Choose based on your infrastructur
 
 **MongoDB** remains the default and most battle-tested backend. **PostgreSQL** is great when you want to consolidate on a single database. **Redis** offers the lowest latency for job notifications but requires proper persistence configuration (RDB/AOF) for durability.
 
+#### Backend Capabilities
+
+Each backend provides different capabilities for storage and real-time notifications:
+
+| Backend | Storage | Notifications | Notes |
+|---------|:-------:|:-------------:|-------|
+| **MongoDB** (`MongoBackend`) | ✅ | ❌ | Storage only. Use with external notification channel for real-time. |
+| **PostgreSQL** (`PostgresBackend`) | ✅ | ✅ | Full backend. Uses LISTEN/NOTIFY for notifications. |
+| **Redis** (`RedisBackend`) | ✅ | ✅ | Full backend. Uses Pub/Sub for notifications. |
+| **InMemoryNotificationChannel** | ❌ | ✅ | Notifications only. For single-process/testing. |
+| **RedisNotificationChannel** | ❌ | ✅ | Notifications only. For multi-process with MongoDB storage. |
+
+#### Mixing Storage and Notification Backends
+
+You can combine MongoDB storage with a separate notification channel for real-time job processing:
+
+```js
+import { Agenda, MongoBackend } from 'agenda';
+import { RedisBackend } from '@agenda.js/redis-backend';
+
+// MongoDB for storage + Redis for real-time notifications
+const redisBackend = new RedisBackend({ connectionString: 'redis://localhost:6379' });
+const agenda = new Agenda({
+  backend: new MongoBackend({ mongo: db }),
+  notificationChannel: redisBackend.notificationChannel
+});
+
+// Or use PostgreSQL notifications with MongoDB storage
+import { PostgresBackend } from '@agenda.js/postgres-backend';
+const pgBackend = new PostgresBackend({ connectionString: 'postgres://...' });
+const agenda = new Agenda({
+  backend: new MongoBackend({ mongo: db }),
+  notificationChannel: pgBackend.notificationChannel
+});
+```
+
+This is useful when you want to keep MongoDB for job storage (proven durability, flexible queries) but need faster real-time notifications across multiple processes.
+
 See [Backend Configuration](#backend-configuration) for setup details.
 
 ### Spawning / forking processes
