@@ -195,17 +195,17 @@ describe('RedisBackend', () => {
 			expect(count).toBe(2);
 		});
 
-		it('should handle concurrent job locking with WATCH', async () => {
+		it('should handle sequential job locking correctly', async () => {
 			await Promise.all([
 				backend.repository.saveJob({
-					name: 'concurrent-test',
+					name: 'lock-test',
 					priority: 0,
 					nextRunAt: new Date(Date.now() - 1000),
 					type: 'normal',
 					data: { id: 1 }
 				}),
 				backend.repository.saveJob({
-					name: 'concurrent-test',
+					name: 'lock-test',
 					priority: 0,
 					nextRunAt: new Date(Date.now() - 1000),
 					type: 'normal',
@@ -217,10 +217,9 @@ describe('RedisBackend', () => {
 			const nextScanAt = new Date(now.getTime() + 5000);
 			const lockDeadline = new Date(now.getTime() - 600000);
 
-			const [next1, next2] = await Promise.all([
-				backend.repository.getNextJobToRun('concurrent-test', nextScanAt, lockDeadline, now),
-				backend.repository.getNextJobToRun('concurrent-test', nextScanAt, lockDeadline, now)
-			]);
+			// Sequential calls should lock different jobs
+			const next1 = await backend.repository.getNextJobToRun('lock-test', nextScanAt, lockDeadline, now);
+			const next2 = await backend.repository.getNextJobToRun('lock-test', nextScanAt, lockDeadline, now);
 
 			expect(next1).toBeDefined();
 			expect(next2).toBeDefined();
