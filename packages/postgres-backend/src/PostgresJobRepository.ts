@@ -266,9 +266,6 @@ export class PostgresJobRepository implements IJobRepository {
 		const now = new Date();
 		const names = await this.getDistinctJobNames();
 
-		// Import computeJobState at runtime
-		const { computeJobState } = require('agenda');
-
 		const overviews = await Promise.all(
 			names.map(async name => {
 				const result = await this.pool.query<IPostgresJobRow>(
