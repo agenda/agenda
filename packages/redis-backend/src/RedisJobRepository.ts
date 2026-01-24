@@ -1,6 +1,5 @@
 import debug from 'debug';
 import { Redis } from 'ioredis';
-import type { RedisOptions } from 'ioredis';
 import { randomUUID } from 'crypto';
 import { toJobId, computeJobState } from 'agenda';
 import type {
