@@ -120,6 +120,33 @@ For production, use one of the official backend packages that include real-time 
 | [`@agenda.js/postgres-backend`](https://www.npmjs.com/package/@agenda.js/postgres-backend) | PostgreSQL | LISTEN/NOTIFY |
 | [`@agenda.js/redis-backend`](https://www.npmjs.com/package/@agenda.js/redis-backend) | Redis | Pub/Sub |
 
+### Backend Capabilities
+
+| Backend | Storage | Notifications | Notes |
+|---------|:-------:|:-------------:|-------|
+| **MongoDB** (`MongoBackend`) | ✅ | ❌ | Storage only. Combine with external notification channel for real-time. |
+| **PostgreSQL** (`PostgresBackend`) | ✅ | ✅ | Full backend. Uses LISTEN/NOTIFY for notifications. |
+| **Redis** (`RedisBackend`) | ✅ | ✅ | Full backend. Uses Pub/Sub for notifications. |
+| **InMemoryNotificationChannel** | ❌ | ✅ | Notifications only. For single-process/testing. |
+
+### Mixing Storage and Notification Backends
+
+You can use MongoDB for storage while using a different system for real-time notifications:
+
+```javascript
+import { Agenda, MongoBackend } from 'agenda';
+import { RedisBackend } from '@agenda.js/redis-backend';
+
+// MongoDB for storage + Redis for real-time notifications
+const redisBackend = new RedisBackend({ connectionString: 'redis://localhost:6379' });
+const agenda = new Agenda({
+  backend: new MongoBackend({ mongo: db }),
+  notificationChannel: redisBackend.notificationChannel
+});
+```
+
+This is useful when you want MongoDB's proven durability and flexible queries for job storage, but need faster real-time notifications across multiple processes.
+
 **PostgreSQL example:**
 
 ```javascript
