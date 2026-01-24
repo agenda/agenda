@@ -55,11 +55,11 @@ await agenda.schedule('in 10 minutes', 'send-email', { to: 'other@example.com', 
 import { PostgresBackend } from '@agenda.js/postgres-backend';
 
 const backend = new PostgresBackend({
-  // PostgreSQL connection string (required unless pool is provided)
+  // PostgreSQL connection string (required unless pool/poolConfig is provided)
   connectionString: 'postgresql://user:pass@localhost:5432/mydb',
 
-  // Or use pool configuration
-  pool: {
+  // Or use pool configuration (creates a new pool)
+  poolConfig: {
     host: 'localhost',
     port: 5432,
     database: 'mydb',
@@ -86,6 +86,22 @@ const backend = new PostgresBackend({
     priority: -1
   }
 });
+```
+
+### Using an Existing Pool
+
+If your application already has a PostgreSQL connection pool, you can pass it directly. The pool will **not** be closed when Agenda disconnects:
+
+```typescript
+import { Pool } from 'pg';
+import { PostgresBackend } from '@agenda.js/postgres-backend';
+
+// Your app's existing pool
+const pool = new Pool({ connectionString: 'postgresql://...' });
+
+const backend = new PostgresBackend({ pool });
+
+// After agenda.stop(), your pool is still usable
 ```
 
 ## How It Works
@@ -181,7 +197,7 @@ POSTGRES_TEST_URL=postgresql://user:pass@localhost:5432/agenda_test pnpm test
 
 | Script | Description |
 |--------|-------------|
-| `pnpm test` | Run tests (skips PostgreSQL tests if no database) |
+| `pnpm test` | Run tests (requires PostgreSQL or Docker) |
 | `pnpm test:postgres` | Run tests with local Docker PostgreSQL |
 | `pnpm test:docker` | Start container, run tests, stop container |
 | `pnpm docker:up` | Start PostgreSQL container |
