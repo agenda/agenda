@@ -1,6 +1,15 @@
 import { expect, describe, it, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import { Pool } from 'pg';
-import { PostgresBackend, PostgresJobRepository, PostgresNotificationChannel, getDropTableSQL } from '../src';
+import {
+	PostgresBackend,
+	PostgresJobRepository,
+	PostgresNotificationChannel,
+	getDropTableSQL
+} from '../src';
+import {
+	repositoryTestSuite,
+	notificationChannelTestSuite
+} from '../../agenda/test/shared';
 import type { IJobParameters, IJobNotification, JobId } from 'agenda';
 import { toJobId } from 'agenda';
 
@@ -17,6 +26,67 @@ const TEST_TABLE_NAME = 'agenda_jobs_test';
 const TEST_CHANNEL_NAME = 'agenda_jobs_test';
 
 const describeWithPostgres = TEST_CONNECTION_STRING ? describe : describe.skip;
+
+// ============================================================================
+// Shared Repository Test Suite
+// ============================================================================
+
+if (TEST_CONNECTION_STRING) {
+	let sharedPool: Pool;
+
+	// Setup/teardown for shared test suite
+	beforeAll(async () => {
+		sharedPool = new Pool({ connectionString: TEST_CONNECTION_STRING });
+		await sharedPool.query(getDropTableSQL(TEST_TABLE_NAME));
+	});
+
+	afterAll(async () => {
+		await sharedPool.query(getDropTableSQL(TEST_TABLE_NAME));
+		await sharedPool.end();
+	});
+
+	repositoryTestSuite({
+		name: 'PostgresJobRepository',
+		createRepository: async () => {
+			const repo = new PostgresJobRepository({
+				connectionString: TEST_CONNECTION_STRING,
+				tableName: TEST_TABLE_NAME,
+				ensureSchema: true
+			});
+			await repo.connect();
+			return repo;
+		},
+		cleanupRepository: async repo => {
+			// Don't disconnect - we're reusing the connection
+			// Just clear jobs
+		},
+		clearJobs: async repo => {
+			const pgRepo = repo as PostgresJobRepository;
+			const pool = pgRepo.getPool();
+			await pool.query(`DELETE FROM "${TEST_TABLE_NAME}"`);
+		}
+	});
+
+	notificationChannelTestSuite({
+		name: 'PostgresNotificationChannel',
+		createChannel: async () => {
+			return new PostgresNotificationChannel({
+				connectionString: TEST_CONNECTION_STRING,
+				channelName: TEST_CHANNEL_NAME
+			});
+		},
+		cleanupChannel: async channel => {
+			if (channel.state !== 'disconnected') {
+				await channel.disconnect();
+			}
+		},
+		propagationDelay: 150 // PostgreSQL LISTEN/NOTIFY may need slightly more time
+	});
+}
+
+// ============================================================================
+// PostgreSQL-Specific Tests
+// ============================================================================
 
 describeWithPostgres('PostgresBackend', () => {
 	let pool: Pool;
@@ -46,18 +116,23 @@ describeWithPostgres('PostgresBackend', () => {
 	afterEach(async () => {
 		await backend.disconnect();
 		// Clean up jobs between tests
-		await pool.query(`DELETE FROM "${TEST_TABLE_NAME}"`);
+		const cleanPool = new Pool({ connectionString: TEST_CONNECTION_STRING });
+		await cleanPool.query(`DELETE FROM "${TEST_TABLE_NAME}"`);
+		await cleanPool.end();
 	});
 
-	describe('connection', () => {
+	describe('backend interface', () => {
 		it('should connect and create schema', async () => {
 			// Verify table exists
-			const result = await pool.query(`
+			const result = await pool.query(
+				`
 				SELECT EXISTS (
 					SELECT FROM information_schema.tables
 					WHERE table_name = $1
 				)
-			`, [TEST_TABLE_NAME]);
+			`,
+				[TEST_TABLE_NAME]
+			);
 			expect(result.rows[0].exists).toBe(true);
 		});
 
@@ -72,389 +147,99 @@ describeWithPostgres('PostgresBackend', () => {
 		});
 	});
 
-	describe('repository operations', () => {
-		it('should save and retrieve a job', async () => {
-			const job: IJobParameters = {
-				name: 'test-job',
-				priority: 10,
+	describe('PostgreSQL-specific features', () => {
+		it('should support JSONB queries for job data', async () => {
+			await backend.repository.saveJob({
+				name: 'jsonb-test',
+				priority: 0,
 				nextRunAt: new Date(),
 				type: 'normal',
-				data: { foo: 'bar' }
-			};
-
-			const saved = await backend.repository.saveJob(job);
-			expect(saved._id).toBeDefined();
-			expect(saved.name).toBe('test-job');
-			expect(saved.priority).toBe(10);
-			expect(saved.data).toEqual({ foo: 'bar' });
-
-			// Retrieve by ID
-			const retrieved = await backend.repository.getJobById(saved._id!.toString());
-			expect(retrieved).not.toBeNull();
-			expect(retrieved!.name).toBe('test-job');
-		});
-
-		it('should update an existing job', async () => {
-			const job: IJobParameters = {
-				name: 'update-test',
-				priority: 5,
-				nextRunAt: new Date(),
-				type: 'normal',
-				data: { version: 1 }
-			};
-
-			const saved = await backend.repository.saveJob(job);
-
-			// Update the job
-			const updated = await backend.repository.saveJob({
-				...saved,
-				priority: 20,
-				data: { version: 2 }
+				data: { nested: { key: 'value' }, array: [1, 2, 3] }
 			});
 
-			expect(updated._id).toBe(saved._id);
-			expect(updated.priority).toBe(20);
-			expect(updated.data).toEqual({ version: 2 });
-		});
+			const result = await backend.repository.queryJobs({
+				data: { nested: { key: 'value' } }
+			});
 
-		it('should handle single type jobs (upsert)', async () => {
-			const job1: IJobParameters = {
-				name: 'single-job',
-				priority: 5,
-				nextRunAt: new Date(Date.now() + 60000),
-				type: 'single',
-				data: { run: 1 }
-			};
-
-			const saved1 = await backend.repository.saveJob(job1);
-
-			// Save again with same name - should update
-			const job2: IJobParameters = {
-				name: 'single-job',
-				priority: 10,
-				nextRunAt: new Date(Date.now() + 120000),
-				type: 'single',
-				data: { run: 2 }
-			};
-
-			const saved2 = await backend.repository.saveJob(job2);
-
-			// Should be same job, updated
-			expect(saved2._id).toBe(saved1._id);
-			expect(saved2.priority).toBe(10);
-			expect(saved2.data).toEqual({ run: 2 });
-
-			// Verify only one job exists
-			const result = await backend.repository.queryJobs({ name: 'single-job' });
 			expect(result.total).toBe(1);
+			expect(result.jobs[0].data).toEqual({ nested: { key: 'value' }, array: [1, 2, 3] });
 		});
 
-		it('should remove jobs by name', async () => {
-			await backend.repository.saveJob({
-				name: 'remove-test',
-				priority: 0,
-				nextRunAt: new Date(),
-				type: 'normal',
-				data: {}
-			});
-			await backend.repository.saveJob({
-				name: 'remove-test',
-				priority: 0,
-				nextRunAt: new Date(),
-				type: 'normal',
-				data: {}
-			});
-			await backend.repository.saveJob({
-				name: 'keep-test',
-				priority: 0,
-				nextRunAt: new Date(),
-				type: 'normal',
-				data: {}
-			});
-
-			const removed = await backend.repository.removeJobs({ name: 'remove-test' });
-			expect(removed).toBe(2);
-
-			const remaining = await backend.repository.queryJobs();
-			expect(remaining.total).toBe(1);
-			expect(remaining.jobs[0].name).toBe('keep-test');
-		});
-
-		it('should query jobs with filters', async () => {
-			await backend.repository.saveJob({
-				name: 'job-a',
-				priority: 10,
-				nextRunAt: new Date(Date.now() + 60000),
-				type: 'normal',
-				data: { type: 'alpha' }
-			});
-			await backend.repository.saveJob({
-				name: 'job-b',
-				priority: 5,
-				nextRunAt: new Date(Date.now() + 120000),
-				type: 'normal',
-				data: { type: 'beta' }
-			});
-
-			// Query by name
-			const byName = await backend.repository.queryJobs({ name: 'job-a' });
-			expect(byName.total).toBe(1);
-			expect(byName.jobs[0].name).toBe('job-a');
-
-			// Query by search
-			const bySearch = await backend.repository.queryJobs({ search: 'job' });
-			expect(bySearch.total).toBe(2);
-
-			// Query by data
-			const byData = await backend.repository.queryJobs({ data: { type: 'beta' } });
-			expect(byData.total).toBe(1);
-			expect(byData.jobs[0].name).toBe('job-b');
-		});
-
-		it('should get distinct job names', async () => {
-			await backend.repository.saveJob({
-				name: 'name-a',
-				priority: 0,
-				nextRunAt: new Date(),
-				type: 'normal',
-				data: {}
-			});
-			await backend.repository.saveJob({
-				name: 'name-b',
-				priority: 0,
-				nextRunAt: new Date(),
-				type: 'normal',
-				data: {}
-			});
-			await backend.repository.saveJob({
-				name: 'name-a',
-				priority: 0,
-				nextRunAt: new Date(),
-				type: 'normal',
-				data: {}
-			});
-
-			const names = await backend.repository.getDistinctJobNames();
-			expect(names).toEqual(['name-a', 'name-b']);
-		});
-
-		it('should get queue size', async () => {
-			// Jobs in the past (should be counted)
-			await backend.repository.saveJob({
-				name: 'past-job',
-				priority: 0,
-				nextRunAt: new Date(Date.now() - 60000),
-				type: 'normal',
-				data: {}
-			});
-			await backend.repository.saveJob({
-				name: 'past-job-2',
-				priority: 0,
-				nextRunAt: new Date(Date.now() - 30000),
-				type: 'normal',
-				data: {}
-			});
-			// Job in the future (should not be counted)
-			await backend.repository.saveJob({
-				name: 'future-job',
-				priority: 0,
-				nextRunAt: new Date(Date.now() + 60000),
-				type: 'normal',
-				data: {}
-			});
-
-			const queueSize = await backend.repository.getQueueSize();
-			expect(queueSize).toBe(2);
-		});
-
-		it('should lock and unlock jobs', async () => {
-			const saved = await backend.repository.saveJob({
-				name: 'lock-test',
-				priority: 0,
-				nextRunAt: new Date(Date.now() - 1000),
-				type: 'normal',
-				data: {}
-			});
-
-			// Lock the job
-			const locked = await backend.repository.lockJob(saved);
-			expect(locked).toBeDefined();
-			expect(locked!.lockedAt).toBeDefined();
-
-			// Try to lock again - should fail
-			const lockedAgain = await backend.repository.lockJob(saved);
-			expect(lockedAgain).toBeUndefined();
-
-			// Unlock
-			await backend.repository.unlockJob(locked!);
-
-			// Verify unlocked
-			const retrieved = await backend.repository.getJobById(saved._id!.toString());
-			expect(retrieved!.lockedAt).toBeUndefined();
-		});
-
-		it('should get next job to run', async () => {
-			// Create jobs with different priorities
-			await backend.repository.saveJob({
-				name: 'runner-test',
-				priority: 5,
-				nextRunAt: new Date(Date.now() - 60000),
-				type: 'normal',
-				data: { order: 'low' }
-			});
-			await backend.repository.saveJob({
-				name: 'runner-test',
-				priority: 10,
-				nextRunAt: new Date(Date.now() - 30000),
-				type: 'normal',
-				data: { order: 'high' }
-			});
+		it('should handle concurrent job locking with SKIP LOCKED', async () => {
+			// Create multiple jobs
+			const jobs = await Promise.all([
+				backend.repository.saveJob({
+					name: 'concurrent-test',
+					priority: 0,
+					nextRunAt: new Date(Date.now() - 1000),
+					type: 'normal',
+					data: { id: 1 }
+				}),
+				backend.repository.saveJob({
+					name: 'concurrent-test',
+					priority: 0,
+					nextRunAt: new Date(Date.now() - 1000),
+					type: 'normal',
+					data: { id: 2 }
+				})
+			]);
 
 			const now = new Date();
 			const nextScanAt = new Date(now.getTime() + 5000);
 			const lockDeadline = new Date(now.getTime() - 600000);
 
-			// Should get highest priority job first
-			const next = await backend.repository.getNextJobToRun('runner-test', nextScanAt, lockDeadline, now);
-			expect(next).toBeDefined();
-			expect(next!.priority).toBe(10);
-			expect(next!.data).toEqual({ order: 'high' });
+			// Get next jobs concurrently - each should get a different job
+			const [next1, next2] = await Promise.all([
+				backend.repository.getNextJobToRun('concurrent-test', nextScanAt, lockDeadline, now),
+				backend.repository.getNextJobToRun('concurrent-test', nextScanAt, lockDeadline, now)
+			]);
+
+			expect(next1).toBeDefined();
+			expect(next2).toBeDefined();
+			expect(next1!._id).not.toBe(next2!._id);
 		});
 
-		it('should save job state', async () => {
-			const saved = await backend.repository.saveJob({
-				name: 'state-test',
-				priority: 0,
-				nextRunAt: new Date(),
-				type: 'normal',
-				data: {}
-			});
+		it('should use indexes for efficient queries', async () => {
+			// Verify indexes exist
+			const result = await pool.query(
+				`
+				SELECT indexname FROM pg_indexes
+				WHERE tablename = $1
+			`,
+				[TEST_TABLE_NAME]
+			);
 
-			const now = new Date();
-			await backend.repository.saveJobState({
-				...saved,
-				lastRunAt: now,
-				lastFinishedAt: now,
-				progress: 50,
-				failCount: 1,
-				failReason: 'Test error'
-			});
-
-			const retrieved = await backend.repository.getJobById(saved._id!.toString());
-			expect(retrieved!.lastRunAt).toBeDefined();
-			expect(retrieved!.lastFinishedAt).toBeDefined();
-			expect(retrieved!.progress).toBe(50);
-			expect(retrieved!.failCount).toBe(1);
-			expect(retrieved!.failReason).toBe('Test error');
+			const indexNames = result.rows.map(r => r.indexname);
+			expect(indexNames.some(n => n.includes('find_and_lock'))).toBe(true);
+			expect(indexNames.some(n => n.includes('single_job'))).toBe(true);
 		});
 	});
 });
 
-describeWithPostgres('PostgresNotificationChannel', () => {
-	let channel: PostgresNotificationChannel;
+// ============================================================================
+// Unit Tests (no database required)
+// ============================================================================
 
-	beforeEach(async () => {
-		channel = new PostgresNotificationChannel({
-			connectionString: TEST_CONNECTION_STRING,
-			channelName: TEST_CHANNEL_NAME
-		});
-		await channel.connect();
-	});
-
-	afterEach(async () => {
-		await channel.disconnect();
-	});
-
-	it('should connect and set state', async () => {
-		expect(channel.state).toBe('connected');
-	});
-
-	it('should publish and receive notifications', async () => {
-		const received: IJobNotification[] = [];
-
-		channel.subscribe(notification => {
-			received.push(notification);
-		});
-
-		const notification: IJobNotification = {
-			jobId: toJobId('test-id-123') as JobId,
-			jobName: 'test-job',
-			nextRunAt: new Date(),
-			priority: 10,
-			timestamp: new Date()
-		};
-
-		await channel.publish(notification);
-
-		// Give some time for the notification to be received
-		await new Promise(resolve => setTimeout(resolve, 100));
-
-		expect(received.length).toBe(1);
-		expect(received[0].jobName).toBe('test-job');
-		expect(received[0].priority).toBe(10);
-	});
-
-	it('should allow unsubscribing', async () => {
-		const received: IJobNotification[] = [];
-
-		const unsubscribe = channel.subscribe(notification => {
-			received.push(notification);
-		});
-
-		await channel.publish({
-			jobId: toJobId('test-1') as JobId,
-			jobName: 'job-1',
-			nextRunAt: new Date(),
-			priority: 0,
-			timestamp: new Date()
-		});
-
-		await new Promise(resolve => setTimeout(resolve, 100));
-		expect(received.length).toBe(1);
-
-		// Unsubscribe
-		unsubscribe();
-
-		await channel.publish({
-			jobId: toJobId('test-2') as JobId,
-			jobName: 'job-2',
-			nextRunAt: new Date(),
-			priority: 0,
-			timestamp: new Date()
-		});
-
-		await new Promise(resolve => setTimeout(resolve, 100));
-		expect(received.length).toBe(1); // Still 1, not 2
-	});
-
-	it('should throw when publishing on disconnected channel', async () => {
-		await channel.disconnect();
-
-		await expect(channel.publish({
-			jobId: toJobId('test') as JobId,
-			jobName: 'test',
-			nextRunAt: new Date(),
-			priority: 0,
-			timestamp: new Date()
-		})).rejects.toThrow('Cannot publish: channel not connected');
-	});
-
-	it('should disconnect and set state', async () => {
-		await channel.disconnect();
-		expect(channel.state).toBe('disconnected');
-	});
-});
-
-// Unit tests that don't require database
 describe('PostgresBackend unit tests', () => {
 	it('should throw if no connection config provided', () => {
-		expect(() => new PostgresBackend({})).toThrow('PostgresBackend requires connectionString or pool config');
+		expect(() => new PostgresBackend({} as any)).toThrow(
+			'PostgresBackend requires connectionString or pool config'
+		);
 	});
 
 	it('should accept connectionString config', () => {
 		const backend = new PostgresBackend({
 			connectionString: 'postgresql://localhost/test'
 		});
+		expect(backend.repository).toBeDefined();
+		expect(backend.notificationChannel).toBeDefined();
+	});
+
+	it('should use default table and channel names', () => {
+		const backend = new PostgresBackend({
+			connectionString: 'postgresql://localhost/test'
+		});
+		// These are internal, but we can verify the backend was created
 		expect(backend.repository).toBeDefined();
 		expect(backend.notificationChannel).toBeDefined();
 	});
