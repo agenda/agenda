@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
-import { Agenda, MongoBackend } from 'agenda';
+import { Agenda } from 'agenda';
+import { MongoBackend } from '@agenda.js/mongo-backend';
 import { createServer } from './server.js';
 import type { Server } from 'http';
 

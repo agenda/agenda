@@ -1,10 +1,9 @@
 import date from 'date.js';
 import debug from 'debug';
-import { ObjectId } from 'mongodb';
 import { ChildProcess, fork } from 'child_process';
 import type { Agenda } from './index.js';
 import type { DefinitionProcessor } from './types/JobDefinition.js';
-import { IJobParameters, datefields, TJobDatefield } from './types/JobParameters.js';
+import { IJobParameters, datefields, TJobDatefield, JobId } from './types/JobParameters.js';
 import { JobPriority, parsePriority } from './utils/priority.js';
 import { computeFromInterval, computeFromRepeatAt } from './utils/nextRunAt.js';
 
@@ -448,11 +447,11 @@ export class Job<DATA = unknown | void> {
 			this.attrs.lockedAt = undefined;
 			try {
 				await this.agenda.db.saveJobState(this.attrs);
-				log('[%s:%s] was saved successfully to MongoDB', this.attrs.name, this.attrs._id);
+				log('[%s:%s] was saved successfully to database', this.attrs.name, this.attrs._id);
 			} catch (err) {
 				// in case this fails, we ignore it
 				// this can e.g. happen if the job gets removed during the execution
-				log('[%s:%s] was not saved to MongoDB', this.attrs.name, this.attrs._id, err);
+				log('[%s:%s] was not saved to database', this.attrs.name, this.attrs._id, err);
 			}
 
 			this.agenda.emit('complete', this);
@@ -504,4 +503,4 @@ export class Job<DATA = unknown | void> {
 	}
 }
 
-export type JobWithId = Job & { attrs: IJobParameters & { _id: ObjectId } };
+export type JobWithId = Job & { attrs: IJobParameters & { _id: JobId } };

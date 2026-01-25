@@ -7,7 +7,7 @@
 
 import { beforeAll, afterAll } from 'vitest';
 import { Db } from 'mongodb';
-import { JobDbRepository } from '../src/JobDbRepository';
+import { MongoJobRepository } from '@agenda.js/mongo-backend';
 import { InMemoryNotificationChannel } from '../src';
 import { mockMongo } from './helpers/mock-mongodb';
 import { repositoryTestSuite, notificationChannelTestSuite } from './shared';
@@ -30,11 +30,11 @@ afterAll(async () => {
 // ============================================================================
 
 repositoryTestSuite({
-	name: 'JobDbRepository (MongoDB)',
+	name: 'MongoJobRepository (MongoDB)',
 	createRepository: async () => {
-		const repo = new JobDbRepository({
+		const repo = new MongoJobRepository({
 			mongo: mongoDb,
-			collection: 'agendaJobs'
+			db: { address: '', collection: 'agendaJobs' }
 		});
 		await repo.connect();
 		return repo;

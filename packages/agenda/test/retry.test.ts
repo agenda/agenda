@@ -3,7 +3,8 @@ import delay from 'delay';
 import { describe, it, beforeEach, afterEach } from 'vitest';
 import { mockMongo } from './helpers/mock-mongodb';
 
-import { Agenda, MongoBackend } from '../src';
+import { Agenda } from '../src';
+import { MongoBackend } from '@agenda.js/mongo-backend';
 
 // agenda instances
 let agenda: Agenda;

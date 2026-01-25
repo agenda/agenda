@@ -1,6 +1,6 @@
 # Custom Backend Driver
 
-Agenda v6 introduces a pluggable backend system (`IAgendaBackend`), allowing you to use databases other than MongoDB and optionally provide real-time notifications.
+Agenda v6 introduces a pluggable backend system (`IAgendaBackend`), allowing you to use any database and optionally provide real-time notifications.
 
 ## Official Backend Packages
 
@@ -8,9 +8,21 @@ Before implementing a custom backend, check if an official package already exist
 
 | Package | Backend | Notifications | Install |
 |---------|---------|---------------|---------|
-| `agenda` | MongoDB | Polling (or custom) | `npm install agenda` |
+| `@agenda.js/mongo-backend` | MongoDB | Polling (or custom) | `npm install @agenda.js/mongo-backend` |
 | `@agenda.js/postgres-backend` | PostgreSQL | LISTEN/NOTIFY | `npm install @agenda.js/postgres-backend` |
 | `@agenda.js/redis-backend` | Redis | Pub/Sub | `npm install @agenda.js/redis-backend` |
+
+**MongoDB:**
+```typescript
+import { Agenda } from 'agenda';
+import { MongoBackend } from '@agenda.js/mongo-backend';
+
+const agenda = new Agenda({
+  backend: new MongoBackend({
+    address: 'mongodb://localhost/agenda'
+  })
+});
+```
 
 **PostgreSQL:**
 ```typescript
@@ -66,7 +78,8 @@ A backend provides:
 You can use MongoDB for storage while using a different system for real-time notifications:
 
 ```typescript
-import { Agenda, MongoBackend } from 'agenda';
+import { Agenda } from 'agenda';
+import { MongoBackend } from '@agenda.js/mongo-backend';
 import { RedisBackend } from '@agenda.js/redis-backend';
 
 // MongoDB for storage + Redis for real-time notifications
@@ -79,12 +92,13 @@ const agenda = new Agenda({
 
 This is useful when you want MongoDB's proven durability and flexible queries for job storage, but need faster real-time notifications across multiple processes.
 
-## Default Backend: MongoBackend
+## MongoDB Backend
 
-By default, Agenda uses MongoDB via the built-in `MongoBackend`:
+For MongoDB, use the `@agenda.js/mongo-backend` package:
 
 ```typescript
-import { Agenda, MongoBackend } from 'agenda';
+import { Agenda } from 'agenda';
+import { MongoBackend } from '@agenda.js/mongo-backend';
 
 // Via connection string
 const agenda = new Agenda({
@@ -420,5 +434,6 @@ const agenda = new Agenda({
 
 For complete implementation examples, see the source code of the official backend packages:
 
+- **MongoDB**: [@agenda.js/mongo-backend](https://github.com/agenda/agenda/tree/main/packages/mongo-backend)
 - **PostgreSQL**: [@agenda.js/postgres-backend](https://github.com/agenda/agenda/tree/main/packages/postgres-backend)
 - **Redis**: [@agenda.js/redis-backend](https://github.com/agenda/agenda/tree/main/packages/redis-backend)

@@ -1,11 +1,10 @@
 import { EventEmitter } from 'events';
 import debug from 'debug';
 
-import { SortDirection } from 'mongodb';
 import { ForkOptions } from 'child_process';
 import type { IJobDefinition } from './types/JobDefinition.js';
 import type { IAgendaConfig } from './types/AgendaConfig.js';
-import type { IDbConfig } from './types/DbOptions.js';
+import type { IDbConfig, SortDirection } from './types/DbOptions.js';
 import type { IAgendaBackend } from './types/AgendaBackend.js';
 import type { INotificationChannel, IJobNotification } from './types/NotificationChannel.js';
 import type { JobId } from './types/JobParameters.js';
@@ -196,7 +195,7 @@ export class Agenda extends EventEmitter {
 			log('%s jobs cancelled', amountOfRemovedJobs);
 			return amountOfRemovedJobs;
 		} catch (error) {
-			log('error trying to delete jobs from MongoDB');
+			log('error trying to delete jobs from database');
 			throw error;
 		}
 	}
@@ -683,5 +682,3 @@ export * from './types/NotificationChannel.js';
 export * from './types/AgendaBackend.js';
 
 export * from './notifications/index.js';
-
-export * from './backends/index.js';

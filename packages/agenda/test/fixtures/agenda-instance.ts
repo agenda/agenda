@@ -1,4 +1,5 @@
-import { Agenda, MongoBackend } from '../../src';
+import { Agenda } from '../../src';
+import { MongoBackend } from '@agenda.js/mongo-backend';
 import addTests from './add-tests';
 
 const connStr = process.argv[2];

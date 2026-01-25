@@ -1,34 +1,6 @@
-import type { Db, MongoClientOptions, SortDirection } from 'mongodb';
-import { JobDbRepository } from '../JobDbRepository.js';
-import type { IAgendaBackend } from '../types/AgendaBackend.js';
-import type { IJobRepository } from '../types/JobRepository.js';
-import type { INotificationChannel } from '../types/NotificationChannel.js';
-
-/**
- * Configuration options for MongoBackend
- */
-export interface IMongoBackendConfig {
-	/** MongoDB connection string */
-	address?: string;
-
-	/** Existing MongoDB database instance */
-	mongo?: Db;
-
-	/** Collection name for jobs (default: 'agendaJobs') */
-	collection?: string;
-
-	/** MongoDB client options */
-	options?: MongoClientOptions;
-
-	/** Name to set as lastModifiedBy on jobs */
-	name?: string;
-
-	/** Whether to create indexes on connect (default: false) */
-	ensureIndex?: boolean;
-
-	/** Sort order for job queries */
-	sort?: { [key: string]: SortDirection };
-}
+import type { IAgendaBackend, IJobRepository, INotificationChannel } from 'agenda';
+import { MongoJobRepository } from './MongoJobRepository.js';
+import type { IMongoBackendConfig } from './types.js';
 
 /**
  * MongoDB backend for Agenda.
@@ -36,6 +8,9 @@ export interface IMongoBackendConfig {
  *
  * @example
  * ```typescript
+ * import { Agenda } from 'agenda';
+ * import { MongoBackend } from '@agenda.js/mongo-backend';
+ *
  * // Via connection string
  * const backend = new MongoBackend({ address: 'mongodb://localhost/agenda' });
  *
@@ -46,7 +21,7 @@ export interface IMongoBackendConfig {
  * ```
  */
 export class MongoBackend implements IAgendaBackend {
-	private _repository: JobDbRepository;
+	private _repository: MongoJobRepository;
 
 	/**
 	 * MongoDB does not provide a notification channel.
@@ -56,7 +31,7 @@ export class MongoBackend implements IAgendaBackend {
 	readonly notificationChannel: INotificationChannel | undefined = undefined;
 
 	constructor(private config: IMongoBackendConfig) {
-		this._repository = new JobDbRepository({
+		this._repository = new MongoJobRepository({
 			db: config.address
 				? { address: config.address, collection: config.collection, options: config.options }
 				: undefined,
@@ -83,7 +58,7 @@ export class MongoBackend implements IAgendaBackend {
 	 * Note: If using an existing Db instance, this does not close the connection.
 	 */
 	async disconnect(): Promise<void> {
-		// JobDbRepository doesn't currently have a disconnect method
+		// MongoJobRepository doesn't currently have a disconnect method
 		// For passed-in connections, we don't own the lifecycle
 		// For connection string connections, we could add cleanup if needed
 	}

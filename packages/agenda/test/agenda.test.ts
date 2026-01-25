@@ -1,13 +1,14 @@
- 
-
 import delay from 'delay';
 import { Db } from 'mongodb';
 import { expect, describe, it, beforeEach, afterEach } from 'vitest';
 import { mockMongo } from './helpers/mock-mongodb';
 
-import { Agenda, MongoBackend } from '../src';
-import { hasMongoProtocol } from '../src/utils/hasMongoProtocol';
+import { Agenda } from '../src';
+import { MongoBackend } from '@agenda.js/mongo-backend';
 import { Job } from '../src/Job';
+
+// hasMongoProtocol is a simple utility, inline it here for testing
+const hasMongoProtocol = (url: string): boolean => /mongodb(?:\+srv)?:\/\/.*/.test(url);
 
 // agenda instances
 let globalAgenda: Agenda;

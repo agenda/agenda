@@ -1,9 +1,9 @@
- 
 import { fail } from 'node:assert';
 import { expect, describe, it, beforeEach, afterEach } from 'vitest';
 
 import { Db } from 'mongodb';
-import { Agenda, MongoBackend } from '../src';
+import { Agenda } from '../src';
+import { MongoBackend } from '@agenda.js/mongo-backend';
 import { mockMongo } from './helpers/mock-mongodb';
 
 // Create agenda instances

@@ -1,6 +1,7 @@
 import { expect, describe, it, beforeEach, afterEach } from 'vitest';
 import { Db } from 'mongodb';
-import { Agenda, MongoBackend, InMemoryNotificationChannel, IJobNotification, toJobId } from '../src';
+import { Agenda, InMemoryNotificationChannel, IJobNotification, toJobId } from '../src';
+import { MongoBackend } from '@agenda.js/mongo-backend';
 import { mockMongo } from './helpers/mock-mongodb';
 
 let agenda: Agenda;

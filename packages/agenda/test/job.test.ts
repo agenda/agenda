@@ -1,4 +1,3 @@
-
 import path from 'node:path';
 import cp from 'node:child_process';
 import { expect, describe, it, beforeEach, afterEach } from 'vitest';
@@ -8,7 +7,8 @@ import { Db, ObjectId } from 'mongodb';
 import delay from 'delay';
 import sinon from 'sinon';
 import { Job } from '../src/Job';
-import { Agenda, MongoBackend } from '../src';
+import { Agenda } from '../src';
+import { MongoBackend } from '@agenda.js/mongo-backend';
 import { mockMongo } from './helpers/mock-mongodb';
 import someJobDefinition from './fixtures/someJobDefinition';
 

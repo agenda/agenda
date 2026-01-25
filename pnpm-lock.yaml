@@ -53,10 +53,10 @@ importers:
       luxon:
         specifier: ^3.2.1
         version: 3.7.2
-      mongodb:
-        specifier: ^6.12.0
-        version: 6.21.0(@aws-sdk/credential-providers@3.972.0)(socks@2.8.7)
     devDependencies:
+      '@agenda.js/mongo-backend':
+        specifier: workspace:*
+        version: link:../mongo-backend
       '@types/debug':
         specifier: ^4.1.12
         version: 4.1.12
@@ -75,6 +75,9 @@ importers:
       delay:
         specifier: ^7.0.0
         version: 7.0.0
+      mongodb:
+        specifier: ^6.12.0
+        version: 6.21.0(@aws-sdk/credential-providers@3.972.0)(socks@2.8.7)
       mongodb-memory-server:
         specifier: ^10.0.0
         version: 10.4.3(@aws-sdk/credential-providers@3.972.0)(socks@2.8.7)
@@ -93,6 +96,9 @@ importers:
 
   packages/agenda-rest:
     dependencies:
+      '@agenda.js/mongo-backend':
+        specifier: workspace:*
+        version: link:../mongo-backend
       agenda:
         specifier: workspace:*
         version: link:../agenda
@@ -200,6 +206,34 @@ importers:
       supertest:
         specifier: ^7.0.0
         version: 7.2.2
+      vitest:
+        specifier: ^3.1.0
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@22.19.7)(tsx@4.21.0)(yaml@2.8.2)
+
+  packages/mongo-backend:
+    dependencies:
+      debug:
+        specifier: ^4.4.0
+        version: 4.4.3
+      mongodb:
+        specifier: ^6.12.0
+        version: 6.21.0(@aws-sdk/credential-providers@3.972.0)(socks@2.8.7)
+    devDependencies:
+      '@types/debug':
+        specifier: ^4.1.12
+        version: 4.1.12
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.7
+      '@vitest/coverage-v8':
+        specifier: ^3.1.0
+        version: 3.2.4(vitest@3.2.4(@types/debug@4.1.12)(@types/node@22.19.7)(tsx@4.21.0)(yaml@2.8.2))
+      agenda:
+        specifier: workspace:*
+        version: link:../agenda
+      mongodb-memory-server:
+        specifier: ^10.0.0
+        version: 10.4.3(@aws-sdk/credential-providers@3.972.0)(socks@2.8.7)
       vitest:
         specifier: ^3.1.0
         version: 3.2.4(@types/debug@4.1.12)(@types/node@22.19.7)(tsx@4.21.0)(yaml@2.8.2)

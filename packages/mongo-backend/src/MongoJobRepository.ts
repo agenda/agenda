@@ -10,21 +10,22 @@ import {
 	Sort,
 	UpdateFilter
 } from 'mongodb';
-import type { IDbConfig } from './types/DbOptions.js';
-import type { IJobParameters, JobId } from './types/JobParameters.js';
-import { toJobId } from './types/JobParameters.js';
 import type {
+	IJobParameters,
+	JobId,
 	IJobsQueryOptions,
 	IJobsResult,
 	IJobsOverview,
 	IJobWithState,
-	IJobsSort
-} from './types/JobQuery.js';
-import { computeJobState } from './types/JobQuery.js';
-import type { IJobRepository, IRemoveJobsOptions } from './types/JobRepository.js';
-import { hasMongoProtocol } from './utils/hasMongoProtocol.js';
+	IJobsSort,
+	IJobRepository,
+	IRemoveJobsOptions
+} from 'agenda';
+import { toJobId, computeJobState } from 'agenda';
+import type { IMongoJobRepositoryConfig } from './types.js';
+import { hasMongoProtocol } from './hasMongoProtocol.js';
 
-const log = debug('agenda:db');
+const log = debug('agenda:mongo:repository');
 
 /**
  * Internal MongoDB document type with ObjectId for _id
@@ -33,25 +34,13 @@ const log = debug('agenda:db');
 type MongoJobDocument = Omit<IJobParameters, '_id'> & { _id?: ObjectId };
 
 /**
- * Configuration options for JobDbRepository
- */
-export interface IJobDbRepositoryConfig extends IDbConfig {
-	/** MongoDB connection string */
-	db?: { address: string; collection?: string; options?: MongoClientOptions };
-	/** Existing MongoDB database instance */
-	mongo?: Db;
-	/** Name to set as lastModifiedBy on jobs */
-	name?: string;
-}
-
-/**
  * @class
  * MongoDB implementation of IJobRepository
  */
-export class JobDbRepository implements IJobRepository {
+export class MongoJobRepository implements IJobRepository {
 	collection!: Collection<MongoJobDocument>;
 
-	constructor(private connectOptions: IJobDbRepositoryConfig) {
+	constructor(private connectOptions: IMongoJobRepositoryConfig) {
 		this.connectOptions.sort = this.connectOptions.sort || { nextRunAt: 1, priority: -1 };
 	}
 
@@ -81,6 +70,14 @@ export class JobDbRepository implements IJobRepository {
 	}
 
 	/**
+	 * Convert a SortDirection value to MongoDB's numeric sort direction
+	 */
+	private toMongoSortDirection(dir: 1 | -1 | 'asc' | 'desc' | 'ascending' | 'descending'): 1 | -1 {
+		if (dir === 1 || dir === 'asc' || dir === 'ascending') return 1;
+		return -1;
+	}
+
+	/**
 	 * Convert generic sort options to MongoDB sort
 	 */
 	private toMongoSort(sort?: IJobsSort): Sort {
@@ -88,12 +85,12 @@ export class JobDbRepository implements IJobRepository {
 			return { nextRunAt: -1, lastRunAt: -1 };
 		}
 		const mongoSort: Record<string, 1 | -1> = {};
-		if (sort.nextRunAt !== undefined) mongoSort.nextRunAt = sort.nextRunAt;
-		if (sort.lastRunAt !== undefined) mongoSort.lastRunAt = sort.lastRunAt;
-		if (sort.lastFinishedAt !== undefined) mongoSort.lastFinishedAt = sort.lastFinishedAt;
-		if (sort.priority !== undefined) mongoSort.priority = sort.priority;
-		if (sort.name !== undefined) mongoSort.name = sort.name;
-		if (sort.data !== undefined) mongoSort.data = sort.data;
+		if (sort.nextRunAt !== undefined) mongoSort.nextRunAt = this.toMongoSortDirection(sort.nextRunAt);
+		if (sort.lastRunAt !== undefined) mongoSort.lastRunAt = this.toMongoSortDirection(sort.lastRunAt);
+		if (sort.lastFinishedAt !== undefined) mongoSort.lastFinishedAt = this.toMongoSortDirection(sort.lastFinishedAt);
+		if (sort.priority !== undefined) mongoSort.priority = this.toMongoSortDirection(sort.priority);
+		if (sort.name !== undefined) mongoSort.name = this.toMongoSortDirection(sort.name);
+		if (sort.data !== undefined) mongoSort.data = this.toMongoSortDirection(sort.data);
 		return Object.keys(mongoSort).length > 0 ? mongoSort : { nextRunAt: -1, lastRunAt: -1 };
 	}
 
@@ -122,7 +119,7 @@ export class JobDbRepository implements IJobRepository {
 			}
 		} else if (ids && ids.length > 0) {
 			try {
-				query._id = { $in: ids.map(i => new ObjectId(i)) };
+				query._id = { $in: ids.map((i: string) => new ObjectId(i)) };
 			} catch {
 				return { jobs: [], total: 0 };
 			}
@@ -222,7 +219,7 @@ export class JobDbRepository implements IJobRepository {
 			}
 		} else if (options.ids && options.ids.length > 0) {
 			try {
-				query._id = { $in: options.ids.map(id => new ObjectId(id.toString())) };
+				query._id = { $in: options.ids.map((id: string | JobId) => new ObjectId(id.toString())) };
 			} catch {
 				return 0;
 			}
