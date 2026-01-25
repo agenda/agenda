@@ -21,7 +21,11 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "build": "tsc -b"
+    "build": "tsc -b",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:debug": "DEBUG=agenda:**,-agenda:internal:** vitest run"
   },
   "repository": {
     "type": "git",
@@ -48,6 +52,9 @@
   "devDependencies": {
     "@types/debug": "^4.1.12",
     "@types/node": "^22.0.0",
-    "agenda": "workspace:*"
+    "@vitest/coverage-v8": "^3.1.0",
+    "agenda": "workspace:*",
+    "mongodb-memory-server": "^10.0.0",
+    "vitest": "^3.1.0"
   }
 }
