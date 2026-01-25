@@ -642,8 +642,114 @@ describe('Agenda', () => {
 		});
 	});
 
+	describe('drain', () => {
+		it('should wait for running jobs to finish', async () => {
+			let jobStarted = false;
+			let jobFinished = false;
+
+			globalAgenda.define('drainTestJob', async () => {
+				jobStarted = true;
+				await delay(200);
+				jobFinished = true;
+			});
+
+			globalAgenda.processEvery(50);
+			await globalAgenda.start();
+
+			await globalAgenda.now('drainTestJob');
+
+			// Wait for job to start
+			await delay(100);
+			expect(jobStarted).to.equal(true);
+			expect(jobFinished).to.equal(false);
+
+			// Call drain - should wait for job to complete
+			await globalAgenda.drain();
+
+			expect(jobFinished).to.equal(true);
+		});
+
+		it('should resolve immediately if no jobs are running', async () => {
+			globalAgenda.processEvery(50);
+			await globalAgenda.start();
+
+			// No jobs scheduled, drain should resolve immediately
+			await globalAgenda.drain();
+			// If we get here, the test passes
+		});
+
+		it('should wait for multiple running jobs to finish', async () => {
+			let job1Finished = false;
+			let job2Finished = false;
+
+			globalAgenda.define('drainTestJob1', async () => {
+				await delay(150);
+				job1Finished = true;
+			});
+
+			globalAgenda.define('drainTestJob2', async () => {
+				await delay(200);
+				job2Finished = true;
+			});
+
+			globalAgenda.processEvery(50);
+			await globalAgenda.start();
+
+			await globalAgenda.now('drainTestJob1');
+			await globalAgenda.now('drainTestJob2');
+
+			// Wait for jobs to start
+			await delay(100);
+
+			// Call drain - should wait for both jobs to complete
+			await globalAgenda.drain();
+
+			expect(job1Finished).to.equal(true);
+			expect(job2Finished).to.equal(true);
+		});
+
+		it('should not process new jobs after drain is called', async () => {
+			let jobCount = 0;
+
+			globalAgenda.define('drainCountJob', async () => {
+				jobCount++;
+				await delay(50);
+			});
+
+			globalAgenda.processEvery(50);
+			await globalAgenda.start();
+
+			await globalAgenda.now('drainCountJob');
+
+			// Wait for first job to start
+			await delay(100);
+
+			// Call drain - should stop accepting new jobs
+			const drainPromise = globalAgenda.drain();
+
+			// Try to schedule a new job after drain started
+			// This job should not be processed since we're draining
+			await globalAgenda.now('drainCountJob');
+
+			await drainPromise;
+
+			// Only the first job should have run
+			expect(jobCount).to.equal(1);
+		});
+
+		it('should do nothing if agenda was never started', async () => {
+			const freshAgenda = new Agenda({
+				backend: new MongoBackend({ mongo: mongoDb })
+			});
+			await freshAgenda.ready;
+
+			// Should not throw
+			await freshAgenda.drain();
+		});
+	});
+
 	describe('process jobs', () => {
-		 
+
 		it('do not run failed jobs again', async () => {
 			const unhandledRejections: unknown[] = [];
 			const rejectionsHandler = (error: unknown) => unhandledRejections.push(error);
