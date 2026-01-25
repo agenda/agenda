@@ -120,17 +120,24 @@ The following features from agenda.js v4 are **not supported** in v6:
 | Feature | Status | Alternative |
 |---------|--------|-------------|
 | `shouldSaveResult` | Removed | Store results manually in job data |
-| `drain()` method | Removed | Use `stop()` and wait for jobs to complete |
 | `_collection` internal access | Removed | Use `agenda.db` (IJobRepository) |
 | Top-level `disable()`/`enable()` | Removed | Use `job.disable()`/`job.enable()` on individual jobs |
 | `startDate`/`endDate` in scheduling | Not implemented | Filter manually in job processor |
 
-### 5. Node.js Version Requirement
+### 5. Restored Features
+
+The following features have been restored in v6:
+
+| Feature | Description |
+|---------|-------------|
+| `drain()` method | Waits for running jobs to complete before stopping (graceful shutdown) |
+
+### 6. Node.js Version Requirement
 
 **Before (v5):** Node.js 14+
 **After (v6):** Node.js 18+
 
-### 6. MongoDB Driver Version
+### 7. MongoDB Driver Version
 
 **Before (v5):** MongoDB driver v4
 **After (v6):** MongoDB driver v6
