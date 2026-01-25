@@ -27,3 +27,4 @@ export {
 	notificationChannelTestSuite,
 	type NotificationChannelTestConfig
 } from './notification-channel-test-suite.js';
+export { agendaTestSuite, type AgendaTestConfig } from './agenda-test-suite.js';
