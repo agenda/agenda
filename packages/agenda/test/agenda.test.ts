@@ -1,7 +1,6 @@
 import delay from 'delay';
-import { Db } from 'mongodb';
 import { expect, describe, it, beforeEach, afterEach } from 'vitest';
-import { mockMongo } from './helpers/mock-mongodb';
+import { mockMongo, Db } from '@agenda.js/mongo-backend/testing';
 
 import { Agenda } from '../src';
 import { MongoBackend } from '@agenda.js/mongo-backend';

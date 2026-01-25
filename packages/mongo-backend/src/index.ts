@@ -37,3 +37,4 @@ export type { IMongoBackendConfig, IMongoJobRepositoryConfig, IMongoDbConfig } f
 
 // Re-export mongodb types that users might need
 export type { Db, MongoClientOptions, SortDirection } from 'mongodb';
+export { MongoClient, ObjectId } from 'mongodb';

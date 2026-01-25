@@ -2,7 +2,8 @@ import path from 'node:path';
 import cp from 'node:child_process';
 import { expect, describe, it, beforeEach, afterEach } from 'vitest';
 import { DateTime } from 'luxon';
-import { Db, ObjectId } from 'mongodb';
+import { Db } from '@agenda.js/mongo-backend/testing';
+import { ObjectId } from '@agenda.js/mongo-backend';
 
 import delay from 'delay';
 import sinon from 'sinon';

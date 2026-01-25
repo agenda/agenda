@@ -1,4 +1,4 @@
-import { Db } from 'mongodb';
+import { Db } from '@agenda.js/mongo-backend';
 import delay from 'delay';
 import { describe, it, beforeEach, afterEach } from 'vitest';
 import { mockMongo } from './helpers/mock-mongodb';
