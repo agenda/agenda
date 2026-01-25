@@ -227,6 +227,18 @@ agenda.define('long-job', async (job) => {
 });
 ```
 
+### Stopping / Draining
+
+```javascript
+// Stop immediately - unlocks running jobs so other workers can pick them up
+await agenda.stop();
+
+// Drain - waits for running jobs to complete before stopping
+await agenda.drain();
+```
+
+Use `drain()` for graceful shutdowns where you want in-progress jobs to finish their work.
+
 ### Events
 
 ```javascript

@@ -120,7 +120,6 @@ The following features from agenda.js v4 are **not supported** in v6:
 | Feature | Status | Alternative |
 |---------|--------|-------------|
 | `shouldSaveResult` | Removed | Store results manually in job data |
-| `drain()` method | Removed | Use `stop()` and wait for jobs to complete |
 | `_collection` internal access | Removed | Use `agenda.db` (IJobRepository) |
 | Top-level `disable()`/`enable()` | Removed | Use `job.disable()`/`job.enable()` on individual jobs |
 | `startDate`/`endDate` in scheduling | Not implemented | Filter manually in job processor |
