@@ -777,6 +777,29 @@ process.on('SIGTERM', graceful);
 process.on('SIGINT', graceful);
 ```
 
+### drain
+
+Waits for all currently running jobs to finish before stopping the job queue processing. Unlike `stop()`, this method does not unlock jobs - it lets them complete their work.
+
+This is useful for graceful shutdowns where you want to ensure all in-progress work finishes before the process exits.
+
+```js
+async function graceful() {
+	await agenda.drain();
+	process.exit(0);
+}
+
+process.on('SIGTERM', graceful);
+process.on('SIGINT', graceful);
+```
+
+**Comparison of `stop()` vs `drain()`:**
+
+| Method | Running Jobs | New Jobs | Use Case |
+|--------|--------------|----------|----------|
+| `stop()` | Unlocks immediately | Stops accepting | Quick shutdown, jobs picked up by other workers |
+| `drain()` | Waits for completion | Stops accepting | Graceful shutdown, ensure work finishes |
+
 ## Multiple job processors
 
 Sometimes you may want to have multiple node instances / machines process from
