@@ -231,7 +231,7 @@ Possible agenda config options:
 }
 ```
 
-Agenda uses [Human Interval](http://github.com/rschmukler/human-interval) for specifying the intervals. It supports the following units:
+Agenda uses [Human Interval](https://github.com/agenda/human-interval) for specifying the intervals. It supports the following units:
 
 `seconds`, `minutes`, `hours`, `days`,`weeks`, `months` -- assumes 30 days, `years` -- assumes 365 days
 
@@ -1042,10 +1042,6 @@ Agenda doesn't have a preferred project structure and leaves it to the user to
 choose how they would like to use it. That being said, you can check out the
 [example project structure](#example-project-structure) below.
 
-### Can I Donate?
-
-Thanks! I'm flattered, but it's really not necessary. If you really want to, you can find my [gittip here](https://www.gittip.com/rschmukler/).
-
 ### Web Interface?
 
 Agenda itself does not have a web interface built in but we do offer stand-alone web interface [Agendash](https://github.com/agenda/agendash):
@@ -1233,11 +1229,14 @@ module.exports = function (agenda) {
 lib/agenda.js
 
 ```js
-const Agenda = require('agenda');
+import { Agenda, MongoBackend } from 'agenda';
 
-const connectionOpts = { db: { address: 'localhost:27017/agenda-test', collection: 'agendaJobs' } };
-
-const agenda = new Agenda(connectionOpts);
+const agenda = new Agenda({
+	backend: new MongoBackend({
+		address: 'mongodb://localhost:27017/agenda-test',
+		collection: 'agendaJobs'
+	})
+});
 
 const jobTypes = process.env.JOB_TYPES ? process.env.JOB_TYPES.split(',') : [];
 
