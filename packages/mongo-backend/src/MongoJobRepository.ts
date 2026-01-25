@@ -315,6 +315,74 @@ export class MongoJobRepository implements JobRepository {
 		return result.deletedCount;
 	}
 
+	/**
+	 * Build a MongoDB filter from RemoveJobsOptions
+	 */
+	private buildFilterFromOptions(options: RemoveJobsOptions): Filter<MongoJobDocument> | null {
+		const query: Filter<MongoJobDocument> = {};
+
+		if (options.id) {
+			const idStr = String(options.id);
+			try {
+				query._id = new ObjectId(idStr);
+			} catch {
+				return null;
+			}
+		} else if (options.ids && Array.isArray(options.ids) && options.ids.length > 0) {
+			try {
+				query._id = { $in: options.ids.map(id => new ObjectId(String(id))) };
+			} catch {
+				return null;
+			}
+		}
+
+		// Validate name is a string to prevent query operator injection
+		if (options.name && typeof options.name === 'string') {
+			query.name = options.name;
+		} else if (options.names && Array.isArray(options.names) && options.names.length > 0) {
+			const validNames = options.names.filter((n): n is string => typeof n === 'string');
+			if (validNames.length > 0) {
+				query.name = { $in: validNames };
+			}
+		} else if (options.notNames && Array.isArray(options.notNames) && options.notNames.length > 0) {
+			const validNotNames = options.notNames.filter((n): n is string => typeof n === 'string');
+			if (validNotNames.length > 0) {
+				query.name = { $nin: validNotNames };
+			}
+		}
+
+		if (options.data !== undefined) {
+			query.data = options.data as JobParameters['data'];
+		}
+
+		// If no criteria provided, return null to indicate no operation
+		if (Object.keys(query).length === 0) {
+			return null;
+		}
+
+		return query;
+	}
+
+	async disableJobs(options: RemoveJobsOptions): Promise<number> {
+		const query = this.buildFilterFromOptions(options);
+		if (!query) {
+			return 0;
+		}
+
+		const result = await this.collection.updateMany(query, { $set: { disabled: true } });
+		return result.modifiedCount;
+	}
+
+	async enableJobs(options: RemoveJobsOptions): Promise<number> {
+		const query = this.buildFilterFromOptions(options);
+		if (!query) {
+			return 0;
+		}
+
+		const result = await this.collection.updateMany(query, { $set: { disabled: false } });
+		return result.modifiedCount;
+	}
+
 	async unlockJob(job: JobParameters): Promise<void> {
 		if (!job._id) return;
 		// only unlock jobs which are not currently processed (nextRunAt is not null)

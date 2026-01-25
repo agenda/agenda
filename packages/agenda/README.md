@@ -222,10 +222,14 @@ await agenda.every('0 * * * *', 'my-job'); // Cron syntax
 ### Job Control
 
 ```javascript
-// Cancel jobs
+// Cancel jobs (removes from database)
 await agenda.cancel({ name: 'my-job' });
 
-// Disable/enable
+// Disable/enable jobs globally (by query)
+await agenda.disable({ name: 'my-job' });  // Disable all jobs matching query
+await agenda.enable({ name: 'my-job' });   // Enable all jobs matching query
+
+// Disable/enable individual jobs
 const job = await agenda.create('my-job', data);
 job.disable();
 await job.save();

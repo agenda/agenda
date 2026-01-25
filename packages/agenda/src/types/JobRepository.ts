@@ -110,4 +110,16 @@ export interface JobRepository {
 		now: Date | undefined,
 		options: JobRepositoryOptions | undefined
 	): Promise<JobParameters | undefined>;
+
+	/**
+	 * Disable jobs matching the given options
+	 * @returns Number of jobs disabled
+	 */
+	disableJobs(options: RemoveJobsOptions): Promise<number>;
+
+	/**
+	 * Enable jobs matching the given options
+	 * @returns Number of jobs enabled
+	 */
+	enableJobs(options: RemoveJobsOptions): Promise<number>;
 }

@@ -211,6 +211,40 @@ export class Agenda extends EventEmitter {
 	}
 
 	/**
+	 * Disables any jobs matching the passed options, preventing them from being run.
+	 * @param options Options for which jobs to disable
+	 * @returns Number of jobs disabled
+	 */
+	async disable(options: RemoveJobsOptions): Promise<number> {
+		log('attempting to disable Agenda jobs', options);
+		try {
+			const numDisabled = await this.db.disableJobs(options);
+			log('%s jobs disabled', numDisabled);
+			return numDisabled;
+		} catch (error) {
+			log('error trying to disable jobs');
+			throw error;
+		}
+	}
+
+	/**
+	 * Enables any jobs matching the passed options, allowing them to be run.
+	 * @param options Options for which jobs to enable
+	 * @returns Number of jobs enabled
+	 */
+	async enable(options: RemoveJobsOptions): Promise<number> {
+		log('attempting to enable Agenda jobs', options);
+		try {
+			const numEnabled = await this.db.enableJobs(options);
+			log('%s jobs enabled', numEnabled);
+			return numEnabled;
+		} catch (error) {
+			log('error trying to enable jobs');
+			throw error;
+		}
+	}
+
+	/**
 	 * Set name of queue
 	 * @param name
 	 */

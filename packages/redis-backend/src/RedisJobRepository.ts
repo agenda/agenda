@@ -405,6 +405,84 @@ export class RedisJobRepository implements JobRepository {
 		return removed;
 	}
 
+	/**
+	 * Get job IDs matching the given options
+	 */
+	private async getJobIdsFromOptions(options: RemoveJobsOptions): Promise<string[]> {
+		if (options.id) {
+			return [options.id.toString()];
+		}
+		if (options.ids && options.ids.length > 0) {
+			return options.ids.map((id: JobId | string) => id.toString());
+		}
+		if (options.name) {
+			return this.redis.smembers(this.key(`jobs:by_name:${options.name}`));
+		}
+		if (options.names && options.names.length > 0) {
+			const sets = options.names.map((n: string) => this.key(`jobs:by_name:${n}`));
+			return this.redis.sunion(...sets);
+		}
+		if (options.notNames && options.notNames.length > 0) {
+			const allIds = await this.redis.smembers(this.key('jobs:all'));
+			const excludeSets = options.notNames.map((n: string) => this.key(`jobs:by_name:${n}`));
+			const excludeIds = new Set(await this.redis.sunion(...excludeSets));
+			return allIds.filter((id: string) => !excludeIds.has(id));
+		}
+		if (options.data !== undefined) {
+			// Need to scan all jobs for data match
+			const allIds = await this.redis.smembers(this.key('jobs:all'));
+			const searchDataStr = JSON.stringify(options.data);
+			const matchingIds: string[] = [];
+			for (const jobId of allIds) {
+				const jobData = await this.redis.hget(this.key(`job:${jobId}`), 'data');
+				if (jobData && jobData.includes(searchDataStr.slice(1, -1))) {
+					matchingIds.push(jobId);
+				}
+			}
+			return matchingIds;
+		}
+		// No criteria - return empty array
+		return [];
+	}
+
+	async disableJobs(options: RemoveJobsOptions): Promise<number> {
+		const jobIds = await this.getJobIdsFromOptions(options);
+		if (jobIds.length === 0) {
+			return 0;
+		}
+
+		let modified = 0;
+		const now = new Date().toISOString();
+		for (const jobId of jobIds) {
+			const exists = await this.redis.exists(this.key(`job:${jobId}`));
+			if (!exists) continue;
+
+			await this.redis.hset(this.key(`job:${jobId}`), 'disabled', 'true', 'updatedAt', now);
+			modified++;
+		}
+
+		return modified;
+	}
+
+	async enableJobs(options: RemoveJobsOptions): Promise<number> {
+		const jobIds = await this.getJobIdsFromOptions(options);
+		if (jobIds.length === 0) {
+			return 0;
+		}
+
+		let modified = 0;
+		const now = new Date().toISOString();
+		for (const jobId of jobIds) {
+			const exists = await this.redis.exists(this.key(`job:${jobId}`));
+			if (!exists) continue;
+
+			await this.redis.hset(this.key(`job:${jobId}`), 'disabled', 'false', 'updatedAt', now);
+			modified++;
+		}
+
+		return modified;
+	}
+
 	private async deleteJob(id: string, name: string, type: string): Promise<void> {
 		const pipeline = this.redis.pipeline();
 
