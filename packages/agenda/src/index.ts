@@ -461,31 +461,66 @@ export class Agenda extends EventEmitter {
 		interval: string | number,
 		names: string[],
 		data?: undefined,
-		options?: { timezone?: string; skipImmediate?: boolean; forkMode?: boolean }
+		options?: {
+			timezone?: string;
+			skipImmediate?: boolean;
+			forkMode?: boolean;
+			startDate?: Date | string;
+			endDate?: Date | string;
+			skipDays?: number[];
+		}
 	): Promise<Job<void>[]>;
 	async every(
 		interval: string | number,
 		name: string,
 		data?: undefined,
-		options?: { timezone?: string; skipImmediate?: boolean; forkMode?: boolean }
+		options?: {
+			timezone?: string;
+			skipImmediate?: boolean;
+			forkMode?: boolean;
+			startDate?: Date | string;
+			endDate?: Date | string;
+			skipDays?: number[];
+		}
 	): Promise<Job<void>>;
 	async every<DATA = unknown>(
 		interval: string | number,
 		names: string[],
 		data: DATA,
-		options?: { timezone?: string; skipImmediate?: boolean; forkMode?: boolean }
+		options?: {
+			timezone?: string;
+			skipImmediate?: boolean;
+			forkMode?: boolean;
+			startDate?: Date | string;
+			endDate?: Date | string;
+			skipDays?: number[];
+		}
 	): Promise<Job<DATA>[]>;
 	async every<DATA = unknown>(
 		interval: string | number,
 		name: string,
 		data: DATA,
-		options?: { timezone?: string; skipImmediate?: boolean; forkMode?: boolean }
+		options?: {
+			timezone?: string;
+			skipImmediate?: boolean;
+			forkMode?: boolean;
+			startDate?: Date | string;
+			endDate?: Date | string;
+			skipDays?: number[];
+		}
 	): Promise<Job<DATA>>;
 	async every(
 		interval: string | number,
 		names: string | string[],
 		data?: unknown,
-		options?: { timezone?: string; skipImmediate?: boolean; forkMode?: boolean }
+		options?: {
+			timezone?: string;
+			skipImmediate?: boolean;
+			forkMode?: boolean;
+			startDate?: Date | string;
+			endDate?: Date | string;
+			skipDays?: number[];
+		}
 	): // eslint-disable-next-line @typescript-eslint/no-explicit-any
 	Promise<Job<any> | Job<any>[]> {
 		log('Agenda.every(%s, %O, %O)', interval, names, options);
@@ -494,6 +529,18 @@ export class Agenda extends EventEmitter {
 		const createJob = async (name: string): Promise<Job> => {
 			const job = this.create(name, data);
 			job.attrs.type = 'single';
+
+			// Apply date constraints before repeatEvery (so they're used in nextRunAt computation)
+			if (options?.startDate) {
+				job.startDate(options.startDate);
+			}
+			if (options?.endDate) {
+				job.endDate(options.endDate);
+			}
+			if (options?.skipDays) {
+				job.skipDays(options.skipDays);
+			}
+
 			job.repeatEvery(interval, options);
 			if (options?.forkMode) {
 				job.forkMode(options.forkMode);
@@ -515,22 +562,72 @@ export class Agenda extends EventEmitter {
 	 * Schedule a job or jobs at a specific time
 	 * @param when
 	 * @param names
+	 * @param data
+	 * @param options
 	 */
-	async schedule<DATA = void>(when: string | Date, names: string[]): Promise<Job<DATA>[]>;
-	async schedule<DATA = void>(when: string | Date, names: string): Promise<Job<DATA>>;
+	async schedule<DATA = void>(
+		when: string | Date,
+		names: string[],
+		data?: undefined,
+		options?: {
+			startDate?: Date | string;
+			endDate?: Date | string;
+			skipDays?: number[];
+		}
+	): Promise<Job<DATA>[]>;
+	async schedule<DATA = void>(
+		when: string | Date,
+		names: string,
+		data?: undefined,
+		options?: {
+			startDate?: Date | string;
+			endDate?: Date | string;
+			skipDays?: number[];
+		}
+	): Promise<Job<DATA>>;
 	async schedule<DATA = unknown>(
 		when: string | Date,
 		names: string[],
-		data: DATA
+		data: DATA,
+		options?: {
+			startDate?: Date | string;
+			endDate?: Date | string;
+			skipDays?: number[];
+		}
 	): Promise<Job<DATA>[]>;
-	async schedule<DATA = unknown>(when: string | Date, name: string, data: DATA): Promise<Job<DATA>>;
+	async schedule<DATA = unknown>(
+		when: string | Date,
+		name: string,
+		data: DATA,
+		options?: {
+			startDate?: Date | string;
+			endDate?: Date | string;
+			skipDays?: number[];
+		}
+	): Promise<Job<DATA>>;
 	async schedule(
 		when: string | Date,
 		names: string | string[],
-		data?: unknown
+		data?: unknown,
+		options?: {
+			startDate?: Date | string;
+			endDate?: Date | string;
+			skipDays?: number[];
+		}
 	): Promise<Job | Job[]> {
 		const createJob = async (name: string) => {
 			const job = this.create(name, data);
+
+			// Apply date constraints before scheduling
+			if (options?.startDate) {
+				job.startDate(options.startDate);
+			}
+			if (options?.endDate) {
+				job.endDate(options.endDate);
+			}
+			if (options?.skipDays) {
+				job.skipDays(options.skipDays);
+			}
 
 			await job.schedule(when).save();
 
@@ -695,3 +792,11 @@ export * from './types/NotificationChannel.js';
 export * from './types/AgendaBackend.js';
 
 export * from './notifications/index.js';
+
+export {
+	applyAllDateConstraints,
+	applyDateRangeConstraints,
+	applySkipDays,
+	shouldSkipDay,
+	isWithinDateRange
+} from './utils/dateConstraints.js';
