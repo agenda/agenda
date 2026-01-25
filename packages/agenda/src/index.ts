@@ -634,6 +634,34 @@ export class Agenda extends EventEmitter {
 
 		this.jobProcessor = undefined;
 	}
+
+	/**
+	 * Waits for all currently running jobs to finish before stopping.
+	 * This allows for a graceful shutdown where jobs complete their work.
+	 * Unlike stop(), this method waits for running jobs to complete instead of unlocking them.
+	 */
+	async drain(): Promise<void> {
+		if (!this.jobProcessor) {
+			log('Agenda.drain called, but agenda has never started!');
+			return;
+		}
+
+		log('Agenda.drain called, waiting for jobs to finish');
+
+		await this.jobProcessor.drain();
+
+		// Disconnect notification channel if configured
+		if (this.notificationChannel) {
+			log('Agenda.drain disconnecting notification channel');
+			await this.notificationChannel.disconnect();
+		}
+
+		// Disconnect the backend
+		log('Agenda.drain disconnecting backend');
+		await this.backend.disconnect();
+
+		this.jobProcessor = undefined;
+	}
 }
 
 export * from './types/AgendaConfig.js';

@@ -130,6 +130,60 @@ export class JobProcessor {
 	}
 
 	/**
+	 * Waits for all currently running jobs to finish, then stops the processor.
+	 * Unlike stop(), this method does not immediately return - it waits for graceful completion.
+	 * @returns Promise that resolves when all running jobs have completed
+	 */
+	async drain(): Promise<void> {
+		log.extend('drain')('drain called, clearing interval for processJobs()');
+
+		// Stop accepting new jobs
+		if (this.processInterval) {
+			clearInterval(this.processInterval);
+			this.processInterval = undefined;
+		}
+
+		// Unsubscribe from notifications to stop receiving new job notifications
+		if (this.notificationUnsubscribe) {
+			log.extend('drain')('unsubscribing from notification channel');
+			this.notificationUnsubscribe();
+			this.notificationUnsubscribe = undefined;
+		}
+
+		// If no jobs are running, resolve immediately
+		if (this.runningJobs.length === 0) {
+			log.extend('drain')('no running jobs, resolving immediately');
+			this.isRunning = false;
+			return;
+		}
+
+		log.extend('drain')('waiting for %d running jobs to finish', this.runningJobs.length);
+
+		// Wait for all running jobs to complete
+		return new Promise<void>(resolve => {
+			const checkComplete = () => {
+				if (this.runningJobs.length === 0) {
+					log.extend('drain')('all jobs completed, resolving');
+					this.isRunning = false;
+					resolve();
+				}
+			};
+
+			// Listen for 'complete' events from the agenda
+			const completeListener = () => {
+				// Running jobs are removed after the event is emitted,
+				// so we check on next tick
+				setImmediate(checkComplete);
+			};
+
+			this.agenda.on('complete', completeListener);
+
+			// Also check immediately in case jobs finished between our check and listener setup
+			checkComplete();
+		});
+	}
+
+	/**
 	 * Handle incoming job notification - triggers immediate processing
 	 */
 	private async handleNotification(notification: IJobNotification): Promise<void> {
