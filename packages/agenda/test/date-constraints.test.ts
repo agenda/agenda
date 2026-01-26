@@ -5,7 +5,7 @@ import {
 	applySkipDays,
 	shouldSkipDay,
 	isWithinDateRange
-} from '../src/utils/dateConstraints';
+} from '../src/utils/dateConstraints.js';
 
 /**
  * Unit tests for Date Constraints Utilities
