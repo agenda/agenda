@@ -34,9 +34,9 @@ export class Job<DATA = unknown | void> {
 		if (this.forkedChild) {
 			try {
 				this.forkedChild.send('cancel');
-				console.info('canceled child', this.attrs.name, this.attrs._id);
+				log('canceled child', this.attrs.name, this.attrs._id);
 			} catch {
-				console.log('cannot send cancel to child');
+				log('cannot send cancel to child');
 			}
 		}
 	}
@@ -270,7 +270,7 @@ export class Job<DATA = unknown | void> {
 	async save(): Promise<Job> {
 		if (this.agenda.forkedWorker) {
 			const warning = new Error('calling save() on a Job during a forkedWorker has no effect!');
-			console.warn(warning.message, warning.stack);
+			log('WARNING: %s %s', warning.message, warning.stack);
 			return this as Job;
 		}
 		// ensure db connection is ready
@@ -398,15 +398,15 @@ export class Job<DATA = unknown | void> {
 					let childError: unknown;
 					this.forkedChild.on('close', code => {
 						if (code) {
-							console.info(
-								'fork parameters',
+							log(
+								'fork parameters: %O name=%s id=%s filePath=%s',
 								forkHelper,
 								this.attrs.name,
 								this.attrs._id,
 								this.agenda.definitions[this.attrs.name].filePath
 							);
 							const error = new Error(`child process exited with code: ${code}`);
-							console.warn(error.message, childError || this.canceled);
+							log('fork child error: %s %O', error.message, childError || this.canceled);
 							reject(childError || this.canceled || error);
 						} else {
 							resolve();

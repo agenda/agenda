@@ -515,9 +515,7 @@ export class JobProcessor {
 						this.agenda.definitions[job.attrs.name].lockLifetime / 2
 					);
 					do {
-						console.log('setTimeout keep ALIVE check', timeout);
 						await delay(timeout);
-						console.log('running  keep ALIVE check', jobIsRunning);
 						// when job is not running anymore, just finish
 						if (!jobIsRunning) {
 							log.extend('runOrRetry')(

@@ -40,6 +40,6 @@ export {
 	notificationChannelTestSuite,
 	type NotificationChannelTestConfig
 } from './notification-channel-test-suite.js';
-export { agendaTestSuite, type AgendaTestConfig } from './agenda-test-suite.js';
+export { agendaTestSuite, type AgendaTestConfig, type ForkHelperConfig } from './agenda-test-suite.js';
 export { jobProcessorTestSuite, type JobProcessorTestConfig } from './jobprocessor-test-suite.js';
 export { retryTestSuite, type RetryTestConfig } from './retry-test-suite.js';

@@ -122,7 +122,7 @@ export class Agenda extends EventEmitter {
 	on(event: string, listener: (...args: any[]) => void): this {
 		if (this.forkedWorker && event !== 'ready' && event !== 'error') {
 			const warning = new Error(`calling on(${event}) during a forkedWorker has no effect!`);
-			console.warn(warning.message, warning.stack);
+			log('WARNING: %s %s', warning.message, warning.stack);
 			return this;
 		}
 		return super.on(event, listener);

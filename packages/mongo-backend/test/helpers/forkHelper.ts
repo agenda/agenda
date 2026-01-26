@@ -9,9 +9,7 @@ process.on('message', message => {
 	}
 });
 
-(async () => {
-	/** do other required initializations */
-
+try {
 	// get process arguments (name, jobId and path to agenda definition file)
 	const [, , name, jobId, agendaDefinition] = process.argv;
 
@@ -20,7 +18,10 @@ process.on('message', message => {
 
 	// initialize Agenda in "forkedWorker" mode
 	const agenda = new Agenda({
-		backend: new MongoBackend({ address: process.env.DB_CONNECTION! }),
+		backend: new MongoBackend({
+			address: process.env.DB_CONNECTION!,
+			collection: process.env.DB_COLLECTION || 'agendaJobs'
+		}),
 		name: `subworker-${name}`,
 		forkedWorker: true
 	});
@@ -32,23 +33,6 @@ process.on('message', message => {
 	}
 
 	// load job definition
-	/** in this case the file is for example ../some/path/definitions.js
-	 with a content like:
-	 export default (agenda: Agenda, definitionOnly = false) => {
-		agenda.define(
-			'some job',
-			async (notification: {
-				attrs: { data: { dealId: string; orderId: TypeObjectId<IOrder> } };
-			}) => {
-				// do something
-			}
-		);
-
-		if (!definitionOnly) {
-				// here you can create scheduled jobs or other things
-		}
-	});
-	 */
 	if (agendaDefinition) {
 		const loadDefinition = await import(agendaDefinition);
 		(loadDefinition.default || loadDefinition)(agenda, true);
@@ -59,10 +43,10 @@ process.on('message', message => {
 
 	// disconnect database and exit
 	process.exit(0);
-})().catch(err => {
+} catch (err) {
 	console.error('err', err);
 	if (process.send) {
 		process.send(JSON.stringify(err));
 	}
 	process.exit(1);
-});
+}

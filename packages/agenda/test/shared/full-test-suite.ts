@@ -28,7 +28,7 @@
 
 import type { IAgendaBackend, INotificationChannel } from '../../src/index.js';
 import { repositoryTestSuite } from './repository-test-suite.js';
-import { agendaTestSuite } from './agenda-test-suite.js';
+import { agendaTestSuite, type ForkHelperConfig } from './agenda-test-suite.js';
 import { jobProcessorTestSuite } from './jobprocessor-test-suite.js';
 import { retryTestSuite } from './retry-test-suite.js';
 
@@ -45,12 +45,15 @@ export interface FullAgendaTestConfig {
 	createNotificationChannel?: () => Promise<INotificationChannel>;
 	/** Cleanup notification channel */
 	cleanupNotificationChannel?: (channel: INotificationChannel) => Promise<void>;
+	/** Fork mode configuration (backend-specific fork helper) */
+	forkHelper?: ForkHelperConfig;
 	/** Skip specific test suites */
 	skip?: {
 		repository?: boolean;
 		agenda?: boolean;
 		jobProcessor?: boolean;
 		retry?: boolean;
+		forkMode?: boolean;
 	};
 }
 
@@ -89,7 +92,11 @@ export function fullAgendaTestSuite(config: FullAgendaTestConfig): void {
 			cleanupBackend: config.cleanupBackend,
 			clearJobs: config.clearJobs,
 			createNotificationChannel: config.createNotificationChannel,
-			cleanupNotificationChannel: config.cleanupNotificationChannel
+			cleanupNotificationChannel: config.cleanupNotificationChannel,
+			forkHelper: config.forkHelper,
+			skip: {
+				forkMode: skip.forkMode
+			}
 		});
 	}
 

@@ -1,12 +1,9 @@
 import { expect, describe, it, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { Db, MongoClient } from 'mongodb';
 import { randomUUID } from 'crypto';
-import { Agenda, InMemoryNotificationChannel } from 'agenda';
+import { InMemoryNotificationChannel } from 'agenda';
 import { MongoBackend, MongoJobRepository } from '../src/index.js';
 import { fullAgendaTestSuite } from 'agenda/testing';
-import someJobDefinition from './fixtures/someJobDefinition.js';
-
-const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * MongoDB backend tests.
@@ -17,7 +14,7 @@ const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(r
 
 const TEST_COLLECTION = 'agendaJobs';
 
-// Helper to create a fresh database connection
+// Helper to create a fresh database connection (used by MongoDB-specific tests)
 async function createTestDb(): Promise<{ db: Db; client: MongoClient; disconnect: () => Promise<void> }> {
 	const baseUri = process.env.MONGO_URI;
 	if (!baseUri) {
@@ -44,12 +41,23 @@ async function createTestDb(): Promise<{ db: Db; client: MongoClient; disconnect
 // ============================================================================
 
 let sharedDb: Db;
+let sharedDbUri: string;
 let disconnectShared: () => Promise<void>;
 
 beforeAll(async () => {
-	const { db, disconnect } = await createTestDb();
-	sharedDb = db;
-	disconnectShared = disconnect;
+	const baseUri = process.env.MONGO_URI;
+	if (!baseUri) {
+		throw new Error('MONGO_URI not set. Ensure global setup is configured.');
+	}
+	const dbName = `agenda_test_${randomUUID().replace(/-/g, '')}`;
+	sharedDbUri = `${baseUri.replace(/\/$/, '')}/${dbName}`;
+
+	const client = await MongoClient.connect(sharedDbUri);
+	sharedDb = client.db(dbName);
+	disconnectShared = async () => {
+		await sharedDb.dropDatabase();
+		await client.close();
+	};
 });
 
 afterAll(async () => {
@@ -83,6 +91,20 @@ fullAgendaTestSuite({
 	cleanupNotificationChannel: async channel => {
 		if (channel.state !== 'disconnected') {
 			await channel.disconnect();
+		}
+	},
+	// Fork mode configuration - env is evaluated at test time via getter
+	forkHelper: {
+		path: './test/helpers/forkHelper.ts',
+		options: {
+			execArgv: ['--import', 'tsx'],
+			get env() {
+				return {
+					...process.env,
+					DB_CONNECTION: sharedDbUri,
+					DB_COLLECTION: TEST_COLLECTION
+				};
+			}
 		}
 	}
 });
@@ -372,183 +394,5 @@ describe('MongoBackend unit tests', () => {
 			});
 			expect(backend.repository).toBeDefined();
 		});
-	});
-});
-
-// ============================================================================
-// Fork Mode Tests (MongoDB-specific)
-// TODO: These tests require proper environment setup with tsx loader and
-// working module resolution in forked processes. Skipping for now.
-// ============================================================================
-
-describe.skip('MongoBackend fork mode', () => {
-	let db: Db;
-	let mongoCfg: string;
-	let disconnectDb: () => Promise<void>;
-
-	beforeAll(async () => {
-		const result = await createTestDb();
-		db = result.db;
-		disconnectDb = result.disconnect;
-		mongoCfg = `${process.env.MONGO_URI?.replace(/\/$/, '')}/${db.databaseName}`;
-	});
-
-	afterAll(async () => {
-		await disconnectDb();
-	});
-
-	it('runs a job in fork mode', async () => {
-		const backend = new MongoBackend({
-			mongo: db,
-			collection: TEST_COLLECTION
-		});
-		await backend.connect();
-
-		const agendaFork = new Agenda({
-			backend,
-			forkHelper: {
-				path: './test/helpers/forkHelper.ts',
-				options: {
-					env: { DB_CONNECTION: mongoCfg },
-					execArgv: ['--import', 'tsx']
-				}
-			}
-		});
-
-		expect(agendaFork.forkHelper?.path).toBe('./test/helpers/forkHelper.ts');
-
-		const job = agendaFork.create('some job');
-		job.forkMode(true);
-		job.schedule('now');
-		await job.save();
-
-		const jobData = await backend.repository.getJobById(job.attrs._id!);
-
-		if (!jobData) {
-			throw new Error('job not found');
-		}
-
-		expect(jobData.fork).toBe(true);
-
-		// Initialize job definition
-		someJobDefinition(agendaFork);
-
-		await agendaFork.start();
-
-		do {
-			await delay(50);
-		} while (await job.isRunning());
-
-		const jobDataFinished = await backend.repository.getJobById(job.attrs._id!);
-		expect(jobDataFinished?.lastFinishedAt).toBeDefined();
-		expect(jobDataFinished?.failReason).toBeNull();
-		expect(jobDataFinished?.failCount).toBeNull();
-
-		await agendaFork.stop();
-		await backend.disconnect();
-	});
-
-	it('runs a job in fork mode and handles failure', async () => {
-		const backend = new MongoBackend({
-			mongo: db,
-			collection: TEST_COLLECTION + '_fork_fail'
-		});
-		await backend.connect();
-
-		const agendaFork = new Agenda({
-			backend,
-			forkHelper: {
-				path: './test/helpers/forkHelper.ts',
-				options: {
-					env: { DB_CONNECTION: mongoCfg },
-					execArgv: ['--import', 'tsx']
-				}
-			}
-		});
-
-		expect(agendaFork.forkHelper?.path).toBe('./test/helpers/forkHelper.ts');
-
-		const job = agendaFork.create('some job', { failIt: 'error' });
-		job.forkMode(true);
-		job.schedule('now');
-		await job.save();
-
-		const jobData = await backend.repository.getJobById(job.attrs._id!);
-
-		if (!jobData) {
-			throw new Error('job not found');
-		}
-
-		expect(jobData.fork).toBe(true);
-
-		// Initialize job definition
-		someJobDefinition(agendaFork);
-
-		await agendaFork.start();
-
-		do {
-			await delay(50);
-		} while (await job.isRunning());
-
-		const jobDataFinished = await backend.repository.getJobById(job.attrs._id!);
-		expect(jobDataFinished?.lastFinishedAt).toBeDefined();
-		expect(jobDataFinished?.failReason).not.toBeNull();
-		expect(jobDataFinished?.failCount).toBe(1);
-
-		await agendaFork.stop();
-		await backend.disconnect();
-		await db.collection(TEST_COLLECTION + '_fork_fail').drop();
-	});
-
-	it('runs a job in fork mode and handles process exit', async () => {
-		const backend = new MongoBackend({
-			mongo: db,
-			collection: TEST_COLLECTION + '_fork_die'
-		});
-		await backend.connect();
-
-		const agendaFork = new Agenda({
-			backend,
-			forkHelper: {
-				path: './test/helpers/forkHelper.ts',
-				options: {
-					env: { DB_CONNECTION: mongoCfg },
-					execArgv: ['--import', 'tsx']
-				}
-			}
-		});
-
-		expect(agendaFork.forkHelper?.path).toBe('./test/helpers/forkHelper.ts');
-
-		const job = agendaFork.create('some job', { failIt: 'die' });
-		job.forkMode(true);
-		job.schedule('now');
-		await job.save();
-
-		const jobData = await backend.repository.getJobById(job.attrs._id!);
-
-		if (!jobData) {
-			throw new Error('job not found');
-		}
-
-		expect(jobData.fork).toBe(true);
-
-		// Initialize job definition
-		someJobDefinition(agendaFork);
-
-		await agendaFork.start();
-
-		do {
-			await delay(50);
-		} while (await job.isRunning());
-
-		const jobDataFinished = await backend.repository.getJobById(job.attrs._id!);
-		expect(jobDataFinished?.lastFinishedAt).toBeDefined();
-		expect(jobDataFinished?.failReason).not.toBeNull();
-		expect(jobDataFinished?.failCount).toBe(1);
-
-		await agendaFork.stop();
-		await backend.disconnect();
-		await db.collection(TEST_COLLECTION + '_fork_die').drop();
 	});
 });

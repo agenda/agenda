@@ -3,6 +3,16 @@ import type { IAgendaBackend, INotificationChannel } from '../../src/index.js';
 import { Agenda } from '../../src/index.js';
 import { Job } from '../../src/Job.js';
 import { delay, waitForEvent, waitForEvents } from './test-utils.js';
+import someJobDefinition from '../fixtures/someJobDefinition.js';
+
+export interface ForkHelperConfig {
+	/** Path to the fork helper script (relative to cwd) */
+	path: string;
+	/** Fork options (e.g., execArgv for tsx loader) */
+	options?: {
+		execArgv?: string[];
+	};
+}
 
 export interface AgendaTestConfig {
 	/** Name for the test suite */
@@ -17,6 +27,8 @@ export interface AgendaTestConfig {
 	createNotificationChannel?: () => Promise<INotificationChannel>;
 	/** Cleanup notification channel */
 	cleanupNotificationChannel?: (channel: INotificationChannel) => Promise<void>;
+	/** Fork mode configuration (required if forkMode tests are enabled) */
+	forkHelper?: ForkHelperConfig;
 	/** Skip specific tests if not supported */
 	skip?: {
 		forkMode?: boolean; // Skip fork mode tests (require specific file paths)
@@ -1414,6 +1426,112 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 					await new Promise(resolve => setTimeout(resolve, 500));
 
 					expect(jobProcessed).toBe(true);
+				});
+			});
+		}
+
+		// Fork mode tests - skip if configured to skip or if forkHelper is not provided
+		if (!config.skip?.forkMode && config.forkHelper) {
+			describe('fork mode', () => {
+				it('should run a job in fork mode', async () => {
+					const agendaFork = new Agenda({
+						backend,
+						forkHelper: config.forkHelper
+					});
+					await agendaFork.ready;
+
+					expect(agendaFork.forkHelper?.path).toBe(config.forkHelper!.path);
+
+					const job = agendaFork.create('some job');
+					job.forkMode(true);
+					job.schedule('now');
+					await job.save();
+
+					const jobData = await backend.repository.getJobById(job.attrs._id!);
+					expect(jobData).toBeDefined();
+					expect(jobData?.fork).toBe(true);
+
+					// Initialize job definition
+					someJobDefinition(agendaFork);
+
+					await agendaFork.start();
+
+					do {
+						await delay(50);
+					} while (await job.isRunning());
+
+					const jobDataFinished = await backend.repository.getJobById(job.attrs._id!);
+					expect(jobDataFinished?.lastFinishedAt).toBeDefined();
+					expect(jobDataFinished?.failReason).toBeNull();
+					expect(jobDataFinished?.failCount).toBeNull();
+
+					await agendaFork.stop();
+				});
+
+				it('should handle job failure in fork mode', async () => {
+					const agendaFork = new Agenda({
+						backend,
+						forkHelper: config.forkHelper
+					});
+					await agendaFork.ready;
+
+					const job = agendaFork.create('some job', { failIt: 'error' });
+					job.forkMode(true);
+					job.schedule('now');
+					await job.save();
+
+					const jobData = await backend.repository.getJobById(job.attrs._id!);
+					expect(jobData).toBeDefined();
+					expect(jobData?.fork).toBe(true);
+
+					// Initialize job definition
+					someJobDefinition(agendaFork);
+
+					await agendaFork.start();
+
+					do {
+						await delay(50);
+					} while (await job.isRunning());
+
+					const jobDataFinished = await backend.repository.getJobById(job.attrs._id!);
+					expect(jobDataFinished?.lastFinishedAt).toBeDefined();
+					expect(jobDataFinished?.failReason).not.toBeNull();
+					expect(jobDataFinished?.failCount).toBe(1);
+
+					await agendaFork.stop();
+				});
+
+				it('should handle process exit in fork mode', async () => {
+					const agendaFork = new Agenda({
+						backend,
+						forkHelper: config.forkHelper
+					});
+					await agendaFork.ready;
+
+					const job = agendaFork.create('some job', { failIt: 'die' });
+					job.forkMode(true);
+					job.schedule('now');
+					await job.save();
+
+					const jobData = await backend.repository.getJobById(job.attrs._id!);
+					expect(jobData).toBeDefined();
+					expect(jobData?.fork).toBe(true);
+
+					// Initialize job definition
+					someJobDefinition(agendaFork);
+
+					await agendaFork.start();
+
+					do {
+						await delay(50);
+					} while (await job.isRunning());
+
+					const jobDataFinished = await backend.repository.getJobById(job.attrs._id!);
+					expect(jobDataFinished?.lastFinishedAt).toBeDefined();
+					expect(jobDataFinished?.failReason).not.toBeNull();
+					expect(jobDataFinished?.failCount).toBe(1);
+
+					await agendaFork.stop();
 				});
 			});
 		}

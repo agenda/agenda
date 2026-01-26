@@ -24,7 +24,8 @@ export default tseslint.config(
 		rules: {
 			'@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
 			'@typescript-eslint/no-explicit-any': 'warn',
-			'@typescript-eslint/no-require-imports': 'off'
+			'@typescript-eslint/no-require-imports': 'off',
+			'no-console': 'error'
 		}
 	},
 	{
@@ -33,7 +34,15 @@ export default tseslint.config(
 			globals: { ...globals.mocha }
 		},
 		rules: {
-			'@typescript-eslint/no-unused-expressions': 'off'
+			'@typescript-eslint/no-unused-expressions': 'off',
+			'no-console': 'off'
+		}
+	},
+	{
+		// CLI tools and their servers are allowed to use console for user output
+		files: ['**/cli.ts', '**/cli/**/*.ts', '**/agenda-rest/src/**/*.ts'],
+		rules: {
+			'no-console': 'off'
 		}
 	},
 	eslintConfigPrettier
