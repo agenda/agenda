@@ -8,6 +8,7 @@
     { "path": "packages/mongo-backend" },
     { "path": "packages/mongo-backend/tsconfig.test.json" },
     { "path": "packages/postgres-backend" },
-    { "path": "packages/postgres-backend/tsconfig.test.json" }
+    { "path": "packages/postgres-backend/tsconfig.test.json" },
+    { "path": "examples" }
   ]
 }

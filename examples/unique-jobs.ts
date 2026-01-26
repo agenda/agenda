@@ -108,7 +108,7 @@ async function main() {
   // ===========================================
   log('=== Querying jobs to verify ===');
   const result = await agenda.queryJobs({});
-  log(`Total jobs in database: ${result.totalCount}`);
+  log(`Total jobs in database: ${result.total}`);
   for (const job of result.jobs) {
     log(`  - ${job.name}: ${JSON.stringify(job.data)}`);
   }

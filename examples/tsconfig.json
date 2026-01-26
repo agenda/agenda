@@ -1,0 +1,18 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": ".",
+    "composite": true,
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["./*.ts"],
+  "exclude": ["node_modules", "dist"],
+  "references": [
+    { "path": "../packages/agenda" },
+    { "path": "../packages/mongo-backend" },
+    { "path": "../packages/postgres-backend" },
+    { "path": "../packages/redis-backend" }
+  ]
+}
