@@ -47,29 +47,32 @@
 Since there are a few job queue solutions, here a table comparing them to help you use the one that
 better suits your needs.
 
-| Feature                    |      Bull       |   Bee    |       pg-boss       |         Agenda          |
-| :------------------------- | :-------------: | :------: | :-----------------: | :---------------------: |
-| Backend                    |      redis      |  redis   |      postgres       | mongo, postgres, redis  |
-| Priorities                 |        ✓        |          |          ✓          |            ✓            |
-| Concurrency                |        ✓        |    ✓     |          ✓          |            ✓            |
-| Delayed jobs               |        ✓        |          |          ✓          |            ✓            |
-| Global events              |        ✓        |          |                     |            ✓            |
-| Rate Limiter               |        ✓        |          |          ✓          |                         |
-| Debouncing                 |                 |          |          ✓          |                         |
-| Pause/Resume               |        ✓        |          |                     |            ✓            |
-| Sandboxed worker           |        ✓        |          |                     |            ✓            |
-| Repeatable jobs            |        ✓        |          |          ✓          |            ✓            |
-| Auto-retry with backoff    |        ✓        |          |          ✓          |            ✓            |
-| Dead letter queues         |        ✓        |          |          ✓          |                         |
-| Atomic ops                 |        ✓        |    ✓     |          ✓          |            ~            |
-| Persistence                |        ✓        |    ✓     |          ✓          |            ✓            |
-| UI                         |        ✓        |          |                     |            ✓            |
-| REST API                   |                 |          |                     |            ✓            |
-| Central (Scalable) Queue   |                 |          |          ✓          |            ✓            |
-| Supports long running jobs |                 |          |                     |            ✓            |
-| Human-readable intervals   |                 |          |                     |            ✓            |
-| Real-time notifications    |                 |          |                     |            ✓            |
-| Optimized for              | Jobs / Messages | Messages |        Jobs         |          Jobs           |
+| Feature                    |     BullMQ      |      Bull       |   Bee    |       pg-boss       |         Agenda          |
+| :------------------------- | :-------------: | :-------------: | :------: | :-----------------: | :---------------------: |
+| Backend                    |      redis      |      redis      |  redis   |      postgres       | mongo, postgres, redis  |
+| Status                     |     Active      |   Maintenance   |  Stale   |       Active        |         Active          |
+| TypeScript                 |        ✓        |                 |          |          ✓          |            ✓            |
+| Priorities                 |        ✓        |        ✓        |          |          ✓          |            ✓            |
+| Concurrency                |        ✓        |        ✓        |    ✓     |          ✓          |            ✓            |
+| Delayed jobs               |        ✓        |        ✓        |          |          ✓          |            ✓            |
+| Global events              |        ✓        |        ✓        |          |                     |            ✓            |
+| Rate Limiter               |        ✓        |        ✓        |          |          ✓          |                         |
+| Debouncing                 |        ✓        |                 |          |          ✓          |                         |
+| Pause/Resume               |        ✓        |        ✓        |          |                     |            ✓            |
+| Sandboxed worker           |        ✓        |        ✓        |          |                     |            ✓            |
+| Repeatable jobs            |        ✓        |        ✓        |          |          ✓          |            ✓            |
+| Auto-retry with backoff    |        ✓        |        ✓        |          |          ✓          |            ✓            |
+| Dead letter queues         |        ✓        |        ✓        |          |          ✓          |                         |
+| Job dependencies           |        ✓        |                 |          |                     |                         |
+| Atomic ops                 |        ✓        |        ✓        |    ✓     |          ✓          |            ~            |
+| Persistence                |        ✓        |        ✓        |    ✓     |          ✓          |            ✓            |
+| UI                         |        ✓        |        ✓        |          |                     |            ✓            |
+| REST API                   |                 |                 |          |                     |            ✓            |
+| Central (Scalable) Queue   |        ✓        |                 |          |          ✓          |            ✓            |
+| Supports long running jobs |                 |                 |          |                     |            ✓            |
+| Human-readable intervals   |                 |                 |          |                     |            ✓            |
+| Real-time notifications    |        ✓        |                 |          |          ✓          |            ✓            |
+| Optimized for              | Jobs / Messages | Jobs / Messages | Messages |        Jobs         |          Jobs           |
 
 _Kudos for making the comparison chart goes to [Bull](https://www.npmjs.com/package/bull#feature-comparison) maintainers._
 
