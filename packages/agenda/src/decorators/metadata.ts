@@ -35,15 +35,21 @@ export interface ControllerMetadata {
 }
 
 /**
+ * Type for class constructors used in decorator metadata
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Constructor = abstract new (...args: any[]) => any;
+
+/**
  * Registry for storing job controller metadata
  * Uses WeakMap to allow garbage collection of unused classes
  */
-const controllerRegistry = new WeakMap<Function, ControllerMetadata>();
+const controllerRegistry = new WeakMap<Constructor, ControllerMetadata>();
 
 /**
  * Get or create controller metadata for a class
  */
-export function getOrCreateControllerMetadata(target: Function): ControllerMetadata {
+export function getOrCreateControllerMetadata(target: Constructor): ControllerMetadata {
 	let metadata = controllerRegistry.get(target);
 	if (!metadata) {
 		metadata = { jobs: new Map() };
@@ -55,20 +61,20 @@ export function getOrCreateControllerMetadata(target: Function): ControllerMetad
 /**
  * Get controller metadata for a class
  */
-export function getControllerMetadata(target: Function): ControllerMetadata | undefined {
+export function getControllerMetadata(target: Constructor): ControllerMetadata | undefined {
 	return controllerRegistry.get(target);
 }
 
 /**
  * Set controller metadata for a class
  */
-export function setControllerMetadata(target: Function, metadata: ControllerMetadata): void {
+export function setControllerMetadata(target: Constructor, metadata: ControllerMetadata): void {
 	controllerRegistry.set(target, metadata);
 }
 
 /**
  * Check if a class is decorated with @JobsController
  */
-export function isJobsController(target: Function): boolean {
+export function isJobsController(target: Constructor): boolean {
 	return controllerRegistry.has(target);
 }

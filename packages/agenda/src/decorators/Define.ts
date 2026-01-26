@@ -33,11 +33,8 @@ export type { DefineOptions };
  * ```
  */
 export function Define(options: DefineOptions = {}) {
-	return function (
-		target: any,
-		propertyKey: string,
-		descriptor: PropertyDescriptor
-	): PropertyDescriptor {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Standard decorator signature requires any for target
+	return function (target: any, propertyKey: string, descriptor: PropertyDescriptor): PropertyDescriptor {
 		const metadata = getOrCreateControllerMetadata(target.constructor);
 
 		metadata.jobs.set(propertyKey, {

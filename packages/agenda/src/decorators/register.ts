@@ -62,7 +62,8 @@ export function registerJobs(agenda: Agenda, instances: object[]): void {
 	const pendingEveryJobs: PendingEveryJob[] = [];
 
 	for (const instance of instances) {
-		const constructor = instance.constructor;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- instance.constructor is typed as Function
+		const constructor = instance.constructor as new (...args: any[]) => any;
 
 		// Validate that the class is decorated
 		if (!isJobsController(constructor)) {
@@ -101,6 +102,7 @@ function registerJobsFromMetadata(
 		const jobName = buildJobName(namespace, jobMeta.options.name || methodName);
 
 		// Bind the method to the instance
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Dynamic method access requires any
 		const handler = (instance as any)[methodName].bind(instance);
 
 		// Create an async wrapper that matches Agenda's expected signature
@@ -167,7 +169,8 @@ export function getRegisteredJobsInfo(
 	instances: object[]
 ): Array<{ className: string; namespace?: string; jobs: JobMetadata[] }> {
 	return instances.map(instance => {
-		const constructor = instance.constructor;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- instance.constructor is typed as Function
+		const constructor = instance.constructor as new (...args: any[]) => any;
 		const metadata = getControllerMetadata(constructor);
 
 		return {

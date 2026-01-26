@@ -44,6 +44,7 @@ export interface JobsControllerOptions {
  * ```
  */
 export function JobsController(options: JobsControllerOptions = {}) {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Standard class decorator signature requires any
 	return function <T extends new (...args: any[]) => any>(target: T): T {
 		const metadata = getOrCreateControllerMetadata(target);
 		setControllerMetadata(target, {
