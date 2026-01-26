@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "."
+  },
+  "include": ["test/**/*", "src/**/*"],
+  "references": [
+    { "path": "../agenda" }
+  ]
+}

@@ -27,6 +27,9 @@ export interface IPostgresBackendConfig {
 		nextRunAt?: 1 | -1;
 		priority?: 1 | -1;
 	};
+
+	/** Disable LISTEN/NOTIFY notification channel (default: false) */
+	disableNotifications?: boolean;
 }
 
 /**
@@ -50,6 +53,7 @@ export interface IPostgresJobRow {
 	repeat_at: string | null;
 	disabled: boolean;
 	progress: number | null;
+	fork: boolean;
 	last_modified_by: string | null;
 	created_at: Date;
 	updated_at: Date;

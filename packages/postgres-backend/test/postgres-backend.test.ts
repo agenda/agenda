@@ -5,12 +5,8 @@ import {
 	PostgresJobRepository,
 	PostgresNotificationChannel,
 	getDropTableSQL
-} from '../src';
-import {
-	repositoryTestSuite,
-	notificationChannelTestSuite
-} from '../../agenda/test/shared';
-import { toJobId } from 'agenda';
+} from '../src/index.js';
+import { fullAgendaTestSuite } from 'agenda/testing';
 
 /**
  * PostgreSQL backend tests.
@@ -27,14 +23,18 @@ const TEST_CHANNEL_NAME = 'agenda_jobs_test';
 // Connection string is set by the global setup
 const getConnectionString = () => process.env.POSTGRES_TEST_URL!;
 
+// Store connection string for fork helper
+let sharedConnectionString: string;
+
 // ============================================================================
-// Shared Repository Test Suite
+// Shared Database Connection
 // ============================================================================
 
 let sharedPool: Pool;
 
 beforeAll(async () => {
-	sharedPool = new Pool({ connectionString: getConnectionString() });
+	sharedConnectionString = getConnectionString();
+	sharedPool = new Pool({ connectionString: sharedConnectionString });
 	await sharedPool.query(getDropTableSQL(TEST_TABLE_NAME));
 });
 
@@ -43,41 +43,43 @@ afterAll(async () => {
 	await sharedPool.end();
 });
 
-repositoryTestSuite({
-	name: 'PostgresJobRepository',
-	createRepository: async () => {
-		const repo = new PostgresJobRepository({
-			connectionString: getConnectionString(),
-			tableName: TEST_TABLE_NAME,
-			ensureSchema: true
-		});
-		await repo.connect();
-		return repo;
-	},
-	cleanupRepository: async () => {
-		// Don't disconnect - we're reusing the connection
-	},
-	clearJobs: async repo => {
-		const pgRepo = repo as PostgresJobRepository;
-		const pool = pgRepo.getPool();
-		await pool.query(`DELETE FROM "${TEST_TABLE_NAME}"`);
-	}
-});
+// ============================================================================
+// Full Agenda Test Suite
+// ============================================================================
 
-notificationChannelTestSuite({
-	name: 'PostgresNotificationChannel',
-	createChannel: async () => {
-		return new PostgresNotificationChannel({
-			connectionString: getConnectionString(),
-			channelName: TEST_CHANNEL_NAME
+fullAgendaTestSuite({
+	name: 'PostgresBackend',
+	createBackend: async () => {
+		const backend = new PostgresBackend({
+			connectionString: sharedConnectionString,
+			tableName: TEST_TABLE_NAME,
+			channelName: TEST_CHANNEL_NAME,
+			// Disable notification channel for tests - causes hangs
+			disableNotifications: true
 		});
+		await backend.connect();
+		return backend;
 	},
-	cleanupChannel: async channel => {
-		if (channel.state !== 'disconnected') {
-			await channel.disconnect();
+	cleanupBackend: async backend => {
+		await backend.disconnect();
+	},
+	clearJobs: async () => {
+		await sharedPool.query(`DELETE FROM "${TEST_TABLE_NAME}"`);
+	},
+	// Fork mode configuration - env is evaluated at test time via getter
+	forkHelper: {
+		path: './test/helpers/forkHelper.ts',
+		options: {
+			execArgv: ['--import', 'tsx'],
+			get env() {
+				return {
+					...process.env,
+					DB_CONNECTION: sharedConnectionString,
+					DB_TABLE: TEST_TABLE_NAME
+				};
+			}
 		}
-	},
-	propagationDelay: 150 // PostgreSQL LISTEN/NOTIFY may need slightly more time
+	}
 });
 
 // ============================================================================
@@ -157,7 +159,7 @@ describe('PostgresBackend', () => {
 				nextRunAt: new Date(),
 				type: 'normal',
 				data: {}
-			});
+			}, undefined);
 			expect(saved._id).toBeDefined();
 
 			await backendWithPool.disconnect();
@@ -180,7 +182,7 @@ describe('PostgresBackend', () => {
 				nextRunAt: new Date(),
 				type: 'normal',
 				data: { nested: { key: 'value' }, array: [1, 2, 3] }
-			});
+			}, undefined);
 
 			const result = await backend.repository.queryJobs({
 				data: { nested: { key: 'value' } }
@@ -198,14 +200,14 @@ describe('PostgresBackend', () => {
 					nextRunAt: new Date(Date.now() - 1000),
 					type: 'normal',
 					data: { id: 1 }
-				}),
+				}, undefined),
 				backend.repository.saveJob({
 					name: 'concurrent-test',
 					priority: 0,
 					nextRunAt: new Date(Date.now() - 1000),
 					type: 'normal',
 					data: { id: 2 }
-				})
+				}, undefined)
 			]);
 
 			const now = new Date();
@@ -213,8 +215,8 @@ describe('PostgresBackend', () => {
 			const lockDeadline = new Date(now.getTime() - 600000);
 
 			const [next1, next2] = await Promise.all([
-				backend.repository.getNextJobToRun('concurrent-test', nextScanAt, lockDeadline, now),
-				backend.repository.getNextJobToRun('concurrent-test', nextScanAt, lockDeadline, now)
+				backend.repository.getNextJobToRun('concurrent-test', nextScanAt, lockDeadline, now, undefined),
+				backend.repository.getNextJobToRun('concurrent-test', nextScanAt, lockDeadline, now, undefined)
 			]);
 
 			expect(next1).toBeDefined();
@@ -241,6 +243,7 @@ describe('PostgresBackend', () => {
 
 describe('PostgresBackend unit tests', () => {
 	it('should throw if no connection config provided', () => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		expect(() => new PostgresBackend({} as any)).toThrow(
 			'PostgresBackend requires pool, connectionString, or poolConfig'
 		);

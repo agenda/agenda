@@ -1,3 +1,4 @@
+import assert from 'node:assert';
 import debug from 'debug';
 import {
 	Collection,
@@ -8,7 +9,8 @@ import {
 	MongoClientOptions,
 	ObjectId,
 	Sort,
-	UpdateFilter
+	UpdateFilter,
+	WithId
 } from 'mongodb';
 import type {
 	IJobParameters,
@@ -33,6 +35,32 @@ const log = debug('agenda:mongo:repository');
  */
 function escapeRegex(str: string): string {
 	return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function computeJobObj<DATA = unknown>(job: WithId<MongoJobDocument>): IJobParameters<DATA> & { _id: JobId } {
+	return {
+		_id: toJobId(job._id!.toHexString()),
+		name: job.name,
+		priority: job.priority,
+		nextRunAt: job.nextRunAt,
+		type: job.type,
+		data: job.data as DATA,
+		lockedAt: job.lockedAt,
+		lastFinishedAt: job.lastFinishedAt,
+		failedAt: job.failedAt || undefined,
+		failCount: job.failCount || undefined,
+		failReason: job.failReason || undefined,
+		repeatTimezone: job.repeatTimezone,
+		lastRunAt: job.lastRunAt,
+		repeatInterval: job.repeatInterval,
+		repeatAt: job.repeatAt,
+		disabled: job.disabled,
+		progress: job.progress,
+		unique: job.unique,
+		uniqueOpts: job.uniqueOpts,
+		lastModifiedBy: job.lastModifiedBy,
+		fork: job.fork
+	};
 }
 
 /**
@@ -64,8 +92,6 @@ export class MongoJobRepository implements IJobRepository {
 			return this.database(connectOptions.db.address, connectOptions.db.options);
 		}
 
-
-
 		throw new Error('invalid db config, or db config not found');
 	}
 
@@ -73,10 +99,7 @@ export class MongoJobRepository implements IJobRepository {
 		const doc = await this.collection.findOne({ _id: new ObjectId(id) });
 		if (!doc) return null;
 		// Convert MongoDB ObjectId to JobId
-		return {
-			...doc,
-			_id: toJobId(doc._id.toHexString())
-		};
+		return computeJobObj(doc);
 	}
 
 	/**
@@ -176,11 +199,13 @@ export class MongoJobRepository implements IJobRepository {
 
 		// Compute states and filter by state if specified
 		let jobsWithState: IJobWithState[] = allJobs
-			.map(job => ({
-				...job,
-				_id: toJobId(job._id!.toHexString()),
-				state: computeJobState(job as unknown as IJobParameters, now)
-			}))
+			.map(job => {
+				const jobOb = computeJobObj(job);
+				return {
+					...jobOb,
+					state: computeJobState(jobOb, now)
+				};
+			})
 			.filter(job => !state || job.state === state);
 
 		// Apply pagination after state filtering
@@ -337,10 +362,7 @@ export class MongoJobRepository implements IJobRepository {
 		if (!result) return undefined;
 
 		// Convert MongoDB ObjectId to JobId
-		return {
-			...result,
-			_id: toJobId(result._id.toHexString())
-		};
+		return computeJobObj(result);
 	}
 
 	async getNextJobToRun(
@@ -394,10 +416,7 @@ export class MongoJobRepository implements IJobRepository {
 		if (!result) return undefined;
 
 		// Convert MongoDB ObjectId to JobId
-		return {
-			...result,
-			_id: toJobId(result._id.toHexString())
-		};
+		return computeJobObj(result);
 	}
 
 	async connect(): Promise<void> {
@@ -451,18 +470,6 @@ export class MongoJobRepository implements IJobRepository {
 		});
 
 		return client.db();
-	}
-
-	/**
-	 * Convert MongoDB document to IJobParameters with JobId
-	 */
-	private toJobParameters<DATA = unknown>(
-		doc: MongoJobDocument & { _id: ObjectId }
-	): IJobParameters<DATA> {
-		return {
-			...doc,
-			_id: toJobId(doc._id.toHexString())
-		} as IJobParameters<DATA>;
 	}
 
 	async saveJobState(
@@ -543,7 +550,7 @@ export class MongoJobRepository implements IJobRepository {
 					log('job %s was not found for update, returning original data', _id);
 					return job;
 				}
-				return this.toJobParameters(result as MongoJobDocument & { _id: ObjectId });
+				return computeJobObj<DATA>(result);
 			}
 
 			if (props.type === 'single') {
@@ -576,7 +583,8 @@ export class MongoJobRepository implements IJobRepository {
 					}
 				);
 				log(`findOneAndUpdate(${props.name}) with type "single" completed`);
-				return this.toJobParameters(result as MongoJobDocument & { _id: ObjectId });
+				assert(result, 'findOneAndUpdate with upsert should always return a document');
+				return computeJobObj(result);
 			}
 
 			if (unique) {
@@ -592,7 +600,8 @@ export class MongoJobRepository implements IJobRepository {
 					upsert: true,
 					returnDocument: 'after'
 				});
-				return this.toJobParameters(result as MongoJobDocument & { _id: ObjectId });
+				assert(result, 'findOneAndUpdate with upsert should always return a document');
+				return computeJobObj(result);
 			}
 
 			// Insert new job
@@ -601,10 +610,10 @@ export class MongoJobRepository implements IJobRepository {
 				propsWithModifier
 			);
 			const result = await this.collection.insertOne(propsWithModifier as MongoJobDocument);
-			return this.toJobParameters({
+			return computeJobObj({
 				_id: result.insertedId,
 				...propsWithModifier
-			} as MongoJobDocument & { _id: ObjectId });
+			});
 		} catch (error) {
 			log('saveJob() received an error, job was not updated/created');
 			throw error;
