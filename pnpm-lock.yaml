@@ -54,9 +54,6 @@ importers:
         specifier: ^3.2.1
         version: 3.7.2
     devDependencies:
-      '@agenda.js/mongo-backend':
-        specifier: workspace:*
-        version: link:../mongo-backend
       '@types/debug':
         specifier: ^4.1.12
         version: 4.1.12
@@ -75,9 +72,6 @@ importers:
       delay:
         specifier: ^7.0.0
         version: 7.0.0
-      mongodb-memory-server:
-        specifier: ^10.0.0
-        version: 10.4.3(@aws-sdk/credential-providers@3.972.0)(socks@2.8.7)
       sinon:
         specifier: ^19.0.0
         version: 19.0.5

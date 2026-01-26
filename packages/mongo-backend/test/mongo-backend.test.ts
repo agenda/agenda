@@ -1,8 +1,9 @@
 import { expect, describe, it, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { Db, MongoClient } from 'mongodb';
 import { randomUUID } from 'crypto';
+import { InMemoryNotificationChannel } from 'agenda';
 import { MongoBackend, MongoJobRepository } from '../src';
-import { repositoryTestSuite } from '../../agenda/test/shared';
+import { fullAgendaTestSuite } from '../../agenda/test/shared';
 
 /**
  * MongoDB backend tests.
@@ -36,7 +37,7 @@ async function createTestDb(): Promise<{ db: Db; client: MongoClient; disconnect
 }
 
 // ============================================================================
-// Shared Repository Test Suite
+// Shared Database Connection
 // ============================================================================
 
 let sharedDb: Db;
@@ -54,21 +55,34 @@ afterAll(async () => {
 	await disconnectShared();
 });
 
-repositoryTestSuite({
-	name: 'MongoJobRepository',
-	createRepository: async () => {
-		const repo = new MongoJobRepository({
+// ============================================================================
+// Full Agenda Test Suite
+// ============================================================================
+
+fullAgendaTestSuite({
+	name: 'MongoBackend',
+	createBackend: async () => {
+		const backend = new MongoBackend({
 			mongo: sharedDb,
-			db: { address: '', collection: TEST_COLLECTION }
+			collection: TEST_COLLECTION
 		});
-		await repo.connect();
-		return repo;
+		await backend.connect();
+		return backend;
 	},
-	cleanupRepository: async () => {
+	cleanupBackend: async () => {
 		// Don't disconnect - we're sharing the connection
 	},
 	clearJobs: async () => {
 		await sharedDb.collection(TEST_COLLECTION).deleteMany({});
+	},
+	// Test with notification channel
+	createNotificationChannel: async () => {
+		return new InMemoryNotificationChannel();
+	},
+	cleanupNotificationChannel: async channel => {
+		if (channel.state !== 'disconnected') {
+			await channel.disconnect();
+		}
 	}
 });
 
@@ -78,14 +92,12 @@ repositoryTestSuite({
 
 describe('MongoBackend', () => {
 	let db: Db;
-	let client: MongoClient;
 	let disconnectDb: () => Promise<void>;
 	let backend: MongoBackend;
 
 	beforeAll(async () => {
 		const result = await createTestDb();
 		db = result.db;
-		client = result.client;
 		disconnectDb = result.disconnect;
 	});
 

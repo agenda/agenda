@@ -24,6 +24,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import type { INotificationChannel, IJobNotification, JobId } from '../../src';
 import { toJobId } from '../../src';
+import { delay } from './test-utils.js';
 
 export interface NotificationChannelTestConfig {
 	/** Name for the test suite */
@@ -54,7 +55,6 @@ function createTestNotification(overrides: Partial<IJobNotification> = {}): IJob
  * Creates a test suite for INotificationChannel implementations
  */
 export function notificationChannelTestSuite(config: NotificationChannelTestConfig): void {
-	const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 	const propagationDelay = config.propagationDelay ?? 100;
 
 	describe(`${config.name} - INotificationChannel`, () => {

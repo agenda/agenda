@@ -126,7 +126,10 @@ export class JobProcessor {
 			this.notificationUnsubscribe = undefined;
 		}
 
-		return this.lockedJobs;
+		// Return both locked and running jobs so they can all be unlocked
+		// Running jobs are also "locked" in the database (they have lockedAt set),
+		// they just moved from lockedJobs to runningJobs when processing started
+		return [...this.lockedJobs, ...this.runningJobs];
 	}
 
 	/**

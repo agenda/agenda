@@ -86,16 +86,25 @@ export class Agenda extends EventEmitter {
 
 	private notificationChannel?: INotificationChannel;
 
+	// Lifecycle events
+	on(event: 'ready', listener: () => void): this;
+	on(event: 'error', listener: (error: Error) => void): this;
+
+	// Job events (generic)
 	on(event: 'fail', listener: (error: Error, job: JobWithId) => void): this;
 	on(event: 'success', listener: (job: JobWithId) => void): this;
 	on(event: 'start', listener: (job: JobWithId) => void): this;
 	on(event: 'complete', listener: (job: JobWithId) => void): this;
-	on(event: string, listener: (job: JobWithId) => void): this;
-	on(event: string, listener: (error: Error, job: JobWithId) => void): this;
-	on(event: 'ready', listener: () => void): this;
-	on(event: 'error', listener: (error: Error) => void): this;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	on(event: string, listener: (...args: any[]) => void): this {
+
+	// Job-specific events (e.g., 'fail:myJobName')
+	on(event: `fail:${string}`, listener: (error: Error, job: JobWithId) => void): this;
+	on(event: `success:${string}`, listener: (job: JobWithId) => void): this;
+	on(event: `start:${string}`, listener: (job: JobWithId) => void): this;
+	on(event: `complete:${string}`, listener: (job: JobWithId) => void): this;
+	on(event: string, listener: (...args: unknown[]) => void): this;
+
+	// Implementation (eslint-disable needed because overloads provide the public type safety)
+	on(event: string, listener: (...args: unknown[]) => void): this {
 		if (this.forkedWorker && event !== 'ready' && event !== 'error') {
 			const warning = new Error(`calling on(${event}) during a forkedWorker has no effect!`);
 			console.warn(warning.message, warning.stack);

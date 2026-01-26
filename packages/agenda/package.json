@@ -53,14 +53,12 @@
     "luxon": "^3.2.1"
   },
   "devDependencies": {
-    "@agenda.js/mongo-backend": "workspace:*",
     "@types/debug": "^4.1.12",
     "@types/human-interval": "^1.0.0",
     "@types/luxon": "^3.4.0",
     "@types/node": "^22.0.0",
     "@vitest/coverage-v8": "^3.1.0",
     "delay": "^7.0.0",
-    "mongodb-memory-server": "^10.0.0",
     "sinon": "^19.0.0",
     "ts-node": "^10.9.2",
     "tsx": "^4.21.0",

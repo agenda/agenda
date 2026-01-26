@@ -25,11 +25,11 @@
  * ```
  */
 
-import delay from 'delay';
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import type { IAgendaBackend, INotificationChannel } from '../../src';
 import { Agenda } from '../../src';
 import { Job } from '../../src/Job';
+import { waitForEvent, waitForEvents } from './test-utils.js';
 
 export interface AgendaTestConfig {
 	/** Name for the test suite */
@@ -51,20 +51,6 @@ export interface AgendaTestConfig {
 }
 
 /**
- * Helper to query jobs from agenda
- */
-async function getJobs(agenda: Agenda, query: { name?: string } = {}): Promise<Job[]> {
-	const result = await agenda.queryJobs(query);
-	// queryJobs returns IJobWithState[], we need to convert to Job[]
-	// For now, we'll create Job instances from the parameters
-	return result.jobs.map(params => {
-		const job = agenda.create(params.name, params.data);
-		Object.assign(job.attrs, params);
-		return job;
-	});
-}
-
-/**
  * Creates a comprehensive test suite for Agenda with a specific backend
  */
 export function agendaTestSuite(config: AgendaTestConfig): void {
@@ -72,7 +58,6 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 		let backend: IAgendaBackend;
 		let agenda: Agenda;
 
-		const jobTimeout = 500;
 		const jobType = 'do work';
 		const jobProcessor = () => {};
 
@@ -86,11 +71,11 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 
 		beforeEach(async () => {
 			await config.clearJobs(backend);
-			agenda = new Agenda({ backend });
-			agenda.define('someJob', jobProcessor);
-			agenda.define('send email', jobProcessor);
-			agenda.define('some job', jobProcessor);
-			agenda.define(jobType, jobProcessor);
+			agenda = new Agenda({
+				backend,
+				processEvery: 100 // Fast processing for tests (100ms)
+			});
+			await agenda.ready;
 		});
 
 		afterEach(async () => {
@@ -100,88 +85,72 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 			await config.clearJobs(backend);
 		});
 
-		describe('configuration', () => {
-			it('should set processEvery', () => {
-				agenda.processEvery('3 minutes');
-				expect(agenda.attrs.processEvery).toBe(180000);
-			});
-
-			it('should set name', () => {
-				agenda.name('test-name');
-				expect(agenda.attrs.name).toBe('test-name');
-			});
-
-			it('should set maxConcurrency', () => {
-				agenda.maxConcurrency(10);
-				expect(agenda.attrs.maxConcurrency).toBe(10);
-			});
-
-			it('should set defaultConcurrency', () => {
-				agenda.defaultConcurrency(3);
-				expect(agenda.attrs.defaultConcurrency).toBe(3);
-			});
-
-			it('should set lockLimit', () => {
-				agenda.lockLimit(5);
-				expect(agenda.attrs.lockLimit).toBe(5);
-			});
-
-			it('should set defaultLockLimit', () => {
-				agenda.defaultLockLimit(2);
-				expect(agenda.attrs.defaultLockLimit).toBe(2);
-			});
-
-			it('should set defaultLockLifetime', () => {
-				agenda.defaultLockLifetime(300000);
-				expect(agenda.attrs.defaultLockLifetime).toBe(300000);
-			});
-		});
-
-		describe('job definition', () => {
-			it('should create a job', () => {
-				const job = agenda.create('test job', { data: 1 });
-				expect(job).toBeInstanceOf(Job);
-			});
-
-			it('should create a job with data', () => {
-				const job = agenda.create('test job', { key: 'value' });
-				expect(job.attrs.data).toEqual({ key: 'value' });
-			});
-		});
+		// Note: Basic configuration and job definition tests are in unit.test.ts
+		// This suite focuses on integration tests that require a real backend
 
 		describe('every()', () => {
 			it('should schedule a job to run at an interval', async () => {
-				await agenda.start();
 				await agenda.every('5 minutes', 'test-interval-job');
 
-				const jobs = await getJobs(agenda, { name: 'test-interval-job' });
-				expect(jobs.length).toBe(1);
-				expect(jobs[0].attrs.repeatInterval).toBe('5 minutes');
+				const result = await agenda.queryJobs({ name: 'test-interval-job' });
+				expect(result.jobs.length).toBe(1);
+				expect(result.jobs[0].repeatInterval).toBe('5 minutes');
 			});
 
 			it('should schedule a job to run at a cron expression', async () => {
-				await agenda.start();
 				await agenda.every('0 6 * * *', 'test-cron-job');
 
-				const jobs = await getJobs(agenda, { name: 'test-cron-job' });
-				expect(jobs.length).toBe(1);
-				expect(jobs[0].attrs.repeatInterval).toBe('0 6 * * *');
+				const result = await agenda.queryJobs({ name: 'test-cron-job' });
+				expect(result.jobs.length).toBe(1);
+				expect(result.jobs[0].repeatInterval).toBe('0 6 * * *');
 			});
 
 			it('should update a job that was previously scheduled', async () => {
-				await agenda.start();
 				await agenda.every('1 minute', 'update-interval-job');
 				await agenda.every('5 minutes', 'update-interval-job');
 
-				const jobs = await getJobs(agenda, { name: 'update-interval-job' });
-				expect(jobs.length).toBe(1);
-				expect(jobs[0].attrs.repeatInterval).toBe('5 minutes');
+				const result = await agenda.queryJobs({ name: 'update-interval-job' });
+				expect(result.jobs.length).toBe(1);
+				expect(result.jobs[0].repeatInterval).toBe('5 minutes');
+			});
+
+			it('should accept options object with timezone', async () => {
+				agenda.define('timezoneJob', jobProcessor);
+				const job = await agenda.every('5 minutes', 'timezoneJob', {}, { timezone: 'America/New_York' });
+				expect(job.attrs.repeatTimezone).toBe('America/New_York');
+			});
+
+			it('should set skipImmediate option', async () => {
+				agenda.define('skipImmediateJob', jobProcessor);
+				agenda.define('noSkipJob', jobProcessor);
+				// Without skipImmediate, job should run immediately (nextRunAt ~ now)
+				const jobWithoutSkip = await agenda.every('5 minutes', 'noSkipJob', {});
+				const immediateDiff = Math.abs(
+					(jobWithoutSkip.attrs.nextRunAt?.getTime() || 0) - Date.now()
+				);
+
+				// With skipImmediate, job should run in ~5 minutes (nextRunAt > now + 4 minutes)
+				const jobWithSkip = await agenda.every('5 minutes', 'skipImmediateJob', {}, { skipImmediate: true });
+				const skipDiff = (jobWithSkip.attrs.nextRunAt?.getTime() || 0) - Date.now();
+
+				// Without skip, should run very soon (within 1 second)
+				expect(immediateDiff).toBeLessThan(1000);
+				// With skip, should run in ~5 minutes (at least 4 minutes from now)
+				expect(skipDiff).toBeGreaterThan(4 * 60 * 1000);
+			});
+
+			it('should create multiple jobs with array of names', async () => {
+				agenda.define('arrayJob1', jobProcessor);
+				agenda.define('arrayJob2', jobProcessor);
+				const jobs = await agenda.every('5 minutes', ['arrayJob1', 'arrayJob2']) as Job[];
+				expect(jobs).toHaveLength(2);
+				expect(jobs.map(j => j.attrs.name)).toContain('arrayJob1');
+				expect(jobs.map(j => j.attrs.name)).toContain('arrayJob2');
 			});
 		});
 
 		describe('schedule()', () => {
 			it('should schedule a job for a specific time', async () => {
-				await agenda.start();
 				const when = new Date(Date.now() + 60000);
 				const job = await agenda.schedule(when, 'test-schedule-job');
 
@@ -189,17 +158,23 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 			});
 
 			it('should schedule a job with human-readable time', async () => {
-				await agenda.start();
 				const job = await agenda.schedule('in 1 hour', 'test-human-schedule');
 
 				expect(job.attrs.nextRunAt).toBeDefined();
 				expect(job.attrs.nextRunAt!.getTime()).toBeGreaterThan(Date.now());
 			});
+
+			it('should create multiple jobs with array of names', async () => {
+				agenda.define('scheduleArrayJob1', jobProcessor);
+				agenda.define('scheduleArrayJob2', jobProcessor);
+				const when = new Date(Date.now() + 60000);
+				const jobs = await agenda.schedule(when, ['scheduleArrayJob1', 'scheduleArrayJob2']) as Job[];
+				expect(jobs).toHaveLength(2);
+			});
 		});
 
 		describe('now()', () => {
 			it('should schedule a job to run immediately', async () => {
-				await agenda.start();
 				const job = await agenda.now('test-now-job');
 
 				expect(job.attrs.nextRunAt).toBeDefined();
@@ -207,7 +182,6 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 			});
 
 			it('should schedule a job with data', async () => {
-				await agenda.start();
 				const job = await agenda.now('test-now-data', { key: 'value' });
 
 				expect(job.attrs.data).toEqual({ key: 'value' });
@@ -216,7 +190,6 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 
 		describe('queryJobs()', () => {
 			it('should return all jobs matching query', async () => {
-				await agenda.start();
 				await agenda.now('query-job-1');
 				await agenda.now('query-job-2');
 				await agenda.now('query-job-1');
@@ -229,11 +202,59 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				const result = await agenda.queryJobs({ name: 'non-existent' });
 				expect(result.jobs).toEqual([]);
 			});
+
+			it('should limit results', async () => {
+				await agenda.now('limit-test');
+				await agenda.now('limit-test');
+				await agenda.now('limit-test');
+
+				const result = await agenda.queryJobs({ name: 'limit-test', limit: 2 });
+				expect(result.jobs.length).toBe(2);
+				expect(result.total).toBe(3);
+			});
+
+			it('should skip results', async () => {
+				await agenda.now('skip-test');
+				await agenda.now('skip-test');
+				await agenda.now('skip-test');
+
+				const result = await agenda.queryJobs({ name: 'skip-test', skip: 2 });
+				expect(result.jobs.length).toBe(1);
+			});
+
+			it('should combine limit and skip', async () => {
+				await agenda.now('limit-skip-test');
+				await agenda.now('limit-skip-test');
+				await agenda.now('limit-skip-test');
+				await agenda.now('limit-skip-test');
+				await agenda.now('limit-skip-test');
+
+				const result = await agenda.queryJobs({ name: 'limit-skip-test', limit: 2, skip: 2 });
+				expect(result.jobs.length).toBe(2);
+			});
+
+			it('should sort results', async () => {
+				const j1 = await agenda.now('sort-test', { order: 3 });
+				await j1.priority(3).save();
+				const j2 = await agenda.now('sort-test', { order: 1 });
+				await j2.priority(1).save();
+				const j3 = await agenda.now('sort-test', { order: 2 });
+				await j3.priority(2).save();
+
+				const result = await agenda.queryJobs({
+					name: 'sort-test',
+					sort: { priority: -1 }
+				});
+
+				expect(result.jobs.length).toBe(3);
+				expect(result.jobs[0].priority).toBe(3);
+				expect(result.jobs[1].priority).toBe(2);
+				expect(result.jobs[2].priority).toBe(1);
+			});
 		});
 
 		describe('cancel()', () => {
 			it('should cancel jobs matching query', async () => {
-				await agenda.start();
 				await agenda.now('cancel-test');
 				await agenda.now('cancel-test');
 				await agenda.now('keep-test');
@@ -247,59 +268,27 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 			});
 		});
 
-		describe('disable() / enable()', () => {
-			it('should disable jobs matching query', async () => {
-				await agenda.start();
-				await agenda.now('disable-test');
-				await agenda.now('disable-test');
-
-				const disabled = await agenda.disable({ name: 'disable-test' });
-				expect(disabled).toBe(2);
+		describe('job disable/enable', () => {
+			it('should disable a job via Job.disable()', async () => {
+				const job = await agenda.now('disable-test');
+				await job.disable().save();
 
 				const result = await agenda.queryJobs({ name: 'disable-test' });
-				result.jobs.forEach(job => expect(job.disabled).toBe(true));
+				expect(result.jobs[0].disabled).toBe(true);
 			});
 
-			it('should enable disabled jobs', async () => {
-				await agenda.start();
+			it('should enable a disabled job via Job.enable()', async () => {
 				const job = await agenda.now('enable-test');
 				await job.disable().save();
 
-				const enabled = await agenda.enable({ name: 'enable-test' });
-				expect(enabled).toBe(1);
+				// Re-fetch and enable
+				const jobs = (await agenda.queryJobs({ name: 'enable-test' })).jobs;
+				const jobToEnable = agenda.create(jobs[0].name, jobs[0].data);
+				Object.assign(jobToEnable.attrs, jobs[0]);
+				await jobToEnable.enable().save();
 
 				const result = await agenda.queryJobs({ name: 'enable-test' });
 				expect(result.jobs[0].disabled).toBeFalsy();
-			});
-		});
-
-		describe('job processing', () => {
-			it('should process a job', async () => {
-				let processed = false;
-				agenda.define('process-test', async () => {
-					processed = true;
-				});
-
-				await agenda.start();
-				await agenda.now('process-test');
-
-				await delay(jobTimeout);
-				expect(processed).toBe(true);
-			});
-
-			it('should pass job instance to processor', async () => {
-				let receivedJob: Job | undefined;
-				agenda.define('job-instance-test', async (job: Job) => {
-					receivedJob = job;
-				});
-
-				await agenda.start();
-				await agenda.now('job-instance-test', { testData: 123 });
-
-				await delay(jobTimeout);
-				expect(receivedJob).toBeDefined();
-				expect(receivedJob?.attrs.name).toBe('job-instance-test');
-				expect(receivedJob?.attrs.data).toEqual({ testData: 123 });
 			});
 
 			it('should not run disabled jobs', async () => {
@@ -312,8 +301,63 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				await job.disable().save();
 				await agenda.start();
 
-				await delay(jobTimeout);
+				// Wait a bit to ensure job would have been picked up
+				await new Promise(resolve => setTimeout(resolve, 500));
 				expect(processed).toBe(false);
+			});
+
+			// TODO: Add agenda.disable() and agenda.enable() methods to Agenda class
+			// These would allow bulk disable/enable of jobs by query
+			// it('should disable jobs matching query via agenda.disable()', async () => {
+			// 	await agenda.now('disable-test');
+			// 	await agenda.now('disable-test');
+			//
+			// 	const disabled = await agenda.disable({ name: 'disable-test' });
+			// 	expect(disabled).toBe(2);
+			//
+			// 	const result = await agenda.queryJobs({ name: 'disable-test' });
+			// 	result.jobs.forEach(job => expect(job.disabled).toBe(true));
+			// });
+			//
+			// it('should enable disabled jobs via agenda.enable()', async () => {
+			// 	const job = await agenda.now('enable-test');
+			// 	await job.disable().save();
+			//
+			// 	const enabled = await agenda.enable({ name: 'enable-test' });
+			// 	expect(enabled).toBe(1);
+			//
+			// 	const result = await agenda.queryJobs({ name: 'enable-test' });
+			// 	expect(result.jobs[0].disabled).toBeFalsy();
+			// });
+		});
+
+		describe('job processing', () => {
+			it('should process a job', async () => {
+				let processed = false;
+				agenda.define('process-test', async () => {
+					processed = true;
+				});
+
+				await agenda.start();
+				await agenda.now('process-test');
+
+				await waitForEvent(agenda, 'complete:process-test');
+				expect(processed).toBe(true);
+			});
+
+			it('should pass job instance to processor', async () => {
+				let receivedJob: Job | undefined;
+				agenda.define('job-instance-test', async (job: Job) => {
+					receivedJob = job;
+				});
+
+				await agenda.start();
+				await agenda.now('job-instance-test', { testData: 123 });
+
+				await waitForEvent(agenda, 'complete:job-instance-test');
+				expect(receivedJob).toBeDefined();
+				expect(receivedJob?.attrs.name).toBe('job-instance-test');
+				expect(receivedJob?.attrs.data).toEqual({ testData: 123 });
 			});
 
 			it('should emit success event on completion', async () => {
@@ -327,7 +371,7 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				await agenda.start();
 				await agenda.now('success-event-test');
 
-				await delay(jobTimeout);
+				await waitForEvent(agenda, 'complete:success-event-test');
 				expect(successEmitted).toBe(true);
 			});
 
@@ -346,7 +390,7 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				await agenda.start();
 				await agenda.now('fail-event-test');
 
-				await delay(jobTimeout);
+				await waitForEvent(agenda, 'complete:fail-event-test');
 				expect(failEmitted).toBe(true);
 				expect(failError?.message).toBe('Test error');
 			});
@@ -359,25 +403,25 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 					const result = await agenda.queryJobs({ name: 'lock-test' });
 					lockedDuringProcessing =
 						result.jobs[0].lockedAt !== null && result.jobs[0].lockedAt !== undefined;
-					await delay(100);
 				});
 
 				await agenda.start();
 				await agenda.now('lock-test');
 
-				await delay(jobTimeout);
+				await waitForEvent(agenda, 'complete:lock-test');
 				expect(lockedDuringProcessing).toBe(true);
 			});
 
 			it('should clear locks on stop', async () => {
 				agenda.define('clear-lock-test', async () => {
-					await delay(5000);
+					await new Promise(resolve => setTimeout(resolve, 5000));
 				});
 
 				await agenda.start();
 				await agenda.now('clear-lock-test');
 
-				await delay(200);
+				// Wait for job to start
+				await waitForEvent(agenda, 'start:clear-lock-test');
 				await agenda.stop();
 
 				const result = await agenda.queryJobs({ name: 'clear-lock-test' });
@@ -394,7 +438,7 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				agenda.define('concurrency-test', async () => {
 					running++;
 					maxRunning = Math.max(maxRunning, running);
-					await delay(200);
+					await new Promise(resolve => setTimeout(resolve, 100));
 					running--;
 				});
 
@@ -406,7 +450,7 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 					agenda.now('concurrency-test')
 				]);
 
-				await delay(1500);
+				await waitForEvents(agenda, 'complete:concurrency-test', 4);
 				expect(maxRunning).toBeLessThanOrEqual(2);
 			});
 
@@ -419,7 +463,7 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 					async () => {
 						running++;
 						maxRunning = Math.max(maxRunning, running);
-						await delay(200);
+						await new Promise(resolve => setTimeout(resolve, 100));
 						running--;
 					},
 					{ concurrency: 1 }
@@ -432,7 +476,7 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 					agenda.now('per-job-concurrency')
 				]);
 
-				await delay(1500);
+				await waitForEvents(agenda, 'complete:per-job-concurrency', 3);
 				expect(maxRunning).toBe(1);
 			});
 		});
@@ -445,22 +489,665 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 					processOrder.push(job.attrs.priority || 0);
 				});
 
-				// Schedule jobs - low priority first to ensure they're in queue
-				const j1 = await agenda.now('priority-test');
+				// Use the same nextRunAt for all jobs so priority is the deciding factor
+				const sameTime = new Date(Date.now() - 1000); // 1 second in the past
+
+				// Create jobs with same nextRunAt but different priorities
+				const j1 = agenda.create('priority-test');
+				j1.attrs.nextRunAt = sameTime;
 				await j1.priority(-10).save();
-				const j2 = await agenda.now('priority-test');
+
+				const j2 = agenda.create('priority-test');
+				j2.attrs.nextRunAt = sameTime;
 				await j2.priority(10).save();
-				const j3 = await agenda.now('priority-test');
+
+				const j3 = agenda.create('priority-test');
+				j3.attrs.nextRunAt = sameTime;
 				await j3.priority(0).save();
 
 				agenda.maxConcurrency(1); // Process one at a time
 				await agenda.start();
 
-				await delay(jobTimeout * 4);
+				await waitForEvents(agenda, 'complete:priority-test', 3);
 
 				// Higher priority (10) should be processed first
 				expect(processOrder[0]).toBe(10);
 			});
 		});
+
+		// Note: getRunningStats tests are in jobprocessor-test-suite.ts (more comprehensive)
+
+		describe('purge', () => {
+			it('should remove orphaned jobs (jobs without definitions)', async () => {
+				// Define and create jobs that should be KEPT
+				agenda.define('defined-job', jobProcessor);
+				await agenda.now('defined-job');
+
+				// Create orphaned jobs directly in DB (no definition)
+				// We need to temporarily define them to create, then "orphan" them
+				agenda.define('orphan-1', jobProcessor);
+				agenda.define('orphan-2', jobProcessor);
+				await agenda.now('orphan-1');
+				await agenda.now('orphan-2');
+
+				// Remove the definitions to make them orphans
+				delete agenda.definitions['orphan-1'];
+				delete agenda.definitions['orphan-2'];
+
+				const beforePurge = await agenda.queryJobs({});
+				expect(beforePurge.total).toBe(3);
+
+				// Purge should only remove orphaned jobs (not defined)
+				const purged = await agenda.purge();
+				expect(purged).toBe(2);
+
+				const afterPurge = await agenda.queryJobs({});
+				expect(afterPurge.total).toBe(1);
+				expect(afterPurge.jobs[0].name).toBe('defined-job');
+			});
+		});
+
+		describe('unique constraint', () => {
+			it('should modify one job when unique matches', async () => {
+				const job1 = await agenda
+					.create('unique-job', {
+						type: 'active',
+						userId: '123',
+						other: true
+					})
+					.unique({
+						'data.type': 'active',
+						'data.userId': '123'
+					})
+					.schedule('now')
+					.save();
+
+				const job2 = await agenda
+					.create('unique-job', {
+						type: 'active',
+						userId: '123',
+						other: false
+					})
+					.unique({
+						'data.type': 'active',
+						'data.userId': '123'
+					})
+					.schedule('now')
+					.save();
+
+				// Both should have the same ID (upserted)
+				expect(job1.attrs._id?.toString()).toBe(job2.attrs._id?.toString());
+
+				const result = await agenda.queryJobs({ name: 'unique-job' });
+				expect(result.jobs.length).toBe(1);
+			});
+
+			it('should not modify job when unique matches and insertOnly is set', async () => {
+				const job1 = await agenda
+					.create('unique-insert-only', {
+						type: 'active',
+						userId: '123',
+						value: 'first'
+					})
+					.unique(
+						{
+							'data.type': 'active',
+							'data.userId': '123'
+						},
+						{ insertOnly: true }
+					)
+					.schedule('now')
+					.save();
+
+				const job2 = await agenda
+					.create('unique-insert-only', {
+						type: 'active',
+						userId: '123',
+						value: 'second'
+					})
+					.unique(
+						{
+							'data.type': 'active',
+							'data.userId': '123'
+						},
+						{ insertOnly: true }
+					)
+					.schedule('now')
+					.save();
+
+				// Same ID but data should not be updated
+				expect(job1.attrs._id?.toString()).toBe(job2.attrs._id?.toString());
+
+				const result = await agenda.queryJobs({ name: 'unique-insert-only' });
+				expect(result.jobs.length).toBe(1);
+				// Original value should be preserved
+				expect(result.jobs[0].data.value).toBe('first');
+			});
+
+			it('should create two jobs when unique does not match', async () => {
+				await agenda
+					.create('unique-no-match', {
+						type: 'active',
+						userId: '123'
+					})
+					.unique({
+						'data.type': 'active',
+						'data.userId': '123'
+					})
+					.schedule('now')
+					.save();
+
+				await agenda
+					.create('unique-no-match', {
+						type: 'active',
+						userId: '456' // Different userId
+					})
+					.unique({
+						'data.type': 'active',
+						'data.userId': '456'
+					})
+					.schedule('now')
+					.save();
+
+				const result = await agenda.queryJobs({ name: 'unique-no-match' });
+				expect(result.jobs.length).toBe(2);
+			});
+		});
+
+		describe('Job class', () => {
+			describe('toJson', () => {
+				it('should return job attributes as JSON', async () => {
+					const job = await agenda.now('json-test', { foo: 'bar' });
+					const json = job.toJson();
+
+					expect(json.name).toBe('json-test');
+					expect(json.data).toEqual({ foo: 'bar' });
+					expect(json._id).toBeDefined();
+				});
+			});
+
+			describe('repeatEvery', () => {
+				it('should set repeatInterval', async () => {
+					const job = agenda.create('repeat-every-test');
+					job.repeatEvery('5 minutes');
+
+					expect(job.attrs.repeatInterval).toBe('5 minutes');
+				});
+
+				it('should accept cron expression', async () => {
+					const job = agenda.create('repeat-cron-test');
+					job.repeatEvery('0 6 * * *');
+
+					expect(job.attrs.repeatInterval).toBe('0 6 * * *');
+				});
+
+				it('should clear repeatInterval when set to null', async () => {
+					agenda.define('repeat-clear-test', jobProcessor);
+					const job = await agenda.create('repeat-clear-test');
+					job.repeatEvery('5 minutes');
+					await job.save();
+					expect(job.attrs.repeatInterval).toBe('5 minutes');
+
+					job.repeatEvery(null);
+					await job.save();
+					expect(job.attrs.repeatInterval).toBeNull();
+				});
+			});
+
+			describe('repeatAt', () => {
+				it('should set repeatAt time', async () => {
+					const job = agenda.create('repeat-at-test');
+					job.repeatAt('3:30pm');
+
+					expect(job.attrs.repeatAt).toBe('3:30pm');
+				});
+			});
+
+			describe('schedule', () => {
+				it('should set nextRunAt from Date', async () => {
+					const job = agenda.create('schedule-date-test');
+					const when = new Date(Date.now() + 60000);
+					job.schedule(when);
+
+					expect(job.attrs.nextRunAt?.getTime()).toBe(when.getTime());
+				});
+
+				it('should set nextRunAt from string', async () => {
+					const job = agenda.create('schedule-string-test');
+					job.schedule('in 5 minutes');
+
+					expect(job.attrs.nextRunAt).toBeDefined();
+					expect(job.attrs.nextRunAt!.getTime()).toBeGreaterThan(Date.now());
+				});
+			});
+
+			describe('priority', () => {
+				it('should set priority number', async () => {
+					const job = agenda.create('priority-num-test');
+					job.priority(10);
+
+					expect(job.attrs.priority).toBe(10);
+				});
+
+				it('should parse priority string', async () => {
+					const job = agenda.create('priority-str-test');
+					job.priority('high');
+
+					expect(job.attrs.priority).toBe(10);
+				});
+
+				it('should support negative priority', async () => {
+					const job = agenda.create('priority-neg-test');
+					job.priority(-5);
+
+					expect(job.attrs.priority).toBe(-5);
+				});
+			});
+
+			describe('remove', () => {
+				it('should remove job from database', async () => {
+					const job = await agenda.now('remove-test');
+					const id = job.attrs._id;
+
+					await job.remove();
+
+					const result = await agenda.queryJobs({ _id: id });
+					expect(result.jobs.length).toBe(0);
+				});
+			});
+
+			describe('run', () => {
+				it('should call the job processor directly', async () => {
+					let called = false;
+					agenda.define('run-direct-test', async () => {
+						called = true;
+					});
+
+					const job = agenda.create('run-direct-test');
+					await job.save(); // Save first to get an ID
+					await job.run();
+
+					expect(called).toBe(true);
+				});
+
+				it('should pass the job instance to the processor', async () => {
+					let receivedJob: Job | undefined;
+					agenda.define('run-job-instance-test', async (j: Job) => {
+						receivedJob = j;
+					});
+
+					const job = agenda.create('run-job-instance-test', { foo: 'bar' });
+					await job.save(); // Save first to get an ID
+					await job.run();
+
+					expect(receivedJob).toBeDefined();
+					expect(receivedJob?.attrs.data).toEqual({ foo: 'bar' });
+				});
+			});
+
+			describe('touch', () => {
+				it('should update lockedAt', async () => {
+					let touchedLockedAt: Date | undefined;
+					let initialLockedAt: Date | undefined;
+
+					agenda.define('touch-test', async (job: Job) => {
+						initialLockedAt = job.attrs.lockedAt;
+						await new Promise(resolve => setTimeout(resolve, 50));
+						await job.touch();
+						touchedLockedAt = job.attrs.lockedAt;
+					});
+
+					await agenda.start();
+					await agenda.now('touch-test');
+
+					await waitForEvent(agenda, 'complete:touch-test');
+					expect(initialLockedAt).toBeDefined();
+					expect(touchedLockedAt).toBeDefined();
+					expect(touchedLockedAt!.getTime()).toBeGreaterThan(initialLockedAt!.getTime());
+				});
+			});
+
+			describe('fail', () => {
+				it('should mark job as failed', async () => {
+					const job = await agenda.now('fail-mark-test');
+					job.fail(new Error('Test failure'));
+					await job.save();
+
+					const result = await agenda.queryJobs({ name: 'fail-mark-test' });
+					expect(result.jobs[0].failReason).toBe('Test failure');
+					expect(result.jobs[0].failedAt).toBeDefined();
+				});
+			});
+
+			describe('save', () => {
+				it('should persist job to database', async () => {
+					const job = agenda.create('save-test', { value: 42 });
+					await job.save();
+
+					expect(job.attrs._id).toBeDefined();
+
+					const result = await agenda.queryJobs({ name: 'save-test' });
+					expect(result.jobs.length).toBe(1);
+					expect(result.jobs[0].data.value).toBe(42);
+				});
+
+				it('should update existing job', async () => {
+					const job = await agenda.now('save-update-test', { value: 1 });
+					job.attrs.data = { value: 2 };
+					await job.save();
+
+					const result = await agenda.queryJobs({ name: 'save-update-test' });
+					expect(result.jobs.length).toBe(1);
+					expect(result.jobs[0].data.value).toBe(2);
+				});
+
+				it('should return the job', async () => {
+					const job = agenda.create('save-return-test');
+					const result = await job.save();
+					expect(result).toBe(job);
+				});
+			});
+		});
+
+		describe('events', () => {
+			it('should emit start event when job begins', async () => {
+				let startEmitted = false;
+				agenda.define('start-event-test', async () => {});
+
+				agenda.on('start:start-event-test', () => {
+					startEmitted = true;
+				});
+
+				await agenda.start();
+				await agenda.now('start-event-test');
+
+				await waitForEvent(agenda, 'complete:start-event-test');
+				expect(startEmitted).toBe(true);
+			});
+
+			it('should emit complete event when job finishes', async () => {
+				let completeEmitted = false;
+				agenda.define('complete-event-test', async () => {});
+
+				agenda.on('complete:complete-event-test', () => {
+					completeEmitted = true;
+				});
+
+				await agenda.start();
+				await agenda.now('complete-event-test');
+
+				await waitForEvent(agenda, 'complete:complete-event-test');
+				expect(completeEmitted).toBe(true);
+			});
+
+			it('should emit generic start event', async () => {
+				let genericStartEmitted = false;
+				agenda.define('generic-start-test', async () => {});
+
+				agenda.on('start', () => {
+					genericStartEmitted = true;
+				});
+
+				await agenda.start();
+				await agenda.now('generic-start-test');
+
+				await waitForEvent(agenda, 'complete:generic-start-test');
+				expect(genericStartEmitted).toBe(true);
+			});
+		});
+
+		describe('drain', () => {
+			it('should wait for all running jobs to complete', async () => {
+				const completedJobs: string[] = [];
+
+				agenda.define('drain-test', async (job: Job) => {
+					await new Promise(resolve => setTimeout(resolve, 200));
+					completedJobs.push(job.attrs._id?.toString() || 'unknown');
+				});
+
+				await agenda.start();
+
+				// Schedule multiple jobs
+				await Promise.all([
+					agenda.now('drain-test'),
+					agenda.now('drain-test'),
+					agenda.now('drain-test')
+				]);
+
+				// Wait for at least one job to start (processEvery is 100ms)
+				await waitForEvent(agenda, 'start:drain-test');
+
+				// Drain should wait for all to complete
+				await agenda.drain();
+
+				expect(completedJobs.length).toBe(3);
+			});
+
+			it('should wait for running job to finish', async () => {
+				let jobStarted = false;
+				let jobFinished = false;
+
+				agenda.define('drainWaitJob', async () => {
+					jobStarted = true;
+					await new Promise(resolve => setTimeout(resolve, 300));
+					jobFinished = true;
+				});
+
+				await agenda.start();
+				await agenda.now('drainWaitJob');
+
+				// Wait for job to actually start
+				await waitForEvent(agenda, 'start:drainWaitJob');
+				expect(jobStarted).toBe(true);
+				expect(jobFinished).toBe(false);
+
+				// Call drain - should wait for job to complete
+				await agenda.drain();
+				expect(jobFinished).toBe(true);
+			});
+
+			it('should resolve immediately if no jobs are running', async () => {
+				await agenda.start();
+				// No jobs scheduled, drain should resolve immediately
+				await agenda.drain();
+				// If we get here, the test passes
+			});
+		});
+
+		describe('stop', () => {
+			it('should stop agenda', async () => {
+				await agenda.start();
+				await agenda.stop();
+				// Agenda should be stopped after stop - if we get here, it worked
+			});
+		});
+
+		describe('repeating jobs', () => {
+			it('should reschedule job after completion when using repeatEvery', async () => {
+				let runCount = 0;
+				agenda.define('repeat-test', async () => {
+					runCount++;
+				});
+
+				// Use 1 second interval (humanInterval recognizes "1 second")
+				await agenda.every('1 second', 'repeat-test');
+				await agenda.start();
+
+				// Wait for multiple runs (need >2 seconds for 2+ runs with 1 second interval)
+				await new Promise(resolve => setTimeout(resolve, 2500));
+
+				await agenda.stop();
+				expect(runCount).toBeGreaterThanOrEqual(2);
+			});
+
+			it('should run job at scheduled cron time', async () => {
+				let processed = false;
+				agenda.define('cron-test', async () => {
+					processed = true;
+				});
+
+				// Schedule to run every second
+				await agenda.every('* * * * * *', 'cron-test');
+				await agenda.start();
+
+				await waitForEvent(agenda, 'complete:cron-test', 3000);
+				expect(processed).toBe(true);
+			});
+		});
+
+		describe('error handling', () => {
+			it('should emit error event when job throws', async () => {
+				let errorEmitted = false;
+				let errorJob: Job | undefined;
+
+				agenda.define('error-test', async () => {
+					throw new Error('Job error');
+				});
+
+				agenda.on('fail:error-test', (err: Error, job: Job) => {
+					errorEmitted = true;
+					errorJob = job;
+				});
+
+				await agenda.start();
+				await agenda.now('error-test');
+
+				await waitForEvent(agenda, 'complete:error-test');
+				expect(errorEmitted).toBe(true);
+				expect(errorJob?.attrs.name).toBe('error-test');
+			});
+
+			it('should save failReason and failedAt when job fails', async () => {
+				agenda.define('fail-save-test', async () => {
+					throw new Error('Failure reason');
+				});
+
+				await agenda.start();
+				await agenda.now('fail-save-test');
+
+				await waitForEvent(agenda, 'complete:fail-save-test');
+
+				const result = await agenda.queryJobs({ name: 'fail-save-test' });
+				expect(result.jobs[0].failReason).toBe('Failure reason');
+				expect(result.jobs[0].failedAt).toBeDefined();
+			});
+
+			it('should increment failCount on repeated failures', async () => {
+				agenda.define('fail-count-test', async () => {
+					throw new Error('Repeated failure');
+				});
+
+				// The fail event emits (error, job), so second param is the job
+				agenda.on('fail:fail-count-test', (_err, job) => {
+					job.attrs.nextRunAt = new Date();
+				});
+
+				await agenda.start();
+				await agenda.now('fail-count-test');
+
+				// Wait for 2 failures (give enough time for job pickup and retries)
+				await Promise.all([
+					waitForEvents(agenda, 'fail:fail-count-test', 2, 10000), // fail is called before we save hte result to the db
+					waitForEvents(agenda, 'complete:fail-count-test', 2, 10000) // therefore we also wait for complete events (emitted after the db commit)
+				]);
+
+				const result = await agenda.queryJobs({ name: 'fail-count-test' });
+				expect(result.jobs[0].failCount).toBeGreaterThanOrEqual(2);
+			});
+		});
+
+		// Notification channel integration tests - only run if channel is provided
+		if (config.createNotificationChannel) {
+			describe('notification channel integration', () => {
+				let notificationChannel: INotificationChannel;
+				let agendaWithChannel: Agenda;
+
+				beforeEach(async () => {
+					if (config.createNotificationChannel) {
+						notificationChannel = await config.createNotificationChannel();
+					}
+				});
+
+				afterEach(async () => {
+					if (agendaWithChannel) {
+						await agendaWithChannel.stop();
+					}
+					if (config.cleanupNotificationChannel && notificationChannel) {
+						await config.cleanupNotificationChannel(notificationChannel);
+					}
+				});
+
+				it('should accept notification channel in constructor', async () => {
+					agendaWithChannel = new Agenda({
+						backend,
+						notificationChannel
+					});
+
+					expect(agendaWithChannel.hasNotificationChannel()).toBe(true);
+				});
+
+				it('should accept notification channel via notifyVia method', async () => {
+					agendaWithChannel = new Agenda({ backend });
+					expect(agendaWithChannel.hasNotificationChannel()).toBe(false);
+
+					agendaWithChannel.notifyVia(notificationChannel);
+					expect(agendaWithChannel.hasNotificationChannel()).toBe(true);
+				});
+
+				it('should throw when setting notification channel after start', async () => {
+					agendaWithChannel = new Agenda({ backend });
+					agendaWithChannel.define('test', async () => {});
+					await agendaWithChannel.start();
+
+					expect(() => {
+						agendaWithChannel.notifyVia(notificationChannel);
+					}).toThrow(/already running/i);
+				});
+
+				it('should connect and disconnect notification channel on start/stop', async () => {
+					agendaWithChannel = new Agenda({
+						backend,
+						notificationChannel
+					});
+
+					expect(notificationChannel.state).toBe('disconnected');
+
+					agendaWithChannel.define('test', async () => {});
+					await agendaWithChannel.start();
+
+					expect(notificationChannel.state).toBe('connected');
+
+					await agendaWithChannel.stop();
+
+					expect(notificationChannel.state).toBe('disconnected');
+				});
+
+				it('should process jobs faster with notification channel', async () => {
+					let jobProcessed = false;
+
+					// Create agenda with long processEvery but with notification channel
+					agendaWithChannel = new Agenda({
+						backend,
+						processEvery: 10000, // 10 seconds - way longer than our test
+						notificationChannel
+					});
+					await agendaWithChannel.ready;
+
+					agendaWithChannel.define('fast-job', async () => {
+						jobProcessed = true;
+					});
+
+					await agendaWithChannel.start();
+
+					// Schedule a job - notification should trigger immediate processing
+					await agendaWithChannel.now('fast-job');
+
+					// Wait a short time for notification-based processing
+					await new Promise(resolve => setTimeout(resolve, 500));
+
+					expect(jobProcessed).toBe(true);
+				});
+			});
+		}
 	});
 }
