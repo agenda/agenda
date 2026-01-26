@@ -607,7 +607,15 @@ reboot from time to time.
 `data` is an optional argument that will be passed to the processing function
 under `job.attrs.data`.
 
-`options` is an optional argument that will be passed to [`job.repeatEvery`](#repeateveryinterval-options).
+`options` is an optional argument containing:
+
+- `timezone`: Timezone for cron expressions (e.g., `'America/New_York'`)
+- `skipImmediate`: If `true`, skip the immediate first run
+- `forkMode`: If `true`, run in a forked child process
+- `startDate`: `Date` or string - job won't run before this date
+- `endDate`: `Date` or string - job won't run after this date
+- `skipDays`: Array of days to skip (0=Sunday, 1=Monday, ..., 6=Saturday)
+
 In order to use this argument, `data` must also be specified.
 
 Returns the `job`.
@@ -622,6 +630,17 @@ agenda.define('printAnalyticsReport', async job => {
 agenda.every('15 minutes', 'printAnalyticsReport');
 ```
 
+**With date constraints (business hours only, weekdays):**
+
+```js
+await agenda.every('1 hour', 'business-metrics', { type: 'hourly' }, {
+	startDate: new Date('2024-06-01'),
+	endDate: new Date('2024-12-31'),
+	skipDays: [0, 6],  // Skip weekends
+	timezone: 'America/New_York'
+});
+```
+
 Optionally, `name` could be array of job names, which is convenient for scheduling
 different jobs for same `interval`.
 
@@ -631,7 +650,7 @@ agenda.every('15 minutes', ['printAnalyticsReport', 'sendNotifications', 'update
 
 In this case, `every` returns array of `jobs`.
 
-### schedule(when, name, [data])
+### schedule(when, name, [data], [options])
 
 Schedules a job to run `name` once at a given time. `when` can be a `Date` or a
 `String` such as `tomorrow at 5pm`.
@@ -639,10 +658,25 @@ Schedules a job to run `name` once at a given time. `when` can be a `Date` or a
 `data` is an optional argument that will be passed to the processing function
 under `job.attrs.data`.
 
+`options` is an optional argument containing:
+
+- `startDate`: `Date` or string - job won't run before this date
+- `endDate`: `Date` or string - job won't run after this date (sets `nextRunAt` to `null`)
+- `skipDays`: Array of days to skip (0=Sunday, 1=Monday, ..., 6=Saturday)
+
 Returns the `job`.
 
 ```js
 agenda.schedule('tomorrow at noon', 'printAnalyticsReport', { userCount: 100 });
+```
+
+**With date constraints:**
+
+```js
+// Schedule for Saturday, but skip weekends - will run on Monday instead
+await agenda.schedule('next saturday', 'weekday-task', { id: 123 }, {
+	skipDays: [0, 6]  // Skip weekends
+});
 ```
 
 Optionally, `name` could be array of job names, similar to the `every` method.
@@ -830,12 +864,6 @@ Specifies an `interval` on which the job should repeat. The job runs at the time
 
 `options.skipImmediate`: `true` | `false` (default) Setting this `true` will skip the immediate run. The first run will occur only in configured interval.
 
-`options.startDate`: `Date` the first time the job runs, should be equal or after the start date.
-
-`options.endDate`: `Date` the job should not repeat after the endDate. The job can run on the end-date itself, but not after that.
-
-`options.skipDays`: `human readable string` ('2 days'). After each run, it will skip the duration of 'skipDays'
-
 ```js
 job.repeatEvery('10 minutes');
 await job.save();
@@ -870,6 +898,55 @@ Specifies the next `time` at which the job should run.
 
 ```js
 job.schedule('tomorrow at 6pm');
+await job.save();
+```
+
+### startDate(date)
+
+Sets the start date for the job. The job will not run before this date. If `nextRunAt` is computed to be before `startDate`, it will be adjusted to `startDate`.
+
+```js
+job.startDate(new Date('2024-06-01'));
+// Or with a string
+job.startDate('2024-06-01T00:00:00Z');
+await job.save();
+```
+
+### endDate(date)
+
+Sets the end date for the job. The job will not run after this date. If `nextRunAt` would be after `endDate`, it will be set to `null` and the job stops running.
+
+```js
+job.endDate(new Date('2024-12-31'));
+// Or with a string
+job.endDate('2024-12-31T23:59:59Z');
+await job.save();
+```
+
+### skipDays(days)
+
+Sets the days of the week to skip. The job will not run on these days. Days are specified as an array of numbers where 0 = Sunday, 1 = Monday, ..., 6 = Saturday.
+
+```js
+// Skip weekends
+job.skipDays([0, 6]);
+await job.save();
+```
+
+```js
+// Skip Monday and Wednesday
+job.skipDays([1, 3]);
+await job.save();
+```
+
+**Combining date constraints:**
+
+```js
+const job = agenda.create('business-report', { type: 'daily' });
+job.startDate('2024-06-01')
+   .endDate('2024-12-31')
+   .skipDays([0, 6])  // Skip weekends
+   .repeatEvery('1 day', { timezone: 'America/New_York' });
 await job.save();
 ```
 

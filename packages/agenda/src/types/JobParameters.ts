@@ -51,11 +51,29 @@ export interface JobParameters<DATA = unknown | void> {
 
 	/** Forks a new node sub process for executing this job */
 	fork?: boolean;
+
+	/**
+	 * The date when the job should start running.
+	 * The job will not run before this date.
+	 */
+	startDate?: Date;
+
+	/**
+	 * The date when the job should stop running.
+	 * The job will not run after this date (nextRunAt will be set to null).
+	 */
+	endDate?: Date;
+
+	/**
+	 * Days of the week to skip (0 = Sunday, 1 = Monday, ..., 6 = Saturday).
+	 * The job will not run on these days.
+	 */
+	skipDays?: number[];
 }
 
 export type TJobDatefield = keyof Pick<
 	JobParameters,
-	'lastRunAt' | 'lastFinishedAt' | 'nextRunAt' | 'failedAt' | 'lockedAt'
+	'lastRunAt' | 'lastFinishedAt' | 'nextRunAt' | 'failedAt' | 'lockedAt' | 'startDate' | 'endDate'
 >;
 
 export const datefields: Array<TJobDatefield> = [
@@ -63,5 +81,7 @@ export const datefields: Array<TJobDatefield> = [
 	'lastFinishedAt',
 	'nextRunAt',
 	'failedAt',
-	'lockedAt'
+	'lockedAt',
+	'startDate',
+	'endDate'
 ];
