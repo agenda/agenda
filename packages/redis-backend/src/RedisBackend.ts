@@ -47,9 +47,13 @@ export class RedisBackend implements IAgendaBackend {
 	private _repository: RedisJobRepository;
 	private _notificationChannel: RedisNotificationChannel;
 	private config: IRedisBackendConfig;
+	private _ownsConnection: boolean;
 
 	constructor(config: IRedisBackendConfig) {
 		this.config = config;
+
+		// Determine if we own the connection (not passed in by user)
+		this._ownsConnection = !config.redis;
 
 		// Create repository
 		this._repository = new RedisJobRepository(config);
@@ -80,6 +84,14 @@ export class RedisBackend implements IAgendaBackend {
 	 */
 	get notificationChannel(): INotificationChannel {
 		return this._notificationChannel;
+	}
+
+	/**
+	 * Whether this backend owns its Redis connection.
+	 * True if created from connectionString/redisOptions, false if redis client was passed in.
+	 */
+	get ownsConnection(): boolean {
+		return this._ownsConnection;
 	}
 
 	/**

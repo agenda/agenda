@@ -6,6 +6,10 @@ export default defineConfig({
 		environment: 'node',
 		testTimeout: 30000,
 		hookTimeout: 30000,
-		globalSetup: './test/setup.ts'
+		globalSetup: './test/setup.ts',
+		typecheck: {
+			enabled: true,
+			tsconfig: './tsconfig.json'
+		}
 	}
 });

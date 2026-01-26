@@ -4,11 +4,8 @@ import {
 	RedisBackend,
 	RedisJobRepository,
 	RedisNotificationChannel
-} from '../src';
-import {
-	repositoryTestSuite,
-	notificationChannelTestSuite
-} from '../../agenda/test/shared';
+} from '../src/index.js';
+import { fullAgendaTestSuite } from 'agenda/testing';
 
 /**
  * Redis backend tests.
@@ -25,6 +22,9 @@ const TEST_CHANNEL_NAME = 'agenda_test:notifications';
 // Connection string is set by the global setup
 const getConnectionString = () => process.env.REDIS_TEST_URL!;
 
+// Store connection string for fork helper
+let sharedConnectionString: string;
+
 // Helper to clear all test keys
 async function clearTestKeys(redis: Redis): Promise<void> {
 	const keys = await redis.keys(`${TEST_KEY_PREFIX}*`);
@@ -34,13 +34,14 @@ async function clearTestKeys(redis: Redis): Promise<void> {
 }
 
 // ============================================================================
-// Shared Repository Test Suite
+// Shared Redis Connection
 // ============================================================================
 
 let sharedRedis: Redis;
 
 beforeAll(async () => {
-	sharedRedis = new Redis(getConnectionString());
+	sharedConnectionString = getConnectionString();
+	sharedRedis = new Redis(sharedConnectionString);
 	await clearTestKeys(sharedRedis);
 });
 
@@ -49,38 +50,43 @@ afterAll(async () => {
 	sharedRedis.disconnect();
 });
 
-repositoryTestSuite({
-	name: 'RedisJobRepository',
-	createRepository: async () => {
-		const repo = new RedisJobRepository({
-			connectionString: getConnectionString(),
-			keyPrefix: TEST_KEY_PREFIX
+// ============================================================================
+// Full Agenda Test Suite
+// ============================================================================
+
+fullAgendaTestSuite({
+	name: 'RedisBackend',
+	createBackend: async () => {
+		const backend = new RedisBackend({
+			// Pass the shared redis client so ownsConnection is false
+			// This allows stop() to not close the client, so tests can query after stop
+			redis: sharedRedis,
+			keyPrefix: TEST_KEY_PREFIX,
+			channelName: TEST_CHANNEL_NAME
 		});
-		await repo.connect();
-		return repo;
+		await backend.connect();
+		return backend;
 	},
-	cleanupRepository: async () => {
-		// Don't disconnect - we're reusing the connection
+	cleanupBackend: async backend => {
+		await backend.disconnect();
 	},
 	clearJobs: async () => {
 		await clearTestKeys(sharedRedis);
-	}
-});
-
-notificationChannelTestSuite({
-	name: 'RedisNotificationChannel',
-	createChannel: async () => {
-		return new RedisNotificationChannel({
-			connectionString: getConnectionString(),
-			channelName: TEST_CHANNEL_NAME
-		});
 	},
-	cleanupChannel: async channel => {
-		if (channel.state !== 'disconnected') {
-			await channel.disconnect();
+	// Fork mode configuration - env is evaluated at test time via getter
+	forkHelper: {
+		path: './test/helpers/forkHelper.ts',
+		options: {
+			execArgv: ['--import', 'tsx'],
+			get env() {
+				return {
+					...process.env,
+					REDIS_CONNECTION: sharedConnectionString,
+					REDIS_KEY_PREFIX: TEST_KEY_PREFIX
+				};
+			}
 		}
-	},
-	propagationDelay: 100 // Redis Pub/Sub is very fast
+	}
 });
 
 // ============================================================================
@@ -129,6 +135,18 @@ describe('RedisBackend', () => {
 		it('should provide notification channel', () => {
 			expect(backend.notificationChannel).toBeDefined();
 			expect(backend.notificationChannel).toBeInstanceOf(RedisNotificationChannel);
+		});
+
+		it('should report ownsConnection correctly', () => {
+			// This backend was created with connectionString, so it owns the connection
+			expect(backend.ownsConnection).toBe(true);
+
+			// Create one with existing client
+			const backendWithClient = new RedisBackend({
+				redis: redis,
+				keyPrefix: TEST_KEY_PREFIX
+			});
+			expect(backendWithClient.ownsConnection).toBe(false);
 		});
 	});
 

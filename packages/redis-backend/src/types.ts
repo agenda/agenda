@@ -49,6 +49,7 @@ export interface IRedisJobData {
 	repeatAt: string | null;
 	disabled: string;
 	progress: string | null;
+	fork: string;
 	lastModifiedBy: string | null;
 	createdAt: string;
 	updatedAt: string;
