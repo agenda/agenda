@@ -1,12 +1,12 @@
 /**
- * @agenda.js/postgres-backend
+ * @agendajs/postgres-backend
  *
  * PostgreSQL backend for Agenda job scheduler with LISTEN/NOTIFY support.
  *
  * @example
  * ```typescript
  * import { Agenda } from 'agenda';
- * import { PostgresBackend } from '@agenda.js/postgres-backend';
+ * import { PostgresBackend } from '@agendajs/postgres-backend';
  *
  * // Create agenda with PostgreSQL backend
  * const agenda = new Agenda({

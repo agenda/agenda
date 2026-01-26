@@ -41,13 +41,13 @@ Install the core package and your preferred backend:
 
 ```bash
 # For MongoDB
-npm install agenda @agenda.js/mongo-backend
+npm install agenda @agendajs/mongo-backend
 
 # For PostgreSQL
-npm install agenda @agenda.js/postgres-backend
+npm install agenda @agendajs/postgres-backend
 
 # For Redis
-npm install agenda @agenda.js/redis-backend
+npm install agenda @agendajs/redis-backend
 ```
 
 **Requirements:**
@@ -58,7 +58,7 @@ npm install agenda @agenda.js/redis-backend
 
 ```javascript
 import { Agenda } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
 
 const agenda = new Agenda({
   backend: new MongoBackend({ address: 'mongodb://localhost/agenda' })
@@ -83,9 +83,9 @@ await agenda.now('send email', { to: 'support@example.com', subject: 'Urgent' })
 
 | Package | Backend | Notifications | Install |
 |---------|---------|---------------|---------|
-| [`@agenda.js/mongo-backend`](https://www.npmjs.com/package/@agenda.js/mongo-backend) | MongoDB | Polling only | `npm install @agenda.js/mongo-backend` |
-| [`@agenda.js/postgres-backend`](https://www.npmjs.com/package/@agenda.js/postgres-backend) | PostgreSQL | LISTEN/NOTIFY | `npm install @agenda.js/postgres-backend` |
-| [`@agenda.js/redis-backend`](https://www.npmjs.com/package/@agenda.js/redis-backend) | Redis | Pub/Sub | `npm install @agenda.js/redis-backend` |
+| [`@agendajs/mongo-backend`](https://www.npmjs.com/package/@agendajs/mongo-backend) | MongoDB | Polling only | `npm install @agendajs/mongo-backend` |
+| [`@agendajs/postgres-backend`](https://www.npmjs.com/package/@agendajs/postgres-backend) | PostgreSQL | LISTEN/NOTIFY | `npm install @agendajs/postgres-backend` |
+| [`@agendajs/redis-backend`](https://www.npmjs.com/package/@agendajs/redis-backend) | Redis | Pub/Sub | `npm install @agendajs/redis-backend` |
 
 ### Backend Capabilities
 
@@ -102,7 +102,7 @@ await agenda.now('send email', { to: 'support@example.com', subject: 'Urgent' })
 
 ```javascript
 import { Agenda } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
 
 // Via connection string
 const agenda = new Agenda({
@@ -130,7 +130,7 @@ const agenda = new Agenda({
 
 ```javascript
 import { Agenda } from 'agenda';
-import { PostgresBackend } from '@agenda.js/postgres-backend';
+import { PostgresBackend } from '@agendajs/postgres-backend';
 
 const agenda = new Agenda({
   backend: new PostgresBackend({
@@ -143,7 +143,7 @@ const agenda = new Agenda({
 
 ```javascript
 import { Agenda } from 'agenda';
-import { RedisBackend } from '@agenda.js/redis-backend';
+import { RedisBackend } from '@agendajs/redis-backend';
 
 const agenda = new Agenda({
   backend: new RedisBackend({
@@ -158,7 +158,7 @@ For faster job processing across distributed systems:
 
 ```javascript
 import { Agenda, InMemoryNotificationChannel } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
 
 const agenda = new Agenda({
   backend: new MongoBackend({ mongo: db }),
@@ -172,8 +172,8 @@ You can use MongoDB for storage while using a different system for real-time not
 
 ```javascript
 import { Agenda } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
-import { RedisBackend } from '@agenda.js/redis-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
+import { RedisBackend } from '@agendajs/redis-backend';
 
 // MongoDB for storage + Redis for real-time notifications
 const redisBackend = new RedisBackend({ connectionString: 'redis://localhost:6379' });
@@ -296,9 +296,9 @@ See [Custom Backend Driver](https://github.com/agenda/agenda/blob/main/docs/cust
 ## Related Packages
 
 **Official Backend Packages:**
-- [@agenda.js/mongo-backend](https://www.npmjs.com/package/@agenda.js/mongo-backend) - MongoDB backend
-- [@agenda.js/postgres-backend](https://www.npmjs.com/package/@agenda.js/postgres-backend) - PostgreSQL backend with LISTEN/NOTIFY
-- [@agenda.js/redis-backend](https://www.npmjs.com/package/@agenda.js/redis-backend) - Redis backend with Pub/Sub
+- [@agendajs/mongo-backend](https://www.npmjs.com/package/@agendajs/mongo-backend) - MongoDB backend
+- [@agendajs/postgres-backend](https://www.npmjs.com/package/@agendajs/postgres-backend) - PostgreSQL backend with LISTEN/NOTIFY
+- [@agendajs/redis-backend](https://www.npmjs.com/package/@agendajs/redis-backend) - Redis backend with Pub/Sub
 
 **Tools:**
 - [agendash](https://www.npmjs.com/package/agendash) - Web dashboard for Agenda

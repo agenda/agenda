@@ -9,7 +9,7 @@ import type { IMongoBackendConfig } from './types.js';
  * @example
  * ```typescript
  * import { Agenda } from 'agenda';
- * import { MongoBackend } from '@agenda.js/mongo-backend';
+ * import { MongoBackend } from '@agendajs/mongo-backend';
  *
  * // Via connection string
  * const backend = new MongoBackend({ address: 'mongodb://localhost/agenda' });

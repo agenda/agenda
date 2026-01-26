@@ -43,7 +43,7 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@agenda.js/mongo-backend": "workspace:*",
+    "@agendajs/mongo-backend": "workspace:*",
     "agenda": "workspace:*",
     "koa": "^2.15.0",
     "koa-bodyparser": "^4.4.0",

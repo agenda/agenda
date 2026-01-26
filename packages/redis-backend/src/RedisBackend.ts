@@ -15,7 +15,7 @@ const log = debug('agenda:redis:backend');
  * @example
  * ```typescript
  * import { Agenda } from 'agenda';
- * import { RedisBackend } from '@agenda.js/redis-backend';
+ * import { RedisBackend } from '@agendajs/redis-backend';
  *
  * // Using connection string
  * const agenda = new Agenda({

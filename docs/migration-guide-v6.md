@@ -30,13 +30,13 @@ const { Agenda } = require('agenda');
 **After (v6):**
 ```javascript
 import { Agenda } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
 ```
 
 If you need to use Agenda in a CommonJS project, you can use dynamic imports:
 ```javascript
 const { Agenda } = await import('agenda');
-const { MongoBackend } = await import('@agenda.js/mongo-backend');
+const { MongoBackend } = await import('@agendajs/mongo-backend');
 ```
 
 ### 2. Separate Backend Packages (Major Breaking Change)
@@ -46,23 +46,23 @@ In v6, all storage backends are separate packages. MongoDB is no longer bundled 
 **Install:**
 ```bash
 # For MongoDB
-npm install agenda @agenda.js/mongo-backend
+npm install agenda @agendajs/mongo-backend
 
 # For PostgreSQL
-npm install agenda @agenda.js/postgres-backend
+npm install agenda @agendajs/postgres-backend
 
 # For Redis
-npm install agenda @agenda.js/redis-backend
+npm install agenda @agendajs/redis-backend
 ```
 
 **Import:**
 ```javascript
 import { Agenda } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
 // OR
-import { PostgresBackend } from '@agenda.js/postgres-backend';
+import { PostgresBackend } from '@agendajs/postgres-backend';
 // OR
-import { RedisBackend } from '@agenda.js/redis-backend';
+import { RedisBackend } from '@agendajs/redis-backend';
 ```
 
 ### 3. New Backend API (Major Breaking Change)
@@ -95,7 +95,7 @@ const agenda = new Agenda({
 **After (v6):**
 ```javascript
 import { Agenda } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
 
 // Via connection string
 const agenda = new Agenda({
@@ -191,7 +191,7 @@ Agenda v6 introduces a pluggable notification system for real-time job processin
 **Basic usage (single process):**
 ```javascript
 import { Agenda, InMemoryNotificationChannel } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
 
 const agenda = new Agenda({
   backend: new MongoBackend({ mongo: db }),
@@ -341,11 +341,11 @@ node --version  # Should be v18.0.0 or higher
 
 ```bash
 # Install core package and your preferred backend
-npm install agenda@6 @agenda.js/mongo-backend
+npm install agenda@6 @agendajs/mongo-backend
 # or
-pnpm add agenda@6 @agenda.js/mongo-backend
+pnpm add agenda@6 @agendajs/mongo-backend
 # or
-yarn add agenda@6 @agenda.js/mongo-backend
+yarn add agenda@6 @agendajs/mongo-backend
 ```
 
 ### Step 3: Update Imports
@@ -358,7 +358,7 @@ const Agenda = require('agenda');
 
 // After
 import { Agenda } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
 ```
 
 If your project uses CommonJS, update `package.json`:
@@ -383,7 +383,7 @@ const agenda = new Agenda({
 
 // After
 import { Agenda } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
 
 const agenda = new Agenda({
   backend: new MongoBackend({ address: 'mongodb://localhost/agenda' }),
@@ -452,7 +452,7 @@ const agenda = new Agenda({ mongo: testDb });
 
 // After
 import { Agenda } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
 const agenda = new Agenda({ backend: new MongoBackend({ mongo: testDb }) });
 ```
 
@@ -492,7 +492,7 @@ async function main() {
 
 ```javascript
 import { Agenda } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
 import { MongoClient } from 'mongodb';
 
 async function main() {
@@ -530,11 +530,11 @@ You're trying to use CommonJS `require()` with Agenda v6. Switch to ESM imports:
 ```javascript
 // Use this
 import { Agenda } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
 
 // Or dynamic import in CommonJS
 const { Agenda } = await import('agenda');
-const { MongoBackend } = await import('@agenda.js/mongo-backend');
+const { MongoBackend } = await import('@agendajs/mongo-backend');
 ```
 
 ### Error: "backend is required"
@@ -546,7 +546,7 @@ You forgot to provide a backend. Agenda v6 requires explicit backend configurati
 const agenda = new Agenda({ mongo: db });
 
 // Correct
-import { MongoBackend } from '@agenda.js/mongo-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
 const agenda = new Agenda({ backend: new MongoBackend({ mongo: db }) });
 ```
 
@@ -554,17 +554,17 @@ const agenda = new Agenda({ backend: new MongoBackend({ mongo: db }) });
 
 Same as above - you need to provide a backend.
 
-### Error: "Cannot find module '@agenda.js/mongo-backend'"
+### Error: "Cannot find module '@agendajs/mongo-backend'"
 
 You need to install the backend package separately:
 
 ```bash
-npm install @agenda.js/mongo-backend
+npm install @agendajs/mongo-backend
 ```
 
 ### MongoDB Connection Issues
 
-The MongoDB driver was upgraded from v4 to v6 in `@agenda.js/mongo-backend`. Check if your connection options are still valid:
+The MongoDB driver was upgraded from v4 to v6 in `@agendajs/mongo-backend`. Check if your connection options are still valid:
 
 ```javascript
 // Some options may have changed
@@ -586,15 +586,15 @@ Agenda v6 offers official backend packages for MongoDB, PostgreSQL, and Redis:
 
 | Package | Backend | Install |
 |---------|---------|---------|
-| `@agenda.js/mongo-backend` | MongoDB | `npm install @agenda.js/mongo-backend` |
-| `@agenda.js/postgres-backend` | PostgreSQL + LISTEN/NOTIFY | `npm install @agenda.js/postgres-backend` |
-| `@agenda.js/redis-backend` | Redis + Pub/Sub | `npm install @agenda.js/redis-backend` |
+| `@agendajs/mongo-backend` | MongoDB | `npm install @agendajs/mongo-backend` |
+| `@agendajs/postgres-backend` | PostgreSQL + LISTEN/NOTIFY | `npm install @agendajs/postgres-backend` |
+| `@agendajs/redis-backend` | Redis + Pub/Sub | `npm install @agendajs/redis-backend` |
 
 **MongoDB example:**
 
 ```javascript
 import { Agenda } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
 
 const agenda = new Agenda({
   backend: new MongoBackend({
@@ -607,7 +607,7 @@ const agenda = new Agenda({
 
 ```javascript
 import { Agenda } from 'agenda';
-import { PostgresBackend } from '@agenda.js/postgres-backend';
+import { PostgresBackend } from '@agendajs/postgres-backend';
 
 const agenda = new Agenda({
   backend: new PostgresBackend({
@@ -620,7 +620,7 @@ const agenda = new Agenda({
 
 ```javascript
 import { Agenda } from 'agenda';
-import { RedisBackend } from '@agenda.js/redis-backend';
+import { RedisBackend } from '@agendajs/redis-backend';
 
 const agenda = new Agenda({
   backend: new RedisBackend({

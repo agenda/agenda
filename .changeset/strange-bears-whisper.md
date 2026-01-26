@@ -1,5 +1,5 @@
 ---
-"@agenda.js/redis-backend": patch
+"@agendajs/redis-backend": patch
 ---
 
-feat: add Redis backend full test suite and improve backend API consistency                                                                                                                                              
+feat: add Redis backend full test suite and improve backend API consistency

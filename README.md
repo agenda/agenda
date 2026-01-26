@@ -28,17 +28,7 @@
 - `getRunningStats()` for monitoring
 - Fork mode for sandboxed job execution
 - Automatic connection handling
-- Creates indexes automatically by default (`ensureIndex: true`). To create manually instead:
-
-```
-db.agendaJobs.ensureIndex({
-    "name" : 1,
-    "nextRunAt" : 1,
-    "priority" : -1,
-    "lockedAt" : 1,
-    "disabled" : 1
-}, "findAndLockNextJobIndex")
-```
+- Creates indexes automatically by default
 
 # Agenda offers
 
@@ -86,23 +76,23 @@ Install via NPM
 
 **For MongoDB:** Install the official MongoDB backend:
 
-    npm install @agenda.js/mongo-backend
+    npm install @agendajs/mongo-backend
 
 You will need a working [MongoDB](https://www.mongodb.com/) database (v4+).
 
 **For PostgreSQL:** Install the official PostgreSQL backend:
 
-    npm install @agenda.js/postgres-backend
+    npm install @agendajs/postgres-backend
 
 **For Redis:** Install the official Redis backend:
 
-    npm install @agenda.js/redis-backend
+    npm install @agendajs/redis-backend
 
 # Example Usage
 
 ```js
 import { Agenda } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
 
 const mongoConnectionString = 'mongodb://127.0.0.1/agenda';
 
@@ -257,7 +247,7 @@ Agenda uses a pluggable backend system. The backend provides storage and optiona
 
 ```js
 import { Agenda } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
 
 // Via connection string
 const agenda = new Agenda({
@@ -281,12 +271,12 @@ const agenda = new Agenda({
 **Using PostgresBackend:**
 
 ```bash
-npm install @agenda.js/postgres-backend
+npm install @agendajs/postgres-backend
 ```
 
 ```js
 import { Agenda } from 'agenda';
-import { PostgresBackend } from '@agenda.js/postgres-backend';
+import { PostgresBackend } from '@agendajs/postgres-backend';
 
 const agenda = new Agenda({
 	backend: new PostgresBackend({
@@ -299,12 +289,12 @@ const agenda = new Agenda({
 **Using RedisBackend:**
 
 ```bash
-npm install @agenda.js/redis-backend
+npm install @agendajs/redis-backend
 ```
 
 ```js
 import { Agenda } from 'agenda';
-import { RedisBackend } from '@agenda.js/redis-backend';
+import { RedisBackend } from '@agendajs/redis-backend';
 
 const agenda = new Agenda({
 	backend: new RedisBackend({
@@ -333,7 +323,7 @@ By default, Agenda uses periodic polling (controlled by `processEvery`) to check
 
 ```js
 import { Agenda, InMemoryNotificationChannel } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
 
 const agenda = new Agenda({
 	backend: new MongoBackend({ mongo: db }),
@@ -519,19 +509,6 @@ You can also specify it during instantiation
 ```js
 const agenda = new Agenda({ defaultLockLifetime: 10000 });
 ```
-
-### sort(query)
-
-Takes a `query` which specifies the sort query to be used for finding and locking the next job.
-
-By default it is `{ nextRunAt: 1, priority: -1 }`, which obeys a first in first out approach, with respect to priority.
-
-### disableAutoIndex(boolean)
-
-Optional. Disables the automatic creation of the default index on the jobs table.
-By default, Agenda creates an index to optimize its queries against Mongo while processing jobs.
-
-This is useful if you want to use your own index in specific use-cases.
 
 ## Agenda Events
 
@@ -1085,8 +1062,8 @@ Agenda v6 supports multiple storage backends. Choose based on your infrastructur
 | Backend | Package | Best For |
 |---------|---------|----------|
 | **MongoDB** | Built-in (`agenda`) | Default choice, excellent for most use cases. Strong consistency, flexible queries. |
-| **PostgreSQL** | `@agenda.js/postgres-backend` | Teams already using PostgreSQL. LISTEN/NOTIFY provides real-time notifications without additional infrastructure. |
-| **Redis** | `@agenda.js/redis-backend` | High-throughput scenarios. Fast Pub/Sub notifications. Configure persistence for durability. |
+| **PostgreSQL** | `@agendajs/postgres-backend` | Teams already using PostgreSQL. LISTEN/NOTIFY provides real-time notifications without additional infrastructure. |
+| **Redis** | `@agendajs/redis-backend` | High-throughput scenarios. Fast Pub/Sub notifications. Configure persistence for durability. |
 
 **MongoDB** remains the default and most battle-tested backend. **PostgreSQL** is great when you want to consolidate on a single database. **Redis** offers the lowest latency for job notifications but requires proper persistence configuration (RDB/AOF) for durability.
 
@@ -1108,8 +1085,8 @@ You can combine MongoDB storage with a separate notification channel for real-ti
 
 ```js
 import { Agenda } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
-import { RedisBackend } from '@agenda.js/redis-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
+import { RedisBackend } from '@agendajs/redis-backend';
 
 // MongoDB for storage + Redis for real-time notifications
 const redisBackend = new RedisBackend({ connectionString: 'redis://localhost:6379' });
@@ -1119,7 +1096,7 @@ const agenda = new Agenda({
 });
 
 // Or use PostgreSQL notifications with MongoDB storage
-import { PostgresBackend } from '@agenda.js/postgres-backend';
+import { PostgresBackend } from '@agendajs/postgres-backend';
 const pgBackend = new PostgresBackend({ connectionString: 'postgres://...' });
 const agenda = new Agenda({
   backend: new MongoBackend({ mongo: db }),
@@ -1261,7 +1238,7 @@ lib/agenda.js
 
 ```js
 import { Agenda } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
 
 const agenda = new Agenda({
 	backend: new MongoBackend({
@@ -1365,9 +1342,9 @@ be extremely useful in debugging certain issues and is encouraged.
 
 Performance tuning is backend-specific. See the documentation for your backend:
 
-- **MongoDB**: See [@agenda.js/mongo-backend](https://www.npmjs.com/package/@agenda.js/mongo-backend) for index recommendations
-- **PostgreSQL**: See [@agenda.js/postgres-backend](https://www.npmjs.com/package/@agenda.js/postgres-backend) - indexes are created automatically by default
-- **Redis**: See [@agenda.js/redis-backend](https://www.npmjs.com/package/@agenda.js/redis-backend)
+- **MongoDB**: See [@agendajs/mongo-backend](https://www.npmjs.com/package/@agendajs/mongo-backend) for index recommendations
+- **PostgreSQL**: See [@agendajs/postgres-backend](https://www.npmjs.com/package/@agendajs/postgres-backend) - indexes are created automatically by default
+- **Redis**: See [@agendajs/redis-backend](https://www.npmjs.com/package/@agendajs/redis-backend)
 
 # Sandboxed Worker - use child processes
 

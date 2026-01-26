@@ -1,4 +1,4 @@
-# @agenda.js/postgres-backend
+# @agendajs/postgres-backend
 
 PostgreSQL backend for [Agenda](https://github.com/agenda/agenda) job scheduler with LISTEN/NOTIFY support for real-time job processing.
 
@@ -13,11 +13,11 @@ PostgreSQL backend for [Agenda](https://github.com/agenda/agenda) job scheduler 
 ## Installation
 
 ```bash
-npm install @agenda.js/postgres-backend
+npm install @agendajs/postgres-backend
 # or
-pnpm add @agenda.js/postgres-backend
+pnpm add @agendajs/postgres-backend
 # or
-yarn add @agenda.js/postgres-backend
+yarn add @agendajs/postgres-backend
 ```
 
 ## Usage
@@ -26,7 +26,7 @@ yarn add @agenda.js/postgres-backend
 
 ```typescript
 import { Agenda } from 'agenda';
-import { PostgresBackend } from '@agenda.js/postgres-backend';
+import { PostgresBackend } from '@agendajs/postgres-backend';
 
 // Create agenda with PostgreSQL backend
 const agenda = new Agenda({
@@ -52,7 +52,7 @@ await agenda.schedule('in 10 minutes', 'send-email', { to: 'other@example.com', 
 ### Configuration Options
 
 ```typescript
-import { PostgresBackend } from '@agenda.js/postgres-backend';
+import { PostgresBackend } from '@agendajs/postgres-backend';
 
 const backend = new PostgresBackend({
   // PostgreSQL connection string (required unless pool/poolConfig is provided)
@@ -94,7 +94,7 @@ If your application already has a PostgreSQL connection pool, you can pass it di
 
 ```typescript
 import { Pool } from 'pg';
-import { PostgresBackend } from '@agenda.js/postgres-backend';
+import { PostgresBackend } from '@agendajs/postgres-backend';
 
 // Your app's existing pool
 const pool = new Pool({ connectionString: 'postgresql://...' });
@@ -160,7 +160,7 @@ CREATE INDEX agenda_jobs_next_run_at_idx
 If you prefer to manage the schema yourself (set `ensureSchema: false`):
 
 ```typescript
-import { getCreateTableSQL, getCreateIndexesSQL } from '@agenda.js/postgres-backend';
+import { getCreateTableSQL, getCreateIndexesSQL } from '@agendajs/postgres-backend';
 
 const tableName = 'agenda_jobs';
 

@@ -2,7 +2,7 @@
 
 import { Command } from 'commander';
 import { Agenda } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
 import { createServer } from './server.js';
 import type { Server } from 'http';
 

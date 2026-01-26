@@ -1,12 +1,12 @@
 /**
- * @agenda.js/mongo-backend
+ * @agendajs/mongo-backend
  *
  * MongoDB backend for Agenda job scheduler.
  *
  * @example
  * ```typescript
  * import { Agenda } from 'agenda';
- * import { MongoBackend } from '@agenda.js/mongo-backend';
+ * import { MongoBackend } from '@agendajs/mongo-backend';
  *
  * // Create agenda with MongoDB backend
  * const agenda = new Agenda({
