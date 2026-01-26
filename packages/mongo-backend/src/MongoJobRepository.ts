@@ -28,6 +28,13 @@ import { hasMongoProtocol } from './hasMongoProtocol.js';
 const log = debug('agenda:mongo:repository');
 
 /**
+ * Escape special regex characters in a string to treat it as literal text
+ */
+function escapeRegex(str: string): string {
+	return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
  * Internal MongoDB document type with ObjectId for _id
  * This is what's actually stored in MongoDB, separate from the public IJobParameters interface
  */
@@ -120,28 +127,37 @@ export class MongoJobRepository implements IJobRepository {
 		// Build MongoDB query from options
 		const query: Filter<MongoJobDocument> = {};
 
-		if (name) {
+		// Validate name is a string to prevent query operator injection
+		if (name && typeof name === 'string') {
 			query.name = name;
-		} else if (names && names.length > 0) {
-			query.name = { $in: names };
+		} else if (names && Array.isArray(names) && names.length > 0) {
+			// Filter to only valid strings
+			const validNames = names.filter((n): n is string => typeof n === 'string');
+			if (validNames.length > 0) {
+				query.name = { $in: validNames };
+			}
 		}
 
-		if (id) {
+		if (id && typeof id === 'string') {
 			try {
 				query._id = new ObjectId(id);
 			} catch {
 				return { jobs: [], total: 0 };
 			}
-		} else if (ids && ids.length > 0) {
+		} else if (ids && Array.isArray(ids) && ids.length > 0) {
 			try {
-				query._id = { $in: ids.map((i: string) => new ObjectId(i)) };
+				const validIds = ids.filter((i): i is string => typeof i === 'string');
+				if (validIds.length > 0) {
+					query._id = { $in: validIds.map(i => new ObjectId(i)) };
+				}
 			} catch {
 				return { jobs: [], total: 0 };
 			}
 		}
 
-		if (search) {
-			query.name = { $regex: search, $options: 'i' };
+		// Validate search is a string and escape regex metacharacters
+		if (search && typeof search === 'string' && search.length > 0) {
+			query.name = { $regex: escapeRegex(search), $options: 'i' };
 		}
 
 		if (data !== undefined) {
@@ -224,17 +240,33 @@ export class MongoJobRepository implements IJobRepository {
 		const query: Filter<MongoJobDocument> = {};
 
 		if (options.id) {
-			query._id = new ObjectId(options.id.toString());
-		} else if (options.ids && options.ids.length > 0) {
-			query._id = { $in: options.ids.map((id: string | JobId) => new ObjectId(id.toString())) };
+			const idStr = String(options.id);
+			try {
+				query._id = new ObjectId(idStr);
+			} catch {
+				return 0;
+			}
+		} else if (options.ids && Array.isArray(options.ids) && options.ids.length > 0) {
+			try {
+				query._id = { $in: options.ids.map(id => new ObjectId(String(id))) };
+			} catch {
+				return 0;
+			}
 		}
 
-		if (options.name) {
+		// Validate name is a string to prevent query operator injection
+		if (options.name && typeof options.name === 'string') {
 			query.name = options.name;
-		} else if (options.names && options.names.length > 0) {
-			query.name = { $in: options.names };
-		} else if (options.notNames && options.notNames.length > 0) {
-			query.name = { $nin: options.notNames };
+		} else if (options.names && Array.isArray(options.names) && options.names.length > 0) {
+			const validNames = options.names.filter((n): n is string => typeof n === 'string');
+			if (validNames.length > 0) {
+				query.name = { $in: validNames };
+			}
+		} else if (options.notNames && Array.isArray(options.notNames) && options.notNames.length > 0) {
+			const validNotNames = options.notNames.filter((n): n is string => typeof n === 'string');
+			if (validNotNames.length > 0) {
+				query.name = { $nin: validNotNames };
+			}
 		}
 
 		if (options.data !== undefined) {
