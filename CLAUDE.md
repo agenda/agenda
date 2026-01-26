@@ -55,7 +55,8 @@ Agenda (packages/agenda/src/index.ts)    # Main class, extends EventEmitter
 
 MongoBackend (packages/mongo-backend)     # Separate package for MongoDB
 ├── MongoBackend                          # MongoDB backend implementation
-└── MongoJobRepository                    # MongoDB data layer abstraction
+├── MongoJobRepository                    # MongoDB data layer abstraction
+└── MongoChangeStreamNotificationChannel  # Real-time notifications via Change Streams
 ```
 
 ### Source Structure
@@ -77,7 +78,7 @@ MongoBackend (packages/mongo-backend)     # Separate package for MongoDB
 - Notifications (optional): via `INotificationChannel`
 
 All backends are separate packages:
-- MongoDB: `@agendajs/mongo-backend` - Storage with polling-based job processing
+- MongoDB: `@agendajs/mongo-backend` - Storage with polling-based job processing (or real-time via Change Streams)
 - PostgreSQL: `@agendajs/postgres-backend` - Storage + LISTEN/NOTIFY for real-time notifications
 - Redis: `@agendajs/redis-backend` - Storage + Pub/Sub for real-time notifications
 
@@ -259,6 +260,45 @@ const agenda = new Agenda({
 });
 ```
 
+### MongoDB Change Streams (Native MongoDB Notifications)
+
+For MongoDB-only deployments, you can use `MongoChangeStreamNotificationChannel` from `@agendajs/mongo-backend` to enable real-time notifications without an external system like Redis:
+
+```typescript
+import { Agenda } from 'agenda';
+import { MongoBackend, MongoChangeStreamNotificationChannel } from '@agendajs/mongo-backend';
+
+// Create agenda with MongoDB storage AND change stream notifications
+const agenda = new Agenda({
+  backend: new MongoBackend({ mongo: db }),
+  notificationChannel: new MongoChangeStreamNotificationChannel({ db })
+});
+
+// Jobs are processed immediately when created (no polling delay)
+await agenda.start();
+await agenda.now('myJob'); // Triggers instant processing via change stream
+```
+
+**Requirements:**
+- MongoDB must be deployed as a replica set (even single-node replica sets work)
+- WiredTiger storage engine (default since MongoDB 3.2)
+
+**How it works:**
+- Uses MongoDB Change Streams to watch the jobs collection
+- Automatically detects job inserts/updates and notifies the job processor
+- The `publish()` method is a no-op since changes are detected automatically
+- Supports resume tokens for recovery after disconnections
+
+**Configuration:**
+```typescript
+const channel = new MongoChangeStreamNotificationChannel({
+  db: mongoDb,                    // Required: MongoDB database instance
+  collection: 'agendaJobs',       // Optional: collection name (default: 'agendaJobs')
+  resumeToken: savedToken,        // Optional: resume from specific point
+  fullDocument: true              // Optional: include full document on updates (default: true)
+});
+```
+
 ### Key Types
 
 - `IAgendaBackend` - Interface for backend implementations (storage + optional notifications)
@@ -267,3 +307,4 @@ const agenda = new Agenda({
 - `IJobNotification` - Payload sent when a job is saved (jobId, jobName, nextRunAt, priority)
 - `BaseNotificationChannel` - Abstract base class with state management and reconnection logic
 - `InMemoryNotificationChannel` - In-memory implementation for testing/single-process
+- `MongoChangeStreamNotificationChannel` - MongoDB Change Streams for native real-time notifications (from `@agendajs/mongo-backend`)

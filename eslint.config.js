@@ -49,7 +49,8 @@ export default tseslint.config(
 		// Examples are allowed to use console for demonstration purposes
 		files: ['examples/**/*.ts'],
 		rules: {
-			'no-console': 'off'
+			'no-console': 'off',
+			'@typescript-eslint/no-unused-vars': 'off'
 		}
 	},
 	eslintConfigPrettier

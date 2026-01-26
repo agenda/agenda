@@ -6,6 +6,7 @@ import type { DefinitionProcessor } from './types/JobDefinition.js';
 import { JobParameters, datefields, TJobDatefield, JobId } from './types/JobParameters.js';
 import { JobPriority, parsePriority } from './utils/priority.js';
 import { computeFromInterval, computeFromRepeatAt } from './utils/nextRunAt.js';
+import { applyAllDateConstraints } from './utils/dateConstraints.js';
 
 const log = debug('agenda:job');
 
@@ -139,6 +140,50 @@ export class Job<DATA = unknown | void> {
 	}
 
 	/**
+	 * Sets the start date for the job.
+	 * The job will not run before this date.
+	 * @param date - The start date (Date object or string parseable by Date constructor)
+	 */
+	startDate(dateInput: Date | string): this {
+		const d = new Date(dateInput);
+		if (Number.isNaN(d.getTime())) {
+			throw new Error(`Invalid start date: ${dateInput}`);
+		}
+		this.attrs.startDate = d;
+		return this;
+	}
+
+	/**
+	 * Sets the end date for the job.
+	 * The job will not run after this date (nextRunAt will be set to null).
+	 * @param date - The end date (Date object or string parseable by Date constructor)
+	 */
+	endDate(dateInput: Date | string): this {
+		const d = new Date(dateInput);
+		if (Number.isNaN(d.getTime())) {
+			throw new Error(`Invalid end date: ${dateInput}`);
+		}
+		this.attrs.endDate = d;
+		return this;
+	}
+
+	/**
+	 * Sets the days of the week to skip.
+	 * The job will not run on these days.
+	 * @param days - Array of days to skip (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+	 */
+	skipDays(days: number[]): this {
+		// Validate days
+		for (const day of days) {
+			if (day < 0 || day > 6 || !Number.isInteger(day)) {
+				throw new Error(`Invalid skip day: ${day}. Must be an integer 0-6 (0=Sunday, 6=Saturday)`);
+			}
+		}
+		this.attrs.skipDays = [...new Set(days)]; // Remove duplicates
+		return this;
+	}
+
+	/**
 	 * if set, a job is forked via node child process and runs in a seperate/own
 	 * thread
 	 * @param enableForkMode
@@ -179,13 +224,26 @@ export class Job<DATA = unknown | void> {
 	}
 
 	/**
-	 * Schedules a job to run at specified time
+	 * Schedules a job to run at specified time.
+	 * Date constraints (startDate, endDate, skipDays) are applied if set.
 	 * @param time
 	 */
 	schedule(time: string | Date): this {
 		const d = new Date(time);
 
-		this.attrs.nextRunAt = Number.isNaN(d.getTime()) ? date(time as string) : d;
+		let nextRunAt: Date | null = Number.isNaN(d.getTime()) ? date(time as string) : d;
+
+		// Apply date constraints if any are set
+		if (this.attrs.startDate || this.attrs.endDate || this.attrs.skipDays) {
+			nextRunAt = applyAllDateConstraints(nextRunAt, {
+				startDate: this.attrs.startDate,
+				endDate: this.attrs.endDate,
+				skipDays: this.attrs.skipDays,
+				timezone: this.attrs.repeatTimezone
+			});
+		}
+
+		this.attrs.nextRunAt = nextRunAt;
 
 		return this;
 	}
@@ -339,22 +397,40 @@ export class Job<DATA = unknown | void> {
 	private computeNextRunAt() {
 		try {
 			if (this.attrs.repeatInterval) {
-				this.attrs.nextRunAt = computeFromInterval(this.attrs);
-				log(
-					'[%s:%s] nextRunAt set to [%s]',
-					this.attrs.name,
-					this.attrs._id,
-					new Date(this.attrs.nextRunAt).toISOString()
-				);
+				const nextRunAt = computeFromInterval(this.attrs);
+				this.attrs.nextRunAt = nextRunAt;
+				if (nextRunAt) {
+					log(
+						'[%s:%s] nextRunAt set to [%s]',
+						this.attrs.name,
+						this.attrs._id,
+						nextRunAt.toISOString()
+					);
+				} else {
+					log(
+						'[%s:%s] nextRunAt set to null (date constraints)',
+						this.attrs.name,
+						this.attrs._id
+					);
+				}
 			} else if (this.attrs.repeatAt) {
-				this.attrs.nextRunAt = computeFromRepeatAt(this.attrs);
+				const nextRunAt = computeFromRepeatAt(this.attrs);
+				this.attrs.nextRunAt = nextRunAt;
 
-				log(
-					'[%s:%s] nextRunAt set to [%s]',
-					this.attrs.name,
-					this.attrs._id,
-					this.attrs.nextRunAt.toISOString()
-				);
+				if (nextRunAt) {
+					log(
+						'[%s:%s] nextRunAt set to [%s]',
+						this.attrs.name,
+						this.attrs._id,
+						nextRunAt.toISOString()
+					);
+				} else {
+					log(
+						'[%s:%s] nextRunAt set to null (date constraints)',
+						this.attrs.name,
+						this.attrs._id
+					);
+				}
 			} else {
 				this.attrs.nextRunAt = null;
 			}

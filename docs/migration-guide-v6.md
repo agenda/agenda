@@ -168,7 +168,6 @@ The following features from agenda.js v4 are **not supported** in v6:
 |---------|--------|-------------|
 | `shouldSaveResult` | Removed | Store results manually in job data |
 | `_collection` internal access | Removed | Use `agenda.db` (IJobRepository) |
-| `startDate`/`endDate` in scheduling | Not implemented | Filter manually in job processor |
 
 ### 7. Node.js Version Requirement
 
@@ -324,6 +323,43 @@ console.log(stats);
 //   jobStatus: { ... }
 // }
 ```
+
+### 7. Date Range and Skip Days Constraints
+
+Jobs can now be constrained to run only within specific date ranges and skip certain days of the week:
+
+**New Job methods:**
+```javascript
+// Set date constraints on a job
+const job = agenda.create('report', { type: 'weekly' });
+job.startDate('2024-06-01')        // Job won't run before this date
+   .endDate('2024-12-31')          // Job won't run after this date
+   .skipDays([0, 6])               // Skip weekends (0=Sunday, 6=Saturday)
+   .repeatEvery('1 day');
+await job.save();
+```
+
+**Via `every()` options:**
+```javascript
+await agenda.every('1 day', 'business-report', data, {
+  startDate: new Date('2024-06-01'),
+  endDate: new Date('2024-12-31'),
+  skipDays: [0, 6],  // Skip weekends
+  timezone: 'America/New_York'
+});
+```
+
+**Via `schedule()` options:**
+```javascript
+await agenda.schedule('next monday', 'one-time-job', data, {
+  skipDays: [0, 6]  // If scheduled day is a weekend, moves to next weekday
+});
+```
+
+When a job's `nextRunAt` would fall on a skip day or outside the date range:
+- If before `startDate`: `nextRunAt` is moved to `startDate`
+- If on a skip day: `nextRunAt` is moved to the next valid day
+- If after `endDate`: `nextRunAt` is set to `null` (job stops running)
 
 ---
 

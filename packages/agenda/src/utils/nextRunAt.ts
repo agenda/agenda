@@ -4,6 +4,7 @@ import debug from 'debug';
 import { CronExpressionParser } from 'cron-parser';
 import humanInterval from 'human-interval';
 import { isValidDate } from './isValidDate.js';
+import { applyAllDateConstraints } from './dateConstraints.js';
 import type { JobParameters } from '../types/JobParameters.js';
 
 const log = debug('agenda:nextRunAt');
@@ -19,7 +20,7 @@ export function isValidHumanInterval(value: unknown): value is string {
 /**
  * Internal method that computes the interval
  */
-export const computeFromInterval = (attrs: JobParameters<unknown>): Date => {
+export const computeFromInterval = (attrs: JobParameters<unknown>): Date | null => {
 	const previousNextRunAt = attrs.nextRunAt || new Date();
 	log('[%s:%s] computing next run via interval [%s]', attrs.name, attrs._id, attrs.repeatInterval);
 
@@ -75,13 +76,27 @@ export const computeFromInterval = (attrs: JobParameters<unknown>): Date => {
 		);
 	}
 
+	// Apply date constraints (startDate, endDate, skipDays)
+	if (attrs.startDate || attrs.endDate || attrs.skipDays) {
+		nextRunAt = applyAllDateConstraints(nextRunAt, {
+			startDate: attrs.startDate,
+			endDate: attrs.endDate,
+			skipDays: attrs.skipDays,
+			timezone: attrs.repeatTimezone
+		});
+
+		if (nextRunAt === null) {
+			log('[%s:%s] nextRunAt is null after applying date constraints', attrs.name, attrs._id);
+		}
+	}
+
 	return nextRunAt;
 };
 
 /**
  * Internal method to compute next run time from the repeat string
  */
-export function computeFromRepeatAt(attrs: JobParameters<unknown>): Date {
+export function computeFromRepeatAt(attrs: JobParameters<unknown>): Date | null {
 	const lastRun = attrs.lastRunAt || new Date();
 	const repeatAt = attrs.repeatAt;
 	if (!repeatAt) {
@@ -98,9 +113,29 @@ export function computeFromRepeatAt(attrs: JobParameters<unknown>): Date {
 		throw new Error('failed to calculate repeatAt time due to invalid format');
 	}
 
+	let nextRunAt: Date;
 	if (nextDate === lastRun.valueOf()) {
-		return date('tomorrow at ' + repeatAt);
+		nextRunAt = date('tomorrow at ' + repeatAt);
+	} else {
+		nextRunAt = date(repeatAt);
 	}
 
-	return date(repeatAt);
+	// Apply date constraints (startDate, endDate, skipDays)
+	if (attrs.startDate || attrs.endDate || attrs.skipDays) {
+		const constrainedDate = applyAllDateConstraints(nextRunAt, {
+			startDate: attrs.startDate,
+			endDate: attrs.endDate,
+			skipDays: attrs.skipDays,
+			timezone: attrs.repeatTimezone
+		});
+
+		if (constrainedDate === null) {
+			log('[%s:%s] nextRunAt is null after applying date constraints', attrs.name, attrs._id);
+			return null;
+		}
+
+		nextRunAt = constrainedDate;
+	}
+
+	return nextRunAt;
 }
