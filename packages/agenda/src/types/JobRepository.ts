@@ -2,6 +2,14 @@ import type { IJobParameters, JobId } from './JobParameters.js';
 import type { IJobsQueryOptions, IJobsResult, IJobsOverview } from './JobQuery.js';
 
 /**
+ * Options passed to repository methods that modify jobs
+ */
+export interface IJobRepositoryOptions {
+	/** Name to set as lastModifiedBy on the job */
+	lastModifiedBy?: string;
+}
+
+/**
  * Options for removing jobs (database-agnostic)
  */
 export interface IRemoveJobsOptions {
@@ -63,18 +71,24 @@ export interface IJobRepository {
 	/**
 	 * Save a job (insert or update)
 	 */
-	saveJob<DATA = unknown>(job: IJobParameters<DATA>): Promise<IJobParameters<DATA>>;
+	saveJob<DATA = unknown>(
+		job: IJobParameters<DATA>,
+		options: IJobRepositoryOptions | undefined
+	): Promise<IJobParameters<DATA>>;
 
 	/**
 	 * Update job state fields (lockedAt, lastRunAt, progress, etc.)
 	 */
-	saveJobState(job: IJobParameters): Promise<void>;
+	saveJobState(job: IJobParameters, options: IJobRepositoryOptions | undefined): Promise<void>;
 
 	/**
 	 * Attempt to lock a job for processing
 	 * @returns The locked job data, or undefined if lock failed
 	 */
-	lockJob(job: IJobParameters): Promise<IJobParameters | undefined>;
+	lockJob(
+		job: IJobParameters,
+		options: IJobRepositoryOptions | undefined
+	): Promise<IJobParameters | undefined>;
 
 	/**
 	 * Unlock a single job
@@ -93,6 +107,7 @@ export interface IJobRepository {
 		jobName: string,
 		nextScanAt: Date,
 		lockDeadline: Date,
-		now?: Date
+		now: Date | undefined,
+		options: IJobRepositoryOptions | undefined
 	): Promise<IJobParameters | undefined>;
 }

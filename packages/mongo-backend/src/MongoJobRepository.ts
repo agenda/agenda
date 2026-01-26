@@ -19,6 +19,7 @@ import type {
 	IJobWithState,
 	IJobsSort,
 	IJobRepository,
+	IJobRepositoryOptions,
 	IRemoveJobsOptions
 } from 'agenda';
 import { toJobId, computeJobState } from 'agenda';
@@ -306,7 +307,10 @@ export class MongoJobRepository implements IJobRepository {
 		await this.collection.updateMany({ _id: { $in: objectIds } }, { $unset: { lockedAt: true } });
 	}
 
-	async lockJob(job: IJobParameters): Promise<IJobParameters | undefined> {
+	async lockJob(
+		job: IJobParameters,
+		options: IJobRepositoryOptions | undefined
+	): Promise<IJobParameters | undefined> {
 		if (!job._id) return undefined;
 
 		// Query to run against collection to see if we need to lock it
@@ -319,14 +323,16 @@ export class MongoJobRepository implements IJobRepository {
 		};
 
 		// Update / options for the MongoDB query
-		const update: UpdateFilter<MongoJobDocument> = { $set: { lockedAt: new Date() } };
-		const options: FindOneAndUpdateOptions = {
+		const update: UpdateFilter<MongoJobDocument> = {
+			$set: { lockedAt: new Date(), lastModifiedBy: options?.lastModifiedBy }
+		};
+		const findOptions: FindOneAndUpdateOptions = {
 			returnDocument: 'after',
 			sort: this.connectOptions.sort
 		};
 
 		// Lock the job in MongoDB!
-		const result = await this.collection.findOneAndUpdate(criteria, update, options);
+		const result = await this.collection.findOneAndUpdate(criteria, update, findOptions);
 
 		if (!result) return undefined;
 
@@ -341,8 +347,11 @@ export class MongoJobRepository implements IJobRepository {
 		jobName: string,
 		nextScanAt: Date,
 		lockDeadline: Date,
-		now: Date = new Date()
+		now: Date | undefined,
+		options: IJobRepositoryOptions | undefined
 	): Promise<IJobParameters | undefined> {
+		const lockTime = now ?? new Date();
+
 		/**
 		 * Query used to find job to run
 		 */
@@ -363,7 +372,9 @@ export class MongoJobRepository implements IJobRepository {
 		/**
 		 * Query used to set a job as locked
 		 */
-		const JOB_PROCESS_SET_QUERY: UpdateFilter<MongoJobDocument> = { $set: { lockedAt: now } };
+		const JOB_PROCESS_SET_QUERY: UpdateFilter<MongoJobDocument> = {
+			$set: { lockedAt: lockTime, lastModifiedBy: options?.lastModifiedBy }
+		};
 
 		/**
 		 * Query used to affect what gets returned
@@ -454,7 +465,10 @@ export class MongoJobRepository implements IJobRepository {
 		} as IJobParameters<DATA>;
 	}
 
-	async saveJobState(job: IJobParameters): Promise<void> {
+	async saveJobState(
+		job: IJobParameters,
+		options: IJobRepositoryOptions | undefined
+	): Promise<void> {
 		if (!job._id) {
 			throw new Error('Cannot save job state without job ID');
 		}
@@ -467,7 +481,8 @@ export class MongoJobRepository implements IJobRepository {
 			failReason: job.failReason,
 			failCount: job.failCount,
 			failedAt: job.failedAt && new Date(job.failedAt),
-			lastFinishedAt: (job.lastFinishedAt && new Date(job.lastFinishedAt)) || undefined
+			lastFinishedAt: (job.lastFinishedAt && new Date(job.lastFinishedAt)) || undefined,
+			lastModifiedBy: options?.lastModifiedBy
 		};
 
 		log('[job %s] save job state: \n%O', job._id, $set);
@@ -491,7 +506,10 @@ export class MongoJobRepository implements IJobRepository {
 	 * @param job Job parameters to save
 	 * @returns The saved job parameters with ID
 	 */
-	async saveJob<DATA = unknown>(job: IJobParameters<DATA>): Promise<IJobParameters<DATA>> {
+	async saveJob<DATA = unknown>(
+		job: IJobParameters<DATA>,
+		options: IJobRepositoryOptions | undefined
+	): Promise<IJobParameters<DATA>> {
 		try {
 			log('attempting to save a job');
 
@@ -501,7 +519,7 @@ export class MongoJobRepository implements IJobRepository {
 			// Add lastModifiedBy
 			const propsWithModifier = {
 				...props,
-				lastModifiedBy: this.connectOptions.name
+				lastModifiedBy: options?.lastModifiedBy
 			};
 
 			log('[job %s] set job props: \n%O', _id, propsWithModifier);

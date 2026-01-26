@@ -6,6 +6,7 @@ import {
 } from 'agenda';
 import type {
 	IJobRepository,
+	IJobRepositoryOptions,
 	IRemoveJobsOptions,
 	IJobParameters,
 	JobId,
@@ -31,13 +32,11 @@ export class PostgresJobRepository implements IJobRepository {
 	private pool: Pool;
 	private ownPool: boolean;
 	private tableName: string;
-	private name?: string;
 	private ensureSchema: boolean;
 	private sort: { nextRunAt?: 1 | -1; priority?: 1 | -1 };
 
 	constructor(private config: IPostgresBackendConfig) {
 		this.tableName = config.tableName || 'agenda_jobs';
-		this.name = config.name;
 		this.ensureSchema = config.ensureSchema ?? true;
 		this.sort = config.sort || { nextRunAt: 1, priority: -1 };
 
@@ -377,7 +376,10 @@ export class PostgresJobRepository implements IJobRepository {
 		);
 	}
 
-	async lockJob(job: IJobParameters): Promise<IJobParameters | undefined> {
+	async lockJob(
+		job: IJobParameters,
+		options: IJobRepositoryOptions | undefined
+	): Promise<IJobParameters | undefined> {
 		if (!job._id) return undefined;
 
 		const orderBy = `${this.sort.nextRunAt === 1 ? 'next_run_at ASC' : 'next_run_at DESC'} NULLS LAST, ${this.sort.priority === -1 ? 'priority DESC' : 'priority ASC'}`;
@@ -385,7 +387,7 @@ export class PostgresJobRepository implements IJobRepository {
 		// Atomic lock using UPDATE ... RETURNING
 		const result = await this.pool.query<IPostgresJobRow>(
 			`UPDATE "${this.tableName}"
-			 SET locked_at = NOW()
+			 SET locked_at = NOW(), last_modified_by = $4
 			 WHERE id = (
 				 SELECT id FROM "${this.tableName}"
 				 WHERE id = $1
@@ -398,7 +400,7 @@ export class PostgresJobRepository implements IJobRepository {
 				 FOR UPDATE SKIP LOCKED
 			 )
 			 RETURNING *`,
-			[job._id.toString(), job.name, job.nextRunAt]
+			[job._id.toString(), job.name, job.nextRunAt, options?.lastModifiedBy || null]
 		);
 
 		if (result.rows.length === 0) {
@@ -412,14 +414,16 @@ export class PostgresJobRepository implements IJobRepository {
 		jobName: string,
 		nextScanAt: Date,
 		lockDeadline: Date,
-		now: Date = new Date()
+		now: Date | undefined,
+		options: IJobRepositoryOptions | undefined
 	): Promise<IJobParameters | undefined> {
+		const lockTime = now ?? new Date();
 		const orderBy = `${this.sort.nextRunAt === 1 ? 'next_run_at ASC' : 'next_run_at DESC'} NULLS LAST, ${this.sort.priority === -1 ? 'priority DESC' : 'priority ASC'}`;
 
 		// Find and lock job atomically using UPDATE ... RETURNING with subquery
 		const result = await this.pool.query<IPostgresJobRow>(
 			`UPDATE "${this.tableName}"
-			 SET locked_at = $1
+			 SET locked_at = $1, last_modified_by = $5
 			 WHERE id = (
 				 SELECT id FROM "${this.tableName}"
 				 WHERE name = $2
@@ -433,7 +437,7 @@ export class PostgresJobRepository implements IJobRepository {
 				 FOR UPDATE SKIP LOCKED
 			 )
 			 RETURNING *`,
-			[now, jobName, nextScanAt, lockDeadline]
+			[lockTime, jobName, nextScanAt, lockDeadline, options?.lastModifiedBy || null]
 		);
 
 		if (result.rows.length === 0) {
@@ -443,7 +447,10 @@ export class PostgresJobRepository implements IJobRepository {
 		return this.rowToJob(result.rows[0]);
 	}
 
-	async saveJobState(job: IJobParameters): Promise<void> {
+	async saveJobState(
+		job: IJobParameters,
+		options: IJobRepositoryOptions | undefined
+	): Promise<void> {
 		if (!job._id) {
 			throw new Error('Cannot save job state without job ID');
 		}
@@ -457,7 +464,8 @@ export class PostgresJobRepository implements IJobRepository {
 				 fail_reason = $6,
 				 fail_count = $7,
 				 failed_at = $8,
-				 last_finished_at = $9
+				 last_finished_at = $9,
+				 last_modified_by = $11
 			 WHERE id = $1 AND name = $10`,
 			[
 				job._id.toString(),
@@ -469,7 +477,8 @@ export class PostgresJobRepository implements IJobRepository {
 				job.failCount ?? null,
 				job.failedAt || null,
 				job.lastFinishedAt || null,
-				job.name
+				job.name,
+				options?.lastModifiedBy || null
 			]
 		);
 
@@ -480,7 +489,10 @@ export class PostgresJobRepository implements IJobRepository {
 		}
 	}
 
-	async saveJob<DATA = unknown>(job: IJobParameters<DATA>): Promise<IJobParameters<DATA>> {
+	async saveJob<DATA = unknown>(
+		job: IJobParameters<DATA>,
+		options: IJobRepositoryOptions | undefined
+	): Promise<IJobParameters<DATA>> {
 		log('attempting to save a job');
 
 		const { _id, unique, uniqueOpts, ...props } = job;
@@ -513,7 +525,7 @@ export class PostgresJobRepository implements IJobRepository {
 					JSON.stringify(props.data),
 					props.repeatAt || null,
 					props.disabled || false,
-					this.name || null
+					options?.lastModifiedBy || null
 				]
 			);
 
@@ -562,7 +574,7 @@ export class PostgresJobRepository implements IJobRepository {
 					JSON.stringify(props.data),
 					props.repeatAt || null,
 					props.disabled || false,
-					this.name || null
+					options?.lastModifiedBy || null
 				]
 			);
 
@@ -629,7 +641,7 @@ export class PostgresJobRepository implements IJobRepository {
 						JSON.stringify(props.data),
 						props.repeatAt || null,
 						props.disabled || false,
-						this.name || null
+						options?.lastModifiedBy || null
 					]
 				);
 
@@ -655,7 +667,7 @@ export class PostgresJobRepository implements IJobRepository {
 				JSON.stringify(props.data),
 				props.repeatAt || null,
 				props.disabled || false,
-				this.name || null
+				options?.lastModifiedBy || null
 			]
 		);
 

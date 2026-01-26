@@ -21,9 +21,6 @@ export type IMongoBackendConfig = MongoConnectionConfig & {
 	/** Collection name for jobs (default: 'agendaJobs') */
 	collection?: string;
 
-	/** Name to set as lastModifiedBy on jobs */
-	name?: string;
-
 	/** Whether to create indexes on connect (default: false) */
 	ensureIndex?: boolean;
 
@@ -55,7 +52,4 @@ export type IMongoJobRepositoryConfig = IMongoDbConfig &
 				mongo: Db;
 				db?: { collection?: string };
 		  }
-	) & {
-		/** Name to set as lastModifiedBy on jobs */
-		name?: string;
-	};
+	);
