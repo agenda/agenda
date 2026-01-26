@@ -13,7 +13,7 @@ export function getCreateTableSQL(tableName: string): string {
 			locked_at TIMESTAMPTZ,
 			last_finished_at TIMESTAMPTZ,
 			failed_at TIMESTAMPTZ,
-			fail_count INTEGER DEFAULT 0,
+			fail_count INTEGER DEFAULT NULL,
 			fail_reason TEXT,
 			repeat_timezone VARCHAR(100),
 			last_run_at TIMESTAMPTZ,
@@ -22,6 +22,7 @@ export function getCreateTableSQL(tableName: string): string {
 			repeat_at VARCHAR(255),
 			disabled BOOLEAN DEFAULT FALSE,
 			progress REAL,
+			fork BOOLEAN DEFAULT FALSE,
 			last_modified_by VARCHAR(255),
 			created_at TIMESTAMPTZ DEFAULT NOW(),
 			updated_at TIMESTAMPTZ DEFAULT NOW()

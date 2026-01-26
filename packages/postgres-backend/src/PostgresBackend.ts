@@ -45,7 +45,7 @@ const log = debug('agenda:postgres:backend');
  */
 export class PostgresBackend implements IAgendaBackend {
 	private _repository: PostgresJobRepository;
-	private _notificationChannel: PostgresNotificationChannel;
+	private _notificationChannel?: PostgresNotificationChannel;
 	private config: IPostgresBackendConfig;
 
 	constructor(config: IPostgresBackendConfig) {
@@ -54,18 +54,21 @@ export class PostgresBackend implements IAgendaBackend {
 		// Create repository
 		this._repository = new PostgresJobRepository(config);
 
-		// Create notification channel
-		this._notificationChannel = new PostgresNotificationChannel({
-			channelName: config.channelName,
-			reconnect: {
-				enabled: true
-			}
-		});
+		// Create notification channel (unless disabled)
+		if (!config.disableNotifications) {
+			this._notificationChannel = new PostgresNotificationChannel({
+				channelName: config.channelName,
+				reconnect: {
+					enabled: true
+				}
+			});
+		}
 
 		log('PostgresBackend created with config: %O', {
 			tableName: config.tableName || 'agenda_jobs',
 			channelName: config.channelName || 'agenda_jobs',
-			ensureSchema: config.ensureSchema ?? true
+			ensureSchema: config.ensureSchema ?? true,
+			disableNotifications: config.disableNotifications ?? false
 		});
 	}
 
@@ -78,8 +81,9 @@ export class PostgresBackend implements IAgendaBackend {
 
 	/**
 	 * The notification channel for real-time notifications via LISTEN/NOTIFY
+	 * Returns undefined if notifications are disabled
 	 */
-	get notificationChannel(): INotificationChannel {
+	get notificationChannel(): INotificationChannel | undefined {
 		return this._notificationChannel;
 	}
 
@@ -96,8 +100,10 @@ export class PostgresBackend implements IAgendaBackend {
 		// Connect repository first (creates pool and schema)
 		await this._repository.connect();
 
-		// Share the pool with notification channel
-		this._notificationChannel.setPool(this._repository.getPool());
+		// Share the pool with notification channel (if enabled)
+		if (this._notificationChannel) {
+			this._notificationChannel.setPool(this._repository.getPool());
+		}
 
 		// Note: notification channel is connected by Agenda.start()
 		// when it's needed, so we don't connect it here

@@ -29,11 +29,12 @@ const log = debug('agenda:postgres:repository');
  * PostgreSQL implementation of IJobRepository
  */
 export class PostgresJobRepository implements IJobRepository {
-	private pool: Pool;
+	private pool!: Pool;
 	private ownPool: boolean;
 	private tableName: string;
 	private ensureSchema: boolean;
 	private sort: { nextRunAt?: 1 | -1; priority?: 1 | -1 };
+	private disconnected: boolean = false;
 
 	constructor(private config: IPostgresBackendConfig) {
 		this.tableName = config.tableName || 'agenda_jobs';
@@ -45,15 +46,21 @@ export class PostgresJobRepository implements IJobRepository {
 			// Use existing pool (won't be closed on disconnect)
 			this.pool = config.pool;
 			this.ownPool = false;
-		} else if (config.connectionString) {
-			this.pool = new Pool({ connectionString: config.connectionString });
+		} else if (config.connectionString || config.poolConfig) {
 			this.ownPool = true;
-		} else if (config.poolConfig) {
-			this.pool = new Pool(config.poolConfig);
-			this.ownPool = true;
+			this.createPool();
 		} else {
 			throw new Error('PostgresBackend requires pool, connectionString, or poolConfig');
 		}
+	}
+
+	private createPool(): void {
+		if (this.config.connectionString) {
+			this.pool = new Pool({ connectionString: this.config.connectionString });
+		} else if (this.config.poolConfig) {
+			this.pool = new Pool(this.config.poolConfig);
+		}
+		this.disconnected = false;
 	}
 
 	/**
@@ -65,6 +72,12 @@ export class PostgresJobRepository implements IJobRepository {
 
 	async connect(): Promise<void> {
 		log('connecting to PostgreSQL');
+
+		// Recreate pool if it was disconnected
+		if (this.disconnected && this.ownPool) {
+			log('recreating pool after disconnect');
+			this.createPool();
+		}
 
 		// Test connection
 		const client = await this.pool.connect();
@@ -100,9 +113,20 @@ export class PostgresJobRepository implements IJobRepository {
 
 	async disconnect(): Promise<void> {
 		log('disconnecting from PostgreSQL');
-		// Only close the pool if we created it
-		if (this.ownPool) {
+		// Note: We don't close the pool here - it's reused across multiple agenda instances
+		// The pool will be closed when the application shuts down
+		// This matches the behavior of MongoBackend.disconnect() which is also a no-op
+	}
+
+	/**
+	 * Force close the pool - should only be called on application shutdown
+	 * or when you're sure the backend won't be reused
+	 */
+	async close(): Promise<void> {
+		log('closing PostgreSQL pool');
+		if (this.ownPool && !this.disconnected) {
 			await this.pool.end();
+			this.disconnected = true;
 		}
 	}
 
@@ -128,6 +152,7 @@ export class PostgresJobRepository implements IJobRepository {
 			repeatAt: row.repeat_at ?? undefined,
 			disabled: row.disabled,
 			progress: row.progress ?? undefined,
+			fork: row.fork ?? undefined,
 			lastModifiedBy: row.last_modified_by ?? undefined
 		};
 	}
@@ -371,7 +396,7 @@ export class PostgresJobRepository implements IJobRepository {
 		await this.pool.query(
 			`UPDATE "${this.tableName}"
 			 SET locked_at = NULL
-			 WHERE id = ANY($1::uuid[]) AND next_run_at IS NOT NULL`,
+			 WHERE id = ANY($1::uuid[])`,
 			[ids]
 		);
 	}
@@ -511,7 +536,11 @@ export class PostgresJobRepository implements IJobRepository {
 					 data = $8,
 					 repeat_at = $9,
 					 disabled = $10,
-					 last_modified_by = $11
+					 fork = $11,
+					 fail_reason = $12,
+					 fail_count = $13,
+					 failed_at = $14,
+					 last_modified_by = $15
 				 WHERE id = $1 AND name = $2
 				 RETURNING *`,
 				[
@@ -525,6 +554,10 @@ export class PostgresJobRepository implements IJobRepository {
 					JSON.stringify(props.data),
 					props.repeatAt || null,
 					props.disabled || false,
+					props.fork || false,
+					props.failReason ?? null,
+					props.failCount ?? null,
+					props.failedAt || null,
 					options?.lastModifiedBy || null
 				]
 			);
@@ -549,8 +582,8 @@ export class PostgresJobRepository implements IJobRepository {
 			const result = await this.pool.query<IPostgresJobRow>(
 				`INSERT INTO "${this.tableName}" (
 					name, priority, next_run_at, type, repeat_timezone,
-					repeat_interval, data, repeat_at, disabled, last_modified_by
-				 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+					repeat_interval, data, repeat_at, disabled, fork, last_modified_by
+				 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 				 ON CONFLICT ((name)) WHERE type = 'single'
 				 DO UPDATE SET
 					priority = EXCLUDED.priority,
@@ -562,6 +595,7 @@ export class PostgresJobRepository implements IJobRepository {
 					data = EXCLUDED.data,
 					repeat_at = EXCLUDED.repeat_at,
 					disabled = EXCLUDED.disabled,
+					fork = EXCLUDED.fork,
 					last_modified_by = EXCLUDED.last_modified_by
 				 RETURNING *`,
 				[
@@ -574,6 +608,7 @@ export class PostgresJobRepository implements IJobRepository {
 					JSON.stringify(props.data),
 					props.repeatAt || null,
 					props.disabled || false,
+					props.fork || false,
 					options?.lastModifiedBy || null
 				]
 			);
@@ -628,7 +663,8 @@ export class PostgresJobRepository implements IJobRepository {
 						 data = $${paramIndex + 5},
 						 repeat_at = $${paramIndex + 6},
 						 disabled = $${paramIndex + 7},
-						 last_modified_by = $${paramIndex + 8}
+						 fork = $${paramIndex + 8},
+						 last_modified_by = $${paramIndex + 9}
 					 WHERE ${conditions.join(' AND ')}
 					 RETURNING *`,
 					[
@@ -641,6 +677,7 @@ export class PostgresJobRepository implements IJobRepository {
 						JSON.stringify(props.data),
 						props.repeatAt || null,
 						props.disabled || false,
+						props.fork || false,
 						options?.lastModifiedBy || null
 					]
 				);
@@ -654,8 +691,8 @@ export class PostgresJobRepository implements IJobRepository {
 		const result = await this.pool.query<IPostgresJobRow>(
 			`INSERT INTO "${this.tableName}" (
 				name, priority, next_run_at, type, repeat_timezone,
-				repeat_interval, data, repeat_at, disabled, last_modified_by
-			 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+				repeat_interval, data, repeat_at, disabled, fork, last_modified_by
+			 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 			 RETURNING *`,
 			[
 				props.name,
@@ -667,6 +704,7 @@ export class PostgresJobRepository implements IJobRepository {
 				JSON.stringify(props.data),
 				props.repeatAt || null,
 				props.disabled || false,
+				props.fork || false,
 				options?.lastModifiedBy || null
 			]
 		);

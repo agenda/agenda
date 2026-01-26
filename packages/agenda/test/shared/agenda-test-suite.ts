@@ -1461,8 +1461,8 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 
 					const jobDataFinished = await backend.repository.getJobById(job.attrs._id!);
 					expect(jobDataFinished?.lastFinishedAt).toBeDefined();
-					expect(jobDataFinished?.failReason).toBeNull();
-					expect(jobDataFinished?.failCount).toBeNull();
+					expect(jobDataFinished?.failReason).toBeUndefined();
+					expect(jobDataFinished?.failCount).toBeUndefined();
 
 					await agendaFork.stop();
 				});
@@ -1494,7 +1494,7 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 
 					const jobDataFinished = await backend.repository.getJobById(job.attrs._id!);
 					expect(jobDataFinished?.lastFinishedAt).toBeDefined();
-					expect(jobDataFinished?.failReason).not.toBeNull();
+					expect(jobDataFinished?.failReason).not.toBeUndefined();
 					expect(jobDataFinished?.failCount).toBe(1);
 
 					await agendaFork.stop();
@@ -1527,7 +1527,7 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 
 					const jobDataFinished = await backend.repository.getJobById(job.attrs._id!);
 					expect(jobDataFinished?.lastFinishedAt).toBeDefined();
-					expect(jobDataFinished?.failReason).not.toBeNull();
+					expect(jobDataFinished?.failReason).not.toBeUndefined();
 					expect(jobDataFinished?.failCount).toBe(1);
 
 					await agendaFork.stop();
