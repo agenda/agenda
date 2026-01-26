@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
+import type { ForkOptions } from 'child_process';
 import type { IAgendaBackend, INotificationChannel } from '../../src/index.js';
 import { Agenda } from '../../src/index.js';
 import { Job } from '../../src/Job.js';
@@ -8,10 +9,8 @@ import someJobDefinition from '../fixtures/someJobDefinition.js';
 export interface ForkHelperConfig {
 	/** Path to the fork helper script (relative to cwd) */
 	path: string;
-	/** Fork options (e.g., execArgv for tsx loader) */
-	options?: {
-		execArgv?: string[];
-	};
+	/** Fork options (e.g., execArgv for tsx loader, env for environment variables) */
+	options?: ForkOptions;
 }
 
 export interface AgendaTestConfig {
