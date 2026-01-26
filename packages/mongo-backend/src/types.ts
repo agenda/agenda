@@ -1,4 +1,5 @@
-import type { Db, MongoClientOptions, SortDirection } from 'mongodb';
+import type { Db, MongoClientOptions } from 'mongodb';
+import type { SortDirection } from 'agenda';
 
 /**
  * Configuration options for MongoBackend
@@ -21,7 +22,7 @@ export type IMongoBackendConfig = MongoConnectionConfig & {
 	/** Collection name for jobs (default: 'agendaJobs') */
 	collection?: string;
 
-	/** Whether to create indexes on connect (default: false) */
+	/** Whether to create indexes on connect (default: true) */
 	ensureIndex?: boolean;
 
 	/** Sort order for job queries */

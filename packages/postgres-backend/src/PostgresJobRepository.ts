@@ -14,7 +14,8 @@ import type {
 	IJobsResult,
 	IJobsOverview,
 	IJobWithState,
-	IJobsSort
+	IJobsSort,
+	SortDirection
 } from 'agenda';
 import type { IPostgresBackendConfig, IPostgresJobRow } from './types.js';
 import {
@@ -33,13 +34,13 @@ export class PostgresJobRepository implements IJobRepository {
 	private ownPool: boolean;
 	private tableName: string;
 	private ensureSchema: boolean;
-	private sort: { nextRunAt?: 1 | -1; priority?: 1 | -1 };
+	private sort: { nextRunAt?: SortDirection; priority?: SortDirection };
 	private disconnected: boolean = false;
 
 	constructor(private config: IPostgresBackendConfig) {
 		this.tableName = config.tableName || 'agenda_jobs';
 		this.ensureSchema = config.ensureSchema ?? true;
-		this.sort = config.sort || { nextRunAt: 1, priority: -1 };
+		this.sort = config.sort || { nextRunAt: 'asc', priority: 'desc' };
 
 		// Use existing pool or create a new one
 		if (config.pool) {
@@ -113,9 +114,11 @@ export class PostgresJobRepository implements IJobRepository {
 
 	async disconnect(): Promise<void> {
 		log('disconnecting from PostgreSQL');
-		// Note: We don't close the pool here - it's reused across multiple agenda instances
-		// The pool will be closed when the application shuts down
-		// This matches the behavior of MongoBackend.disconnect() which is also a no-op
+		if (this.ownPool && this.pool && !this.disconnected) {
+			log('closing owned pool');
+			await this.pool.end();
+			this.disconnected = true;
+		}
 	}
 
 	/**
@@ -158,6 +161,13 @@ export class PostgresJobRepository implements IJobRepository {
 	}
 
 	/**
+	 * Convert SortDirection to SQL ASC/DESC
+	 */
+	private toSqlDirection(dir: SortDirection): 'ASC' | 'DESC' {
+		return dir === 'asc' ? 'ASC' : 'DESC';
+	}
+
+	/**
 	 * Convert sort options to PostgreSQL ORDER BY clause
 	 */
 	private toOrderByClause(sort?: IJobsSort): string {
@@ -168,19 +178,19 @@ export class PostgresJobRepository implements IJobRepository {
 		const parts: string[] = [];
 
 		if (sort.nextRunAt !== undefined) {
-			parts.push(`next_run_at ${sort.nextRunAt === 1 ? 'ASC' : 'DESC'} NULLS LAST`);
+			parts.push(`next_run_at ${this.toSqlDirection(sort.nextRunAt)} NULLS LAST`);
 		}
 		if (sort.lastRunAt !== undefined) {
-			parts.push(`last_run_at ${sort.lastRunAt === 1 ? 'ASC' : 'DESC'} NULLS LAST`);
+			parts.push(`last_run_at ${this.toSqlDirection(sort.lastRunAt)} NULLS LAST`);
 		}
 		if (sort.lastFinishedAt !== undefined) {
-			parts.push(`last_finished_at ${sort.lastFinishedAt === 1 ? 'ASC' : 'DESC'} NULLS LAST`);
+			parts.push(`last_finished_at ${this.toSqlDirection(sort.lastFinishedAt)} NULLS LAST`);
 		}
 		if (sort.priority !== undefined) {
-			parts.push(`priority ${sort.priority === 1 ? 'ASC' : 'DESC'}`);
+			parts.push(`priority ${this.toSqlDirection(sort.priority)}`);
 		}
 		if (sort.name !== undefined) {
-			parts.push(`name ${sort.name === 1 ? 'ASC' : 'DESC'}`);
+			parts.push(`name ${this.toSqlDirection(sort.name)}`);
 		}
 
 		return parts.length > 0
@@ -407,7 +417,7 @@ export class PostgresJobRepository implements IJobRepository {
 	): Promise<IJobParameters | undefined> {
 		if (!job._id) return undefined;
 
-		const orderBy = `${this.sort.nextRunAt === 1 ? 'next_run_at ASC' : 'next_run_at DESC'} NULLS LAST, ${this.sort.priority === -1 ? 'priority DESC' : 'priority ASC'}`;
+		const orderBy = `next_run_at ${this.toSqlDirection(this.sort.nextRunAt || 'asc')} NULLS LAST, priority ${this.toSqlDirection(this.sort.priority || 'desc')}`;
 
 		// Atomic lock using UPDATE ... RETURNING
 		const result = await this.pool.query<IPostgresJobRow>(
@@ -443,7 +453,7 @@ export class PostgresJobRepository implements IJobRepository {
 		options: IJobRepositoryOptions | undefined
 	): Promise<IJobParameters | undefined> {
 		const lockTime = now ?? new Date();
-		const orderBy = `${this.sort.nextRunAt === 1 ? 'next_run_at ASC' : 'next_run_at DESC'} NULLS LAST, ${this.sort.priority === -1 ? 'priority DESC' : 'priority ASC'}`;
+		const orderBy = `next_run_at ${this.toSqlDirection(this.sort.nextRunAt || 'asc')} NULLS LAST, priority ${this.toSqlDirection(this.sort.priority || 'desc')}`;
 
 		// Find and lock job atomically using UPDATE ... RETURNING with subquery
 		const result = await this.pool.query<IPostgresJobRow>(

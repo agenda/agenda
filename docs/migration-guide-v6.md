@@ -88,7 +88,7 @@ const agenda = new Agenda({
   processEvery: '30 seconds',
   maxConcurrency: 20,
   ensureIndex: true,
-  sort: { nextRunAt: 1, priority: -1 }
+  sort: { nextRunAt: 'asc', priority: 'desc' }
 });
 ```
 
@@ -112,7 +112,7 @@ const agenda = new Agenda({
   backend: new MongoBackend({
     mongo: mongoDb,
     ensureIndex: true,
-    sort: { nextRunAt: 1, priority: -1 }
+    sort: { nextRunAt: 'asc', priority: 'desc' }
   }),
   processEvery: '30 seconds',
   maxConcurrency: 20
@@ -142,7 +142,25 @@ Options have been split between Agenda and MongoBackend:
 | `forkHelper` | Agenda | Agenda (unchanged) |
 | `forkedWorker` | Agenda | Agenda (unchanged) |
 
-### 5. Removed Features
+### 5. Sort Direction Uses Strings
+
+The `sort` option now uses readable string values instead of numeric values:
+
+**Before (v5):**
+```javascript
+// Numeric values (1 = ascending, -1 = descending)
+sort: { nextRunAt: 1, priority: -1 }
+```
+
+**After (v6):**
+```javascript
+// String values ('asc' or 'desc')
+sort: { nextRunAt: 'asc', priority: 'desc' }
+```
+
+This applies to all backend configurations and query sort options.
+
+### 6. Removed Features
 
 The following features from agenda.js v4 are **not supported** in v6:
 
@@ -153,12 +171,12 @@ The following features from agenda.js v4 are **not supported** in v6:
 | Top-level `disable()`/`enable()` | Removed | Use `job.disable()`/`job.enable()` on individual jobs |
 | `startDate`/`endDate` in scheduling | Not implemented | Filter manually in job processor |
 
-### 6. Node.js Version Requirement
+### 7. Node.js Version Requirement
 
 **Before (v5):** Node.js 14+
 **After (v6):** Node.js 18+
 
-### 7. MongoDB Driver Version
+### 8. MongoDB Driver Version
 
 If using MongoDB, the driver was upgraded from v4 to v6. This may require updates if you're using MongoDB connection options that changed between driver versions.
 
@@ -382,7 +400,7 @@ Move `ensureIndex` and `sort` to MongoBackend:
 const agenda = new Agenda({
   mongo: db,
   ensureIndex: true,
-  sort: { priority: -1 }
+  sort: { priority: 'desc' }
 });
 
 // After
@@ -390,7 +408,7 @@ const agenda = new Agenda({
   backend: new MongoBackend({
     mongo: db,
     ensureIndex: true,
-    sort: { priority: -1 }
+    sort: { priority: 'desc' }
   })
 });
 ```

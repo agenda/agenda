@@ -28,7 +28,7 @@
 - `getRunningStats()` for monitoring
 - Fork mode for sandboxed job execution
 - Automatic connection handling
-- Does not create indexes by default - set `ensureIndex: true` or run manually:
+- Creates indexes automatically by default (`ensureIndex: true`). To create manually instead:
 
 ```
 db.agendaJobs.ensureIndex({
@@ -227,7 +227,7 @@ Possible agenda config options:
 	collection?: string;
 	// MongoDB client options
 	options?: MongoClientOptions;
-	// Create indexes on connect (default: false)
+	// Create indexes on connect (default: true)
 	ensureIndex?: boolean;
 	// Sort order for job queries
 	sort?: { [key: string]: SortDirection };
@@ -1056,7 +1056,7 @@ Jobs are run with priority in a first in first out order (so they will be run in
 
 For example, if we have two jobs named "send-email" queued (both with the same priority), and the first job is queued at 3:00 PM and second job is queued at 3:05 PM with the same `priority` value, then the first job will run first if we start to send "send-email" jobs at 3:10 PM. However if the first job has a priority of `5` and the second job has a priority of `10`, then the second will run first (priority takes precedence) at 3:10 PM.
 
-The default [MongoDB sort object](https://docs.mongodb.com/manual/reference/method/cursor.sort/) is `{ nextRunAt: 1, priority: -1 }` and can be changed through the option `sort` when configuring Agenda.
+The default sort order is `{ nextRunAt: 'asc', priority: 'desc' }` and can be changed through the `sort` option when configuring the backend.
 
 ### What is the difference between `lockLimit` and `maxConcurrency`?
 
@@ -1361,32 +1361,13 @@ be extremely useful in debugging certain issues and is encouraged.
 
 # Known Issues
 
-#### "Multiple order-by items are not supported. Please specify a single order-by item."
-
-When running Agenda on Azure cosmosDB, you might run into this issue caused by Agenda's sort query used for finding and locking the next job. To fix this, you can pass [custom sort option](#sortquery): `sort: { nextRunAt: 1 }`
-
 # Performance
 
-It is recommended to set this index if you use agendash:
+Performance tuning is backend-specific. See the documentation for your backend:
 
-```
-db.agendaJobs.ensureIndex({
-    "nextRunAt" : -1,
-    "lastRunAt" : -1,
-    "lastFinishedAt" : -1
-}, "agendash2")
-```
-
-If you have one job definition with thousand of instances, you can add this index to improve internal sorting query
-for faster sortings
-
-```
-db.agendaJobs.ensureIndex({
-    "name" : 1,
-    "disabled" : 1,
-    "lockedAt" : 1
-}, "findAndLockDeadJobs")
-```
+- **MongoDB**: See [@agenda.js/mongo-backend](https://www.npmjs.com/package/@agenda.js/mongo-backend) for index recommendations
+- **PostgreSQL**: See [@agenda.js/postgres-backend](https://www.npmjs.com/package/@agenda.js/postgres-backend) - indexes are created automatically by default
+- **Redis**: See [@agenda.js/redis-backend](https://www.npmjs.com/package/@agenda.js/redis-backend)
 
 # Sandboxed Worker - use child processes
 

@@ -36,5 +36,5 @@ export { MongoJobRepository } from './MongoJobRepository.js';
 export type { IMongoBackendConfig, IMongoJobRepositoryConfig, IMongoDbConfig } from './types.js';
 
 // Re-export mongodb types that users might need
-export type { Db, MongoClientOptions, SortDirection } from 'mongodb';
+export type { Db, MongoClientOptions } from 'mongodb';
 export { MongoClient, ObjectId } from 'mongodb';

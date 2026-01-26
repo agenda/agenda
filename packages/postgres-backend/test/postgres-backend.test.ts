@@ -51,11 +51,11 @@ fullAgendaTestSuite({
 	name: 'PostgresBackend',
 	createBackend: async () => {
 		const backend = new PostgresBackend({
-			connectionString: sharedConnectionString,
+			// Pass the shared pool so ownsConnection is false
+			// This allows stop() to not close the pool, so tests can query after stop
+			pool: sharedPool,
 			tableName: TEST_TABLE_NAME,
-			channelName: TEST_CHANNEL_NAME,
-			// Disable notification channel for tests - causes hangs
-			disableNotifications: true
+			channelName: TEST_CHANNEL_NAME
 		});
 		await backend.connect();
 		return backend;

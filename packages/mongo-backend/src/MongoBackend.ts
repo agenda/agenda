@@ -22,6 +22,7 @@ import type { IMongoBackendConfig } from './types.js';
  */
 export class MongoBackend implements IAgendaBackend {
 	private _repository: MongoJobRepository;
+	private _ownsConnection: boolean;
 
 	/**
 	 * MongoDB does not provide a notification channel.
@@ -31,6 +32,8 @@ export class MongoBackend implements IAgendaBackend {
 	readonly notificationChannel: INotificationChannel | undefined = undefined;
 
 	constructor(private config: IMongoBackendConfig) {
+		// Determine if we own the connection (not passed in by user)
+		this._ownsConnection = !('mongo' in config);
 		this._repository = new MongoJobRepository({
 			...('mongo' in config
 				? { mongo: config.mongo, db: { collection: config.collection } }
@@ -47,6 +50,14 @@ export class MongoBackend implements IAgendaBackend {
 	}
 
 	/**
+	 * Whether this backend owns its database connection.
+	 * True if created from address (connection string), false if mongo Db was passed in.
+	 */
+	get ownsConnection(): boolean {
+		return this._ownsConnection;
+	}
+
+	/**
 	 * Connect to MongoDB and initialize the collection.
 	 */
 	async connect(): Promise<void> {
@@ -55,11 +66,10 @@ export class MongoBackend implements IAgendaBackend {
 
 	/**
 	 * Disconnect from MongoDB.
-	 * Note: If using an existing Db instance, this does not close the connection.
+	 * Only closes the connection if we created it (i.e., from connection string).
+	 * If an existing Db instance was passed in, this is a no-op.
 	 */
 	async disconnect(): Promise<void> {
-		// MongoJobRepository doesn't currently have a disconnect method
-		// For passed-in connections, we don't own the lifecycle
-		// For connection string connections, we could add cleanup if needed
+		await this._repository.disconnect();
 	}
 }

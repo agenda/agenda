@@ -22,7 +22,8 @@ import type {
 	IJobsSort,
 	IJobRepository,
 	IJobRepositoryOptions,
-	IRemoveJobsOptions
+	IRemoveJobsOptions,
+	SortDirection
 } from 'agenda';
 import { toJobId, computeJobState } from 'agenda';
 import type { IMongoJobRepositoryConfig } from './types.js';
@@ -75,9 +76,13 @@ type MongoJobDocument = Omit<IJobParameters, '_id'> & { _id?: ObjectId };
  */
 export class MongoJobRepository implements IJobRepository {
 	collection!: Collection<MongoJobDocument>;
+	private mongoClient?: MongoClient;
+	private ownsConnection: boolean = false;
 
 	constructor(private connectOptions: IMongoJobRepositoryConfig) {
-		this.connectOptions.sort = this.connectOptions.sort || { nextRunAt: 1, priority: -1 };
+		this.connectOptions.sort = this.connectOptions.sort || { nextRunAt: 'asc', priority: 'desc' };
+		// Track if we own the connection (i.e., we created it from a connection string)
+		this.ownsConnection = !('mongo' in connectOptions);
 	}
 
 	private async createConnection(): Promise<Db> {
@@ -105,9 +110,8 @@ export class MongoJobRepository implements IJobRepository {
 	/**
 	 * Convert a SortDirection value to MongoDB's numeric sort direction
 	 */
-	private toMongoSortDirection(dir: 1 | -1 | 'asc' | 'desc' | 'ascending' | 'descending'): 1 | -1 {
-		if (dir === 1 || dir === 'asc' || dir === 'ascending') return 1;
-		return -1;
+	private toMongoSortDirection(dir: SortDirection): 1 | -1 {
+		return dir === 'asc' ? 1 : -1;
 	}
 
 	/**
@@ -436,7 +440,7 @@ export class MongoJobRepository implements IJobRepository {
 			);
 		}
 
-		if (this.connectOptions.ensureIndex) {
+		if (this.connectOptions.ensureIndex ?? true) {
 			log('attempting index creation');
 			try {
 				const result = await this.collection.createIndex(
@@ -465,11 +469,19 @@ export class MongoJobRepository implements IJobRepository {
 			connectionString = `mongodb://${connectionString}`;
 		}
 
-		const client = await MongoClient.connect(connectionString, {
+		this.mongoClient = await MongoClient.connect(connectionString, {
 			...options
 		});
 
-		return client.db();
+		return this.mongoClient.db();
+	}
+
+	async disconnect(): Promise<void> {
+		if (this.ownsConnection && this.mongoClient) {
+			log('closing owned MongoDB connection');
+			await this.mongoClient.close();
+			this.mongoClient = undefined;
+		}
 	}
 
 	async saveJobState(

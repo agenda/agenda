@@ -28,6 +28,16 @@ export interface IAgendaBackend {
 	readonly notificationChannel?: INotificationChannel;
 
 	/**
+	 * Whether the backend owns its database connection.
+	 * - true: backend created the connection (e.g., from connection string)
+	 * - false: connection was passed in by the user
+	 *
+	 * Used by agenda.stop() to determine whether to close the connection.
+	 * Defaults to true if not implemented.
+	 */
+	readonly ownsConnection?: boolean;
+
+	/**
 	 * Connect to the backend.
 	 * Called when agenda.start() is invoked.
 	 * Should establish database connections, set up notification subscriptions, etc.

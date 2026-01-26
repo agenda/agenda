@@ -1,4 +1,5 @@
 import type { Redis, RedisOptions } from 'ioredis';
+import type { SortDirection } from 'agenda';
 
 /**
  * Configuration options for RedisBackend
@@ -19,10 +20,10 @@ export interface IRedisBackendConfig {
 	/** Channel name for Pub/Sub notifications (default: 'agenda:notifications') */
 	channelName?: string;
 
-	/** Sort order for job queries (default: { nextRunAt: 1, priority: -1 }) */
+	/** Sort order for job queries (default: { nextRunAt: 'asc', priority: 'desc' }) */
 	sort?: {
-		nextRunAt?: 1 | -1;
-		priority?: 1 | -1;
+		nextRunAt?: SortDirection;
+		priority?: SortDirection;
 	};
 }
 

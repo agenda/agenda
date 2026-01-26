@@ -1,15 +1,4 @@
 /**
- * Sort direction for job queries
- * Compatible with MongoDB and other backends
+ * Sort direction for job queries.
  */
-export type SortDirection = 1 | -1 | 'asc' | 'desc' | 'ascending' | 'descending';
-
-/**
- * Database configuration options used internally by backends
- */
-export interface IDbConfig {
-	ensureIndex?: boolean;
-	sort?: {
-		[key: string]: SortDirection;
-	};
-}
+export type SortDirection = 'asc' | 'desc';
