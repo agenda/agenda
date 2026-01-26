@@ -51,6 +51,12 @@ class MockJobRepository implements JobRepository {
 	async getNextJobToRun() {
 		return undefined;
 	}
+	async disableJobs() {
+		return 0;
+	}
+	async enableJobs() {
+		return 0;
+	}
 }
 
 /**
