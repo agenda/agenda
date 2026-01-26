@@ -171,7 +171,7 @@ describe('MongoBackend', () => {
 				nextRunAt: new Date(),
 				type: 'normal',
 				data: {}
-			});
+			}, undefined);
 			expect(saved._id).toBeDefined();
 
 			await backendWithDb.disconnect();
@@ -189,7 +189,7 @@ describe('MongoBackend', () => {
 				nextRunAt: new Date(),
 				type: 'normal',
 				data: jobData
-			});
+			}, undefined);
 
 			// MongoDB requires exact match on data field
 			const result = await backend.repository.queryJobs({
@@ -208,14 +208,14 @@ describe('MongoBackend', () => {
 					nextRunAt: new Date(Date.now() - 1000),
 					type: 'normal',
 					data: { id: 1 }
-				}),
+				}, undefined),
 				backend.repository.saveJob({
 					name: 'concurrent-test',
 					priority: 0,
 					nextRunAt: new Date(Date.now() - 1000),
 					type: 'normal',
 					data: { id: 2 }
-				})
+				}, undefined)
 			]);
 
 			const now = new Date();
@@ -223,8 +223,8 @@ describe('MongoBackend', () => {
 			const lockDeadline = new Date(now.getTime() - 600000);
 
 			const [next1, next2] = await Promise.all([
-				backend.repository.getNextJobToRun('concurrent-test', nextScanAt, lockDeadline, now),
-				backend.repository.getNextJobToRun('concurrent-test', nextScanAt, lockDeadline, now)
+				backend.repository.getNextJobToRun('concurrent-test', nextScanAt, lockDeadline, now, undefined),
+				backend.repository.getNextJobToRun('concurrent-test', nextScanAt, lockDeadline, now, undefined)
 			]);
 
 			expect(next1).toBeDefined();
@@ -257,7 +257,7 @@ describe('MongoBackend', () => {
 				nextRunAt: new Date(),
 				type: 'normal',
 				data: {}
-			});
+			}, undefined);
 
 			const indexes = await db.collection(testCollection).indexes();
 			// Should only have _id index
@@ -284,7 +284,7 @@ describe('MongoBackend', () => {
 				nextRunAt: new Date(),
 				type: 'normal',
 				data: {}
-			});
+			}, undefined);
 
 			// Verify the job was saved (this ensures the collection exists)
 			const jobs = await backendWithIndex.repository.queryJobs({ name: 'index-test' });
@@ -319,7 +319,7 @@ describe('MongoBackend', () => {
 				nextRunAt: new Date(),
 				type: 'normal',
 				data: {}
-			});
+			}, undefined);
 
 			// Creating second backend with same collection should not throw
 			const backend2 = new MongoBackend({
@@ -335,7 +335,7 @@ describe('MongoBackend', () => {
 				nextRunAt: new Date(),
 				type: 'normal',
 				data: {}
-			});
+			}, undefined);
 
 			await backend1.disconnect();
 			await backend2.disconnect();
