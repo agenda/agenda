@@ -31,6 +31,7 @@ import { repositoryTestSuite } from './repository-test-suite.js';
 import { agendaTestSuite, type ForkHelperConfig } from './agenda-test-suite.js';
 import { jobProcessorTestSuite } from './jobprocessor-test-suite.js';
 import { retryTestSuite } from './retry-test-suite.js';
+import { backoffTestSuite } from './backoff-test-suite.js';
 
 export interface FullAgendaTestConfig {
 	/** Name for the test suite (e.g., 'MongoDB', 'PostgreSQL') */
@@ -53,6 +54,7 @@ export interface FullAgendaTestConfig {
 		agenda?: boolean;
 		jobProcessor?: boolean;
 		retry?: boolean;
+		backoff?: boolean;
 		forkMode?: boolean;
 	};
 }
@@ -65,6 +67,7 @@ export interface FullAgendaTestConfig {
  * - Agenda integration tests (scheduling, processing, events, Job class)
  * - JobProcessor tests (concurrency, locking, stats)
  * - Retry tests (job retry behavior)
+ * - Backoff tests (automatic retry with backoff strategies)
  */
 export function fullAgendaTestSuite(config: FullAgendaTestConfig): void {
 	const skip = config.skip ?? {};
@@ -113,6 +116,16 @@ export function fullAgendaTestSuite(config: FullAgendaTestConfig): void {
 	// Retry tests
 	if (!skip.retry) {
 		retryTestSuite({
+			name: config.name,
+			createBackend: config.createBackend,
+			cleanupBackend: config.cleanupBackend,
+			clearJobs: config.clearJobs
+		});
+	}
+
+	// Backoff tests
+	if (!skip.backoff) {
+		backoffTestSuite({
 			name: config.name,
 			createBackend: config.createBackend,
 			cleanupBackend: config.cleanupBackend,

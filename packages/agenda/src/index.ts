@@ -66,6 +66,20 @@ export interface AgendaOptions {
 }
 
 /**
+ * Details provided when a job is scheduled for retry
+ */
+export interface RetryDetails {
+	/** The retry attempt number (1-based) */
+	attempt: number;
+	/** Delay in milliseconds before the retry */
+	delay: number;
+	/** When the retry will be executed */
+	nextRunAt: Date;
+	/** The error that caused the failure */
+	error: Error;
+}
+
+/**
  * Event names that Agenda emits
  */
 export type AgendaEventName =
@@ -75,10 +89,14 @@ export type AgendaEventName =
 	| 'success'
 	| 'start'
 	| 'complete'
+	| 'retry'
+	| 'retry exhausted'
 	| `fail:${string}`
 	| `success:${string}`
 	| `start:${string}`
-	| `complete:${string}`;
+	| `complete:${string}`
+	| `retry:${string}`
+	| `retry exhausted:${string}`;
 
 /**
  * @class
@@ -109,11 +127,20 @@ export class Agenda extends EventEmitter {
 	on(event: 'start', listener: (job: JobWithId) => void): this;
 	on(event: 'complete', listener: (job: JobWithId) => void): this;
 
+	// Retry events (generic)
+	on(event: 'retry', listener: (job: JobWithId, details: RetryDetails) => void): this;
+	on(event: 'retry exhausted', listener: (error: Error, job: JobWithId) => void): this;
+
 	// Job-specific events (e.g., 'fail:myJobName')
 	on(event: `fail:${string}`, listener: (error: Error, job: JobWithId) => void): this;
 	on(event: `success:${string}`, listener: (job: JobWithId) => void): this;
 	on(event: `start:${string}`, listener: (job: JobWithId) => void): this;
 	on(event: `complete:${string}`, listener: (job: JobWithId) => void): this;
+	on(event: `retry:${string}`, listener: (job: JobWithId, details: RetryDetails) => void): this;
+	on(
+		event: `retry exhausted:${string}`,
+		listener: (error: Error, job: JobWithId) => void
+	): this;
 
 	// Implementation (eslint-disable needed because overloads provide the public type safety)
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -413,7 +440,9 @@ export class Agenda extends EventEmitter {
 	define<DATA = any>(
 		name: string,
 		processor: (agendaJob: Job<DATA>, done: (error?: Error) => void) => void,
-		options?: Partial<Pick<JobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency'>> & {
+		options?: Partial<
+			Pick<JobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency' | 'backoff'>
+		> & {
 			priority?: JobPriority;
 		}
 	): void;
@@ -421,14 +450,18 @@ export class Agenda extends EventEmitter {
 	define<DATA = any>(
 		name: string,
 		processor: (agendaJob: Job<DATA>) => Promise<void>,
-		options?: Partial<Pick<JobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency'>> & {
+		options?: Partial<
+			Pick<JobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency' | 'backoff'>
+		> & {
 			priority?: JobPriority;
 		}
 	): void;
 	define(
 		name: string,
 		processor: ((job: Job) => Promise<void>) | ((job: Job, done: (err?: Error) => void) => void),
-		options?: Partial<Pick<JobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency'>> & {
+		options?: Partial<
+			Pick<JobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency' | 'backoff'>
+		> & {
 			priority?: JobPriority;
 		}
 	): void {
@@ -444,7 +477,8 @@ export class Agenda extends EventEmitter {
 			concurrency: options?.concurrency || this.attrs.defaultConcurrency,
 			lockLimit: options?.lockLimit || this.attrs.defaultLockLimit,
 			priority: parsePriority(options?.priority),
-			lockLifetime: options?.lockLifetime || this.attrs.defaultLockLifetime
+			lockLifetime: options?.lockLifetime || this.attrs.defaultLockLifetime,
+			backoff: options?.backoff
 		};
 		log('job [%s] defined with following options: \n%O', name, this.definitions[name]);
 	}
@@ -836,3 +870,17 @@ export {
 } from './utils/dateConstraints.js';
 
 export * from './decorators/index.js';
+
+export {
+	backoffStrategies,
+	constant,
+	linear,
+	exponential,
+	combine,
+	when,
+	type BackoffStrategy,
+	type BackoffContext,
+	type BackoffOptions,
+	type ExponentialBackoffOptions,
+	type LinearBackoffOptions
+} from './utils/backoff.js';

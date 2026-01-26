@@ -7,6 +7,7 @@ import { JobParameters, datefields, TJobDatefield, JobId } from './types/JobPara
 import { JobPriority, parsePriority } from './utils/priority.js';
 import { computeFromInterval, computeFromRepeatAt } from './utils/nextRunAt.js';
 import { applyAllDateConstraints } from './utils/dateConstraints.js';
+import type { BackoffContext } from './utils/backoff.js';
 
 const log = debug('agenda:job');
 
@@ -442,6 +443,77 @@ export class Job<DATA = unknown | void> {
 		return this;
 	}
 
+	/**
+	 * Handle automatic retry with backoff strategy
+	 * @param error - The error that caused the failure
+	 */
+	private async handleRetry(error: Error): Promise<void> {
+		const definition = this.agenda.definitions[this.attrs.name];
+
+		// No backoff strategy configured - skip auto-retry
+		if (!definition?.backoff) {
+			return;
+		}
+
+		// Don't retry repeating jobs - they'll run again on their schedule
+		if (this.attrs.repeatInterval || this.attrs.repeatAt) {
+			log(
+				'[%s:%s] skipping auto-retry for repeating job',
+				this.attrs.name,
+				this.attrs._id
+			);
+			return;
+		}
+
+		const context: BackoffContext = {
+			attempt: this.attrs.failCount || 1,
+			error,
+			jobName: this.attrs.name,
+			jobData: this.attrs.data
+		};
+
+		const retryDelay = definition.backoff(context);
+
+		if (retryDelay === null) {
+			// No more retries - emit exhausted event
+			log(
+				'[%s:%s] retry attempts exhausted after %d failures',
+				this.attrs.name,
+				this.attrs._id,
+				this.attrs.failCount
+			);
+			this.agenda.emit('retry exhausted', error, this);
+			this.agenda.emit(`retry exhausted:${this.attrs.name}`, error, this);
+			return;
+		}
+
+		// Schedule retry
+		const nextRunAt = new Date(Date.now() + retryDelay);
+		this.attrs.nextRunAt = nextRunAt;
+
+		log(
+			'[%s:%s] scheduling retry #%d in %dms (at %s)',
+			this.attrs.name,
+			this.attrs._id,
+			this.attrs.failCount,
+			retryDelay,
+			nextRunAt.toISOString()
+		);
+
+		this.agenda.emit('retry', this, {
+			attempt: this.attrs.failCount!,
+			delay: retryDelay,
+			nextRunAt,
+			error
+		});
+		this.agenda.emit(`retry:${this.attrs.name}`, this, {
+			attempt: this.attrs.failCount!,
+			delay: retryDelay,
+			nextRunAt,
+			error
+		});
+	}
+
 	async run(): Promise<void> {
 		this.attrs.lastRunAt = new Date();
 		log(
@@ -524,6 +596,9 @@ export class Job<DATA = unknown | void> {
 			this.agenda.emit('fail', error, this);
 			this.agenda.emit(`fail:${this.attrs.name}`, error, this);
 			log('[%s:%s] has failed [%s]', this.attrs.name, this.attrs._id, (error as Error).message);
+
+			// Handle automatic retry with backoff strategy
+			await this.handleRetry(error as Error);
 		} finally {
 			this.forkedChild = undefined;
 			this.attrs.lockedAt = undefined;
