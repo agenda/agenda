@@ -283,29 +283,37 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				expect(processed).toBe(false);
 			});
 
-			// TODO: Add agenda.disable() and agenda.enable() methods to Agenda class
-			// These would allow bulk disable/enable of jobs by query
-			// it('should disable jobs matching query via agenda.disable()', async () => {
-			// 	await agenda.now('disable-test');
-			// 	await agenda.now('disable-test');
-			//
-			// 	const disabled = await agenda.disable({ name: 'disable-test' });
-			// 	expect(disabled).toBe(2);
-			//
-			// 	const result = await agenda.queryJobs({ name: 'disable-test' });
-			// 	result.jobs.forEach(job => expect(job.disabled).toBe(true));
-			// });
-			//
-			// it('should enable disabled jobs via agenda.enable()', async () => {
-			// 	const job = await agenda.now('enable-test');
-			// 	await job.disable().save();
-			//
-			// 	const enabled = await agenda.enable({ name: 'enable-test' });
-			// 	expect(enabled).toBe(1);
-			//
-			// 	const result = await agenda.queryJobs({ name: 'enable-test' });
-			// 	expect(result.jobs[0].disabled).toBeFalsy();
-			// });
+			it('should disable jobs matching query via agenda.disable()', async () => {
+				await agenda.now('bulk-disable-test');
+				await agenda.now('bulk-disable-test');
+
+				const disabled = await agenda.disable({ name: 'bulk-disable-test' });
+				expect(disabled).toBe(2);
+
+				const result = await agenda.queryJobs({ name: 'bulk-disable-test' });
+				result.jobs.forEach(job => expect(job.disabled).toBe(true));
+			});
+
+			it('should enable disabled jobs via agenda.enable()', async () => {
+				const job = await agenda.now('bulk-enable-test');
+				await job.disable().save();
+
+				const enabled = await agenda.enable({ name: 'bulk-enable-test' });
+				expect(enabled).toBe(1);
+
+				const result = await agenda.queryJobs({ name: 'bulk-enable-test' });
+				expect(result.jobs[0].disabled).toBeFalsy();
+			});
+
+			it('should return 0 when no jobs match disable query', async () => {
+				const disabled = await agenda.disable({ name: 'non-existent-job' });
+				expect(disabled).toBe(0);
+			});
+
+			it('should return 0 when no options provided to disable', async () => {
+				const disabled = await agenda.disable({});
+				expect(disabled).toBe(0);
+			});
 		});
 
 		describe('job processing', () => {

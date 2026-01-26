@@ -168,7 +168,6 @@ The following features from agenda.js v4 are **not supported** in v6:
 |---------|--------|-------------|
 | `shouldSaveResult` | Removed | Store results manually in job data |
 | `_collection` internal access | Removed | Use `agenda.db` (IJobRepository) |
-| Top-level `disable()`/`enable()` | Removed | Use `job.disable()`/`job.enable()` on individual jobs |
 
 ### 7. Node.js Version Requirement
 

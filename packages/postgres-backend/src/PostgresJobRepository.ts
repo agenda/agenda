@@ -387,6 +387,74 @@ export class PostgresJobRepository implements JobRepository {
 		return result.rowCount || 0;
 	}
 
+	/**
+	 * Build PostgreSQL filter conditions from RemoveJobsOptions
+	 */
+	private buildFilterFromOptions(options: RemoveJobsOptions): { conditions: string[]; params: unknown[] } | null {
+		const conditions: string[] = [];
+		const params: unknown[] = [];
+		let paramIndex = 1;
+
+		if (options.id) {
+			conditions.push(`id = $${paramIndex++}`);
+			params.push(options.id.toString());
+		} else if (options.ids && options.ids.length > 0) {
+			conditions.push(`id = ANY($${paramIndex++}::uuid[])`);
+			params.push(options.ids.map(id => id.toString()));
+		}
+
+		if (options.name) {
+			conditions.push(`name = $${paramIndex++}`);
+			params.push(options.name);
+		} else if (options.names && options.names.length > 0) {
+			conditions.push(`name = ANY($${paramIndex++})`);
+			params.push(options.names);
+		} else if (options.notNames && options.notNames.length > 0) {
+			conditions.push(`name != ALL($${paramIndex++})`);
+			params.push(options.notNames);
+		}
+
+		if (options.data !== undefined) {
+			conditions.push(`data @> $${paramIndex++}::jsonb`);
+			params.push(JSON.stringify(options.data));
+		}
+
+		// If no criteria provided, return null
+		if (conditions.length === 0) {
+			return null;
+		}
+
+		return { conditions, params };
+	}
+
+	async disableJobs(options: RemoveJobsOptions): Promise<number> {
+		const filter = this.buildFilterFromOptions(options);
+		if (!filter) {
+			return 0;
+		}
+
+		const result = await this.pool.query(
+			`UPDATE "${this.tableName}" SET disabled = TRUE WHERE ${filter.conditions.join(' AND ')}`,
+			filter.params
+		);
+
+		return result.rowCount || 0;
+	}
+
+	async enableJobs(options: RemoveJobsOptions): Promise<number> {
+		const filter = this.buildFilterFromOptions(options);
+		if (!filter) {
+			return 0;
+		}
+
+		const result = await this.pool.query(
+			`UPDATE "${this.tableName}" SET disabled = FALSE WHERE ${filter.conditions.join(' AND ')}`,
+			filter.params
+		);
+
+		return result.rowCount || 0;
+	}
+
 	async unlockJob(job: JobParameters): Promise<void> {
 		if (!job._id) return;
 
