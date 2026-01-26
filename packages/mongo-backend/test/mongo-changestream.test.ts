@@ -1,7 +1,20 @@
 import { expect, describe, it, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
-import { Db, MongoClient } from 'mongodb';
+import type { ChangeStream, Db } from 'mongodb';
+import { MongoClient } from 'mongodb';
 import { randomUUID } from 'crypto';
+import type { JobNotification, NotificationChannelState } from 'agenda';
+import { toJobId } from 'agenda';
 import { MongoChangeStreamNotificationChannel } from '../src/index.js';
+
+/**
+ * Interface for accessing private/protected properties in tests.
+ * This allows type-safe access to internal state for testing purposes.
+ */
+interface TestableChannel {
+	_state: NotificationChannelState;
+	useFullDocument: boolean;
+	changeStream?: ChangeStream;
+}
 
 /**
  * MongoDB Change Stream Notification Channel tests.
@@ -82,7 +95,7 @@ describe('MongoChangeStreamNotificationChannel unit tests', () => {
 
 			// Mock connected state by manually setting it
 			// Note: This is a test-only scenario
-			(channel as any)._state = 'connected';
+			(channel as unknown as TestableChannel)._state = 'connected';
 
 			expect(() => channel.setDb({} as Db)).toThrow('Cannot set database while channel is connected');
 		} finally {
@@ -105,14 +118,14 @@ describe('MongoChangeStreamNotificationChannel unit tests', () => {
 
 	it('should default fullDocument to true', () => {
 		const channel = new MongoChangeStreamNotificationChannel();
-		expect((channel as any).useFullDocument).toBe(true);
+		expect((channel as unknown as TestableChannel).useFullDocument).toBe(true);
 	});
 
 	it('should allow disabling fullDocument', () => {
 		const channel = new MongoChangeStreamNotificationChannel({
 			fullDocument: false
 		});
-		expect((channel as any).useFullDocument).toBe(false);
+		expect((channel as unknown as TestableChannel).useFullDocument).toBe(false);
 	});
 });
 
@@ -143,13 +156,13 @@ describe('MongoChangeStreamNotificationChannel integration tests', () => {
 
 			// Even without connecting, publish should not throw
 			// (it's a no-op for change streams)
-			const notification = {
-				jobId: 'test-id' as any,
+			const notification: JobNotification = {
+				jobId: toJobId('test-id'),
 				jobName: 'test-job',
 				nextRunAt: new Date(),
 				priority: 0,
 				timestamp: new Date(),
-				source: 'test' as const
+				source: 'test'
 			};
 
 			// publish is a no-op, should not throw
@@ -279,7 +292,7 @@ describe('MongoChangeStreamNotificationChannel change stream tests', () => {
 	it('should detect job inserts', async () => {
 		await channel.connect();
 
-		const notifications: any[] = [];
+		const notifications: JobNotification[] = [];
 		channel.subscribe(async notification => {
 			notifications.push(notification);
 		});
@@ -312,7 +325,7 @@ describe('MongoChangeStreamNotificationChannel change stream tests', () => {
 			data: {}
 		});
 
-		const notifications: any[] = [];
+		const notifications: JobNotification[] = [];
 		channel.subscribe(async notification => {
 			notifications.push(notification);
 		});
@@ -337,7 +350,7 @@ describe('MongoChangeStreamNotificationChannel change stream tests', () => {
 	it('should skip jobs without nextRunAt', async () => {
 		await channel.connect();
 
-		const notifications: any[] = [];
+		const notifications: JobNotification[] = [];
 		channel.subscribe(async notification => {
 			notifications.push(notification);
 		});
@@ -359,7 +372,7 @@ describe('MongoChangeStreamNotificationChannel change stream tests', () => {
 	it('should skip disabled jobs', async () => {
 		await channel.connect();
 
-		const notifications: any[] = [];
+		const notifications: JobNotification[] = [];
 		channel.subscribe(async notification => {
 			notifications.push(notification);
 		});
@@ -392,7 +405,7 @@ describe('MongoChangeStreamNotificationChannel change stream tests', () => {
 		await channel.connect();
 
 		// Force an error by closing the stream
-		(channel as any).changeStream?.close();
+		(channel as unknown as TestableChannel).changeStream?.close();
 
 		// Wait for reconnection logic
 		await new Promise(resolve => setTimeout(resolve, 2000));
