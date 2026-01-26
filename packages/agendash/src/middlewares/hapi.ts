@@ -4,7 +4,7 @@ import type { Agenda } from 'agenda';
 import type { Server, Plugin, Request, ResponseToolkit } from '@hapi/hapi';
 import { AgendashController } from '../AgendashController.js';
 import { cspHeader } from '../csp.js';
-import type { IApiQueryParams, ICreateJobRequest, IDeleteRequest, IRequeueRequest } from '../types.js';
+import type { ApiQueryParams, CreateJobRequest, DeleteRequest, RequeueRequest } from '../types.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -82,7 +82,7 @@ export function createHapiPlugin(agenda: Agenda): Plugin<AgendashHapiOptions> {
 				handler: async (request: Request, h: ResponseToolkit) => {
 					try {
 						const query = request.query as ApiQuery;
-						const params: IApiQueryParams = {
+						const params: ApiQueryParams = {
 							name: query.job,
 							state: query.state,
 							search: query.q,
@@ -108,7 +108,7 @@ export function createHapiPlugin(agenda: Agenda): Plugin<AgendashHapiOptions> {
 				path: '/api/jobs/requeue',
 				handler: async (request: Request, h: ResponseToolkit) => {
 					try {
-						const { jobIds } = request.payload as IRequeueRequest;
+						const { jobIds } = request.payload as RequeueRequest;
 						return await controller.requeueJobs(jobIds);
 					} catch (error) {
 						return h
@@ -126,7 +126,7 @@ export function createHapiPlugin(agenda: Agenda): Plugin<AgendashHapiOptions> {
 				path: '/api/jobs/delete',
 				handler: async (request: Request, h: ResponseToolkit) => {
 					try {
-						const { jobIds } = request.payload as IDeleteRequest;
+						const { jobIds } = request.payload as DeleteRequest;
 						const result = await controller.deleteJobs(jobIds);
 						if (result.deleted) {
 							return h.response(result);
@@ -148,7 +148,7 @@ export function createHapiPlugin(agenda: Agenda): Plugin<AgendashHapiOptions> {
 				path: '/api/jobs/create',
 				handler: async (request: Request, h: ResponseToolkit) => {
 					try {
-						const options = request.payload as ICreateJobRequest;
+						const options = request.payload as CreateJobRequest;
 						return await controller.createJob(options);
 					} catch (error) {
 						return h

@@ -11,7 +11,7 @@ export function toJobId(id: string): JobId {
 	return id as JobId;
 }
 
-export interface IJobParameters<DATA = unknown | void> {
+export interface JobParameters<DATA = unknown | void> {
 	/** Job ID */
 	_id?: JobId;
 
@@ -54,7 +54,7 @@ export interface IJobParameters<DATA = unknown | void> {
 }
 
 export type TJobDatefield = keyof Pick<
-	IJobParameters,
+	JobParameters,
 	'lastRunAt' | 'lastFinishedAt' | 'nextRunAt' | 'failedAt' | 'lockedAt'
 >;
 

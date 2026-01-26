@@ -1,5 +1,5 @@
 import type { Job, JobWithId } from './Job.js';
-import type { IJobParameters } from './types/JobParameters.js';
+import type { JobParameters } from './types/JobParameters.js';
 import type { Agenda } from './index.js';
 /**
  * @class
@@ -100,8 +100,8 @@ export class JobProcessingQueue {
 				  }
 				| undefined;
 		},
-		handledJobs: IJobParameters['_id'][]
-	): (JobWithId & { attrs: IJobParameters & { nextRunAt?: Date | null } }) | undefined {
+		handledJobs: JobParameters['_id'][]
+	): (JobWithId & { attrs: JobParameters & { nextRunAt?: Date | null } }) | undefined {
 		const next = (Object.keys(this._queue) as unknown as number[]).reverse().find(i => {
 			const def = this.agenda.definitions[this._queue[i].attrs.name];
 			const status = jobStatus[this._queue[i].attrs.name];
@@ -121,7 +121,7 @@ export class JobProcessingQueue {
 		});
 
 		return next !== undefined
-			? (this._queue[next] as JobWithId & { attrs: IJobParameters & { nextRunAt: Date } })
+			? (this._queue[next] as JobWithId & { attrs: JobParameters & { nextRunAt: Date } })
 			: undefined;
 	}
 }

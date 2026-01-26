@@ -1,8 +1,8 @@
 /**
- * Shared test suite for IJobRepository implementations
+ * Shared test suite for JobRepository implementations
  *
  * This file exports test suite factories that can be used to test any
- * IJobRepository implementation (MongoDB, PostgreSQL, etc.)
+ * JobRepository implementation (MongoDB, PostgreSQL, etc.)
  *
  * Usage:
  * ```typescript
@@ -23,17 +23,17 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import type { IJobRepository, IJobParameters } from '../../src/index.js';
+import type { JobRepository, JobParameters } from '../../src/index.js';
 
 export interface RepositoryTestConfig {
 	/** Name for the test suite */
 	name: string;
 	/** Factory to create a fresh repository instance */
-	createRepository: () => Promise<IJobRepository>;
+	createRepository: () => Promise<JobRepository>;
 	/** Cleanup function called after each test */
-	cleanupRepository: (repo: IJobRepository) => Promise<void>;
+	cleanupRepository: (repo: JobRepository) => Promise<void>;
 	/** Optional: clear all jobs between tests (if not provided, uses removeJobs) */
-	clearJobs?: (repo: IJobRepository) => Promise<void>;
+	clearJobs?: (repo: JobRepository) => Promise<void>;
 	/** Skip specific tests if not supported by the backend */
 	skip?: {
 		uniqueConstraints?: boolean;
@@ -42,11 +42,11 @@ export interface RepositoryTestConfig {
 }
 
 /**
- * Creates a test suite for IJobRepository implementations
+ * Creates a test suite for JobRepository implementations
  */
 export function repositoryTestSuite(config: RepositoryTestConfig): void {
-	describe(`${config.name} - IJobRepository`, () => {
-		let repo: IJobRepository;
+	describe(`${config.name} - JobRepository`, () => {
+		let repo: JobRepository;
 
 		const clearJobs = async () => {
 			if (config.clearJobs) {
@@ -72,7 +72,7 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 
 		describe('saveJob', () => {
 			it('should save a new job and assign an ID', async () => {
-				const job: IJobParameters = {
+				const job: JobParameters = {
 					name: 'test-job',
 					priority: 10,
 					nextRunAt: new Date(),
@@ -90,7 +90,7 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 			});
 
 			it('should update an existing job', async () => {
-				const job: IJobParameters = {
+				const job: JobParameters = {
 					name: 'update-test',
 					priority: 5,
 					nextRunAt: new Date(),
@@ -111,7 +111,7 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 			});
 
 			it('should handle single type jobs (upsert by name)', async () => {
-				const job1: IJobParameters = {
+				const job1: JobParameters = {
 					name: 'single-job',
 					priority: 5,
 					nextRunAt: new Date(Date.now() + 60000),
@@ -121,7 +121,7 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 
 				const saved1 = await repo.saveJob(job1, undefined);
 
-				const job2: IJobParameters = {
+				const job2: JobParameters = {
 					name: 'single-job',
 					priority: 10,
 					nextRunAt: new Date(Date.now() + 120000),
@@ -140,7 +140,7 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 			});
 
 			it('should preserve disabled flag', async () => {
-				const job: IJobParameters = {
+				const job: JobParameters = {
 					name: 'disabled-job',
 					priority: 0,
 					nextRunAt: new Date(),

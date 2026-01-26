@@ -3,24 +3,24 @@ import { Redis } from 'ioredis';
 import { randomUUID } from 'crypto';
 import { toJobId, computeJobState } from 'agenda';
 import type {
-	IJobRepository,
-	IJobRepositoryOptions,
-	IRemoveJobsOptions,
-	IJobParameters,
+	JobRepository,
+	JobRepositoryOptions,
+	RemoveJobsOptions,
+	JobParameters,
 	JobId,
-	IJobsQueryOptions,
-	IJobsResult,
-	IJobsOverview,
-	IJobWithState,
-	IJobsSort,
+	JobsQueryOptions,
+	JobsResult,
+	JobsOverview,
+	JobWithState,
+	JobsSort,
 	SortDirection
 } from 'agenda';
-import type { IRedisBackendConfig, IRedisJobData } from './types.js';
+import type { RedisBackendConfig, RedisJobData } from './types.js';
 
 const log = debug('agenda:redis:repository');
 
 /**
- * Redis implementation of IJobRepository
+ * Redis implementation of JobRepository
  *
  * Data structure:
  * - `{prefix}job:{id}` - Hash containing job data
@@ -29,13 +29,13 @@ const log = debug('agenda:redis:repository');
  * - `{prefix}jobs:by_next_run_at` - Sorted set of job IDs by nextRunAt timestamp
  * - `{prefix}jobs:single:{name}` - String storing ID of single-type job for a name
  */
-export class RedisJobRepository implements IJobRepository {
+export class RedisJobRepository implements JobRepository {
 	private redis: Redis;
 	private ownClient: boolean;
 	private keyPrefix: string;
 	private sort: { nextRunAt?: SortDirection; priority?: SortDirection };
 
-	constructor(private config: IRedisBackendConfig) {
+	constructor(private config: RedisBackendConfig) {
 		this.keyPrefix = config.keyPrefix || 'agenda:';
 		this.sort = config.sort || { nextRunAt: 'asc', priority: 'desc' };
 
@@ -85,9 +85,9 @@ export class RedisJobRepository implements IJobRepository {
 	}
 
 	/**
-	 * Convert Redis hash data to IJobParameters
+	 * Convert Redis hash data to JobParameters
 	 */
-	private hashToJob<DATA = unknown>(data: Record<string, string>): IJobParameters<DATA> {
+	private hashToJob<DATA = unknown>(data: Record<string, string>): JobParameters<DATA> {
 		return {
 			_id: toJobId(data.id) as JobId,
 			name: data.name,
@@ -132,13 +132,13 @@ export class RedisJobRepository implements IJobRepository {
 	}
 
 	/**
-	 * Convert IJobParameters to Redis hash data
+	 * Convert JobParameters to Redis hash data
 	 */
 	private jobToHash<DATA = unknown>(
-		job: IJobParameters<DATA>,
+		job: JobParameters<DATA>,
 		id: string,
 		lastModifiedBy: string | undefined
-	): IRedisJobData {
+	): RedisJobData {
 		const now = new Date().toISOString();
 		return {
 			id,
@@ -179,7 +179,7 @@ export class RedisJobRepository implements IJobRepository {
 		return nextRunAt.getTime() + priorityPart;
 	}
 
-	async getJobById(id: string): Promise<IJobParameters | null> {
+	async getJobById(id: string): Promise<JobParameters | null> {
 		const data = await this.redis.hgetall(this.key(`job:${id}`));
 
 		if (!data || Object.keys(data).length === 0) {
@@ -189,7 +189,7 @@ export class RedisJobRepository implements IJobRepository {
 		return this.hashToJob(data);
 	}
 
-	async queryJobs(options: IJobsQueryOptions = {}): Promise<IJobsResult> {
+	async queryJobs(options: JobsQueryOptions = {}): Promise<JobsResult> {
 		const {
 			name,
 			names,
@@ -222,7 +222,7 @@ export class RedisJobRepository implements IJobRepository {
 		}
 
 		// Fetch all jobs
-		const jobs: IJobWithState[] = [];
+		const jobs: JobWithState[] = [];
 		for (const jobId of jobIds) {
 			const jobData = await this.redis.hgetall(this.key(`job:${jobId}`));
 			if (!jobData || Object.keys(jobData).length === 0) continue;
@@ -263,7 +263,7 @@ export class RedisJobRepository implements IJobRepository {
 		return { jobs: result, total };
 	}
 
-	private sortJobs(jobs: IJobWithState[], sort?: IJobsSort): void {
+	private sortJobs(jobs: JobWithState[], sort?: JobsSort): void {
 		jobs.sort((a, b) => {
 			if (sort) {
 				if (sort.nextRunAt !== undefined) {
@@ -303,7 +303,7 @@ export class RedisJobRepository implements IJobRepository {
 		});
 	}
 
-	async getJobsOverview(): Promise<IJobsOverview[]> {
+	async getJobsOverview(): Promise<JobsOverview[]> {
 		const now = new Date();
 		const names = await this.getDistinctJobNames();
 
@@ -311,7 +311,7 @@ export class RedisJobRepository implements IJobRepository {
 			names.map(async (name: string) => {
 				const jobIds = await this.redis.smembers(this.key(`jobs:by_name:${name}`));
 
-				const overview: IJobsOverview = {
+				const overview: JobsOverview = {
 					name,
 					total: jobIds.length,
 					running: 0,
@@ -356,7 +356,7 @@ export class RedisJobRepository implements IJobRepository {
 		return jobIds.length;
 	}
 
-	async removeJobs(options: IRemoveJobsOptions): Promise<number> {
+	async removeJobs(options: RemoveJobsOptions): Promise<number> {
 		let jobIds: string[] = [];
 
 		if (options.id) {
@@ -424,7 +424,7 @@ export class RedisJobRepository implements IJobRepository {
 		await pipeline.exec();
 	}
 
-	async unlockJob(job: IJobParameters): Promise<void> {
+	async unlockJob(job: JobParameters): Promise<void> {
 		if (!job._id) return;
 
 		const jobId = job._id.toString();
@@ -446,9 +446,9 @@ export class RedisJobRepository implements IJobRepository {
 	}
 
 	async lockJob(
-		job: IJobParameters,
-		options: IJobRepositoryOptions | undefined
-	): Promise<IJobParameters | undefined> {
+		job: JobParameters,
+		options: JobRepositoryOptions | undefined
+	): Promise<JobParameters | undefined> {
 		if (!job._id) return undefined;
 
 		const jobId = job._id.toString();
@@ -611,8 +611,8 @@ export class RedisJobRepository implements IJobRepository {
 		nextScanAt: Date,
 		lockDeadline: Date,
 		now: Date | undefined,
-		options: IJobRepositoryOptions | undefined
-	): Promise<IJobParameters | undefined> {
+		options: JobRepositoryOptions | undefined
+	): Promise<JobParameters | undefined> {
 		const lockTime = now ?? new Date();
 
 		// Use Lua script for atomic find-and-lock
@@ -643,8 +643,8 @@ export class RedisJobRepository implements IJobRepository {
 	}
 
 	async saveJobState(
-		job: IJobParameters,
-		options: IJobRepositoryOptions | undefined
+		job: JobParameters,
+		options: JobRepositoryOptions | undefined
 	): Promise<void> {
 		if (!job._id) {
 			throw new Error('Cannot save job state without job ID');
@@ -692,9 +692,9 @@ export class RedisJobRepository implements IJobRepository {
 	}
 
 	async saveJob<DATA = unknown>(
-		job: IJobParameters<DATA>,
-		options: IJobRepositoryOptions | undefined
-	): Promise<IJobParameters<DATA>> {
+		job: JobParameters<DATA>,
+		options: JobRepositoryOptions | undefined
+	): Promise<JobParameters<DATA>> {
 		log('attempting to save a job');
 
 		const { _id, unique, uniqueOpts, ...props } = job;
@@ -802,7 +802,7 @@ export class RedisJobRepository implements IJobRepository {
 
 			// Create new single job
 			const newId = randomUUID();
-			const hashData = this.jobToHash(props as IJobParameters<DATA>, newId, options?.lastModifiedBy);
+			const hashData = this.jobToHash(props as JobParameters<DATA>, newId, options?.lastModifiedBy);
 
 			await this.redis.hset(this.key(`job:${newId}`), hashData as unknown as Record<string, string>);
 			await this.redis.sadd(this.key('jobs:all'), newId);
@@ -884,7 +884,7 @@ export class RedisJobRepository implements IJobRepository {
 		// Insert new job
 		log('inserting new job');
 		const newId = randomUUID();
-		const hashData = this.jobToHash(props as IJobParameters<DATA>, newId, options?.lastModifiedBy);
+		const hashData = this.jobToHash(props as JobParameters<DATA>, newId, options?.lastModifiedBy);
 
 		await this.redis.hset(this.key(`job:${newId}`), hashData as unknown as Record<string, string>);
 		await this.redis.sadd(this.key('jobs:all'), newId);

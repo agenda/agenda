@@ -3,7 +3,7 @@ import type { Agenda } from 'agenda';
 /**
  * Query parameters for the API
  */
-export interface IApiQueryParams {
+export interface ApiQueryParams {
 	/** Filter by job name */
 	name?: string;
 	/** Filter by computed state */
@@ -23,7 +23,7 @@ export interface IApiQueryParams {
 /**
  * Frontend job data structure (nested under 'job' key)
  */
-export interface IFrontendJobData {
+export interface FrontendJobData {
 	_id: string;
 	name: string;
 	data?: unknown;
@@ -42,8 +42,8 @@ export interface IFrontendJobData {
 /**
  * Frontend job structure with state flags
  */
-export interface IFrontendJob {
-	job: IFrontendJobData;
+export interface FrontendJob {
+	job: FrontendJobData;
 	running: boolean;
 	scheduled: boolean;
 	queued: boolean;
@@ -55,7 +55,7 @@ export interface IFrontendJob {
 /**
  * Frontend overview structure with displayName
  */
-export interface IFrontendOverview {
+export interface FrontendOverview {
 	displayName: string;
 	total: number;
 	running: number;
@@ -69,9 +69,9 @@ export interface IFrontendOverview {
 /**
  * Response from the API
  */
-export interface IApiResponse {
-	overview: IFrontendOverview[];
-	jobs: IFrontendJob[];
+export interface ApiResponse {
+	overview: FrontendOverview[];
+	jobs: FrontendJob[];
 	total: number;
 	totalPages: number;
 }
@@ -79,28 +79,28 @@ export interface IApiResponse {
 /**
  * Options for requeuing jobs
  */
-export interface IRequeueRequest {
+export interface RequeueRequest {
 	jobIds: string[];
 }
 
 /**
  * Response from requeue operation
  */
-export interface IRequeueResponse {
+export interface RequeueResponse {
 	requeuedCount: number;
 }
 
 /**
  * Options for deleting jobs
  */
-export interface IDeleteRequest {
+export interface DeleteRequest {
 	jobIds: string[];
 }
 
 /**
  * Response from delete operation
  */
-export interface IDeleteResponse {
+export interface DeleteResponse {
 	deleted: boolean;
 	deletedCount?: number;
 }
@@ -108,7 +108,7 @@ export interface IDeleteResponse {
 /**
  * Options for creating a job
  */
-export interface ICreateJobRequest {
+export interface CreateJobRequest {
 	jobName: string;
 	jobSchedule?: string;
 	jobRepeatEvery?: string;
@@ -118,18 +118,18 @@ export interface ICreateJobRequest {
 /**
  * Response from create operation
  */
-export interface ICreateJobResponse {
+export interface CreateJobResponse {
 	created: boolean;
 }
 
 /**
  * Agendash controller interface
  */
-export interface IAgendashController {
-	getJobs(params: IApiQueryParams): Promise<IApiResponse>;
-	requeueJobs(ids: string[]): Promise<IRequeueResponse>;
-	deleteJobs(ids: string[]): Promise<IDeleteResponse>;
-	createJob(options: ICreateJobRequest): Promise<ICreateJobResponse>;
+export interface AgendashController {
+	getJobs(params: ApiQueryParams): Promise<ApiResponse>;
+	requeueJobs(ids: string[]): Promise<RequeueResponse>;
+	deleteJobs(ids: string[]): Promise<DeleteResponse>;
+	createJob(options: CreateJobRequest): Promise<CreateJobResponse>;
 }
 
 /**

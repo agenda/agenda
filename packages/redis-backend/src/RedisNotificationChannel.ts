@@ -1,7 +1,7 @@
 import debug from 'debug';
 import { Redis } from 'ioredis';
 import type { RedisOptions } from 'ioredis';
-import type { IJobNotification, INotificationChannelConfig, JobId } from 'agenda';
+import type { JobNotification, NotificationChannelConfig, JobId } from 'agenda';
 import { BaseNotificationChannel, toJobId } from 'agenda';
 
 const log = debug('agenda:redis:notification');
@@ -9,7 +9,7 @@ const log = debug('agenda:redis:notification');
 /**
  * Configuration for RedisNotificationChannel
  */
-export interface IRedisNotificationChannelConfig extends INotificationChannelConfig {
+export interface RedisNotificationChannelConfig extends NotificationChannelConfig {
 	/** Redis client for publishing (shared with repository) */
 	redis?: Redis;
 	/** Redis connection URL (if not sharing client) */
@@ -34,7 +34,7 @@ export class RedisNotificationChannel extends BaseNotificationChannel {
 	private connectionString?: string;
 	private redisOptions?: RedisOptions;
 
-	constructor(config: IRedisNotificationChannelConfig = {}) {
+	constructor(config: RedisNotificationChannelConfig = {}) {
 		super(config);
 
 		if (config.redis) {
@@ -167,7 +167,7 @@ export class RedisNotificationChannel extends BaseNotificationChannel {
 		this.setState('disconnected');
 	}
 
-	async publish(notification: IJobNotification): Promise<void> {
+	async publish(notification: JobNotification): Promise<void> {
 		if (this._state !== 'connected') {
 			throw new Error('Cannot publish: channel not connected');
 		}
@@ -185,7 +185,7 @@ export class RedisNotificationChannel extends BaseNotificationChannel {
 	/**
 	 * Serialize notification to JSON string for Redis Pub/Sub
 	 */
-	private serializeNotification(notification: IJobNotification): string {
+	private serializeNotification(notification: JobNotification): string {
 		return JSON.stringify({
 			jobId: notification.jobId,
 			jobName: notification.jobName,
@@ -199,7 +199,7 @@ export class RedisNotificationChannel extends BaseNotificationChannel {
 	/**
 	 * Parse notification from JSON string received via Pub/Sub
 	 */
-	private parseNotification(payload: string): IJobNotification {
+	private parseNotification(payload: string): JobNotification {
 		const data = JSON.parse(payload);
 
 		return {

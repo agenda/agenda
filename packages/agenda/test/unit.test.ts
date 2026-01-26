@@ -5,13 +5,13 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Agenda, Job, toJobId } from '../src/index.js';
-import type { IAgendaBackend, IJobRepository, IJobParameters } from '../src/index.js';
+import type { AgendaBackend, JobRepository, JobParameters } from '../src/index.js';
 
 /**
  * Minimal mock repository that satisfies the interface without real storage.
  * Used for unit tests that don't need actual database operations.
  */
-class MockJobRepository implements IJobRepository {
+class MockJobRepository implements JobRepository {
 	async connect(): Promise<void> {}
 	async queryJobs() {
 		return { jobs: [], total: 0 };
@@ -31,7 +31,7 @@ class MockJobRepository implements IJobRepository {
 	async removeJobs() {
 		return 0;
 	}
-	async saveJob<DATA = unknown>(job: IJobParameters<DATA>): Promise<IJobParameters<DATA>> {
+	async saveJob<DATA = unknown>(job: JobParameters<DATA>): Promise<JobParameters<DATA>> {
 		return { ...job, _id: job._id || toJobId('mock-id') };
 	}
 	async saveJobState() {}
@@ -48,7 +48,7 @@ class MockJobRepository implements IJobRepository {
 /**
  * Minimal mock backend for unit tests
  */
-class MockBackend implements IAgendaBackend {
+class MockBackend implements AgendaBackend {
 	readonly repository = new MockJobRepository();
 	async connect(): Promise<void> {}
 	async disconnect(): Promise<void> {}

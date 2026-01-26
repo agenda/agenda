@@ -1,4 +1,4 @@
-import type { IJobParameters, JobId } from './JobParameters.js';
+import type { JobParameters, JobId } from './JobParameters.js';
 import type { SortDirection } from './DbOptions.js';
 
 /**
@@ -10,7 +10,7 @@ export type JobState = 'running' | 'scheduled' | 'queued' | 'completed' | 'faile
 /**
  * Overview statistics for a single job name
  */
-export interface IJobsOverview {
+export interface JobsOverview {
 	name: string;
 	total: number;
 	running: number;
@@ -24,7 +24,7 @@ export interface IJobsOverview {
 /**
  * Job with computed state
  */
-export interface IJobWithState<DATA = unknown> extends IJobParameters<DATA> {
+export interface JobWithState<DATA = unknown> extends JobParameters<DATA> {
 	_id: JobId;
 	state: JobState;
 }
@@ -32,7 +32,7 @@ export interface IJobWithState<DATA = unknown> extends IJobParameters<DATA> {
 /**
  * Sort options for job queries (database-agnostic)
  */
-export interface IJobsSort {
+export interface JobsSort {
 	nextRunAt?: SortDirection;
 	lastRunAt?: SortDirection;
 	lastFinishedAt?: SortDirection;
@@ -44,7 +44,7 @@ export interface IJobsSort {
 /**
  * Database-agnostic query options for jobs
  */
-export interface IJobsQueryOptions {
+export interface JobsQueryOptions {
 	/** Filter by job name */
 	name?: string;
 	/** Filter by job names (multiple) */
@@ -62,7 +62,7 @@ export interface IJobsQueryOptions {
 	/** Include disabled jobs (default: true) */
 	includeDisabled?: boolean;
 	/** Sort order */
-	sort?: IJobsSort;
+	sort?: JobsSort;
 	/** Number of jobs to skip (pagination) */
 	skip?: number;
 	/** Maximum number of jobs to return */
@@ -72,8 +72,8 @@ export interface IJobsQueryOptions {
 /**
  * Result of jobs query with state computation
  */
-export interface IJobsResult<DATA = unknown> {
-	jobs: IJobWithState<DATA>[];
+export interface JobsResult<DATA = unknown> {
+	jobs: JobWithState<DATA>[];
 	/** Total count (before pagination, after state filter) */
 	total: number;
 }
@@ -81,7 +81,7 @@ export interface IJobsResult<DATA = unknown> {
 /**
  * Compute the state for a job based on its timestamps
  */
-export function computeJobState(job: IJobParameters, now: Date = new Date()): JobState {
+export function computeJobState(job: JobParameters, now: Date = new Date()): JobState {
 	const { lockedAt, lastFinishedAt, failedAt, nextRunAt, repeatInterval } = job;
 
 	// Running: currently locked and processing

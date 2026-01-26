@@ -4,7 +4,7 @@ import type { Agenda } from 'agenda';
 import type { FastifyInstance, FastifyPluginCallback, FastifyRequest, FastifyReply } from 'fastify';
 import { AgendashController } from '../AgendashController.js';
 import { cspHeader } from '../csp.js';
-import type { IApiQueryParams, ICreateJobRequest, IDeleteRequest, IRequeueRequest } from '../types.js';
+import type { ApiQueryParams, CreateJobRequest, DeleteRequest, RequeueRequest } from '../types.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -55,7 +55,7 @@ export function createFastifyPlugin(agenda: Agenda): FastifyPluginCallback {
 			async (request: FastifyRequest<{ Querystring: ApiQuerystring }>, reply: FastifyReply) => {
 				try {
 					const { job, state, q, property, isObjectId, skip, limit } = request.query;
-					const params: IApiQueryParams = {
+					const params: ApiQueryParams = {
 						name: job,
 						state,
 						search: q,
@@ -74,9 +74,9 @@ export function createFastifyPlugin(agenda: Agenda): FastifyPluginCallback {
 			}
 		);
 
-		instance.post<{ Body: IRequeueRequest }>(
+		instance.post<{ Body: RequeueRequest }>(
 			'/api/jobs/requeue',
-			async (request: FastifyRequest<{ Body: IRequeueRequest }>, reply: FastifyReply) => {
+			async (request: FastifyRequest<{ Body: RequeueRequest }>, reply: FastifyReply) => {
 				try {
 					const { jobIds } = request.body;
 					const result = await controller.requeueJobs(jobIds);
@@ -89,9 +89,9 @@ export function createFastifyPlugin(agenda: Agenda): FastifyPluginCallback {
 			}
 		);
 
-		instance.post<{ Body: IDeleteRequest }>(
+		instance.post<{ Body: DeleteRequest }>(
 			'/api/jobs/delete',
-			async (request: FastifyRequest<{ Body: IDeleteRequest }>, reply: FastifyReply) => {
+			async (request: FastifyRequest<{ Body: DeleteRequest }>, reply: FastifyReply) => {
 				try {
 					const { jobIds } = request.body;
 					const result = await controller.deleteJobs(jobIds);
@@ -104,9 +104,9 @@ export function createFastifyPlugin(agenda: Agenda): FastifyPluginCallback {
 			}
 		);
 
-		instance.post<{ Body: ICreateJobRequest }>(
+		instance.post<{ Body: CreateJobRequest }>(
 			'/api/jobs/create',
-			async (request: FastifyRequest<{ Body: ICreateJobRequest }>, reply: FastifyReply) => {
+			async (request: FastifyRequest<{ Body: CreateJobRequest }>, reply: FastifyReply) => {
 				try {
 					const result = await controller.createJob(request.body);
 					return reply.send(result);

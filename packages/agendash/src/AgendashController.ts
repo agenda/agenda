@@ -1,14 +1,14 @@
-import type { Agenda, JobState, IJobWithState, IJobsOverview } from 'agenda';
+import type { Agenda, JobState, JobWithState, JobsOverview } from 'agenda';
 import type {
-	IAgendashController,
-	IApiQueryParams,
-	IApiResponse,
-	ICreateJobRequest,
-	ICreateJobResponse,
-	IDeleteResponse,
-	IRequeueResponse,
-	IFrontendJob,
-	IFrontendOverview
+	AgendashController as IAgendashController,
+	ApiQueryParams,
+	ApiResponse,
+	CreateJobRequest,
+	CreateJobResponse,
+	DeleteResponse,
+	RequeueResponse,
+	FrontendJob,
+	FrontendOverview
 } from './types.js';
 
 /**
@@ -25,7 +25,7 @@ export class AgendashController implements IAgendashController {
 	/**
 	 * Transform a job from the new API format to the frontend format
 	 */
-	private transformJob(job: IJobWithState): IFrontendJob {
+	private transformJob(job: JobWithState): FrontendJob {
 		return {
 			job: {
 				_id: String(job._id),
@@ -54,7 +54,7 @@ export class AgendashController implements IAgendashController {
 	/**
 	 * Transform overview from new API format to frontend format
 	 */
-	private transformOverview(overviews: IJobsOverview[]): IFrontendOverview[] {
+	private transformOverview(overviews: JobsOverview[]): FrontendOverview[] {
 		// Calculate totals for "All Jobs" entry
 		const totals = overviews.reduce(
 			(acc, o) => ({
@@ -69,12 +69,12 @@ export class AgendashController implements IAgendashController {
 			{ total: 0, running: 0, scheduled: 0, queued: 0, completed: 0, failed: 0, repeating: 0 }
 		);
 
-		const allJobsEntry: IFrontendOverview = {
+		const allJobsEntry: FrontendOverview = {
 			displayName: 'All Jobs',
 			...totals
 		};
 
-		const jobOverviews: IFrontendOverview[] = overviews.map((o) => ({
+		const jobOverviews: FrontendOverview[] = overviews.map((o) => ({
 			displayName: o.name,
 			total: o.total,
 			running: o.running,
@@ -91,7 +91,7 @@ export class AgendashController implements IAgendashController {
 	/**
 	 * Get jobs with overview and filtering
 	 */
-	async getJobs(params: IApiQueryParams): Promise<IApiResponse> {
+	async getJobs(params: ApiQueryParams): Promise<ApiResponse> {
 		const { name, state, search, skip = 0, limit = 50 } = params;
 
 		const [overview, result] = await Promise.all([
@@ -121,7 +121,7 @@ export class AgendashController implements IAgendashController {
 	/**
 	 * Requeue jobs by creating new instances
 	 */
-	async requeueJobs(ids: string[]): Promise<IRequeueResponse> {
+	async requeueJobs(ids: string[]): Promise<RequeueResponse> {
 		if (!ids || ids.length === 0) {
 			return { requeuedCount: 0 };
 		}
@@ -140,7 +140,7 @@ export class AgendashController implements IAgendashController {
 	/**
 	 * Delete jobs by ID
 	 */
-	async deleteJobs(ids: string[]): Promise<IDeleteResponse> {
+	async deleteJobs(ids: string[]): Promise<DeleteResponse> {
 		if (!ids || ids.length === 0) {
 			return { deleted: false, deletedCount: 0 };
 		}
@@ -155,7 +155,7 @@ export class AgendashController implements IAgendashController {
 	/**
 	 * Create a new job
 	 */
-	async createJob(options: ICreateJobRequest): Promise<ICreateJobResponse> {
+	async createJob(options: CreateJobRequest): Promise<CreateJobResponse> {
 		const { jobName, jobSchedule, jobRepeatEvery, jobData } = options;
 
 		if (!jobName) {

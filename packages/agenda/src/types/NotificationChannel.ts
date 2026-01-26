@@ -3,7 +3,7 @@ import type { JobId } from './JobParameters.js';
 /**
  * Notification payload sent when a job is saved/updated
  */
-export interface IJobNotification {
+export interface JobNotification {
 	jobId: JobId;
 	jobName: string;
 	nextRunAt: Date | null;
@@ -15,7 +15,7 @@ export interface IJobNotification {
 /**
  * Handler function for processing job notifications
  */
-export type NotificationHandler = (notification: IJobNotification) => void | Promise<void>;
+export type NotificationHandler = (notification: JobNotification) => void | Promise<void>;
 
 /**
  * Possible states of a notification channel
@@ -25,7 +25,7 @@ export type NotificationChannelState = 'disconnected' | 'connecting' | 'connecte
 /**
  * Configuration options for notification channels
  */
-export interface INotificationChannelConfig {
+export interface NotificationChannelConfig {
 	channelName?: string;
 	reconnect?: {
 		enabled: boolean;
@@ -39,7 +39,7 @@ export interface INotificationChannelConfig {
  * Interface for notification channels that enable cross-process job notifications.
  * Implementations can use Redis, PostgreSQL LISTEN/NOTIFY, or other pub/sub systems.
  */
-export interface INotificationChannel {
+export interface NotificationChannel {
 	/**
 	 * Current state of the channel
 	 */
@@ -66,7 +66,7 @@ export interface INotificationChannel {
 	 * Publish a job notification
 	 * @param notification - The notification to publish
 	 */
-	publish(notification: IJobNotification): Promise<void>;
+	publish(notification: JobNotification): Promise<void>;
 
 	/**
 	 * Register an event listener

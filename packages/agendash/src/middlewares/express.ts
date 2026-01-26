@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import type { Agenda } from 'agenda';
 import { AgendashController } from '../AgendashController.js';
 import { cspHeader } from '../csp.js';
-import type { IApiQueryParams, ICreateJobRequest, IDeleteRequest, IRequeueRequest } from '../types.js';
+import type { ApiQueryParams, CreateJobRequest, DeleteRequest, RequeueRequest } from '../types.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -44,7 +44,7 @@ export function createExpressMiddleware(agenda: Agenda): Router {
 	router.get('/api', async (req, res) => {
 		try {
 			const query = req.query as Record<string, string | undefined>;
-			const params: IApiQueryParams = {
+			const params: ApiQueryParams = {
 				name: query.job,
 				state: query.state,
 				search: query.q,
@@ -62,7 +62,7 @@ export function createExpressMiddleware(agenda: Agenda): Router {
 
 	router.post('/api/jobs/requeue', async (req, res) => {
 		try {
-			const { jobIds } = req.body as IRequeueRequest;
+			const { jobIds } = req.body as RequeueRequest;
 			const result = await controller.requeueJobs(jobIds);
 			res.json(result);
 		} catch (error) {
@@ -72,7 +72,7 @@ export function createExpressMiddleware(agenda: Agenda): Router {
 
 	router.post('/api/jobs/delete', async (req, res) => {
 		try {
-			const { jobIds } = req.body as IDeleteRequest;
+			const { jobIds } = req.body as DeleteRequest;
 			const result = await controller.deleteJobs(jobIds);
 			res.json(result);
 		} catch (error) {
@@ -82,7 +82,7 @@ export function createExpressMiddleware(agenda: Agenda): Router {
 
 	router.post('/api/jobs/create', async (req, res) => {
 		try {
-			const options = req.body as ICreateJobRequest;
+			const options = req.body as CreateJobRequest;
 			const result = await controller.createJob(options);
 			res.json(result);
 		} catch (error) {

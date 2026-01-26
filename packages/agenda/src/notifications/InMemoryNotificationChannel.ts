@@ -1,6 +1,6 @@
 import type {
-	INotificationChannelConfig,
-	IJobNotification
+	NotificationChannelConfig,
+	JobNotification
 } from '../types/NotificationChannel.js';
 import { BaseNotificationChannel } from './BaseNotificationChannel.js';
 
@@ -9,7 +9,7 @@ import { BaseNotificationChannel } from './BaseNotificationChannel.js';
  * Notifications are delivered synchronously within the same process.
  */
 export class InMemoryNotificationChannel extends BaseNotificationChannel {
-	constructor(config: INotificationChannelConfig = {}) {
+	constructor(config: NotificationChannelConfig = {}) {
 		super(config);
 	}
 
@@ -24,7 +24,7 @@ export class InMemoryNotificationChannel extends BaseNotificationChannel {
 		this.setState('disconnected');
 	}
 
-	async publish(notification: IJobNotification): Promise<void> {
+	async publish(notification: JobNotification): Promise<void> {
 		if (this._state !== 'connected') {
 			throw new Error('Cannot publish: channel not connected');
 		}

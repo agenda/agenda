@@ -26,7 +26,7 @@
  * ```
  */
 
-import type { IAgendaBackend, INotificationChannel } from '../../src/index.js';
+import type { AgendaBackend, NotificationChannel } from '../../src/index.js';
 import { repositoryTestSuite } from './repository-test-suite.js';
 import { agendaTestSuite, type ForkHelperConfig } from './agenda-test-suite.js';
 import { jobProcessorTestSuite } from './jobprocessor-test-suite.js';
@@ -36,15 +36,15 @@ export interface FullAgendaTestConfig {
 	/** Name for the test suite (e.g., 'MongoDB', 'PostgreSQL') */
 	name: string;
 	/** Factory to create a fresh backend instance */
-	createBackend: () => Promise<IAgendaBackend>;
+	createBackend: () => Promise<AgendaBackend>;
 	/** Cleanup function called after tests */
-	cleanupBackend: (backend: IAgendaBackend) => Promise<void>;
+	cleanupBackend: (backend: AgendaBackend) => Promise<void>;
 	/** Clear all jobs between tests */
-	clearJobs: (backend: IAgendaBackend) => Promise<void>;
+	clearJobs: (backend: AgendaBackend) => Promise<void>;
 	/** Optional notification channel factory for testing notification integration */
-	createNotificationChannel?: () => Promise<INotificationChannel>;
+	createNotificationChannel?: () => Promise<NotificationChannel>;
 	/** Cleanup notification channel */
-	cleanupNotificationChannel?: (channel: INotificationChannel) => Promise<void>;
+	cleanupNotificationChannel?: (channel: NotificationChannel) => Promise<void>;
 	/** Fork mode configuration (backend-specific fork helper) */
 	forkHelper?: ForkHelperConfig;
 	/** Skip specific test suites */

@@ -1,6 +1,6 @@
 import type { Job } from '../Job.js';
 
-export interface IJobDefinition<DATA = unknown> {
+export interface JobDefinition<DATA = unknown> {
 	/** max number of locked jobs of this kind */
 	lockLimit: number;
 	/** lock lifetime in milliseconds */

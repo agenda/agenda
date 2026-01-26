@@ -3,16 +3,16 @@ import Router from 'koa-router';
 import bodyParser from 'koa-bodyparser';
 import type { Job } from 'agenda';
 import type {
-	IAgendaRestConfig,
-	IJobDefinitionRequest,
-	IScheduleJobRequest,
-	ICancelJobRequest
+	AgendaRestConfig,
+	JobDefinitionRequest,
+	ScheduleJobRequest,
+	CancelJobRequest
 } from './types.js';
 
 /**
  * Job definitions stored in memory (for webhook-style jobs)
  */
-interface IStoredJobDefinition {
+interface StoredJobDefinition {
 	name: string;
 	url?: string;
 	method?: string;
@@ -28,7 +28,7 @@ interface IStoredJobDefinition {
 /**
  * Create a Koa application for the agenda-rest API
  */
-export function createServer(config: IAgendaRestConfig): Koa {
+export function createServer(config: AgendaRestConfig): Koa {
 	const { agenda, apiKey } = config;
 
 	if (!agenda) {
@@ -39,7 +39,7 @@ export function createServer(config: IAgendaRestConfig): Koa {
 	const router = new Router({ prefix: '/api' });
 
 	// In-memory job definitions (for webhook-style job configs)
-	const jobDefinitions = new Map<string, IStoredJobDefinition>();
+	const jobDefinitions = new Map<string, StoredJobDefinition>();
 
 	// Middleware for API key authentication
 	const authenticate = async (ctx: Koa.Context, next: Koa.Next) => {
@@ -105,7 +105,7 @@ export function createServer(config: IAgendaRestConfig): Koa {
 
 	// POST /api/job - Create a new job definition
 	router.post('/job', authenticate, async (ctx) => {
-		const body = ctx.request.body as IJobDefinitionRequest;
+		const body = ctx.request.body as JobDefinitionRequest;
 
 		if (!body.name) {
 			ctx.status = 400;
@@ -128,7 +128,7 @@ export function createServer(config: IAgendaRestConfig): Koa {
 	// PUT /api/job/:jobName - Update a job definition
 	router.put('/job/:jobName', authenticate, async (ctx) => {
 		const { jobName } = ctx.params;
-		const body = ctx.request.body as Partial<IJobDefinitionRequest>;
+		const body = ctx.request.body as Partial<JobDefinitionRequest>;
 
 		if (!jobDefinitions.has(jobName)) {
 			ctx.status = 404;
@@ -161,7 +161,7 @@ export function createServer(config: IAgendaRestConfig): Koa {
 
 	// POST /api/job/now - Run a job immediately
 	router.post('/job/now', authenticate, async (ctx) => {
-		const body = ctx.request.body as IScheduleJobRequest;
+		const body = ctx.request.body as ScheduleJobRequest;
 
 		if (!body.name) {
 			ctx.status = 400;
@@ -186,7 +186,7 @@ export function createServer(config: IAgendaRestConfig): Koa {
 
 	// POST /api/job/once - Schedule a job to run once at a specific time
 	router.post('/job/once', authenticate, async (ctx) => {
-		const body = ctx.request.body as IScheduleJobRequest;
+		const body = ctx.request.body as ScheduleJobRequest;
 
 		if (!body.name) {
 			ctx.status = 400;
@@ -217,7 +217,7 @@ export function createServer(config: IAgendaRestConfig): Koa {
 
 	// POST /api/job/every - Schedule a recurring job
 	router.post('/job/every', authenticate, async (ctx) => {
-		const body = ctx.request.body as IScheduleJobRequest;
+		const body = ctx.request.body as ScheduleJobRequest;
 
 		if (!body.name) {
 			ctx.status = 400;
@@ -248,7 +248,7 @@ export function createServer(config: IAgendaRestConfig): Koa {
 
 	// POST /api/job/cancel - Cancel matching jobs
 	router.post('/job/cancel', authenticate, async (ctx) => {
-		const body = ctx.request.body as ICancelJobRequest;
+		const body = ctx.request.body as CancelJobRequest;
 
 		if (!body.name && !body.data) {
 			ctx.status = 400;

@@ -4,7 +4,7 @@ import debug from 'debug';
 import { CronExpressionParser } from 'cron-parser';
 import humanInterval from 'human-interval';
 import { isValidDate } from './isValidDate.js';
-import type { IJobParameters } from '../types/JobParameters.js';
+import type { JobParameters } from '../types/JobParameters.js';
 
 const log = debug('agenda:nextRunAt');
 
@@ -19,7 +19,7 @@ export function isValidHumanInterval(value: unknown): value is string {
 /**
  * Internal method that computes the interval
  */
-export const computeFromInterval = (attrs: IJobParameters<unknown>): Date => {
+export const computeFromInterval = (attrs: JobParameters<unknown>): Date => {
 	const previousNextRunAt = attrs.nextRunAt || new Date();
 	log('[%s:%s] computing next run via interval [%s]', attrs.name, attrs._id, attrs.repeatInterval);
 
@@ -81,7 +81,7 @@ export const computeFromInterval = (attrs: IJobParameters<unknown>): Date => {
 /**
  * Internal method to compute next run time from the repeat string
  */
-export function computeFromRepeatAt(attrs: IJobParameters<unknown>): Date {
+export function computeFromRepeatAt(attrs: JobParameters<unknown>): Date {
 	const lastRun = attrs.lastRunAt || new Date();
 	const repeatAt = attrs.repeatAt;
 	if (!repeatAt) {

@@ -1,15 +1,15 @@
-import type { IJobParameters } from './JobParameters.js';
-import type { IJobDefinition } from './JobDefinition.js';
+import type { JobParameters } from './JobParameters.js';
+import type { JobDefinition } from './JobDefinition.js';
 
-export interface IAgendaJobStatus {
+export interface AgendaJobStatus {
 	[name: string]: {
 		running: number;
 		locked: number;
-		config: IJobDefinition;
+		config: JobDefinition;
 	};
 }
 
-export interface IAgendaStatus {
+export interface AgendaStatus {
 	version: string;
 	queueName: string | undefined;
 	totalQueueSizeDB: number;
@@ -21,8 +21,8 @@ export interface IAgendaStatus {
 	internal: {
 		localQueueProcessing: number;
 	};
-	jobStatus?: IAgendaJobStatus;
-	queuedJobs: number | IJobParameters[];
-	runningJobs: number | IJobParameters[];
-	lockedJobs: number | IJobParameters[];
+	jobStatus?: AgendaJobStatus;
+	queuedJobs: number | JobParameters[];
+	runningJobs: number | JobParameters[];
+	lockedJobs: number | JobParameters[];
 }

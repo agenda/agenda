@@ -17,7 +17,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
-import type { IAgendaBackend } from '../../src/index.js';
+import type { AgendaBackend } from '../../src/index.js';
 import { Agenda } from '../../src/index.js';
 import { delay } from './test-utils.js';
 
@@ -25,11 +25,11 @@ export interface JobProcessorTestConfig {
 	/** Name for the test suite */
 	name: string;
 	/** Factory to create a fresh backend instance */
-	createBackend: () => Promise<IAgendaBackend>;
+	createBackend: () => Promise<AgendaBackend>;
 	/** Cleanup function called after tests */
-	cleanupBackend: (backend: IAgendaBackend) => Promise<void>;
+	cleanupBackend: (backend: AgendaBackend) => Promise<void>;
 	/** Clear all jobs between tests */
-	clearJobs: (backend: IAgendaBackend) => Promise<void>;
+	clearJobs: (backend: AgendaBackend) => Promise<void>;
 }
 
 /**
@@ -37,7 +37,7 @@ export interface JobProcessorTestConfig {
  */
 export function jobProcessorTestSuite(config: JobProcessorTestConfig): void {
 	describe(`${config.name} - JobProcessor`, () => {
-		let backend: IAgendaBackend;
+		let backend: AgendaBackend;
 		let agenda: Agenda;
 
 		beforeAll(async () => {

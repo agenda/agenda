@@ -1,8 +1,8 @@
 import debug from 'debug';
-import type { IAgendaBackend, IJobRepository, INotificationChannel } from 'agenda';
+import type { AgendaBackend, JobRepository, NotificationChannel } from 'agenda';
 import { PostgresJobRepository } from './PostgresJobRepository.js';
 import { PostgresNotificationChannel } from './PostgresNotificationChannel.js';
-import type { IPostgresBackendConfig } from './types.js';
+import type { PostgresBackendConfig } from './types.js';
 
 const log = debug('agenda:postgres:backend');
 
@@ -43,13 +43,13 @@ const log = debug('agenda:postgres:backend');
  * await agenda.every('5 minutes', 'myJob');
  * ```
  */
-export class PostgresBackend implements IAgendaBackend {
+export class PostgresBackend implements AgendaBackend {
 	private _repository: PostgresJobRepository;
 	private _notificationChannel?: PostgresNotificationChannel;
-	private config: IPostgresBackendConfig;
+	private config: PostgresBackendConfig;
 	private _ownsConnection: boolean;
 
-	constructor(config: IPostgresBackendConfig) {
+	constructor(config: PostgresBackendConfig) {
 		this.config = config;
 
 		// Determine if we own the connection (not passed in by user)
@@ -80,7 +80,7 @@ export class PostgresBackend implements IAgendaBackend {
 	/**
 	 * The job repository for storage operations
 	 */
-	get repository(): IJobRepository {
+	get repository(): JobRepository {
 		return this._repository;
 	}
 
@@ -96,7 +96,7 @@ export class PostgresBackend implements IAgendaBackend {
 	 * The notification channel for real-time notifications via LISTEN/NOTIFY
 	 * Returns undefined if notifications are disabled
 	 */
-	get notificationChannel(): INotificationChannel | undefined {
+	get notificationChannel(): NotificationChannel | undefined {
 		return this._notificationChannel;
 	}
 

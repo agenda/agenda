@@ -4,7 +4,7 @@ import type { SortDirection } from 'agenda';
 /**
  * Configuration options for RedisBackend
  */
-export interface IRedisBackendConfig {
+export interface RedisBackendConfig {
 	/** Redis connection URL (e.g., 'redis://localhost:6379') */
 	connectionString?: string;
 
@@ -31,7 +31,7 @@ export interface IRedisBackendConfig {
  * Internal job storage type for Redis
  * All fields are stored as strings in Redis hashes
  */
-export interface IRedisJobData {
+export interface RedisJobData {
 	id: string;
 	name: string;
 	priority: string;
