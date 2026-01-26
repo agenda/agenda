@@ -123,6 +123,7 @@ export class RedisJobRepository implements IJobRepository {
 			disabled: data.disabled === 'true',
 			progress:
 				data.progress && data.progress !== 'null' ? parseFloat(data.progress) : undefined,
+			fork: data.fork === 'true',
 			lastModifiedBy:
 				data.lastModifiedBy && data.lastModifiedBy !== 'null'
 					? data.lastModifiedBy
@@ -157,6 +158,7 @@ export class RedisJobRepository implements IJobRepository {
 			repeatAt: job.repeatAt ?? 'null',
 			disabled: String(job.disabled ?? false),
 			progress: job.progress !== undefined ? String(job.progress) : 'null',
+			fork: String(job.fork ?? false),
 			lastModifiedBy: lastModifiedBy ?? 'null',
 			createdAt: now,
 			updatedAt: now
@@ -439,10 +441,7 @@ export class RedisJobRepository implements IJobRepository {
 
 		for (const jobId of jobIds) {
 			const id = jobId.toString();
-			const nextRunAt = await this.redis.hget(this.key(`job:${id}`), 'nextRunAt');
-			if (nextRunAt && nextRunAt !== 'null') {
-				await this.redis.hset(this.key(`job:${id}`), 'lockedAt', 'null');
-			}
+			await this.redis.hset(this.key(`job:${id}`), 'lockedAt', 'null');
 		}
 	}
 
@@ -508,6 +507,105 @@ export class RedisJobRepository implements IJobRepository {
 		}
 	}
 
+	/**
+	 * Lua script for atomic find-and-lock operation.
+	 * This ensures that only one worker can lock a job, even under concurrent access.
+	 *
+	 * Arguments:
+	 * KEYS[1] = jobs:by_name:{jobName} set
+	 * KEYS[2] = jobs:by_next_run_at sorted set
+	 * KEYS[3] = job:{id} hash prefix (without the id)
+	 * ARGV[1] = nextScanAt timestamp (ms)
+	 * ARGV[2] = lockDeadline timestamp (ms)
+	 * ARGV[3] = lockTime ISO string
+	 * ARGV[4] = lastModifiedBy
+	 * ARGV[5] = sort direction ('asc' or 'desc')
+	 *
+	 * Returns: job ID if locked, nil if no job available
+	 */
+	private static readonly FIND_AND_LOCK_SCRIPT = `
+		local jobIds = redis.call('SMEMBERS', KEYS[1])
+		if #jobIds == 0 then
+			return nil
+		end
+
+		local nextScanAt = tonumber(ARGV[1])
+		local lockDeadline = tonumber(ARGV[2])
+		local lockTime = ARGV[3]
+		local lastModifiedBy = ARGV[4]
+		local sortDir = ARGV[5]
+		local keyPrefix = KEYS[3]
+
+		-- Get scores and sort candidates
+		local candidates = {}
+		for _, jobId in ipairs(jobIds) do
+			local score = redis.call('ZSCORE', KEYS[2], jobId)
+			if score then
+				table.insert(candidates, {id = jobId, score = tonumber(score)})
+			end
+		end
+
+		-- Sort by score
+		if sortDir == 'asc' then
+			table.sort(candidates, function(a, b) return a.score < b.score end)
+		else
+			table.sort(candidates, function(a, b) return a.score > b.score end)
+		end
+
+		-- Try to lock each candidate
+		for _, candidate in ipairs(candidates) do
+			local jobKey = keyPrefix .. candidate.id
+			local jobData = redis.call('HGETALL', jobKey)
+
+			if #jobData > 0 then
+				-- Convert array to table
+				local data = {}
+				for i = 1, #jobData, 2 do
+					data[jobData[i]] = jobData[i + 1]
+				end
+
+				-- Check if disabled
+				if data.disabled ~= 'true' then
+					local lockedAt = data.lockedAt
+					local nextRunAt = data.nextRunAt
+					local lockedAtMs = data.lockedAtMs
+
+					-- Check if job is ready to run
+					local isUnlockedAndReady = false
+					local isStale = false
+
+					if lockedAt == 'null' or lockedAt == nil then
+						-- Job is unlocked
+						if nextRunAt and nextRunAt ~= 'null' then
+							-- We compare scores since they're based on nextRunAt
+							if candidate.score <= nextScanAt then
+								isUnlockedAndReady = true
+							end
+						end
+					else
+						-- Job is locked - check if stale using lockedAtMs field
+						if lockedAtMs and lockedAtMs ~= 'null' then
+							local lockedAtTime = tonumber(lockedAtMs)
+							if lockedAtTime and lockedAtTime <= lockDeadline then
+								isStale = true
+							end
+						end
+					end
+
+					if isUnlockedAndReady or isStale then
+						-- Lock the job atomically, also store lockedAtMs for efficient stale checks
+						local lockTimeMs = redis.call('TIME')
+						local lockTimestamp = (lockTimeMs[1] * 1000) + math.floor(lockTimeMs[2] / 1000)
+						redis.call('HSET', jobKey, 'lockedAt', lockTime, 'lockedAtMs', tostring(lockTimestamp), 'lastModifiedBy', lastModifiedBy, 'updatedAt', lockTime)
+						return candidate.id
+					end
+				end
+			end
+		end
+
+		return nil
+	`;
+
 	async getNextJobToRun(
 		jobName: string,
 		nextScanAt: Date,
@@ -517,77 +615,31 @@ export class RedisJobRepository implements IJobRepository {
 	): Promise<IJobParameters | undefined> {
 		const lockTime = now ?? new Date();
 
-		// Get job IDs by name
-		const jobIds = await this.redis.smembers(this.key(`jobs:by_name:${jobName}`));
+		// Use Lua script for atomic find-and-lock
+		const result = await this.redis.eval(
+			RedisJobRepository.FIND_AND_LOCK_SCRIPT,
+			3, // number of keys
+			this.key(`jobs:by_name:${jobName}`),
+			this.key('jobs:by_next_run_at'),
+			this.key('job:'),
+			nextScanAt.getTime().toString(),
+			lockDeadline.getTime().toString(),
+			lockTime.toISOString(),
+			options?.lastModifiedBy ?? 'null',
+			this.sort.nextRunAt || 'asc'
+		) as string | null;
 
-		// Sort by nextRunAt and priority
-		const candidates: { id: string; score: number }[] = [];
-		for (const jobId of jobIds) {
-			const score = await this.redis.zscore(this.key('jobs:by_next_run_at'), jobId);
-			if (score !== null) {
-				candidates.push({ id: jobId, score: parseFloat(score) });
-			}
+		if (!result) {
+			return undefined;
 		}
 
-		// Sort candidates
-		if (this.sort.nextRunAt === 'asc') {
-			candidates.sort((a, b) => a.score - b.score);
-		} else {
-			candidates.sort((a, b) => b.score - a.score);
+		// Fetch the locked job
+		const jobData = await this.redis.hgetall(this.key(`job:${result}`));
+		if (!jobData || Object.keys(jobData).length === 0) {
+			return undefined;
 		}
 
-		// Try to lock each candidate
-		for (const candidate of candidates) {
-			await this.redis.watch(this.key(`job:${candidate.id}`));
-
-			try {
-				const jobData = await this.redis.hgetall(this.key(`job:${candidate.id}`));
-				if (!jobData || Object.keys(jobData).length === 0) {
-					await this.redis.unwatch();
-					continue;
-				}
-
-				// Check if job is eligible
-				if (jobData.disabled === 'true') {
-					await this.redis.unwatch();
-					continue;
-				}
-
-				const lockedAt = jobData.lockedAt !== 'null' ? new Date(jobData.lockedAt) : null;
-				const nextRunAt = jobData.nextRunAt !== 'null' ? new Date(jobData.nextRunAt) : null;
-
-				// Check if job is ready to run
-				const isUnlockedAndReady = !lockedAt && nextRunAt && nextRunAt <= nextScanAt;
-				const isStale = lockedAt && lockedAt <= lockDeadline;
-
-				if (!isUnlockedAndReady && !isStale) {
-					await this.redis.unwatch();
-					continue;
-				}
-
-				// Lock the job atomically
-				const result = await this.redis
-					.multi()
-					.hset(this.key(`job:${candidate.id}`), 'lockedAt', lockTime.toISOString())
-					.hset(this.key(`job:${candidate.id}`), 'lastModifiedBy', options?.lastModifiedBy ?? 'null')
-					.hset(this.key(`job:${candidate.id}`), 'updatedAt', lockTime.toISOString())
-					.exec();
-
-				if (!result) {
-					// Transaction was aborted (key was modified)
-					continue;
-				}
-
-				// Return the updated job
-				const updatedData = await this.redis.hgetall(this.key(`job:${candidate.id}`));
-				return this.hashToJob(updatedData);
-			} catch {
-				await this.redis.unwatch();
-				continue;
-			}
-		}
-
-		return undefined;
+		return this.hashToJob(jobData);
 	}
 
 	async saveJobState(
@@ -619,6 +671,7 @@ export class RedisJobRepository implements IJobRepository {
 			failCount: job.failCount !== undefined ? String(job.failCount) : 'null',
 			failedAt: job.failedAt?.toISOString() || 'null',
 			lastFinishedAt: job.lastFinishedAt?.toISOString() || 'null',
+			fork: String(job.fork ?? false),
 			lastModifiedBy: options?.lastModifiedBy ?? 'null',
 			updatedAt: now
 		};
@@ -663,7 +716,9 @@ export class RedisJobRepository implements IJobRepository {
 				return job;
 			}
 
-			// Update the job
+			// Update the job - only update scheduling/config fields, not execution state fields
+			// Execution state (lockedAt, lastRunAt, lastFinishedAt, failedAt, failCount, failReason, progress)
+			// should only be updated via saveJobState
 			const now = new Date().toISOString();
 			const updates: Record<string, string> = {
 				priority: String(props.priority ?? 0),
@@ -674,9 +729,21 @@ export class RedisJobRepository implements IJobRepository {
 				data: JSON.stringify(props.data ?? {}),
 				repeatAt: props.repeatAt ?? 'null',
 				disabled: String(props.disabled ?? false),
+				fork: String(props.fork ?? false),
 				lastModifiedBy: options?.lastModifiedBy ?? 'null',
 				updatedAt: now
 			};
+
+			// Only update fail-related fields if they were explicitly set (for job.fail().save() pattern)
+			if (props.failReason !== undefined) {
+				updates.failReason = props.failReason ?? 'null';
+			}
+			if (props.failedAt !== undefined) {
+				updates.failedAt = props.failedAt?.toISOString() || 'null';
+			}
+			if (props.failCount !== undefined) {
+				updates.failCount = String(props.failCount);
+			}
 
 			await this.redis.hset(this.key(`job:${jobId}`), updates);
 
