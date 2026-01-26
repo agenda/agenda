@@ -6,12 +6,8 @@ import { MongoChangeStreamNotificationChannel } from '../src/index.js';
 /**
  * MongoDB Change Stream Notification Channel tests.
  *
- * NOTE: MongoDB Change Streams require a replica set to function.
- * MongoMemoryServer can be configured with replica sets, but it's complex
- * and has known issues. Tests that require actual change stream functionality
- * are marked with .skip when running against a standalone instance.
- *
- * For full integration testing, use a real MongoDB replica set.
+ * The test setup uses MongoMemoryReplSet which provides a single-node
+ * replica set, enabling Change Streams support for all tests.
  */
 
 const TEST_COLLECTION = 'agendaJobs';
@@ -24,7 +20,13 @@ async function createTestDb(): Promise<{ db: Db; client: MongoClient; disconnect
 	}
 
 	const dbName = `agenda_test_${randomUUID().replace(/-/g, '')}`;
-	const uri = `${baseUri.replace(/\/$/, '')}/${dbName}`;
+
+	// Parse the URI to properly insert the database name before query params
+	// MongoMemoryReplSet returns URIs like: mongodb://127.0.0.1:22261/?replicaSet=testset
+	const url = new URL(baseUri);
+	url.pathname = `/${dbName}`;
+	const uri = url.toString();
+
 	const client = await MongoClient.connect(uri);
 	const db = client.db(dbName);
 
@@ -213,29 +215,10 @@ describe('MongoChangeStreamNotificationChannel integration tests', () => {
 });
 
 // ============================================================================
-// Change Stream Tests (require replica set - skipped in CI)
+// Change Stream Tests (require replica set - provided by MongoMemoryReplSet)
 // ============================================================================
 
-describe.skip('MongoChangeStreamNotificationChannel change stream tests', () => {
-	/**
-	 * These tests require a MongoDB replica set to function properly.
-	 * MongoDB Change Streams only work with:
-	 * - Replica sets
-	 * - Sharded clusters
-	 *
-	 * MongoMemoryServer can be configured with replSet option, but it has
-	 * known limitations and may not work reliably in all environments.
-	 *
-	 * To run these tests:
-	 * 1. Start a MongoDB replica set locally or use MongoDB Atlas
-	 * 2. Set MONGO_URI to your replica set connection string
-	 * 3. Remove the .skip from this describe block
-	 *
-	 * Example with Docker:
-	 * docker run -d -p 27017:27017 --name mongo-rs mongo:6 --replSet rs0
-	 * docker exec mongo-rs mongosh --eval "rs.initiate()"
-	 */
-
+describe('MongoChangeStreamNotificationChannel change stream tests', () => {
 	let db: Db;
 	let client: MongoClient;
 	let channel: MongoChangeStreamNotificationChannel;
@@ -248,7 +231,12 @@ describe.skip('MongoChangeStreamNotificationChannel change stream tests', () => 
 		}
 
 		const dbName = `agenda_test_${randomUUID().replace(/-/g, '')}`;
-		const uri = `${baseUri.replace(/\/$/, '')}/${dbName}`;
+
+		// Parse the URI to properly insert the database name before query params
+		const url = new URL(baseUri);
+		url.pathname = `/${dbName}`;
+		const uri = url.toString();
+
 		client = await MongoClient.connect(uri);
 		db = client.db(dbName);
 	});
