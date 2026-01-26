@@ -38,11 +38,7 @@ let jobRunCount = 1;
 // Define a job with concurrency and lock settings
 agenda.define(
   'long-running job',
-  {
-    lockLifetime: 5 * 1000, // Max 5 seconds before lock expires
-    concurrency: 3 // Allow up to 3 instances to run simultaneously
-  },
-  async (job: Job) => {
+  async (_job: Job) => {
     const thisJob = jobRunCount++;
     console.log(`${time()} Job #${thisJob} started`);
 
@@ -50,16 +46,16 @@ agenda.define(
     await sleep(3 * 1000);
 
     console.log(`${time()} Job #${thisJob} finished`);
+  },
+  {
+    lockLifetime: 5 * 1000, // Max 5 seconds before lock expires
+    concurrency: 3 // Allow up to 3 instances to run simultaneously
   }
 );
 
 // Define a job that uses touch() for long-running work
 agenda.define(
   'long-running with touch',
-  {
-    lockLifetime: 5 * 1000, // Lock expires after 5 seconds
-    concurrency: 1
-  },
   async (job: Job) => {
     console.log(`${time()} Long job started (will use touch to extend lock)`);
 
@@ -74,6 +70,10 @@ agenda.define(
     await sleep(4 * 1000);
 
     console.log(`${time()} Long job finished after 8 seconds total`);
+  },
+  {
+    lockLifetime: 5 * 1000, // Lock expires after 5 seconds
+    concurrency: 1
   }
 );
 

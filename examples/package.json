@@ -1,0 +1,16 @@
+{
+  "name": "agenda-examples",
+  "private": true,
+  "type": "module",
+  "description": "Working examples for Agenda job scheduler",
+  "dependencies": {
+    "agenda": "workspace:*",
+    "@agendajs/mongo-backend": "workspace:*",
+    "@agendajs/postgres-backend": "workspace:*",
+    "@agendajs/redis-backend": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.21.0"
+  }
+}

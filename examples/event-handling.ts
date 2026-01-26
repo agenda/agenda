@@ -9,7 +9,7 @@
  *
  * Run with: npx tsx examples/event-handling.ts
  */
-import { Agenda, Job } from 'agenda';
+import { Agenda } from 'agenda';
 import { MongoBackend } from '@agendajs/mongo-backend';
 
 function timestamp(): string {
@@ -69,16 +69,16 @@ async function main() {
   // ===========================================
 
   // Events specific to a job name: 'start:jobName', 'success:jobName', etc.
-  agenda.on('start:important task', job => {
+  agenda.on('start:important task', _job => {
     console.log(`[${timestamp()}] [IMPORTANT] Starting critical task...`);
   });
 
-  agenda.on('success:important task', job => {
+  agenda.on('success:important task', _job => {
     console.log(`[${timestamp()}] [IMPORTANT] Critical task completed! Sending notification...`);
     // Here you could send a Slack message, email, etc.
   });
 
-  agenda.on('fail:important task', (error, job) => {
+  agenda.on('fail:important task', (_error, _job) => {
     console.error(`[${timestamp()}] [IMPORTANT] ALERT! Critical task failed!`);
     // Here you could page on-call, create incident, etc.
   });

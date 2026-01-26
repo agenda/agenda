@@ -45,5 +45,12 @@ export default tseslint.config(
 			'no-console': 'off'
 		}
 	},
+	{
+		// Examples are allowed to use console for demonstration purposes
+		files: ['examples/**/*.ts'],
+		rules: {
+			'no-console': 'off'
+		}
+	},
 	eslintConfigPrettier
 );

@@ -32,18 +32,18 @@ async function main() {
   // Define jobs with different default priorities
   agenda.define(
     'high priority task',
-    { priority: 'high' },
     async () => {
       log('HIGH priority task executed');
-    }
+    },
+    { priority: 'high' }
   );
 
   agenda.define(
     'low priority task',
-    { priority: 'low' },
     async () => {
       log('LOW priority task executed');
-    }
+    },
+    { priority: 'low' }
   );
 
   agenda.define(
