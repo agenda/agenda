@@ -4,7 +4,22 @@
   "initialVersions": {
     "agenda": "6.0.0-pre",
     "agenda-rest": "6.0.0-pre",
-    "agendash": "6.0.0-pre"
+    "agendash": "6.0.0-pre",
+    "@agendajs/mongo-backend": "1.0.0-pre",
+    "@agendajs/postgres-backend": "1.0.0-pre",
+    "@agendajs/redis-backend": "1.0.0-pre"
   },
-  "changesets": []
+  "changesets": [
+    "clean-beds-lick",
+    "clean-roses-argue",
+    "dull-spiders-matter",
+    "eight-ducks-fly",
+    "great-elephants-exist",
+    "green-ladybugs-brake",
+    "honest-cows-search",
+    "many-rivers-allow",
+    "soft-hotels-join",
+    "strange-bears-whisper",
+    "tasty-gorillas-protect"
+  ]
 }
