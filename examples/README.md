@@ -40,6 +40,7 @@ Depending on the example, you'll need one of these databases running:
 | [graceful-shutdown.ts](./graceful-shutdown.ts) | Proper shutdown with `drain()` and signal handling |
 | [unique-jobs.ts](./unique-jobs.ts) | Preventing duplicate jobs with `unique()` |
 | [job-data-types.ts](./job-data-types.ts) | TypeScript generics for type-safe job data |
+| [backoff-retry.ts](./backoff-retry.ts) | Automatic retry with backoff strategies (constant, linear, exponential) |
 
 ## Quick Start
 
@@ -101,6 +102,44 @@ job.priority('high');
 job.schedule('in 1 hour');
 job.unique({ 'data.userId': '123' });
 await job.save();
+```
+
+### Automatic Retry with Backoff
+
+```typescript
+import { backoffStrategies, exponential, when } from 'agenda';
+
+// Using preset strategy
+agenda.define('api-call', handler, {
+  backoff: backoffStrategies.standard() // ~1s, ~2s, ~4s, ~8s, ~16s
+});
+
+// Using built-in exponential backoff
+agenda.define('send-email', handler, {
+  backoff: exponential({
+    delay: 1000,     // Start at 1 second
+    maxRetries: 5,   // Try up to 5 times
+    factor: 2,       // Double delay each time
+    jitter: 0.1      // Add 10% randomness
+  })
+});
+
+// Conditional retry (only retry specific errors)
+agenda.define('payment', handler, {
+  backoff: when(
+    ctx => ctx.error.message.includes('timeout'),
+    exponential({ delay: 1000, maxRetries: 3 })
+  )
+});
+
+// Listen for retry events
+agenda.on('retry', (job, details) => {
+  console.log(`Retrying ${job.attrs.name} in ${details.delay}ms`);
+});
+
+agenda.on('retry exhausted', (err, job) => {
+  console.log(`Job ${job.attrs.name} failed after ${job.attrs.failCount} attempts`);
+});
 ```
 
 ### Graceful Shutdown

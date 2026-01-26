@@ -47,24 +47,32 @@
 Since there are a few job queue solutions, here a table comparing them to help you use the one that
 better suits your needs.
 
-| Feature                    |      Bull       |   Bee    |         Agenda          |
-| :------------------------- | :-------------: | :------: | :---------------------: |
-| Backend                    |      redis      |  redis   | mongo, postgres, redis  |
-| Priorities                 |        ✓        |          |   ✓    |
-| Concurrency                |        ✓        |    ✓     |   ✓    |
-| Delayed jobs               |        ✓        |          |   ✓    |
-| Global events              |        ✓        |          |   ✓    |
-| Rate Limiter               |        ✓        |          |        |
-| Pause/Resume               |        ✓        |          |   ✓    |
-| Sandboxed worker           |        ✓        |          |   ✓    |
-| Repeatable jobs            |        ✓        |          |   ✓    |
-| Atomic ops                 |        ✓        |    ✓     |   ~    |
-| Persistence                |        ✓        |    ✓     |   ✓    |
-| UI                         |        ✓        |          |   ✓    |
-| REST API                   |                 |          |   ✓    |
-| Central (Scalable) Queue   |                 |          |   ✓    |
-| Supports long running jobs |                 |          |   ✓    |
-| Optimized for              | Jobs / Messages | Messages |  Jobs  |
+| Feature                    |     BullMQ      |      Bull       |   Bee    |       pg-boss       |         Agenda          |
+| :------------------------- | :-------------: | :-------------: | :------: | :-----------------: | :---------------------: |
+| Backend                    |      redis      |      redis      |  redis   |      postgres       | mongo, postgres, redis  |
+| Status                     |     Active      |   Maintenance   |  Stale   |       Active        |         Active          |
+| TypeScript                 |        ✓        |                 |          |          ✓          |            ✓            |
+| Priorities                 |        ✓        |        ✓        |          |          ✓          |            ✓            |
+| Concurrency                |        ✓        |        ✓        |    ✓     |          ✓          |            ✓            |
+| Delayed jobs               |        ✓        |        ✓        |          |          ✓          |            ✓            |
+| Global events              |        ✓        |        ✓        |          |                     |            ✓            |
+| Rate Limiter               |        ✓        |        ✓        |          |          ✓          |                         |
+| Debouncing                 |        ✓        |                 |          |          ✓          |                         |
+| Pause/Resume               |        ✓        |        ✓        |          |                     |            ✓            |
+| Sandboxed worker           |        ✓        |        ✓        |          |                     |            ✓            |
+| Repeatable jobs            |        ✓        |        ✓        |          |          ✓          |            ✓            |
+| Auto-retry with backoff    |        ✓        |        ✓        |          |          ✓          |            ✓            |
+| Dead letter queues         |        ✓        |        ✓        |          |          ✓          |                         |
+| Job dependencies           |        ✓        |                 |          |                     |                         |
+| Atomic ops                 |        ✓        |        ✓        |    ✓     |          ✓          |            ~            |
+| Persistence                |        ✓        |        ✓        |    ✓     |          ✓          |            ✓            |
+| UI                         |        ✓        |        ✓        |          |                     |            ✓            |
+| REST API                   |                 |                 |          |                     |            ✓            |
+| Central (Scalable) Queue   |        ✓        |                 |          |          ✓          |            ✓            |
+| Supports long running jobs |                 |                 |          |                     |            ✓            |
+| Human-readable intervals   |                 |                 |          |                     |            ✓            |
+| Real-time notifications    |        ✓        |                 |          |          ✓          |            ✓            |
+| Optimized for              | Jobs / Messages | Jobs / Messages | Messages |        Jobs         |          Jobs           |
 
 _Kudos for making the comparison chart goes to [Bull](https://www.npmjs.com/package/bull#feature-comparison) maintainers._
 
@@ -168,6 +176,7 @@ mapped to a database collection and load the jobs from within.
   - [Real-Time Notifications](#real-time-notifications)
 - [Agenda Events](#agenda-events)
 - [Defining job processors](#defining-job-processors)
+- [Automatic Retry with Backoff](#automatic-retry-with-backoff)
 - [Creating jobs](#creating-jobs)
 - [Managing jobs](#managing-jobs)
 - [Starting the job processor](#starting-the-job-processor)
@@ -547,6 +556,7 @@ the following:
   of the job. Higher priority jobs will run first. See the priority mapping
   below
 - `shouldSaveResult`: `boolean` flag that specifies whether the result of the job should also be stored in the database. Defaults to false
+- `backoff`: `BackoffStrategy` a function that determines retry delay on failure. See [Automatic Retry with Backoff](#automatic-retry-with-backoff) for details
 
 Priority mapping:
 
@@ -591,6 +601,226 @@ agenda.define('say hello', job => {
 ```
 
 `define()` acts like an assignment: if `define(jobName, ...)` is called multiple times (e.g. every time your script starts), the definition in the last call will overwrite the previous one. Thus, if you `define` the `jobName` only once in your code, it's safe for that call to execute multiple times.
+
+## Automatic Retry with Backoff
+
+Agenda supports automatic retry with configurable backoff strategies. When a job fails, it can be automatically rescheduled based on the backoff strategy you define.
+
+### Basic Usage
+
+```js
+import { Agenda, backoffStrategies } from 'agenda';
+import { MongoBackend } from '@agendajs/mongo-backend';
+
+const agenda = new Agenda({
+	backend: new MongoBackend({ address: 'mongodb://localhost/agenda' })
+});
+
+// Define a job with exponential backoff
+agenda.define(
+	'send email',
+	async job => {
+		await sendEmail(job.attrs.data);
+	},
+	{
+		backoff: backoffStrategies.exponential({
+			delay: 1000,      // Start with 1 second
+			maxRetries: 5,    // Retry up to 5 times
+			factor: 2,        // Double the delay each time
+			jitter: 0.1       // Add 10% randomness to prevent thundering herd
+		})
+	}
+);
+// Retries at: ~1s, ~2s, ~4s, ~8s, ~16s (then gives up)
+```
+
+### Built-in Backoff Strategies
+
+Agenda provides three built-in backoff strategies:
+
+#### Constant Backoff
+
+Same delay between each retry attempt.
+
+```js
+import { constant } from 'agenda';
+
+agenda.define('my-job', handler, {
+	backoff: constant({
+		delay: 5000,      // 5 seconds between each retry
+		maxRetries: 3     // Retry up to 3 times
+	})
+});
+// Retries at: 5s, 5s, 5s
+```
+
+#### Linear Backoff
+
+Delay increases by a fixed amount each retry.
+
+```js
+import { linear } from 'agenda';
+
+agenda.define('my-job', handler, {
+	backoff: linear({
+		delay: 1000,      // Start with 1 second
+		increment: 2000,  // Add 2 seconds each retry (default: same as delay)
+		maxRetries: 4,
+		maxDelay: 10000   // Cap at 10 seconds
+	})
+});
+// Retries at: 1s, 3s, 5s, 7s
+```
+
+#### Exponential Backoff
+
+Delay multiplies by a factor each retry. Best for rate-limited APIs.
+
+```js
+import { exponential } from 'agenda';
+
+agenda.define('my-job', handler, {
+	backoff: exponential({
+		delay: 100,       // Start with 100ms
+		factor: 2,        // Double each time (default: 2)
+		maxRetries: 5,
+		maxDelay: 30000,  // Cap at 30 seconds
+		jitter: 0.2       // Add 20% randomness
+	})
+});
+// Retries at: ~100ms, ~200ms, ~400ms, ~800ms, ~1600ms
+```
+
+### Preset Strategies
+
+For common use cases, Agenda provides preset strategies:
+
+```js
+import { backoffStrategies } from 'agenda';
+
+// Aggressive: Fast retries for transient failures
+// 100ms, 200ms, 400ms (3 retries in ~700ms)
+agenda.define('quick-job', handler, {
+	backoff: backoffStrategies.aggressive()
+});
+
+// Standard: Balanced approach (default recommendation)
+// ~1s, ~2s, ~4s, ~8s, ~16s with 10% jitter (5 retries)
+agenda.define('normal-job', handler, {
+	backoff: backoffStrategies.standard()
+});
+
+// Relaxed: Gentle backoff for rate-limited APIs
+// ~5s, ~15s, ~45s, ~135s with 10% jitter (4 retries)
+agenda.define('api-job', handler, {
+	backoff: backoffStrategies.relaxed()
+});
+```
+
+### Custom Backoff Functions
+
+You can define your own backoff logic by providing a function:
+
+```js
+agenda.define('custom-job', handler, {
+	backoff: (context) => {
+		// context contains: { attempt, error, jobName, jobData }
+
+		// Return delay in milliseconds, or null to stop retrying
+		if (context.attempt > 3) return null;
+
+		// Fibonacci-like sequence
+		const fibDelays = [1000, 1000, 2000, 3000, 5000];
+		return fibDelays[context.attempt - 1];
+	}
+});
+```
+
+### Combining Strategies
+
+Use `combine()` to chain multiple strategies:
+
+```js
+import { combine, constant, exponential } from 'agenda';
+
+agenda.define('complex-job', handler, {
+	backoff: combine(
+		// First 2 retries: quick constant delay
+		(ctx) => ctx.attempt <= 2 ? 100 : null,
+		// Then switch to exponential
+		(ctx) => {
+			if (ctx.attempt > 5) return null;
+			return 1000 * Math.pow(2, ctx.attempt - 3);
+		}
+	)
+});
+```
+
+### Conditional Retry
+
+Use `when()` to retry only for specific errors:
+
+```js
+import { when, exponential } from 'agenda';
+
+agenda.define('api-job', handler, {
+	backoff: when(
+		// Only retry on timeout or rate limit errors
+		(ctx) =>
+			ctx.error.message.includes('timeout') ||
+			ctx.error.message.includes('rate limit'),
+		exponential({ delay: 1000, maxRetries: 3 })
+	)
+});
+```
+
+### Retry Events
+
+Listen for retry events to monitor job behavior:
+
+```js
+// When a job is scheduled for retry
+agenda.on('retry', (job, details) => {
+	console.log(`Job ${job.attrs.name} retry #${details.attempt}`);
+	console.log(`  Next run: ${details.nextRunAt}`);
+	console.log(`  Delay: ${details.delay}ms`);
+	console.log(`  Error: ${details.error.message}`);
+});
+
+// Job-specific retry event
+agenda.on('retry:send email', (job, details) => {
+	metrics.increment('email.retries');
+});
+
+// When all retries are exhausted
+agenda.on('retry exhausted', (error, job) => {
+	console.log(`Job ${job.attrs.name} failed after ${job.attrs.failCount} attempts`);
+	alertOps(job, error);
+});
+
+// Job-specific exhaustion
+agenda.on('retry exhausted:critical-job', (error, job) => {
+	// Move to dead letter queue, send alert, etc.
+});
+```
+
+### Backoff Options Reference
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `delay` | number | 1000 | Initial delay in milliseconds |
+| `maxRetries` | number | 3 | Maximum retry attempts |
+| `maxDelay` | number | Infinity | Maximum delay cap |
+| `jitter` | number | 0 | Randomness factor (0-1) |
+| `factor` | number | 2 | Multiplier for exponential backoff |
+| `increment` | number | delay | Amount to add for linear backoff |
+
+### Important Notes
+
+- **failCount tracks attempts**: Use `job.attrs.failCount` to see how many times a job has failed
+- **Backoff is per-definition**: Set the backoff strategy when defining the job, not when scheduling it
+- **Repeating jobs can use backoff**: If a repeating job (created with `every()`) has a backoff configured and fails, it will retry immediately rather than waiting for the next scheduled run
+- **Manual retry still works**: You can still listen to `fail` events and manually reschedule if needed
 
 ## Creating Jobs
 
@@ -1099,6 +1329,25 @@ agenda.on('success:send email', job => {
 ```js
 agenda.on('fail:send email', (err, job) => {
 	console.log(`Job failed with error: ${err.message}`);
+});
+```
+
+- `retry` - called when a job is scheduled for automatic retry (requires backoff strategy)
+- `retry:job name` - called when a specific job is scheduled for retry
+
+```js
+agenda.on('retry', (job, details) => {
+	// details: { attempt, delay, nextRunAt, error }
+	console.log(`Retrying ${job.attrs.name} in ${details.delay}ms (attempt ${details.attempt})`);
+});
+```
+
+- `retry exhausted` - called when a job has exhausted all retry attempts
+- `retry exhausted:job name` - called when a specific job exhausts retries
+
+```js
+agenda.on('retry exhausted:send email', (err, job) => {
+	console.log(`Email job failed permanently after ${job.attrs.failCount} attempts`);
 });
 ```
 

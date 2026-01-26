@@ -1,4 +1,5 @@
 import type { Job } from '../Job.js';
+import type { BackoffStrategy } from '../utils/backoff.js';
 
 export interface JobDefinition<DATA = unknown> {
 	/** max number of locked jobs of this kind */
@@ -9,6 +10,32 @@ export interface JobDefinition<DATA = unknown> {
 	priority?: number;
 	/** how many jobs of this kind can run in parallel/simultanously per Agenda instance */
 	concurrency?: number;
+
+	/**
+	 * Backoff strategy for automatic retries on failure.
+	 * Can be a built-in strategy from `backoffStrategies` or a custom function.
+	 *
+	 * @example
+	 * ```ts
+	 * import { backoffStrategies } from 'agenda';
+	 *
+	 * // Using built-in exponential backoff
+	 * agenda.define('myJob', handler, {
+	 *   backoff: backoffStrategies.exponential({ delay: 1000, maxRetries: 5 })
+	 * });
+	 *
+	 * // Using a preset
+	 * agenda.define('myJob', handler, {
+	 *   backoff: backoffStrategies.standard()
+	 * });
+	 *
+	 * // Custom strategy
+	 * agenda.define('myJob', handler, {
+	 *   backoff: (ctx) => ctx.attempt <= 3 ? 1000 * ctx.attempt : null
+	 * });
+	 * ```
+	 */
+	backoff?: BackoffStrategy;
 
 	filePath: string | undefined;
 	fn: DefinitionProcessor<DATA, void | ((error?: Error) => void)>;
