@@ -47,9 +47,13 @@ export class PostgresBackend implements IAgendaBackend {
 	private _repository: PostgresJobRepository;
 	private _notificationChannel?: PostgresNotificationChannel;
 	private config: IPostgresBackendConfig;
+	private _ownsConnection: boolean;
 
 	constructor(config: IPostgresBackendConfig) {
 		this.config = config;
+
+		// Determine if we own the connection (not passed in by user)
+		this._ownsConnection = !config.pool;
 
 		// Create repository
 		this._repository = new PostgresJobRepository(config);
@@ -68,7 +72,8 @@ export class PostgresBackend implements IAgendaBackend {
 			tableName: config.tableName || 'agenda_jobs',
 			channelName: config.channelName || 'agenda_jobs',
 			ensureSchema: config.ensureSchema ?? true,
-			disableNotifications: config.disableNotifications ?? false
+			disableNotifications: config.disableNotifications ?? false,
+			ownsConnection: this._ownsConnection
 		});
 	}
 
@@ -77,6 +82,14 @@ export class PostgresBackend implements IAgendaBackend {
 	 */
 	get repository(): IJobRepository {
 		return this._repository;
+	}
+
+	/**
+	 * Whether this backend owns its database connection.
+	 * True if created from connectionString/poolConfig, false if pool was passed in.
+	 */
+	get ownsConnection(): boolean {
+		return this._ownsConnection;
 	}
 
 	/**

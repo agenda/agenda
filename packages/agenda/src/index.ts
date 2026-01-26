@@ -4,7 +4,6 @@ import debug from 'debug';
 import { ForkOptions } from 'child_process';
 import type { IJobDefinition } from './types/JobDefinition.js';
 import type { IAgendaConfig } from './types/AgendaConfig.js';
-import type { IDbConfig, SortDirection } from './types/DbOptions.js';
 import type { IAgendaBackend } from './types/AgendaBackend.js';
 import type { INotificationChannel, IJobNotification } from './types/NotificationChannel.js';
 import type { JobId } from './types/JobParameters.js';
@@ -31,7 +30,6 @@ const DefaultOptions = {
 	defaultLockLimit: 0,
 	lockLimit: 0,
 	defaultLockLifetime: 10 * 60 * 1000,
-	sort: { nextRunAt: 1, priority: -1 } as const,
 	forkHelper: { path: 'dist/childWorker.js' }
 };
 
@@ -86,7 +84,7 @@ export type AgendaEventName =
  * @class
  */
 export class Agenda extends EventEmitter {
-	readonly attrs: IAgendaConfig & IDbConfig;
+	readonly attrs: IAgendaConfig;
 
 	public readonly forkedWorker?: boolean;
 
@@ -170,8 +168,7 @@ export class Agenda extends EventEmitter {
 			maxConcurrency: config.maxConcurrency || DefaultOptions.maxConcurrency,
 			defaultLockLimit: config.defaultLockLimit || DefaultOptions.defaultLockLimit,
 			lockLimit: config.lockLimit || DefaultOptions.lockLimit,
-			defaultLockLifetime: config.defaultLockLifetime || DefaultOptions.defaultLockLifetime,
-			sort: DefaultOptions.sort
+			defaultLockLifetime: config.defaultLockLifetime || DefaultOptions.defaultLockLifetime
 		};
 
 		this.forkedWorker = config.forkedWorker;
@@ -195,17 +192,6 @@ export class Agenda extends EventEmitter {
 		if (cb) {
 			this.ready.then(() => cb());
 		}
-	}
-
-	/**
-	 * Set the sort query for finding next job
-	 * Default is { nextRunAt: 1, priority: -1 }
-	 * @param query
-	 */
-	sort(query: { [key: string]: SortDirection }): Agenda {
-		log('Agenda.sort([Object])');
-		this.attrs.sort = query;
-		return this;
 	}
 
 	/**
@@ -613,8 +599,11 @@ export class Agenda extends EventEmitter {
 
 	/**
 	 * Clear the interval that processes the jobs and unlocks all currently locked jobs
+	 * @param closeConnection - Whether to close the database connection.
+	 *   Defaults to backend.ownsConnection (true if backend created the connection,
+	 *   false if connection was passed in by user).
 	 */
-	async stop(): Promise<void> {
+	async stop(closeConnection?: boolean): Promise<void> {
 		if (!this.jobProcessor) {
 			log('Agenda.stop called, but agenda has never started!');
 			return;
@@ -632,15 +621,20 @@ export class Agenda extends EventEmitter {
 			await this.db.unlockJobs(jobIds);
 		}
 
-		// Disconnect notification channel if configured
+		// Disconnect notification channel if configured (we always disconnect since we connected it in start)
 		if (this.notificationChannel) {
 			log('Agenda.stop disconnecting notification channel');
 			await this.notificationChannel.disconnect();
 		}
 
+		// Determine whether to close backend connection
+		const shouldClose = closeConnection ?? this.backend.ownsConnection ?? true;
+
 		// Disconnect the backend
-		log('Agenda.stop disconnecting backend');
-		await this.backend.disconnect();
+		if (shouldClose) {
+			log('Agenda.stop disconnecting backend');
+			await this.backend.disconnect();
+		}
 
 		this.jobProcessor = undefined;
 	}
@@ -649,8 +643,11 @@ export class Agenda extends EventEmitter {
 	 * Waits for all currently running jobs to finish before stopping.
 	 * This allows for a graceful shutdown where jobs complete their work.
 	 * Unlike stop(), this method waits for running jobs to complete instead of unlocking them.
+	 * @param closeConnection - Whether to close the database connection.
+	 *   Defaults to backend.ownsConnection (true if backend created the connection,
+	 *   false if connection was passed in by user).
 	 */
-	async drain(): Promise<void> {
+	async drain(closeConnection?: boolean): Promise<void> {
 		if (!this.jobProcessor) {
 			log('Agenda.drain called, but agenda has never started!');
 			return;
@@ -660,15 +657,20 @@ export class Agenda extends EventEmitter {
 
 		await this.jobProcessor.drain();
 
-		// Disconnect notification channel if configured
+		// Disconnect notification channel if configured (we always disconnect since we connected it in start)
 		if (this.notificationChannel) {
 			log('Agenda.drain disconnecting notification channel');
 			await this.notificationChannel.disconnect();
 		}
 
+		// Determine whether to close backend connection
+		const shouldClose = closeConnection ?? this.backend.ownsConnection ?? true;
+
 		// Disconnect the backend
-		log('Agenda.drain disconnecting backend');
-		await this.backend.disconnect();
+		if (shouldClose) {
+			log('Agenda.drain disconnecting backend');
+			await this.backend.disconnect();
+		}
 
 		this.jobProcessor = undefined;
 	}

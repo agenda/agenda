@@ -12,7 +12,8 @@ import type {
 	IJobsResult,
 	IJobsOverview,
 	IJobWithState,
-	IJobsSort
+	IJobsSort,
+	SortDirection
 } from 'agenda';
 import type { IRedisBackendConfig, IRedisJobData } from './types.js';
 
@@ -32,11 +33,11 @@ export class RedisJobRepository implements IJobRepository {
 	private redis: Redis;
 	private ownClient: boolean;
 	private keyPrefix: string;
-	private sort: { nextRunAt?: 1 | -1; priority?: 1 | -1 };
+	private sort: { nextRunAt?: SortDirection; priority?: SortDirection };
 
 	constructor(private config: IRedisBackendConfig) {
 		this.keyPrefix = config.keyPrefix || 'agenda:';
-		this.sort = config.sort || { nextRunAt: 1, priority: -1 };
+		this.sort = config.sort || { nextRunAt: 'asc', priority: 'desc' };
 
 		// Use existing client or create a new one
 		if (config.redis) {
@@ -266,28 +267,28 @@ export class RedisJobRepository implements IJobRepository {
 				if (sort.nextRunAt !== undefined) {
 					const aTime = a.nextRunAt?.getTime() ?? Number.MAX_SAFE_INTEGER;
 					const bTime = b.nextRunAt?.getTime() ?? Number.MAX_SAFE_INTEGER;
-					const cmp = sort.nextRunAt === 1 ? aTime - bTime : bTime - aTime;
+					const cmp = sort.nextRunAt === 'asc' ? aTime - bTime : bTime - aTime;
 					if (cmp !== 0) return cmp;
 				}
 				if (sort.priority !== undefined) {
-					const cmp = sort.priority === 1 ? a.priority - b.priority : b.priority - a.priority;
+					const cmp = sort.priority === 'asc' ? a.priority - b.priority : b.priority - a.priority;
 					if (cmp !== 0) return cmp;
 				}
 				if (sort.lastRunAt !== undefined) {
 					const aTime = a.lastRunAt?.getTime() ?? 0;
 					const bTime = b.lastRunAt?.getTime() ?? 0;
-					const cmp = sort.lastRunAt === 1 ? aTime - bTime : bTime - aTime;
+					const cmp = sort.lastRunAt === 'asc' ? aTime - bTime : bTime - aTime;
 					if (cmp !== 0) return cmp;
 				}
 				if (sort.lastFinishedAt !== undefined) {
 					const aTime = a.lastFinishedAt?.getTime() ?? 0;
 					const bTime = b.lastFinishedAt?.getTime() ?? 0;
-					const cmp = sort.lastFinishedAt === 1 ? aTime - bTime : bTime - aTime;
+					const cmp = sort.lastFinishedAt === 'asc' ? aTime - bTime : bTime - aTime;
 					if (cmp !== 0) return cmp;
 				}
 				if (sort.name !== undefined) {
 					const cmp = a.name.localeCompare(b.name);
-					return sort.name === 1 ? cmp : -cmp;
+					return sort.name === 'asc' ? cmp : -cmp;
 				}
 			}
 			// Default sort: nextRunAt DESC, lastRunAt DESC
@@ -529,7 +530,7 @@ export class RedisJobRepository implements IJobRepository {
 		}
 
 		// Sort candidates
-		if (this.sort.nextRunAt === 1) {
+		if (this.sort.nextRunAt === 'asc') {
 			candidates.sort((a, b) => a.score - b.score);
 		} else {
 			candidates.sort((a, b) => b.score - a.score);

@@ -1,4 +1,5 @@
 import type { Pool, PoolConfig } from 'pg';
+import type { SortDirection } from 'agenda';
 
 /**
  * Configuration options for PostgresBackend
@@ -22,10 +23,10 @@ export interface IPostgresBackendConfig {
 	/** Whether to create the table and indexes on connect (default: true) */
 	ensureSchema?: boolean;
 
-	/** Sort order for job queries (default: { nextRunAt: 1, priority: -1 }) */
+	/** Sort order for job queries (default: { nextRunAt: 'asc', priority: 'desc' }) */
 	sort?: {
-		nextRunAt?: 1 | -1;
-		priority?: 1 | -1;
+		nextRunAt?: SortDirection;
+		priority?: SortDirection;
 	};
 
 	/** Disable LISTEN/NOTIFY notification channel (default: false) */

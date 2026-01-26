@@ -118,8 +118,7 @@ const agenda = new Agenda({
 const agenda = new Agenda({
   backend: new MongoBackend({
     mongo: db,
-    collection: 'jobs',      // Collection name (default: 'agendaJobs')
-    ensureIndex: true         // Create indexes on start
+    collection: 'jobs'        // Collection name (default: 'agendaJobs')
   }),
   processEvery: '30 seconds', // Job polling interval
   maxConcurrency: 20,         // Max concurrent jobs

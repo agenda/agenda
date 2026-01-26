@@ -71,7 +71,7 @@ interface IMongoBackendConfig {
   /** Name to identify this Agenda instance (stored as lastModifiedBy) */
   name?: string;
 
-  /** Whether to create indexes on connect (default: false) */
+  /** Whether to create indexes on connect (default: true) */
   ensureIndex?: boolean;
 
   /** Sort order for job queries */
@@ -86,9 +86,7 @@ const agenda = new Agenda({
   backend: new MongoBackend({
     address: 'mongodb://localhost/agenda',
     collection: 'jobs',           // Custom collection name
-    ensureIndex: true,            // Create indexes on start
-    name: 'worker-1',             // Identify this instance
-    sort: { nextRunAt: 1, priority: -1 }
+    sort: { nextRunAt: 'asc', priority: 'desc' }
   }),
   processEvery: '30 seconds',     // Job polling interval
   maxConcurrency: 20,             // Max concurrent jobs
@@ -122,25 +120,47 @@ const agenda = new Agenda({
 
 ## Database Index
 
-For production, create an index for optimal job query performance:
+By default, MongoBackend automatically creates the `findAndLockNextJobIndex` index on connect for optimal job query performance. The index includes:
 
 ```javascript
-db.agendaJobs.createIndex({
+{
   "name": 1,
   "nextRunAt": 1,
   "priority": -1,
   "lockedAt": 1,
   "disabled": 1
-}, { name: "findAndLockNextJobIndex" })
+}
 ```
 
-Or enable automatic index creation:
+To disable automatic index creation (e.g., if you manage indexes separately):
 
 ```typescript
 const backend = new MongoBackend({
   mongo: db,
-  ensureIndex: true  // Creates index on connect
+  ensureIndex: false  // Skip automatic index creation
 });
+```
+
+### Additional Indexes
+
+If you use **Agendash**, add this index for better dashboard performance:
+
+```javascript
+db.agendaJobs.createIndex({
+  "nextRunAt": -1,
+  "lastRunAt": -1,
+  "lastFinishedAt": -1
+}, { name: "agendash" })
+```
+
+If you have job definitions with thousands of instances, this index can improve lock queries:
+
+```javascript
+db.agendaJobs.createIndex({
+  "name": 1,
+  "disabled": 1,
+  "lockedAt": 1
+}, { name: "findAndLockDeadJobs" })
 ```
 
 ## Related Packages

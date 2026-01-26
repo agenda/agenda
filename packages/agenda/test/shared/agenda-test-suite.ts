@@ -220,7 +220,7 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 
 				const result = await agenda.queryJobs({
 					name: 'sort-test',
-					sort: { priority: -1 }
+					sort: { priority: 'desc' }
 				});
 
 				expect(result.jobs.length).toBe(3);

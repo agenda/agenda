@@ -140,10 +140,6 @@ describe('Agenda Unit Tests', () => {
 		it('defaultLockLifetime returns itself', () => {
 			expect(agenda.defaultLockLifetime(1000)).toBe(agenda);
 		});
-
-		it('sort returns itself', () => {
-			expect(agenda.sort({ nextRunAt: 1, priority: -1 })).toBe(agenda);
-		});
 	});
 
 	describe('define', () => {

@@ -102,7 +102,7 @@ export class AgendashController implements IAgendashController {
 				search: search || undefined,
 				skip,
 				limit,
-				sort: { nextRunAt: -1 }
+				sort: { nextRunAt: 'desc' }
 			})
 		]);
 
