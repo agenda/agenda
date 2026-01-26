@@ -22,7 +22,13 @@ async function createTestDb(): Promise<{ db: Db; client: MongoClient; disconnect
 	}
 
 	const dbName = `agenda_test_${randomUUID().replace(/-/g, '')}`;
-	const uri = `${baseUri.replace(/\/$/, '')}/${dbName}`;
+
+	// Parse the URI to properly insert the database name before query params
+	// MongoMemoryReplSet returns URIs like: mongodb://127.0.0.1:22261/?replicaSet=testset
+	const url = new URL(baseUri);
+	url.pathname = `/${dbName}`;
+	const uri = url.toString();
+
 	const client = await MongoClient.connect(uri);
 	const db = client.db(dbName);
 
@@ -50,7 +56,12 @@ beforeAll(async () => {
 		throw new Error('MONGO_URI not set. Ensure global setup is configured.');
 	}
 	const dbName = `agenda_test_${randomUUID().replace(/-/g, '')}`;
-	sharedDbUri = `${baseUri.replace(/\/$/, '')}/${dbName}`;
+
+	// Parse the URI to properly insert the database name before query params
+	// MongoMemoryReplSet returns URIs like: mongodb://127.0.0.1:22261/?replicaSet=testset
+	const url = new URL(baseUri);
+	url.pathname = `/${dbName}`;
+	sharedDbUri = url.toString();
 
 	const client = await MongoClient.connect(sharedDbUri);
 	sharedDb = client.db(dbName);

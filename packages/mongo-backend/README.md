@@ -96,7 +96,41 @@ const agenda = new Agenda({
 
 ## Real-Time Notifications
 
-MongoBackend provides storage only and uses polling to check for new jobs. For real-time job processing across distributed systems, combine it with a notification channel:
+MongoBackend provides storage only and uses polling to check for new jobs. For real-time job processing across distributed systems, you have several options:
+
+### Option 1: MongoDB Change Streams (Native)
+
+If your MongoDB deployment is a replica set (even a single-node replica set works), you can use `MongoChangeStreamNotificationChannel` for native real-time notifications without any external dependencies:
+
+```typescript
+import { Agenda } from 'agenda';
+import { MongoBackend, MongoChangeStreamNotificationChannel } from '@agendajs/mongo-backend';
+
+const agenda = new Agenda({
+  backend: new MongoBackend({ mongo: db }),
+  notificationChannel: new MongoChangeStreamNotificationChannel({ db })
+});
+
+// Jobs are processed immediately when created (no polling delay)
+await agenda.start();
+await agenda.now('myJob'); // Triggers instant processing
+```
+
+**Requirements:**
+- MongoDB replica set (single-node replica sets work fine)
+- WiredTiger storage engine (default since MongoDB 3.2)
+
+**Configuration options:**
+```typescript
+const channel = new MongoChangeStreamNotificationChannel({
+  db: mongoDb,                    // Required: MongoDB database instance
+  collection: 'agendaJobs',       // Optional: collection name (default: 'agendaJobs')
+  resumeToken: savedToken,        // Optional: resume from specific point
+  fullDocument: true              // Optional: include full document on updates (default: true)
+});
+```
+
+### Option 2: In-Memory (Single Process)
 
 ```typescript
 import { Agenda, InMemoryNotificationChannel } from 'agenda';
@@ -107,10 +141,16 @@ const agenda = new Agenda({
   backend: new MongoBackend({ mongo: db }),
   notificationChannel: new InMemoryNotificationChannel()
 });
+```
 
-// For production: use Redis for notifications
+### Option 3: Redis Pub/Sub (Multi-Process)
+
+```typescript
+import { Agenda } from 'agenda';
+import { MongoBackend } from '@agendajs/mongo-backend';
 import { RedisBackend } from '@agendajs/redis-backend';
 
+// For production: use Redis for notifications
 const redisBackend = new RedisBackend({ connectionString: 'redis://localhost:6379' });
 const agenda = new Agenda({
   backend: new MongoBackend({ mongo: db }),

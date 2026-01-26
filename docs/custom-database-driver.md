@@ -8,7 +8,7 @@ Before implementing a custom backend, check if an official package already exist
 
 | Package | Backend | Notifications | Install |
 |---------|---------|---------------|---------|
-| `@agendajs/mongo-backend` | MongoDB | Polling (or custom) | `npm install @agendajs/mongo-backend` |
+| `@agendajs/mongo-backend` | MongoDB | Change Streams (optional) | `npm install @agendajs/mongo-backend` |
 | `@agendajs/postgres-backend` | PostgreSQL | LISTEN/NOTIFY | `npm install @agendajs/postgres-backend` |
 | `@agendajs/redis-backend` | Redis | Pub/Sub | `npm install @agendajs/redis-backend` |
 
@@ -60,7 +60,8 @@ A backend provides:
 
 | Backend | Storage | Notifications | Notes |
 |---------|:-------:|:-------------:|-------|
-| **MongoDB** (`MongoBackend`) | ✅ | ❌ | Storage only. Combine with external notification channel for real-time. |
+| **MongoDB** (`MongoBackend`) | ✅ | ❌ | Storage only by default. |
+| **MongoDB** (`MongoChangeStreamNotificationChannel`) | ❌ | ✅ | Native Change Streams notifications. Requires replica set. |
 | **PostgreSQL** (`PostgresBackend`) | ✅ | ✅ | Full backend. Uses LISTEN/NOTIFY for notifications. |
 | **Redis** (`RedisBackend`) | ✅ | ✅ | Full backend. Uses Pub/Sub for notifications. |
 | **InMemoryNotificationChannel** | ❌ | ✅ | Notifications only. For single-process/testing. |
@@ -68,10 +69,11 @@ A backend provides:
 ### Common Configurations
 
 1. **MongoDB only** (default): Storage with polling-based job processing
-2. **MongoDB + Redis notifications**: MongoDB for storage, Redis Pub/Sub for real-time notifications
-3. **MongoDB + PostgreSQL notifications**: MongoDB for storage, PostgreSQL LISTEN/NOTIFY for notifications
-4. **PostgreSQL unified**: Single backend providing both storage AND notifications
-5. **Redis unified**: Single backend providing both storage AND notifications
+2. **MongoDB + Change Streams**: MongoDB for storage AND real-time notifications (requires replica set)
+3. **MongoDB + Redis notifications**: MongoDB for storage, Redis Pub/Sub for real-time notifications
+4. **MongoDB + PostgreSQL notifications**: MongoDB for storage, PostgreSQL LISTEN/NOTIFY for notifications
+5. **PostgreSQL unified**: Single backend providing both storage AND notifications
+6. **Redis unified**: Single backend providing both storage AND notifications
 
 ### Mixing Storage and Notification Backends
 
@@ -112,6 +114,37 @@ const agenda = new Agenda({
   backend: new MongoBackend({ mongo: client.db('agenda') })
 });
 ```
+
+### MongoDB with Change Streams (Real-Time)
+
+If your MongoDB deployment is a replica set, you can use `MongoChangeStreamNotificationChannel` for native real-time notifications:
+
+```typescript
+import { Agenda } from 'agenda';
+import { MongoBackend, MongoChangeStreamNotificationChannel } from '@agendajs/mongo-backend';
+
+const client = await MongoClient.connect('mongodb://localhost/?replicaSet=rs0');
+const db = client.db('agenda');
+
+const agenda = new Agenda({
+  backend: new MongoBackend({ mongo: db }),
+  notificationChannel: new MongoChangeStreamNotificationChannel({ db })
+});
+
+// Jobs are now processed immediately when created
+await agenda.start();
+await agenda.now('myJob'); // Triggers instant processing via change stream
+```
+
+**How it works:**
+- Uses MongoDB Change Streams to watch the jobs collection for changes
+- Automatically detects job inserts/updates and notifies the processor
+- The `publish()` method is a no-op since changes are detected automatically
+- Supports resume tokens for recovery after disconnections
+
+**Requirements:**
+- MongoDB replica set (even single-node replica sets work)
+- WiredTiger storage engine (default since MongoDB 3.2)
 
 ## Custom Backend
 
