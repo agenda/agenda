@@ -3,7 +3,7 @@ import debug from 'debug';
 import { ChildProcess, fork } from 'child_process';
 import type { Agenda } from './index.js';
 import type { DefinitionProcessor } from './types/JobDefinition.js';
-import { JobParameters, datefields, TJobDatefield, JobId } from './types/JobParameters.js';
+import { JobParameters, datefields, TJobDatefield, JobId, DebounceOptions } from './types/JobParameters.js';
 import { JobPriority, parsePriority } from './utils/priority.js';
 import { computeFromInterval, computeFromRepeatAt } from './utils/nextRunAt.js';
 import { applyAllDateConstraints } from './utils/dateConstraints.js';
@@ -271,6 +271,56 @@ export class Job<DATA = unknown | void> {
 	}
 
 	/**
+	 * Configure debounce behavior for this job.
+	 * Debouncing delays job execution and resets the timer on subsequent saves,
+	 * ensuring the job only runs once after a quiet period.
+	 *
+	 * IMPORTANT: Requires a unique constraint to be set via `.unique()`.
+	 * The unique constraint identifies which jobs should be debounced together.
+	 *
+	 * @param delay - Debounce window in milliseconds
+	 * @param options - Optional configuration (maxWait, strategy)
+	 *
+	 * @example
+	 * ```ts
+	 * // Basic trailing debounce - execute 2s after last save
+	 * await agenda.create('updateIndex', { entityId: 123 })
+	 *   .unique({ 'data.entityId': 123 })
+	 *   .debounce(2000)
+	 *   .save();
+	 *
+	 * // With maxWait - guarantee execution within 30s
+	 * await agenda.create('syncUser', { userId: 456 })
+	 *   .unique({ 'data.userId': 456 })
+	 *   .debounce(5000, { maxWait: 30000 })
+	 *   .save();
+	 *
+	 * // Leading strategy - execute immediately, ignore subsequent calls
+	 * await agenda.create('notify', { channel: '#alerts' })
+	 *   .unique({ 'data.channel': '#alerts' })
+	 *   .debounce(60000, { strategy: 'leading' })
+	 *   .save();
+	 * ```
+	 */
+	debounce(
+		delay: number,
+		options?: { maxWait?: number; strategy?: 'trailing' | 'leading' }
+	): this {
+		const debounceOpts: DebounceOptions = {
+			delay,
+			maxWait: options?.maxWait,
+			strategy: options?.strategy ?? 'trailing'
+		};
+
+		this.attrs.uniqueOpts = {
+			...this.attrs.uniqueOpts,
+			debounce: debounceOpts
+		};
+
+		return this;
+	}
+
+	/**
 	 * Schedules a job to run at specified time.
 	 * Date constraints (startDate, endDate, skipDays) are applied if set.
 	 * @param time
@@ -394,6 +444,7 @@ export class Job<DATA = unknown | void> {
 		// Update attrs from result
 		this.attrs._id = result._id;
 		this._nextRunAt = result.nextRunAt;
+		this.attrs.debounceStartedAt = result.debounceStartedAt;
 
 		// Publish notification for real-time processing if channel is configured
 		if (this.agenda.hasNotificationChannel()) {

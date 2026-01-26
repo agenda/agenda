@@ -60,7 +60,8 @@ function computeJobObj<DATA = unknown>(job: WithId<MongoJobDocument>): JobParame
 		unique: job.unique,
 		uniqueOpts: job.uniqueOpts,
 		lastModifiedBy: job.lastModifiedBy,
-		fork: job.fork
+		fork: job.fork,
+		debounceStartedAt: job.debounceStartedAt
 	};
 }
 
@@ -671,8 +672,81 @@ export class MongoJobRepository implements JobRepository {
 				// Upsert based on the 'unique' query object
 				const query: Filter<MongoJobDocument> = { ...unique } as Filter<MongoJobDocument>;
 				query.name = props.name;
-				if (uniqueOpts?.insertOnly) {
+
+				const debounce = uniqueOpts?.debounce;
+
+				if (uniqueOpts?.insertOnly && !debounce) {
 					update = { $setOnInsert: propsWithModifier };
+				}
+
+				// Handle debounce logic
+				if (debounce) {
+					log('handling debounce with delay: %dms, strategy: %s', debounce.delay, debounce.strategy || 'trailing');
+
+					// First, check if a matching job already exists
+					const existingJob = await this.collection.findOne(query);
+
+					if (existingJob) {
+						// Job exists - apply debounce logic
+						const debounceStartedAt = existingJob.debounceStartedAt ?? now;
+						const timeSinceStart = now.getTime() - debounceStartedAt.getTime();
+
+						if (debounce.strategy === 'leading') {
+							// Leading: keep original nextRunAt, just update data
+							// Don't change nextRunAt - the job runs on its original schedule
+							log('leading debounce: keeping original nextRunAt, updating data only');
+							const leadingUpdate: UpdateFilter<MongoJobDocument> = {
+								$set: {
+									...propsWithModifier,
+									nextRunAt: existingJob.nextRunAt, // Preserve original
+									debounceStartedAt: debounceStartedAt
+								}
+							};
+							const result = await this.collection.findOneAndUpdate(query, leadingUpdate, {
+								returnDocument: 'after'
+							});
+							assert(result, 'findOneAndUpdate should return a document');
+							return computeJobObj(result);
+						}
+
+						// Trailing (default): push nextRunAt forward
+						let newNextRunAt: Date;
+
+						// Check maxWait - force execution if exceeded
+						if (debounce.maxWait && timeSinceStart >= debounce.maxWait) {
+							log('maxWait exceeded (%dms >= %dms), forcing immediate execution', timeSinceStart, debounce.maxWait);
+							newNextRunAt = now;
+							// Reset debounceStartedAt for the next cycle
+							(propsWithModifier as Partial<MongoJobDocument>).debounceStartedAt = undefined;
+						} else {
+							// Normal debounce: schedule for delay ms from now
+							newNextRunAt = new Date(now.getTime() + debounce.delay);
+							(propsWithModifier as Partial<MongoJobDocument>).debounceStartedAt = debounceStartedAt;
+							log('trailing debounce: rescheduling to %s', newNextRunAt.toISOString());
+						}
+
+						(propsWithModifier as Partial<MongoJobDocument>).nextRunAt = newNextRunAt;
+						update = { $set: propsWithModifier };
+
+						const result = await this.collection.findOneAndUpdate(query, update, {
+							returnDocument: 'after'
+						});
+						assert(result, 'findOneAndUpdate should return a document');
+						return computeJobObj(result);
+					}
+
+					// No existing job - this is a new job
+					if (debounce.strategy === 'leading') {
+						// Leading: execute immediately (keep nextRunAt as-is)
+						log('leading debounce: new job, executing immediately');
+						(propsWithModifier as Partial<MongoJobDocument>).debounceStartedAt = now;
+					} else {
+						// Trailing: schedule after delay
+						const newNextRunAt = new Date(now.getTime() + debounce.delay);
+						(propsWithModifier as Partial<MongoJobDocument>).nextRunAt = newNextRunAt;
+						(propsWithModifier as Partial<MongoJobDocument>).debounceStartedAt = now;
+						log('trailing debounce: new job, scheduling for %s', newNextRunAt.toISOString());
+					}
 				}
 
 				log('calling findOneAndUpdate() with unique object as query: \n%O', query);

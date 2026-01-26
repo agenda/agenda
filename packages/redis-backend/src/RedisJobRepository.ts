@@ -127,6 +127,10 @@ export class RedisJobRepository implements JobRepository {
 			lastModifiedBy:
 				data.lastModifiedBy && data.lastModifiedBy !== 'null'
 					? data.lastModifiedBy
+					: undefined,
+			debounceStartedAt:
+				data.debounceStartedAt && data.debounceStartedAt !== 'null'
+					? new Date(data.debounceStartedAt)
 					: undefined
 		};
 	}
@@ -160,6 +164,7 @@ export class RedisJobRepository implements JobRepository {
 			progress: job.progress !== undefined ? String(job.progress) : 'null',
 			fork: String(job.fork ?? false),
 			lastModifiedBy: lastModifiedBy ?? 'null',
+			debounceStartedAt: job.debounceStartedAt?.toISOString() || 'null',
 			createdAt: now,
 			updatedAt: now
 		};
@@ -898,6 +903,10 @@ export class RedisJobRepository implements JobRepository {
 		if (unique) {
 			log('calling upsert with unique constraint');
 
+			const debounce = uniqueOpts?.debounce;
+			const now = new Date();
+			const nowIso = now.toISOString();
+
 			// Build query to find existing job
 			const allIds = await this.redis.smembers(this.key(`jobs:by_name:${props.name}`));
 
@@ -929,15 +938,46 @@ export class RedisJobRepository implements JobRepository {
 				}
 
 				if (matches) {
-					if (uniqueOpts?.insertOnly) {
+					if (uniqueOpts?.insertOnly && !debounce) {
 						return this.hashToJob<DATA>(jobData);
 					}
 
+					// Determine nextRunAt and debounceStartedAt for update
+					let nextRunAt: string = props.nextRunAt?.toISOString() || 'null';
+					let debounceStartedAt: string = 'null';
+
+					if (debounce) {
+						log('handling debounce with delay: %dms, strategy: %s', debounce.delay, debounce.strategy || 'trailing');
+
+						const existingDebounceStartedAt = jobData.debounceStartedAt && jobData.debounceStartedAt !== 'null'
+							? new Date(jobData.debounceStartedAt)
+							: now;
+						const timeSinceStart = now.getTime() - existingDebounceStartedAt.getTime();
+
+						if (debounce.strategy === 'leading') {
+							// Leading: keep original nextRunAt, just update data
+							log('leading debounce: keeping original nextRunAt, updating data only');
+							nextRunAt = jobData.nextRunAt || 'null';
+							debounceStartedAt = existingDebounceStartedAt.toISOString();
+						} else {
+							// Trailing (default): push nextRunAt forward
+							if (debounce.maxWait && timeSinceStart >= debounce.maxWait) {
+								log('maxWait exceeded (%dms >= %dms), forcing immediate execution', timeSinceStart, debounce.maxWait);
+								nextRunAt = nowIso;
+								debounceStartedAt = 'null'; // Reset for next cycle
+							} else {
+								const newNextRunAt = new Date(now.getTime() + debounce.delay);
+								nextRunAt = newNextRunAt.toISOString();
+								debounceStartedAt = existingDebounceStartedAt.toISOString();
+								log('trailing debounce: rescheduling to %s', nextRunAt);
+							}
+						}
+					}
+
 					// Update existing job
-					const now = new Date().toISOString();
 					const updates: Record<string, string> = {
 						priority: String(props.priority ?? 0),
-						nextRunAt: props.nextRunAt?.toISOString() || 'null',
+						nextRunAt,
 						type: props.type || 'normal',
 						repeatTimezone: props.repeatTimezone ?? 'null',
 						repeatInterval: props.repeatInterval !== undefined ? String(props.repeatInterval) : 'null',
@@ -945,17 +985,52 @@ export class RedisJobRepository implements JobRepository {
 						repeatAt: props.repeatAt ?? 'null',
 						disabled: String(props.disabled ?? false),
 						lastModifiedBy: options?.lastModifiedBy ?? 'null',
-						updatedAt: now
+						debounceStartedAt,
+						updatedAt: nowIso
 					};
 
 					await this.redis.hset(this.key(`job:${jobId}`), updates);
 
-					const score = this.getJobScore(props.nextRunAt ?? null, props.priority ?? 0);
+					const parsedNextRunAt = nextRunAt !== 'null' ? new Date(nextRunAt) : null;
+					const score = this.getJobScore(parsedNextRunAt, props.priority ?? 0);
 					await this.redis.zadd(this.key('jobs:by_next_run_at'), score, jobId);
 
 					const updatedData = await this.redis.hgetall(this.key(`job:${jobId}`));
 					return this.hashToJob<DATA>(updatedData);
 				}
+			}
+
+			// No existing record - insert new job with debounce handling
+			if (debounce) {
+				let nextRunAt: Date | null = props.nextRunAt || null;
+				const debounceStartedAt: Date = now;
+
+				if (debounce.strategy === 'leading') {
+					// Leading: execute immediately (keep nextRunAt as-is)
+					log('leading debounce: new job, executing immediately');
+				} else {
+					// Trailing: schedule after delay
+					nextRunAt = new Date(now.getTime() + debounce.delay);
+					log('trailing debounce: new job, scheduling for %s', nextRunAt.toISOString());
+				}
+
+				const newId = randomUUID();
+				const jobWithDebounce = {
+					...props,
+					nextRunAt,
+					debounceStartedAt
+				} as JobParameters<DATA>;
+				const hashData = this.jobToHash(jobWithDebounce, newId, options?.lastModifiedBy);
+
+				await this.redis.hset(this.key(`job:${newId}`), hashData as unknown as Record<string, string>);
+				await this.redis.sadd(this.key('jobs:all'), newId);
+				await this.redis.sadd(this.key(`jobs:by_name:${props.name}`), newId);
+
+				const score = this.getJobScore(nextRunAt, props.priority ?? 0);
+				await this.redis.zadd(this.key('jobs:by_next_run_at'), score, newId);
+
+				const savedData = await this.redis.hgetall(this.key(`job:${newId}`));
+				return this.hashToJob<DATA>(savedData);
 			}
 		}
 

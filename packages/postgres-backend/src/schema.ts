@@ -24,6 +24,7 @@ export function getCreateTableSQL(tableName: string): string {
 			progress REAL,
 			fork BOOLEAN DEFAULT FALSE,
 			last_modified_by VARCHAR(255),
+			debounce_started_at TIMESTAMPTZ,
 			created_at TIMESTAMPTZ DEFAULT NOW(),
 			updated_at TIMESTAMPTZ DEFAULT NOW()
 		);

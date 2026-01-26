@@ -32,6 +32,7 @@ import { agendaTestSuite, type ForkHelperConfig } from './agenda-test-suite.js';
 import { jobProcessorTestSuite } from './jobprocessor-test-suite.js';
 import { retryTestSuite } from './retry-test-suite.js';
 import { backoffTestSuite } from './backoff-test-suite.js';
+import { debounceTestSuite } from './debounce-test-suite.js';
 
 export interface FullAgendaTestConfig {
 	/** Name for the test suite (e.g., 'MongoDB', 'PostgreSQL') */
@@ -55,6 +56,7 @@ export interface FullAgendaTestConfig {
 		jobProcessor?: boolean;
 		retry?: boolean;
 		backoff?: boolean;
+		debounce?: boolean;
 		forkMode?: boolean;
 	};
 }
@@ -68,6 +70,7 @@ export interface FullAgendaTestConfig {
  * - JobProcessor tests (concurrency, locking, stats)
  * - Retry tests (job retry behavior)
  * - Backoff tests (automatic retry with backoff strategies)
+ * - Debounce tests (job debouncing with unique constraints)
  */
 export function fullAgendaTestSuite(config: FullAgendaTestConfig): void {
 	const skip = config.skip ?? {};
@@ -126,6 +129,16 @@ export function fullAgendaTestSuite(config: FullAgendaTestConfig): void {
 	// Backoff tests
 	if (!skip.backoff) {
 		backoffTestSuite({
+			name: config.name,
+			createBackend: config.createBackend,
+			cleanupBackend: config.cleanupBackend,
+			clearJobs: config.clearJobs
+		});
+	}
+
+	// Debounce tests
+	if (!skip.debounce) {
+		debounceTestSuite({
 			name: config.name,
 			createBackend: config.createBackend,
 			cleanupBackend: config.cleanupBackend,

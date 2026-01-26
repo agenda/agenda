@@ -156,7 +156,8 @@ export class PostgresJobRepository implements JobRepository {
 			disabled: row.disabled,
 			progress: row.progress ?? undefined,
 			fork: row.fork ?? undefined,
-			lastModifiedBy: row.last_modified_by ?? undefined
+			lastModifiedBy: row.last_modified_by ?? undefined,
+			debounceStartedAt: row.debounce_started_at ?? undefined
 		};
 	}
 
@@ -698,6 +699,9 @@ export class PostgresJobRepository implements JobRepository {
 		if (unique) {
 			log('calling upsert with unique constraint');
 
+			const debounce = uniqueOpts?.debounce;
+			const now = new Date();
+
 			// Build conditions from unique object
 			const conditions: string[] = ['name = $1'];
 			const params: unknown[] = [props.name];
@@ -724,10 +728,41 @@ export class PostgresJobRepository implements JobRepository {
 			);
 
 			if (existingResult.rows.length > 0) {
-				// Record exists
-				if (uniqueOpts?.insertOnly) {
+				const existingRow = existingResult.rows[0];
+
+				// Record exists - handle debounce or insertOnly
+				if (uniqueOpts?.insertOnly && !debounce) {
 					// Return existing record without update
-					return this.rowToJob<DATA>(existingResult.rows[0]);
+					return this.rowToJob<DATA>(existingRow);
+				}
+
+				// Determine nextRunAt and debounceStartedAt for update
+				let nextRunAt: Date | null = props.nextRunAt || null;
+				let debounceStartedAt: Date | null = null;
+
+				if (debounce) {
+					log('handling debounce with delay: %dms, strategy: %s', debounce.delay, debounce.strategy || 'trailing');
+
+					const existingDebounceStartedAt = existingRow.debounce_started_at ?? now;
+					const timeSinceStart = now.getTime() - existingDebounceStartedAt.getTime();
+
+					if (debounce.strategy === 'leading') {
+						// Leading: keep original nextRunAt, just update data
+						log('leading debounce: keeping original nextRunAt, updating data only');
+						nextRunAt = existingRow.next_run_at;
+						debounceStartedAt = existingDebounceStartedAt;
+					} else {
+						// Trailing (default): push nextRunAt forward
+						if (debounce.maxWait && timeSinceStart >= debounce.maxWait) {
+							log('maxWait exceeded (%dms >= %dms), forcing immediate execution', timeSinceStart, debounce.maxWait);
+							nextRunAt = now;
+							debounceStartedAt = null; // Reset for next cycle
+						} else {
+							nextRunAt = new Date(now.getTime() + debounce.delay);
+							debounceStartedAt = existingDebounceStartedAt;
+							log('trailing debounce: rescheduling to %s', nextRunAt.toISOString());
+						}
+					}
 				}
 
 				// Update existing record
@@ -742,13 +777,14 @@ export class PostgresJobRepository implements JobRepository {
 						 repeat_at = $${paramIndex + 6},
 						 disabled = $${paramIndex + 7},
 						 fork = $${paramIndex + 8},
-						 last_modified_by = $${paramIndex + 9}
+						 last_modified_by = $${paramIndex + 9},
+						 debounce_started_at = $${paramIndex + 10}
 					 WHERE ${conditions.join(' AND ')}
 					 RETURNING *`,
 					[
 						...params,
 						props.priority,
-						props.nextRunAt || null,
+						nextRunAt,
 						props.type,
 						props.repeatTimezone || null,
 						props.repeatInterval || null,
@@ -756,11 +792,51 @@ export class PostgresJobRepository implements JobRepository {
 						props.repeatAt || null,
 						props.disabled || false,
 						props.fork || false,
-						options?.lastModifiedBy || null
+						options?.lastModifiedBy || null,
+						debounceStartedAt
 					]
 				);
 
 				return this.rowToJob<DATA>(updateResult.rows[0]);
+			}
+
+			// No existing record - insert new job with debounce handling
+			if (debounce) {
+				let nextRunAt: Date | null = props.nextRunAt || null;
+				let debounceStartedAt: Date | null = now;
+
+				if (debounce.strategy === 'leading') {
+					// Leading: execute immediately (keep nextRunAt as-is)
+					log('leading debounce: new job, executing immediately');
+				} else {
+					// Trailing: schedule after delay
+					nextRunAt = new Date(now.getTime() + debounce.delay);
+					log('trailing debounce: new job, scheduling for %s', nextRunAt.toISOString());
+				}
+
+				const result = await this.pool.query<PostgresJobRow>(
+					`INSERT INTO "${this.tableName}" (
+						name, priority, next_run_at, type, repeat_timezone,
+						repeat_interval, data, repeat_at, disabled, fork, last_modified_by, debounce_started_at
+					 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+					 RETURNING *`,
+					[
+						props.name,
+						props.priority,
+						nextRunAt,
+						props.type,
+						props.repeatTimezone || null,
+						props.repeatInterval || null,
+						JSON.stringify(props.data),
+						props.repeatAt || null,
+						props.disabled || false,
+						props.fork || false,
+						options?.lastModifiedBy || null,
+						debounceStartedAt
+					]
+				);
+
+				return this.rowToJob<DATA>(result.rows[0]);
 			}
 		}
 
