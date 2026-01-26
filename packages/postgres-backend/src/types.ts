@@ -19,9 +19,6 @@ export interface IPostgresBackendConfig {
 	/** Channel name for LISTEN/NOTIFY (default: 'agenda_jobs') */
 	channelName?: string;
 
-	/** Name to identify this Agenda instance (stored as lastModifiedBy) */
-	name?: string;
-
 	/** Whether to create the table and indexes on connect (default: true) */
 	ensureSchema?: boolean;
 

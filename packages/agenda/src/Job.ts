@@ -275,7 +275,9 @@ export class Job<DATA = unknown | void> {
 		}
 		// ensure db connection is ready
 		await this.agenda.ready;
-		const result = await this.agenda.db.saveJob(this.toJson());
+		const result = await this.agenda.db.saveJob(this.toJson(), {
+			lastModifiedBy: this.agenda.attrs.name || undefined
+		});
 		// Update attrs from result
 		this.attrs._id = result._id;
 		this.attrs.nextRunAt = result.nextRunAt;
@@ -329,7 +331,9 @@ export class Job<DATA = unknown | void> {
 		this.attrs.lockedAt = new Date();
 		this.attrs.progress = progress;
 
-		await this.agenda.db.saveJobState(this.attrs);
+		await this.agenda.db.saveJobState(this.attrs, {
+			lastModifiedBy: this.agenda.attrs.name || undefined
+		});
 	}
 
 	private computeNextRunAt() {
@@ -371,7 +375,9 @@ export class Job<DATA = unknown | void> {
 			this.attrs.lastRunAt.toISOString()
 		);
 		this.computeNextRunAt();
-		await this.agenda.db.saveJobState(this.attrs);
+		await this.agenda.db.saveJobState(this.attrs, {
+			lastModifiedBy: this.agenda.attrs.name || undefined
+		});
 
 		try {
 			this.agenda.emit('start', this);
@@ -446,7 +452,9 @@ export class Job<DATA = unknown | void> {
 			this.forkedChild = undefined;
 			this.attrs.lockedAt = undefined;
 			try {
-				await this.agenda.db.saveJobState(this.attrs);
+				await this.agenda.db.saveJobState(this.attrs, {
+					lastModifiedBy: this.agenda.attrs.name || undefined
+				});
 				log('[%s:%s] was saved successfully to database', this.attrs.name, this.attrs._id);
 			} catch (err) {
 				// in case this fails, we ignore it

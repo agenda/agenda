@@ -37,7 +37,6 @@ export class MongoBackend implements IAgendaBackend {
 				: {
 						db: { address: config.address, collection: config.collection, options: config.options }
 					}),
-			name: config.name,
 			ensureIndex: config.ensureIndex,
 			sort: config.sort
 		});

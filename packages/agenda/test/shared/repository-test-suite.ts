@@ -80,7 +80,7 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 					data: { foo: 'bar' }
 				};
 
-				const saved = await repo.saveJob(job);
+				const saved = await repo.saveJob(job, undefined);
 
 				expect(saved._id).toBeDefined();
 				expect(saved.name).toBe('test-job');
@@ -98,12 +98,12 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 					data: { version: 1 }
 				};
 
-				const saved = await repo.saveJob(job);
+				const saved = await repo.saveJob(job, undefined);
 				const updated = await repo.saveJob({
 					...saved,
 					priority: 20,
 					data: { version: 2 }
-				});
+				}, undefined);
 
 				expect(updated._id).toBe(saved._id);
 				expect(updated.priority).toBe(20);
@@ -119,7 +119,7 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 					data: { run: 1 }
 				};
 
-				const saved1 = await repo.saveJob(job1);
+				const saved1 = await repo.saveJob(job1, undefined);
 
 				const job2: IJobParameters = {
 					name: 'single-job',
@@ -129,7 +129,7 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 					data: { run: 2 }
 				};
 
-				const saved2 = await repo.saveJob(job2);
+				const saved2 = await repo.saveJob(job2, undefined);
 
 				expect(saved2._id).toBe(saved1._id);
 				expect(saved2.priority).toBe(10);
@@ -149,7 +149,7 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 					disabled: true
 				};
 
-				const saved = await repo.saveJob(job);
+				const saved = await repo.saveJob(job, undefined);
 				expect(saved.disabled).toBe(true);
 
 				const retrieved = await repo.getJobById(saved._id!.toString());
@@ -165,7 +165,7 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 					nextRunAt: new Date(),
 					type: 'normal',
 					data: { key: 'value' }
-				});
+				}, undefined);
 
 				const retrieved = await repo.getJobById(saved._id!.toString());
 
@@ -182,7 +182,7 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 					nextRunAt: new Date(),
 					type: 'normal',
 					data: {}
-				});
+				}, undefined);
 
 				await repo.removeJobs({ id: job._id! });
 
@@ -199,21 +199,21 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 					nextRunAt: new Date(Date.now() + 60000),
 					type: 'normal',
 					data: { type: 'alpha', count: 1 }
-				});
+				}, undefined);
 				await repo.saveJob({
 					name: 'job-b',
 					priority: 5,
 					nextRunAt: new Date(Date.now() + 120000),
 					type: 'normal',
 					data: { type: 'beta', count: 2 }
-				});
+				}, undefined);
 				await repo.saveJob({
 					name: 'job-a',
 					priority: 15,
 					nextRunAt: new Date(Date.now() + 180000),
 					type: 'normal',
 					data: { type: 'alpha', count: 3 }
-				});
+				}, undefined);
 			});
 
 			it('should query all jobs', async () => {
@@ -254,7 +254,7 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 					type: 'normal',
 					data: {},
 					disabled: true
-				});
+				}, undefined);
 
 				const withDisabled = await repo.queryJobs({ includeDisabled: true });
 				const withoutDisabled = await repo.queryJobs({ includeDisabled: false });
@@ -272,21 +272,21 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 					nextRunAt: new Date(),
 					type: 'normal',
 					data: {}
-				});
+				}, undefined);
 				await repo.saveJob({
 					name: 'remove-test',
 					priority: 0,
 					nextRunAt: new Date(),
 					type: 'normal',
 					data: {}
-				});
+				}, undefined);
 				await repo.saveJob({
 					name: 'keep-test',
 					priority: 0,
 					nextRunAt: new Date(),
 					type: 'normal',
 					data: {}
-				});
+				}, undefined);
 
 				const removed = await repo.removeJobs({ name: 'remove-test' });
 				expect(removed).toBe(2);
@@ -303,7 +303,7 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 					nextRunAt: new Date(),
 					type: 'normal',
 					data: {}
-				});
+				}, undefined);
 
 				const removed = await repo.removeJobs({ id: saved._id! });
 				expect(removed).toBe(1);
@@ -319,21 +319,21 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 					nextRunAt: new Date(),
 					type: 'normal',
 					data: {}
-				});
+				}, undefined);
 				const job2 = await repo.saveJob({
 					name: 'multi-remove-2',
 					priority: 0,
 					nextRunAt: new Date(),
 					type: 'normal',
 					data: {}
-				});
+				}, undefined);
 				await repo.saveJob({
 					name: 'keep',
 					priority: 0,
 					nextRunAt: new Date(),
 					type: 'normal',
 					data: {}
-				});
+				}, undefined);
 
 				const removed = await repo.removeJobs({ ids: [job1._id!, job2._id!] });
 				expect(removed).toBe(2);
@@ -356,21 +356,21 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 					nextRunAt: new Date(),
 					type: 'normal',
 					data: {}
-				});
+				}, undefined);
 				await repo.saveJob({
 					name: 'name-b',
 					priority: 0,
 					nextRunAt: new Date(),
 					type: 'normal',
 					data: {}
-				});
+				}, undefined);
 				await repo.saveJob({
 					name: 'name-a',
 					priority: 0,
 					nextRunAt: new Date(),
 					type: 'normal',
 					data: {}
-				});
+				}, undefined);
 
 				const names = await repo.getDistinctJobNames();
 				expect(names).toContain('name-a');
@@ -393,14 +393,14 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 					nextRunAt: new Date(Date.now() - 60000),
 					type: 'normal',
 					data: {}
-				});
+				}, undefined);
 				await repo.saveJob({
 					name: 'past-job-2',
 					priority: 0,
 					nextRunAt: new Date(Date.now() - 30000),
 					type: 'normal',
 					data: {}
-				});
+				}, undefined);
 				// Job in the future (should not be counted)
 				await repo.saveJob({
 					name: 'future-job',
@@ -408,7 +408,7 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 					nextRunAt: new Date(Date.now() + 60000),
 					type: 'normal',
 					data: {}
-				});
+				}, undefined);
 
 				const queueSize = await repo.getQueueSize();
 				expect(queueSize).toBe(2);
@@ -421,7 +421,7 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 					nextRunAt: new Date(Date.now() + 60000),
 					type: 'normal',
 					data: {}
-				});
+				}, undefined);
 
 				const queueSize = await repo.getQueueSize();
 				expect(queueSize).toBe(0);
@@ -436,9 +436,9 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 					nextRunAt: new Date(Date.now() - 1000),
 					type: 'normal',
 					data: {}
-				});
+				}, undefined);
 
-				const locked = await repo.lockJob(saved);
+				const locked = await repo.lockJob(saved, undefined);
 
 				expect(locked).toBeDefined();
 				expect(locked!.lockedAt).toBeDefined();
@@ -452,13 +452,13 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 					nextRunAt: new Date(Date.now() - 1000),
 					type: 'normal',
 					data: {}
-				});
+				}, undefined);
 
-				const locked1 = await repo.lockJob(saved);
+				const locked1 = await repo.lockJob(saved, undefined);
 				expect(locked1).toBeDefined();
 
 				// Try to lock again with original (unlocked) job params
-				const locked2 = await repo.lockJob(saved);
+				const locked2 = await repo.lockJob(saved, undefined);
 				expect(locked2).toBeUndefined();
 			});
 
@@ -469,9 +469,9 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 					nextRunAt: new Date(Date.now() - 1000),
 					type: 'normal',
 					data: {}
-				});
+				}, undefined);
 
-				const locked = await repo.lockJob(saved);
+				const locked = await repo.lockJob(saved, undefined);
 				expect(locked!.lockedAt).toBeDefined();
 
 				await repo.unlockJob(locked!);
@@ -488,17 +488,17 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 					nextRunAt: new Date(Date.now() - 1000),
 					type: 'normal',
 					data: {}
-				});
+				}, undefined);
 				const job2 = await repo.saveJob({
 					name: 'multi-unlock-2',
 					priority: 0,
 					nextRunAt: new Date(Date.now() - 1000),
 					type: 'normal',
 					data: {}
-				});
+				}, undefined);
 
-				await repo.lockJob(job1);
-				await repo.lockJob(job2);
+				await repo.lockJob(job1, undefined);
+				await repo.lockJob(job2, undefined);
 
 				await repo.unlockJobs([job1._id!, job2._id!]);
 
@@ -519,13 +519,13 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 					nextRunAt: new Date(Date.now() - 60000),
 					type: 'normal',
 					data: { order: 'first' }
-				});
+				}, undefined);
 
 				const now = new Date();
 				const nextScanAt = new Date(now.getTime() + 5000);
 				const lockDeadline = new Date(now.getTime() - 600000);
 
-				const next = await repo.getNextJobToRun('runner-test', nextScanAt, lockDeadline, now);
+				const next = await repo.getNextJobToRun('runner-test', nextScanAt, lockDeadline, now, undefined);
 
 				expect(next).toBeDefined();
 				expect(next!.name).toBe('runner-test');
@@ -542,20 +542,20 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 					nextRunAt: sameTime,
 					type: 'normal',
 					data: { priority: 'low' }
-				});
+				}, undefined);
 				await repo.saveJob({
 					name: 'priority-test',
 					priority: 10,
 					nextRunAt: sameTime,
 					type: 'normal',
 					data: { priority: 'high' }
-				});
+				}, undefined);
 
 				const now = new Date();
 				const nextScanAt = new Date(now.getTime() + 5000);
 				const lockDeadline = new Date(now.getTime() - 600000);
 
-				const next = await repo.getNextJobToRun('priority-test', nextScanAt, lockDeadline, now);
+				const next = await repo.getNextJobToRun('priority-test', nextScanAt, lockDeadline, now, undefined);
 
 				expect(next).toBeDefined();
 				expect(next!.priority).toBe(10);
@@ -570,13 +570,13 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 					type: 'normal',
 					data: {},
 					disabled: true
-				});
+				}, undefined);
 
 				const now = new Date();
 				const nextScanAt = new Date(now.getTime() + 5000);
 				const lockDeadline = new Date(now.getTime() - 600000);
 
-				const next = await repo.getNextJobToRun('disabled-test', nextScanAt, lockDeadline, now);
+				const next = await repo.getNextJobToRun('disabled-test', nextScanAt, lockDeadline, now, undefined);
 
 				expect(next).toBeUndefined();
 			});
@@ -588,13 +588,13 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 					nextRunAt: new Date(Date.now() + 60000),
 					type: 'normal',
 					data: {}
-				});
+				}, undefined);
 
 				const now = new Date();
 				const nextScanAt = new Date(now.getTime() + 5000);
 				const lockDeadline = new Date(now.getTime() - 600000);
 
-				const next = await repo.getNextJobToRun('future-test', nextScanAt, lockDeadline, now);
+				const next = await repo.getNextJobToRun('future-test', nextScanAt, lockDeadline, now, undefined);
 
 				expect(next).toBeUndefined();
 			});
@@ -608,7 +608,7 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 					nextRunAt: new Date(),
 					type: 'normal',
 					data: {}
-				});
+				}, undefined);
 
 				const now = new Date();
 				await repo.saveJobState({
@@ -619,7 +619,7 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 					failCount: 1,
 					failReason: 'Test error',
 					failedAt: now
-				});
+				}, undefined);
 
 				const retrieved = await repo.getJobById(saved._id!.toString());
 
@@ -638,16 +638,16 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 					nextRunAt: new Date(Date.now() - 1000),
 					type: 'normal',
 					data: {}
-				});
+				}, undefined);
 
-				const locked = await repo.lockJob(saved);
+				const locked = await repo.lockJob(saved, undefined);
 				expect(locked!.lockedAt).toBeDefined();
 
 				await repo.saveJobState({
 					...locked!,
 					lockedAt: undefined,
 					lastFinishedAt: new Date()
-				});
+				}, undefined);
 
 				const retrieved = await repo.getJobById(saved._id!.toString());
 				// Accept both null and undefined as "not locked"
@@ -663,7 +663,7 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 					nextRunAt: new Date(Date.now() + 60000), // scheduled
 					type: 'normal',
 					data: {}
-				});
+				}, undefined);
 				await repo.saveJob({
 					name: 'overview-job',
 					priority: 0,
@@ -671,14 +671,14 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 					type: 'normal',
 					data: {},
 					lastFinishedAt: new Date()
-				});
+				}, undefined);
 				await repo.saveJob({
 					name: 'other-job',
 					priority: 0,
 					nextRunAt: new Date(Date.now() + 60000),
 					type: 'normal',
 					data: {}
-				});
+				}, undefined);
 
 				const overview = await repo.getJobsOverview();
 

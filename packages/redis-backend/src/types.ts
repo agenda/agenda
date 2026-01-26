@@ -19,9 +19,6 @@ export interface IRedisBackendConfig {
 	/** Channel name for Pub/Sub notifications (default: 'agenda:notifications') */
 	channelName?: string;
 
-	/** Name to identify this Agenda instance (stored as lastModifiedBy) */
-	name?: string;
-
 	/** Sort order for job queries (default: { nextRunAt: 1, priority: -1 }) */
 	sort?: {
 		nextRunAt?: 1 | -1;

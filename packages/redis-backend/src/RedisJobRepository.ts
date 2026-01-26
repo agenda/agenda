@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import { toJobId, computeJobState } from 'agenda';
 import type {
 	IJobRepository,
+	IJobRepositoryOptions,
 	IRemoveJobsOptions,
 	IJobParameters,
 	JobId,
@@ -31,12 +32,10 @@ export class RedisJobRepository implements IJobRepository {
 	private redis: Redis;
 	private ownClient: boolean;
 	private keyPrefix: string;
-	private name?: string;
 	private sort: { nextRunAt?: 1 | -1; priority?: 1 | -1 };
 
 	constructor(private config: IRedisBackendConfig) {
 		this.keyPrefix = config.keyPrefix || 'agenda:';
-		this.name = config.name;
 		this.sort = config.sort || { nextRunAt: 1, priority: -1 };
 
 		// Use existing client or create a new one
@@ -133,7 +132,11 @@ export class RedisJobRepository implements IJobRepository {
 	/**
 	 * Convert IJobParameters to Redis hash data
 	 */
-	private jobToHash<DATA = unknown>(job: IJobParameters<DATA>, id: string): IRedisJobData {
+	private jobToHash<DATA = unknown>(
+		job: IJobParameters<DATA>,
+		id: string,
+		lastModifiedBy: string | undefined
+	): IRedisJobData {
 		const now = new Date().toISOString();
 		return {
 			id,
@@ -153,7 +156,7 @@ export class RedisJobRepository implements IJobRepository {
 			repeatAt: job.repeatAt ?? 'null',
 			disabled: String(job.disabled ?? false),
 			progress: job.progress !== undefined ? String(job.progress) : 'null',
-			lastModifiedBy: this.name ?? 'null',
+			lastModifiedBy: lastModifiedBy ?? 'null',
 			createdAt: now,
 			updatedAt: now
 		};
@@ -442,7 +445,10 @@ export class RedisJobRepository implements IJobRepository {
 		}
 	}
 
-	async lockJob(job: IJobParameters): Promise<IJobParameters | undefined> {
+	async lockJob(
+		job: IJobParameters,
+		options: IJobRepositoryOptions | undefined
+	): Promise<IJobParameters | undefined> {
 		if (!job._id) return undefined;
 
 		const jobId = job._id.toString();
@@ -483,6 +489,7 @@ export class RedisJobRepository implements IJobRepository {
 			const result = await this.redis
 				.multi()
 				.hset(this.key(`job:${jobId}`), 'lockedAt', now.toISOString())
+				.hset(this.key(`job:${jobId}`), 'lastModifiedBy', options?.lastModifiedBy ?? 'null')
 				.hset(this.key(`job:${jobId}`), 'updatedAt', now.toISOString())
 				.exec();
 
@@ -504,8 +511,11 @@ export class RedisJobRepository implements IJobRepository {
 		jobName: string,
 		nextScanAt: Date,
 		lockDeadline: Date,
-		now: Date = new Date()
+		now: Date | undefined,
+		options: IJobRepositoryOptions | undefined
 	): Promise<IJobParameters | undefined> {
+		const lockTime = now ?? new Date();
+
 		// Get job IDs by name
 		const jobIds = await this.redis.smembers(this.key(`jobs:by_name:${jobName}`));
 
@@ -557,8 +567,9 @@ export class RedisJobRepository implements IJobRepository {
 				// Lock the job atomically
 				const result = await this.redis
 					.multi()
-					.hset(this.key(`job:${candidate.id}`), 'lockedAt', now.toISOString())
-					.hset(this.key(`job:${candidate.id}`), 'updatedAt', now.toISOString())
+					.hset(this.key(`job:${candidate.id}`), 'lockedAt', lockTime.toISOString())
+					.hset(this.key(`job:${candidate.id}`), 'lastModifiedBy', options?.lastModifiedBy ?? 'null')
+					.hset(this.key(`job:${candidate.id}`), 'updatedAt', lockTime.toISOString())
 					.exec();
 
 				if (!result) {
@@ -578,7 +589,10 @@ export class RedisJobRepository implements IJobRepository {
 		return undefined;
 	}
 
-	async saveJobState(job: IJobParameters): Promise<void> {
+	async saveJobState(
+		job: IJobParameters,
+		options: IJobRepositoryOptions | undefined
+	): Promise<void> {
 		if (!job._id) {
 			throw new Error('Cannot save job state without job ID');
 		}
@@ -604,6 +618,7 @@ export class RedisJobRepository implements IJobRepository {
 			failCount: job.failCount !== undefined ? String(job.failCount) : 'null',
 			failedAt: job.failedAt?.toISOString() || 'null',
 			lastFinishedAt: job.lastFinishedAt?.toISOString() || 'null',
+			lastModifiedBy: options?.lastModifiedBy ?? 'null',
 			updatedAt: now
 		};
 
@@ -622,7 +637,10 @@ export class RedisJobRepository implements IJobRepository {
 		}
 	}
 
-	async saveJob<DATA = unknown>(job: IJobParameters<DATA>): Promise<IJobParameters<DATA>> {
+	async saveJob<DATA = unknown>(
+		job: IJobParameters<DATA>,
+		options: IJobRepositoryOptions | undefined
+	): Promise<IJobParameters<DATA>> {
 		log('attempting to save a job');
 
 		const { _id, unique, uniqueOpts, ...props } = job;
@@ -655,7 +673,7 @@ export class RedisJobRepository implements IJobRepository {
 				data: JSON.stringify(props.data ?? {}),
 				repeatAt: props.repeatAt ?? 'null',
 				disabled: String(props.disabled ?? false),
-				lastModifiedBy: this.name ?? 'null',
+				lastModifiedBy: options?.lastModifiedBy ?? 'null',
 				updatedAt: now
 			};
 
@@ -688,7 +706,7 @@ export class RedisJobRepository implements IJobRepository {
 						data: JSON.stringify(props.data ?? {}),
 						repeatAt: props.repeatAt ?? 'null',
 						disabled: String(props.disabled ?? false),
-						lastModifiedBy: this.name ?? 'null',
+						lastModifiedBy: options?.lastModifiedBy ?? 'null',
 						updatedAt: now.toISOString()
 					};
 
@@ -716,7 +734,7 @@ export class RedisJobRepository implements IJobRepository {
 
 			// Create new single job
 			const newId = randomUUID();
-			const hashData = this.jobToHash(props as IJobParameters<DATA>, newId);
+			const hashData = this.jobToHash(props as IJobParameters<DATA>, newId, options?.lastModifiedBy);
 
 			await this.redis.hset(this.key(`job:${newId}`), hashData as unknown as Record<string, string>);
 			await this.redis.sadd(this.key('jobs:all'), newId);
@@ -780,7 +798,7 @@ export class RedisJobRepository implements IJobRepository {
 						data: JSON.stringify(props.data ?? {}),
 						repeatAt: props.repeatAt ?? 'null',
 						disabled: String(props.disabled ?? false),
-						lastModifiedBy: this.name ?? 'null',
+						lastModifiedBy: options?.lastModifiedBy ?? 'null',
 						updatedAt: now
 					};
 
@@ -798,7 +816,7 @@ export class RedisJobRepository implements IJobRepository {
 		// Insert new job
 		log('inserting new job');
 		const newId = randomUUID();
-		const hashData = this.jobToHash(props as IJobParameters<DATA>, newId);
+		const hashData = this.jobToHash(props as IJobParameters<DATA>, newId, options?.lastModifiedBy);
 
 		await this.redis.hset(this.key(`job:${newId}`), hashData as unknown as Record<string, string>);
 		await this.redis.sadd(this.key('jobs:all'), newId);

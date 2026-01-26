@@ -327,7 +327,8 @@ export class Agenda extends EventEmitter {
 	 * @internal
 	 */
 	async publishJobNotification(job: Job): Promise<void> {
-		if (!this.notificationChannel) {
+		if (!this.notificationChannel || this.notificationChannel.state !== 'connected') {
+			// Channel not configured or not connected - skip publishing
 			return;
 		}
 

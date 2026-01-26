@@ -296,7 +296,13 @@ export class JobProcessor {
 		);
 
 		// Find ONE and ONLY ONE job and set the 'lockedAt' time so that job begins to be processed
-		const result = await this.agenda.db.getNextJobToRun(jobName, this.nextScanAt, lockDeadline);
+		const result = await this.agenda.db.getNextJobToRun(
+			jobName,
+			this.nextScanAt,
+			lockDeadline,
+			undefined,
+			{ lastModifiedBy: this.agenda.attrs.name || undefined }
+		);
 
 		if (result) {
 			log.extend('findAndLockNextJob')(
