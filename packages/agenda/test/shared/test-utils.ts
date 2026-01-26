@@ -2,7 +2,7 @@
  * Shared test utilities for Agenda test suites
  */
 
-import type { Agenda } from '../../src';
+import type { Agenda, AgendaEventName } from '../../src/index.js';
 
 /**
  * Promise-based delay utility
@@ -15,7 +15,7 @@ export const delay = (ms: number): Promise<void> =>
  */
 export function waitForEvent(
 	agenda: Agenda,
-	eventName: string,
+	eventName: AgendaEventName,
 	timeoutMs: number = 5000
 ): Promise<unknown> {
 	return new Promise((resolve, reject) => {
@@ -35,7 +35,7 @@ export function waitForEvent(
  */
 export function waitForEvents(
 	agenda: Agenda,
-	eventName: string,
+	eventName: AgendaEventName,
 	count: number,
 	timeoutMs: number = 10000
 ): Promise<unknown[]> {
@@ -45,7 +45,8 @@ export function waitForEvents(
 			reject(new Error(`Timeout waiting for ${count} ${eventName} events, got ${results.length}`));
 		}, timeoutMs);
 
-		const handler = (...args: unknown[]) => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const handler = (...args: any[]) => {
 			results.push(args[0]);
 			if (results.length >= count) {
 				clearTimeout(timeout);
@@ -54,6 +55,7 @@ export function waitForEvents(
 			}
 		};
 
-		agenda.on(eventName, handler);
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		agenda.on(eventName as any, handler);
 	});
 }

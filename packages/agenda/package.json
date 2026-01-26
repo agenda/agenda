@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./test/shared/index.ts",
+      "import": "./test/shared/index.ts"
     }
   },
   "publishConfig": {
@@ -22,6 +26,7 @@
   },
   "scripts": {
     "build": "tsc -b",
+    "typecheck": "tsc -b && tsc -p tsconfig.test.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

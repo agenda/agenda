@@ -26,9 +26,9 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
-import type { IAgendaBackend, INotificationChannel } from '../../src';
-import { Agenda } from '../../src';
-import { Job } from '../../src/Job';
+import type { IAgendaBackend, INotificationChannel } from '../../src/index.js';
+import { Agenda } from '../../src/index.js';
+import { Job } from '../../src/Job.js';
 import { waitForEvent, waitForEvents } from './test-utils.js';
 
 export interface AgendaTestConfig {
@@ -58,7 +58,6 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 		let backend: IAgendaBackend;
 		let agenda: Agenda;
 
-		const jobType = 'do work';
 		const jobProcessor = () => {};
 
 		beforeAll(async () => {
@@ -621,7 +620,7 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				const result = await agenda.queryJobs({ name: 'unique-insert-only' });
 				expect(result.jobs.length).toBe(1);
 				// Original value should be preserved
-				expect(result.jobs[0].data.value).toBe('first');
+				expect((result.jobs[0].data as { value: string }).value).toBe('first');
 			});
 
 			it('should create two jobs when unique does not match', async () => {
@@ -688,9 +687,9 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 					await job.save();
 					expect(job.attrs.repeatInterval).toBe('5 minutes');
 
-					job.repeatEvery(null);
+					job.repeatEvery('');
 					await job.save();
-					expect(job.attrs.repeatInterval).toBeNull();
+					expect(job.attrs.repeatInterval).toBe('');
 				});
 			});
 
@@ -751,7 +750,7 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 
 					await job.remove();
 
-					const result = await agenda.queryJobs({ _id: id });
+					const result = await agenda.queryJobs({ id: id?.toString() });
 					expect(result.jobs.length).toBe(0);
 				});
 			});
@@ -828,7 +827,7 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 
 					const result = await agenda.queryJobs({ name: 'save-test' });
 					expect(result.jobs.length).toBe(1);
-					expect(result.jobs[0].data.value).toBe(42);
+					expect((result.jobs[0].data as { value: number }).value).toBe(42);
 				});
 
 				it('should update existing job', async () => {
@@ -838,7 +837,7 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 
 					const result = await agenda.queryJobs({ name: 'save-update-test' });
 					expect(result.jobs.length).toBe(1);
-					expect(result.jobs[0].data.value).toBe(2);
+					expect((result.jobs[0].data as { value: number }).value).toBe(2);
 				});
 
 				it('should return the job', async () => {
@@ -1036,7 +1035,6 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				agenda.define('fail-count-test', async () => {
 					throw new Error('Repeated failure');
 				});
-
 				// The fail event emits (error, job), so second param is the job
 				agenda.on('fail:fail-count-test', (_err, job) => {
 					job.attrs.nextRunAt = new Date();

@@ -2,8 +2,11 @@
   "files": [],
   "references": [
     { "path": "packages/agenda" },
+    { "path": "packages/agenda/tsconfig.test.json" },
     { "path": "packages/agendash" },
     { "path": "packages/agenda-rest" },
+    { "path": "packages/mongo-backend" },
+    { "path": "packages/mongo-backend/tsconfig.test.json" },
     { "path": "packages/postgres-backend" }
   ]
 }

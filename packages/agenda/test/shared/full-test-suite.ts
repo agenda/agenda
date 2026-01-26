@@ -26,7 +26,7 @@
  * ```
  */
 
-import type { IAgendaBackend, INotificationChannel } from '../../src';
+import type { IAgendaBackend, INotificationChannel } from '../../src/index.js';
 import { repositoryTestSuite } from './repository-test-suite.js';
 import { agendaTestSuite } from './agenda-test-suite.js';
 import { jobProcessorTestSuite } from './jobprocessor-test-suite.js';
@@ -76,8 +76,8 @@ export function fullAgendaTestSuite(config: FullAgendaTestConfig): void {
 			},
 			cleanupRepository: async () => {
 				// Backend cleanup handles this
-			},
-			clearJobs: config.clearJobs
+			}
+			// clearJobs not passed - repositoryTestSuite uses removeJobs as default
 		});
 	}
 

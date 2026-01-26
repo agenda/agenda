@@ -17,9 +17,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
-import type { IAgendaBackend } from '../../src';
-import { Agenda } from '../../src';
-import { delay } from './test-utils.js';
+import type { IAgendaBackend } from '../../src/index.js';
+import { Agenda } from '../../src/index.js';
 
 export interface RetryTestConfig {
 	/** Name for the test suite */
@@ -39,8 +38,6 @@ export function retryTestSuite(config: RetryTestConfig): void {
 	describe(`${config.name} - Retry`, () => {
 		let backend: IAgendaBackend;
 		let agenda: Agenda;
-
-		const jobProcessor = () => {};
 
 		beforeAll(async () => {
 			backend = await config.createBackend();
@@ -125,5 +122,3 @@ export function retryTestSuite(config: RetryTestConfig): void {
 	});
 }
 
-// Export for use in shared index
-export type { RetryTestConfig };

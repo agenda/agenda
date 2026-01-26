@@ -2,8 +2,8 @@ import { expect, describe, it, beforeAll, afterAll, beforeEach, afterEach } from
 import { Db, MongoClient } from 'mongodb';
 import { randomUUID } from 'crypto';
 import { InMemoryNotificationChannel } from 'agenda';
-import { MongoBackend, MongoJobRepository } from '../src';
-import { fullAgendaTestSuite } from '../../agenda/test/shared';
+import { MongoBackend, MongoJobRepository } from '../src/index.js';
+import { fullAgendaTestSuite } from 'agenda/testing';
 
 /**
  * MongoDB backend tests.
@@ -41,13 +41,11 @@ async function createTestDb(): Promise<{ db: Db; client: MongoClient; disconnect
 // ============================================================================
 
 let sharedDb: Db;
-let sharedClient: MongoClient;
 let disconnectShared: () => Promise<void>;
 
 beforeAll(async () => {
-	const { db, client, disconnect } = await createTestDb();
+	const { db, disconnect } = await createTestDb();
 	sharedDb = db;
-	sharedClient = client;
 	disconnectShared = disconnect;
 });
 

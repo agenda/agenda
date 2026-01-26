@@ -22,8 +22,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import type { INotificationChannel, IJobNotification, JobId } from '../../src';
-import { toJobId } from '../../src';
+import type { INotificationChannel, IJobNotification, JobId } from '../../src/index.js';
+import { toJobId } from '../../src/index.js';
 import { delay } from './test-utils.js';
 
 export interface NotificationChannelTestConfig {
@@ -130,8 +130,8 @@ export function notificationChannelTestSuite(config: NotificationChannelTestConf
 				const received1: IJobNotification[] = [];
 				const received2: IJobNotification[] = [];
 
-				channel.subscribe(n => received1.push(n));
-				channel.subscribe(n => received2.push(n));
+				channel.subscribe(n => { received1.push(n); });
+				channel.subscribe(n => { received2.push(n); });
 
 				await channel.publish(createTestNotification());
 				await delay(propagationDelay);
@@ -165,7 +165,7 @@ export function notificationChannelTestSuite(config: NotificationChannelTestConf
 
 			it('should preserve notification data through serialization', async () => {
 				const received: IJobNotification[] = [];
-				channel.subscribe(n => received.push(n));
+				channel.subscribe(n => { received.push(n); });
 
 				const originalDate = new Date('2024-01-15T10:30:00.000Z');
 				const notification = createTestNotification({
@@ -189,7 +189,7 @@ export function notificationChannelTestSuite(config: NotificationChannelTestConf
 
 			it('should handle null nextRunAt', async () => {
 				const received: IJobNotification[] = [];
-				channel.subscribe(n => received.push(n));
+				channel.subscribe(n => { received.push(n); });
 
 				await channel.publish(createTestNotification({ nextRunAt: null }));
 				await delay(propagationDelay);
@@ -200,7 +200,7 @@ export function notificationChannelTestSuite(config: NotificationChannelTestConf
 
 			it('should handle multiple rapid notifications', async () => {
 				const received: IJobNotification[] = [];
-				channel.subscribe(n => received.push(n));
+				channel.subscribe(n => { received.push(n); });
 
 				const count = 5;
 				for (let i = 0; i < count; i++) {

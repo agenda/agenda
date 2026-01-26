@@ -17,8 +17,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
-import type { IAgendaBackend } from '../../src';
-import { Agenda } from '../../src';
+import type { IAgendaBackend } from '../../src/index.js';
+import { Agenda } from '../../src/index.js';
 import { delay } from './test-utils.js';
 
 export interface JobProcessorTestConfig {
@@ -267,5 +267,3 @@ export function jobProcessorTestSuite(config: JobProcessorTestConfig): void {
 	});
 }
 
-// Export for use in shared index
-export type { JobProcessorTestConfig };

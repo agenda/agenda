@@ -4,10 +4,8 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { Agenda, Job } from '../src';
-import type { IAgendaBackend } from '../src/types/AgendaBackend';
-import type { IJobRepository } from '../src/types/JobRepository';
-import type { IJobParameters } from '../src/types/JobParameters';
+import { Agenda, Job, toJobId } from '../src/index.js';
+import type { IAgendaBackend, IJobRepository, IJobParameters } from '../src/index.js';
 
 /**
  * Minimal mock repository that satisfies the interface without real storage.
@@ -34,7 +32,7 @@ class MockJobRepository implements IJobRepository {
 		return 0;
 	}
 	async saveJob<DATA = unknown>(job: IJobParameters<DATA>): Promise<IJobParameters<DATA>> {
-		return { ...job, _id: job._id || 'mock-id' };
+		return { ...job, _id: job._id || toJobId('mock-id') };
 	}
 	async saveJobState() {}
 	async lockJob() {
@@ -367,7 +365,8 @@ describe('Job Unit Tests', () => {
 				type: 'normal',
 				repeatInterval: '5 minutes'
 			});
-			job.computeNextRunAt();
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			(job as any).computeNextRunAt();
 			expect(job.attrs.nextRunAt).toBeDefined();
 			// nextRunAt should be approximately now (within 1 second)
 			// since this is a new job without skipImmediate
@@ -380,7 +379,8 @@ describe('Job Unit Tests', () => {
 				type: 'normal',
 				repeatInterval: '5 minutes'
 			});
-			expect(job.computeNextRunAt()).toBe(job);
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			expect((job as any).computeNextRunAt()).toBe(job);
 		});
 
 		it('handles cron expressions', () => {
@@ -389,7 +389,8 @@ describe('Job Unit Tests', () => {
 				type: 'normal',
 				repeatInterval: '0 6 * * *' // 6am daily
 			});
-			job.computeNextRunAt();
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			(job as any).computeNextRunAt();
 			expect(job.attrs.nextRunAt).toBeDefined();
 		});
 
@@ -400,7 +401,8 @@ describe('Job Unit Tests', () => {
 				repeatInterval: '0 6 * * *',
 				repeatTimezone: 'America/New_York'
 			});
-			job.computeNextRunAt();
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			(job as any).computeNextRunAt();
 			expect(job.attrs.nextRunAt).toBeDefined();
 		});
 
@@ -410,7 +412,8 @@ describe('Job Unit Tests', () => {
 				type: 'normal',
 				repeatAt: '3:30pm'
 			});
-			job.computeNextRunAt();
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			(job as any).computeNextRunAt();
 			expect(job.attrs.nextRunAt).toBeDefined();
 		});
 

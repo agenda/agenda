@@ -4,8 +4,8 @@
  * MongoDB repository tests have been moved to @agenda.js/mongo-backend package.
  */
 
-import { InMemoryNotificationChannel } from '../src';
-import { notificationChannelTestSuite } from './shared';
+import { InMemoryNotificationChannel } from '../src/index.js';
+import { notificationChannelTestSuite } from './shared/index.js';
 
 // ============================================================================
 // InMemoryNotificationChannel Tests using Shared Suite
