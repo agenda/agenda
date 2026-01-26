@@ -1,0 +1,63 @@
+name: Validate Changesets
+
+on:
+  pull_request:
+    paths:
+      - '.changeset/*.md'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Validate changesets
+        run: |
+          # Get all package names from workspace
+          PACKAGES=$(pnpm ls -r --depth -1 --json | jq -r '.[].name' | sort -u)
+          
+          echo "Valid packages in workspace:"
+          echo "$PACKAGES"
+          echo ""
+          
+          INVALID=0
+          
+          for changeset in .changeset/*.md; do
+            [ "$changeset" = ".changeset/README.md" ] && continue
+            
+            # Extract package names from changeset (lines starting with ")
+            PKG_REFS=$(grep -E '^"[^"]+":' "$changeset" | sed 's/^"\([^"]*\)".*/\1/' || true)
+            
+            for pkg in $PKG_REFS; do
+              if ! echo "$PACKAGES" | grep -qx "$pkg"; then
+                echo "❌ Invalid package '$pkg' in $changeset"
+                INVALID=1
+              else
+                echo "✓ Valid package '$pkg' in $changeset"
+              fi
+            done
+          done
+          
+          if [ $INVALID -eq 1 ]; then
+            echo ""
+            echo "ERROR: Found changesets referencing packages not in the workspace."
+            echo "Valid packages are:"
+            echo "$PACKAGES"
+            exit 1
+          fi
+          
+          echo ""
+          echo "All changesets are valid!"
