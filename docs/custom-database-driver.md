@@ -8,14 +8,14 @@ Before implementing a custom backend, check if an official package already exist
 
 | Package | Backend | Notifications | Install |
 |---------|---------|---------------|---------|
-| `@agenda.js/mongo-backend` | MongoDB | Polling (or custom) | `npm install @agenda.js/mongo-backend` |
-| `@agenda.js/postgres-backend` | PostgreSQL | LISTEN/NOTIFY | `npm install @agenda.js/postgres-backend` |
-| `@agenda.js/redis-backend` | Redis | Pub/Sub | `npm install @agenda.js/redis-backend` |
+| `@agendajs/mongo-backend` | MongoDB | Polling (or custom) | `npm install @agendajs/mongo-backend` |
+| `@agendajs/postgres-backend` | PostgreSQL | LISTEN/NOTIFY | `npm install @agendajs/postgres-backend` |
+| `@agendajs/redis-backend` | Redis | Pub/Sub | `npm install @agendajs/redis-backend` |
 
 **MongoDB:**
 ```typescript
 import { Agenda } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
 
 const agenda = new Agenda({
   backend: new MongoBackend({
@@ -27,7 +27,7 @@ const agenda = new Agenda({
 **PostgreSQL:**
 ```typescript
 import { Agenda } from 'agenda';
-import { PostgresBackend } from '@agenda.js/postgres-backend';
+import { PostgresBackend } from '@agendajs/postgres-backend';
 
 const agenda = new Agenda({
   backend: new PostgresBackend({
@@ -39,7 +39,7 @@ const agenda = new Agenda({
 **Redis:**
 ```typescript
 import { Agenda } from 'agenda';
-import { RedisBackend } from '@agenda.js/redis-backend';
+import { RedisBackend } from '@agendajs/redis-backend';
 
 const agenda = new Agenda({
   backend: new RedisBackend({
@@ -79,8 +79,8 @@ You can use MongoDB for storage while using a different system for real-time not
 
 ```typescript
 import { Agenda } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
-import { RedisBackend } from '@agenda.js/redis-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
+import { RedisBackend } from '@agendajs/redis-backend';
 
 // MongoDB for storage + Redis for real-time notifications
 const redisBackend = new RedisBackend({ connectionString: 'redis://localhost:6379' });
@@ -94,11 +94,11 @@ This is useful when you want MongoDB's proven durability and flexible queries fo
 
 ## MongoDB Backend
 
-For MongoDB, use the `@agenda.js/mongo-backend` package:
+For MongoDB, use the `@agendajs/mongo-backend` package:
 
 ```typescript
 import { Agenda } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
 
 // Via connection string
 const agenda = new Agenda({
@@ -434,6 +434,6 @@ const agenda = new Agenda({
 
 For complete implementation examples, see the source code of the official backend packages:
 
-- **MongoDB**: [@agenda.js/mongo-backend](https://github.com/agenda/agenda/tree/main/packages/mongo-backend)
-- **PostgreSQL**: [@agenda.js/postgres-backend](https://github.com/agenda/agenda/tree/main/packages/postgres-backend)
-- **Redis**: [@agenda.js/redis-backend](https://github.com/agenda/agenda/tree/main/packages/redis-backend)
+- **MongoDB**: [@agendajs/mongo-backend](https://github.com/agenda/agenda/tree/main/packages/mongo-backend)
+- **PostgreSQL**: [@agendajs/postgres-backend](https://github.com/agenda/agenda/tree/main/packages/postgres-backend)
+- **Redis**: [@agendajs/redis-backend](https://github.com/agenda/agenda/tree/main/packages/redis-backend)

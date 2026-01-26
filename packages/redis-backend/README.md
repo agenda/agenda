@@ -1,4 +1,4 @@
-# @agenda.js/redis-backend
+# @agendajs/redis-backend
 
 Redis backend for [Agenda](https://github.com/agenda/agenda) job scheduler with Pub/Sub support for real-time job processing.
 
@@ -14,11 +14,11 @@ Redis backend for [Agenda](https://github.com/agenda/agenda) job scheduler with 
 ## Installation
 
 ```bash
-npm install @agenda.js/redis-backend
+npm install @agendajs/redis-backend
 # or
-pnpm add @agenda.js/redis-backend
+pnpm add @agendajs/redis-backend
 # or
-yarn add @agenda.js/redis-backend
+yarn add @agendajs/redis-backend
 ```
 
 ## Usage
@@ -27,7 +27,7 @@ yarn add @agenda.js/redis-backend
 
 ```typescript
 import { Agenda } from 'agenda';
-import { RedisBackend } from '@agenda.js/redis-backend';
+import { RedisBackend } from '@agendajs/redis-backend';
 
 // Create agenda with Redis backend
 const agenda = new Agenda({
@@ -53,7 +53,7 @@ await agenda.schedule('in 10 minutes', 'send-email', { to: 'other@example.com', 
 ### Configuration Options
 
 ```typescript
-import { RedisBackend } from '@agenda.js/redis-backend';
+import { RedisBackend } from '@agendajs/redis-backend';
 
 const backend = new RedisBackend({
   // Redis connection string (required unless redis/redisOptions is provided)
@@ -90,7 +90,7 @@ If your application already has a Redis client, you can pass it directly. The cl
 
 ```typescript
 import { Redis } from 'ioredis';
-import { RedisBackend } from '@agenda.js/redis-backend';
+import { RedisBackend } from '@agendajs/redis-backend';
 
 // Your app's existing Redis client
 const redis = new Redis('redis://localhost:6379');

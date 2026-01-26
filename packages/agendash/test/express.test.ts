@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 import { Agenda } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
 import { createExpressMiddleware } from '../src/middlewares/express.js';
 import { mockMongo, IMockMongo } from './helpers/mock-mongodb.js';
 

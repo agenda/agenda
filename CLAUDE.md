@@ -8,9 +8,9 @@ Agenda is a lightweight job scheduling library for Node.js with pluggable storag
 
 This is a pnpm monorepo with the following packages:
 - `packages/agenda` - Core scheduler (published as "agenda" on npm)
-- `packages/mongo-backend` - MongoDB backend (published as "@agenda.js/mongo-backend" on npm)
-- `packages/postgres-backend` - PostgreSQL backend (published as "@agenda.js/postgres-backend" on npm)
-- `packages/redis-backend` - Redis backend (published as "@agenda.js/redis-backend" on npm)
+- `packages/mongo-backend` - MongoDB backend (published as "@agendajs/mongo-backend" on npm)
+- `packages/postgres-backend` - PostgreSQL backend (published as "@agendajs/postgres-backend" on npm)
+- `packages/redis-backend` - Redis backend (published as "@agendajs/redis-backend" on npm)
 - `packages/agendash` - Placeholder for dashboard integration
 
 ## Common Commands
@@ -77,9 +77,9 @@ MongoBackend (packages/mongo-backend)     # Separate package for MongoDB
 - Notifications (optional): via `INotificationChannel`
 
 All backends are separate packages:
-- MongoDB: `@agenda.js/mongo-backend` - Storage with polling-based job processing
-- PostgreSQL: `@agenda.js/postgres-backend` - Storage + LISTEN/NOTIFY for real-time notifications
-- Redis: `@agenda.js/redis-backend` - Storage + Pub/Sub for real-time notifications
+- MongoDB: `@agendajs/mongo-backend` - Storage with polling-based job processing
+- PostgreSQL: `@agendajs/postgres-backend` - Storage + LISTEN/NOTIFY for real-time notifications
+- Redis: `@agendajs/redis-backend` - Storage + Pub/Sub for real-time notifications
 
 **Event-Driven Architecture**: Agenda emits events for job lifecycle:
 - `start`, `complete`, `success`, `fail` (with job-specific variants like `start:jobName`)
@@ -105,7 +105,7 @@ Tests use mongodb-memory-server for isolation. Test helper at `packages/agenda/t
 ```typescript
 import { mockMongo } from './helpers/mock-mongodb';
 import { Agenda } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
 
 const { db, disconnect } = await mockMongo();
 const agenda = new Agenda({ backend: new MongoBackend({ mongo: db }) });
@@ -128,7 +128,7 @@ disconnect();
 
 ```typescript
 import { Agenda } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
 
 // Create agenda with MongoDB backend
 const agenda = new Agenda({
@@ -198,7 +198,7 @@ Thread 1 (API/Scheduler)          Thread 2 (Worker)
 ```typescript
 // Without notifications (default) - uses periodic polling only
 import { Agenda } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
 
 const agenda = new Agenda({
   backend: new MongoBackend({ mongo: db })
@@ -206,7 +206,7 @@ const agenda = new Agenda({
 
 // With in-memory notifications (single process, testing)
 import { Agenda, InMemoryNotificationChannel } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
 
 const agenda = new Agenda({
   backend: new MongoBackend({ mongo: db }),
@@ -218,7 +218,7 @@ const agenda = new Agenda({ backend: new MongoBackend({ mongo: db }) })
   .notifyVia(new InMemoryNotificationChannel());
 
 // Unified backend with notifications (e.g., PostgreSQL with LISTEN/NOTIFY)
-import { PostgresBackend } from '@agenda.js/postgres-backend';
+import { PostgresBackend } from '@agendajs/postgres-backend';
 
 const agenda = new Agenda({
   backend: new PostgresBackend({ connectionString: 'postgres://...' })
@@ -251,7 +251,7 @@ class RedisNotificationChannel extends BaseNotificationChannel {
 }
 
 // Use with MongoDB storage
-import { MongoBackend } from '@agenda.js/mongo-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
 
 const agenda = new Agenda({
   backend: new MongoBackend({ mongo: db }),

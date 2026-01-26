@@ -1,9 +1,9 @@
 /**
- * Test utilities for @agenda.js/mongo-backend
+ * Test utilities for @agendajs/mongo-backend
  *
  * @example
  * ```typescript
- * import { mockMongo } from '@agenda.js/mongo-backend/testing';
+ * import { mockMongo } from '@agendajs/mongo-backend/testing';
  *
  * const { db, disconnect } = await mockMongo();
  * // Use db for testing

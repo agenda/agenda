@@ -1,5 +1,5 @@
 {
-  "name": "@agenda.js/mongo-backend",
+  "name": "@agendajs/mongo-backend",
   "version": "1.0.0-pre",
   "description": "MongoDB backend for Agenda job scheduler",
   "type": "module",

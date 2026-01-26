@@ -84,7 +84,7 @@ importers:
 
   packages/agenda-rest:
     dependencies:
-      '@agenda.js/mongo-backend':
+      '@agendajs/mongo-backend':
         specifier: workspace:*
         version: link:../mongo-backend
       agenda:
@@ -161,7 +161,7 @@ importers:
         specifier: ^5.0.0
         version: 5.0.0
     devDependencies:
-      '@agenda.js/mongo-backend':
+      '@agendajs/mongo-backend':
         specifier: workspace:*
         version: link:../mongo-backend
       '@types/express':

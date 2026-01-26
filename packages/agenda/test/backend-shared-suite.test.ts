@@ -1,7 +1,7 @@
 /**
  * Tests for InMemoryNotificationChannel using the shared test suite
  *
- * MongoDB repository tests have been moved to @agenda.js/mongo-backend package.
+ * MongoDB repository tests have been moved to @agendajs/mongo-backend package.
  */
 
 import { InMemoryNotificationChannel } from '../src/index.js';

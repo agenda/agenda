@@ -1,12 +1,12 @@
 /**
- * @agenda.js/redis-backend
+ * @agendajs/redis-backend
  *
  * Redis backend for Agenda job scheduler with Pub/Sub notification support.
  *
  * @example
  * ```typescript
  * import { Agenda } from 'agenda';
- * import { RedisBackend } from '@agenda.js/redis-backend';
+ * import { RedisBackend } from '@agendajs/redis-backend';
  *
  * // Create agenda with Redis backend
  * const agenda = new Agenda({

@@ -1,15 +1,15 @@
-# @agenda.js/mongo-backend
+# @agendajs/mongo-backend
 
 MongoDB backend for [Agenda](https://www.npmjs.com/package/agenda) job scheduler.
 
 ## Installation
 
 ```bash
-npm install agenda @agenda.js/mongo-backend
+npm install agenda @agendajs/mongo-backend
 # or
-pnpm add agenda @agenda.js/mongo-backend
+pnpm add agenda @agendajs/mongo-backend
 # or
-yarn add agenda @agenda.js/mongo-backend
+yarn add agenda @agendajs/mongo-backend
 ```
 
 **Requirements:**
@@ -20,7 +20,7 @@ yarn add agenda @agenda.js/mongo-backend
 
 ```typescript
 import { Agenda } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
 
 // Via connection string
 const agenda = new Agenda({
@@ -100,7 +100,7 @@ MongoBackend provides storage only and uses polling to check for new jobs. For r
 
 ```typescript
 import { Agenda, InMemoryNotificationChannel } from 'agenda';
-import { MongoBackend } from '@agenda.js/mongo-backend';
+import { MongoBackend } from '@agendajs/mongo-backend';
 
 // For single-process apps (testing/development)
 const agenda = new Agenda({
@@ -109,7 +109,7 @@ const agenda = new Agenda({
 });
 
 // For production: use Redis for notifications
-import { RedisBackend } from '@agenda.js/redis-backend';
+import { RedisBackend } from '@agendajs/redis-backend';
 
 const redisBackend = new RedisBackend({ connectionString: 'redis://localhost:6379' });
 const agenda = new Agenda({
@@ -166,8 +166,8 @@ db.agendaJobs.createIndex({
 ## Related Packages
 
 - [agenda](https://www.npmjs.com/package/agenda) - Core scheduler
-- [@agenda.js/postgres-backend](https://www.npmjs.com/package/@agenda.js/postgres-backend) - PostgreSQL backend with LISTEN/NOTIFY
-- [@agenda.js/redis-backend](https://www.npmjs.com/package/@agenda.js/redis-backend) - Redis backend with Pub/Sub
+- [@agendajs/postgres-backend](https://www.npmjs.com/package/@agendajs/postgres-backend) - PostgreSQL backend with LISTEN/NOTIFY
+- [@agendajs/redis-backend](https://www.npmjs.com/package/@agendajs/redis-backend) - Redis backend with Pub/Sub
 
 ## License
 

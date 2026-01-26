@@ -1,5 +1,5 @@
 {
-  "name": "@agenda.js/redis-backend",
+  "name": "@agendajs/redis-backend",
   "version": "1.0.0-pre",
   "description": "Redis backend for Agenda job scheduler with Pub/Sub notification support",
   "type": "module",

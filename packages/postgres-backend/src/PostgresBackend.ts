@@ -15,7 +15,7 @@ const log = debug('agenda:postgres:backend');
  * @example
  * ```typescript
  * import { Agenda } from 'agenda';
- * import { PostgresBackend } from '@agenda.js/postgres-backend';
+ * import { PostgresBackend } from '@agendajs/postgres-backend';
  *
  * // Using connection string
  * const agenda = new Agenda({
