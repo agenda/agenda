@@ -834,3 +834,5 @@ export {
 	shouldSkipDay,
 	isWithinDateRange
 } from './utils/dateConstraints.js';
+
+export * from './decorators/index.js';

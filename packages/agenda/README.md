@@ -34,6 +34,7 @@ See the [6.x Roadmap](https://github.com/agenda/agenda/issues/1610) for details 
 - Configurable concurrency and locking
 - Real-time job notifications (optional)
 - Sandboxed worker execution via fork mode
+- TypeScript decorators for class-based job definitions
 
 ## Installation
 
@@ -204,6 +205,35 @@ agenda.define('my-job', async (job) => { /* ... */ }, {
 });
 ```
 
+### Defining Jobs with Decorators
+
+For a class-based approach, use TypeScript decorators:
+
+```typescript
+import { JobsController, Define, Every, registerJobs, Job } from 'agenda';
+
+@JobsController({ namespace: 'email' })
+class EmailJobs {
+  @Define({ concurrency: 5 })
+  async sendWelcome(job: Job<{ userId: string }>) {
+    console.log('Sending welcome to:', job.attrs.data.userId);
+  }
+
+  @Every('1 hour')
+  async cleanupBounced(job: Job) {
+    console.log('Cleaning up bounced emails');
+  }
+}
+
+registerJobs(agenda, [new EmailJobs()]);
+await agenda.start();
+
+// Schedule using namespaced name
+await agenda.now('email.sendWelcome', { userId: '123' });
+```
+
+See [Decorators Documentation](./docs/decorators.md) for full details.
+
 ### Scheduling Jobs
 
 ```javascript
@@ -295,6 +325,7 @@ See [Custom Backend Driver](https://github.com/agenda/agenda/blob/main/docs/cust
 - [Full Documentation](https://github.com/agenda/agenda#readme)
 - [Migration Guide (v5 to v6)](https://github.com/agenda/agenda/blob/main/docs/migration-guide-v6.md)
 - [Custom Backend Driver](https://github.com/agenda/agenda/blob/main/docs/custom-database-driver.md)
+- [TypeScript Decorators](./docs/decorators.md)
 - [API Reference](https://agenda.github.io/agenda/)
 
 ## Related Packages
