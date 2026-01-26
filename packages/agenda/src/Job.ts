@@ -1,10 +1,9 @@
 import date from 'date.js';
 import debug from 'debug';
-import { ObjectId } from 'mongodb';
 import { ChildProcess, fork } from 'child_process';
 import type { Agenda } from './index.js';
 import type { DefinitionProcessor } from './types/JobDefinition.js';
-import { IJobParameters, datefields, TJobDatefield } from './types/JobParameters.js';
+import { IJobParameters, datefields, TJobDatefield, JobId } from './types/JobParameters.js';
 import { JobPriority, parsePriority } from './utils/priority.js';
 import { computeFromInterval, computeFromRepeatAt } from './utils/nextRunAt.js';
 
@@ -35,9 +34,9 @@ export class Job<DATA = unknown | void> {
 		if (this.forkedChild) {
 			try {
 				this.forkedChild.send('cancel');
-				console.info('canceled child', this.attrs.name, this.attrs._id);
+				log('canceled child', this.attrs.name, this.attrs._id);
 			} catch {
-				console.log('cannot send cancel to child');
+				log('cannot send cancel to child');
 			}
 		}
 	}
@@ -271,7 +270,7 @@ export class Job<DATA = unknown | void> {
 	async save(): Promise<Job> {
 		if (this.agenda.forkedWorker) {
 			const warning = new Error('calling save() on a Job during a forkedWorker has no effect!');
-			console.warn(warning.message, warning.stack);
+			log('WARNING: %s %s', warning.message, warning.stack);
 			return this as Job;
 		}
 		// ensure db connection is ready
@@ -399,15 +398,15 @@ export class Job<DATA = unknown | void> {
 					let childError: unknown;
 					this.forkedChild.on('close', code => {
 						if (code) {
-							console.info(
-								'fork parameters',
+							log(
+								'fork parameters: %O name=%s id=%s filePath=%s',
 								forkHelper,
 								this.attrs.name,
 								this.attrs._id,
 								this.agenda.definitions[this.attrs.name].filePath
 							);
 							const error = new Error(`child process exited with code: ${code}`);
-							console.warn(error.message, childError || this.canceled);
+							log('fork child error: %s %O', error.message, childError || this.canceled);
 							reject(childError || this.canceled || error);
 						} else {
 							resolve();
@@ -448,11 +447,11 @@ export class Job<DATA = unknown | void> {
 			this.attrs.lockedAt = undefined;
 			try {
 				await this.agenda.db.saveJobState(this.attrs);
-				log('[%s:%s] was saved successfully to MongoDB', this.attrs.name, this.attrs._id);
+				log('[%s:%s] was saved successfully to database', this.attrs.name, this.attrs._id);
 			} catch (err) {
 				// in case this fails, we ignore it
 				// this can e.g. happen if the job gets removed during the execution
-				log('[%s:%s] was not saved to MongoDB', this.attrs.name, this.attrs._id, err);
+				log('[%s:%s] was not saved to database', this.attrs.name, this.attrs._id, err);
 			}
 
 			this.agenda.emit('complete', this);
@@ -504,4 +503,4 @@ export class Job<DATA = unknown | void> {
 	}
 }
 
-export type JobWithId = Job & { attrs: IJobParameters & { _id: ObjectId } };
+export type JobWithId = Job & { attrs: IJobParameters & { _id: JobId } };

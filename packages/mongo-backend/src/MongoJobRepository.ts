@@ -10,21 +10,29 @@ import {
 	Sort,
 	UpdateFilter
 } from 'mongodb';
-import type { IDbConfig } from './types/DbOptions.js';
-import type { IJobParameters, JobId } from './types/JobParameters.js';
-import { toJobId } from './types/JobParameters.js';
 import type {
+	IJobParameters,
+	JobId,
 	IJobsQueryOptions,
 	IJobsResult,
 	IJobsOverview,
 	IJobWithState,
-	IJobsSort
-} from './types/JobQuery.js';
-import { computeJobState } from './types/JobQuery.js';
-import type { IJobRepository, IRemoveJobsOptions } from './types/JobRepository.js';
-import { hasMongoProtocol } from './utils/hasMongoProtocol.js';
+	IJobsSort,
+	IJobRepository,
+	IRemoveJobsOptions
+} from 'agenda';
+import { toJobId, computeJobState } from 'agenda';
+import type { IMongoJobRepositoryConfig } from './types.js';
+import { hasMongoProtocol } from './hasMongoProtocol.js';
 
-const log = debug('agenda:db');
+const log = debug('agenda:mongo:repository');
+
+/**
+ * Escape special regex characters in a string to treat it as literal text
+ */
+function escapeRegex(str: string): string {
+	return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 /**
  * Internal MongoDB document type with ObjectId for _id
@@ -33,39 +41,29 @@ const log = debug('agenda:db');
 type MongoJobDocument = Omit<IJobParameters, '_id'> & { _id?: ObjectId };
 
 /**
- * Configuration options for JobDbRepository
- */
-export interface IJobDbRepositoryConfig extends IDbConfig {
-	/** MongoDB connection string */
-	db?: { address: string; collection?: string; options?: MongoClientOptions };
-	/** Existing MongoDB database instance */
-	mongo?: Db;
-	/** Name to set as lastModifiedBy on jobs */
-	name?: string;
-}
-
-/**
  * @class
  * MongoDB implementation of IJobRepository
  */
-export class JobDbRepository implements IJobRepository {
+export class MongoJobRepository implements IJobRepository {
 	collection!: Collection<MongoJobDocument>;
 
-	constructor(private connectOptions: IJobDbRepositoryConfig) {
+	constructor(private connectOptions: IMongoJobRepositoryConfig) {
 		this.connectOptions.sort = this.connectOptions.sort || { nextRunAt: 1, priority: -1 };
 	}
 
 	private async createConnection(): Promise<Db> {
 		const { connectOptions } = this;
-		if (connectOptions.db?.address) {
+		if ('mongo' in connectOptions) {
+			log('using passed in mongo connection');
+			return connectOptions.mongo;
+		}
+
+		if ('db' in connectOptions && connectOptions.db) {
 			log('using database config', connectOptions);
 			return this.database(connectOptions.db.address, connectOptions.db.options);
 		}
 
-		if (connectOptions.mongo) {
-			log('using passed in mongo connection');
-			return connectOptions.mongo;
-		}
+
 
 		throw new Error('invalid db config, or db config not found');
 	}
@@ -81,6 +79,14 @@ export class JobDbRepository implements IJobRepository {
 	}
 
 	/**
+	 * Convert a SortDirection value to MongoDB's numeric sort direction
+	 */
+	private toMongoSortDirection(dir: 1 | -1 | 'asc' | 'desc' | 'ascending' | 'descending'): 1 | -1 {
+		if (dir === 1 || dir === 'asc' || dir === 'ascending') return 1;
+		return -1;
+	}
+
+	/**
 	 * Convert generic sort options to MongoDB sort
 	 */
 	private toMongoSort(sort?: IJobsSort): Sort {
@@ -88,12 +94,15 @@ export class JobDbRepository implements IJobRepository {
 			return { nextRunAt: -1, lastRunAt: -1 };
 		}
 		const mongoSort: Record<string, 1 | -1> = {};
-		if (sort.nextRunAt !== undefined) mongoSort.nextRunAt = sort.nextRunAt;
-		if (sort.lastRunAt !== undefined) mongoSort.lastRunAt = sort.lastRunAt;
-		if (sort.lastFinishedAt !== undefined) mongoSort.lastFinishedAt = sort.lastFinishedAt;
-		if (sort.priority !== undefined) mongoSort.priority = sort.priority;
-		if (sort.name !== undefined) mongoSort.name = sort.name;
-		if (sort.data !== undefined) mongoSort.data = sort.data;
+		if (sort.nextRunAt !== undefined)
+			mongoSort.nextRunAt = this.toMongoSortDirection(sort.nextRunAt);
+		if (sort.lastRunAt !== undefined)
+			mongoSort.lastRunAt = this.toMongoSortDirection(sort.lastRunAt);
+		if (sort.lastFinishedAt !== undefined)
+			mongoSort.lastFinishedAt = this.toMongoSortDirection(sort.lastFinishedAt);
+		if (sort.priority !== undefined) mongoSort.priority = this.toMongoSortDirection(sort.priority);
+		if (sort.name !== undefined) mongoSort.name = this.toMongoSortDirection(sort.name);
+		if (sort.data !== undefined) mongoSort.data = this.toMongoSortDirection(sort.data);
 		return Object.keys(mongoSort).length > 0 ? mongoSort : { nextRunAt: -1, lastRunAt: -1 };
 	}
 
@@ -102,34 +111,55 @@ export class JobDbRepository implements IJobRepository {
 	 * Handles state computation and filtering internally.
 	 */
 	async queryJobs(options: IJobsQueryOptions = {}): Promise<IJobsResult> {
-		const { name, names, state, id, ids, search, data, includeDisabled = true, sort, skip = 0, limit = 0 } = options;
+		const {
+			name,
+			names,
+			state,
+			id,
+			ids,
+			search,
+			data,
+			includeDisabled = true,
+			sort,
+			skip = 0,
+			limit = 0
+		} = options;
 		const now = new Date();
 
 		// Build MongoDB query from options
 		const query: Filter<MongoJobDocument> = {};
 
-		if (name) {
+		// Validate name is a string to prevent query operator injection
+		if (name && typeof name === 'string') {
 			query.name = name;
-		} else if (names && names.length > 0) {
-			query.name = { $in: names };
+		} else if (names && Array.isArray(names) && names.length > 0) {
+			// Filter to only valid strings
+			const validNames = names.filter((n): n is string => typeof n === 'string');
+			if (validNames.length > 0) {
+				query.name = { $in: validNames };
+			}
 		}
 
-		if (id) {
+		if (id && typeof id === 'string') {
 			try {
 				query._id = new ObjectId(id);
 			} catch {
 				return { jobs: [], total: 0 };
 			}
-		} else if (ids && ids.length > 0) {
+		} else if (ids && Array.isArray(ids) && ids.length > 0) {
 			try {
-				query._id = { $in: ids.map(i => new ObjectId(i)) };
+				const validIds = ids.filter((i): i is string => typeof i === 'string');
+				if (validIds.length > 0) {
+					query._id = { $in: validIds.map(i => new ObjectId(i)) };
+				}
 			} catch {
 				return { jobs: [], total: 0 };
 			}
 		}
 
-		if (search) {
-			query.name = { $regex: search, $options: 'i' };
+		// Validate search is a string and escape regex metacharacters
+		if (search && typeof search === 'string' && search.length > 0) {
+			query.name = { $regex: escapeRegex(search), $options: 'i' };
 		}
 
 		if (data !== undefined) {
@@ -141,10 +171,7 @@ export class JobDbRepository implements IJobRepository {
 		}
 
 		// Fetch jobs
-		const allJobs = await this.collection
-			.find(query)
-			.sort(this.toMongoSort(sort))
-			.toArray();
+		const allJobs = await this.collection.find(query).sort(this.toMongoSort(sort)).toArray();
 
 		// Compute states and filter by state if specified
 		let jobsWithState: IJobWithState[] = allJobs
@@ -215,25 +242,33 @@ export class JobDbRepository implements IJobRepository {
 		const query: Filter<MongoJobDocument> = {};
 
 		if (options.id) {
+			const idStr = String(options.id);
 			try {
-				query._id = new ObjectId(options.id.toString());
+				query._id = new ObjectId(idStr);
 			} catch {
 				return 0;
 			}
-		} else if (options.ids && options.ids.length > 0) {
+		} else if (options.ids && Array.isArray(options.ids) && options.ids.length > 0) {
 			try {
-				query._id = { $in: options.ids.map(id => new ObjectId(id.toString())) };
+				query._id = { $in: options.ids.map(id => new ObjectId(String(id))) };
 			} catch {
 				return 0;
 			}
 		}
 
-		if (options.name) {
+		// Validate name is a string to prevent query operator injection
+		if (options.name && typeof options.name === 'string') {
 			query.name = options.name;
-		} else if (options.names && options.names.length > 0) {
-			query.name = { $in: options.names };
-		} else if (options.notNames && options.notNames.length > 0) {
-			query.name = { $nin: options.notNames };
+		} else if (options.names && Array.isArray(options.names) && options.names.length > 0) {
+			const validNames = options.names.filter((n): n is string => typeof n === 'string');
+			if (validNames.length > 0) {
+				query.name = { $in: validNames };
+			}
+		} else if (options.notNames && Array.isArray(options.notNames) && options.notNames.length > 0) {
+			const validNotNames = options.notNames.filter((n): n is string => typeof n === 'string');
+			if (validNotNames.length > 0) {
+				query.name = { $nin: validNotNames };
+			}
 		}
 
 		if (options.data !== undefined) {
@@ -242,11 +277,12 @@ export class JobDbRepository implements IJobRepository {
 
 		// If no criteria provided, don't delete anything
 		if (Object.keys(query).length === 0) {
+			log('removeJobs: skipping deleteMany without query', query);
 			return 0;
 		}
 
 		const result = await this.collection.deleteMany(query);
-		return result.deletedCount || 0;
+		return result.deletedCount;
 	}
 
 	async unlockJob(job: IJobParameters): Promise<void> {
@@ -264,10 +300,10 @@ export class JobDbRepository implements IJobRepository {
 	async unlockJobs(jobIds: (JobId | string)[]): Promise<void> {
 		if (jobIds.length === 0) return;
 		const objectIds = jobIds.map(id => new ObjectId(id.toString()));
-		await this.collection.updateMany(
-			{ _id: { $in: objectIds }, nextRunAt: { $ne: null } },
-			{ $unset: { lockedAt: true } }
-		);
+		// Unlock jobs by ID regardless of nextRunAt status.
+		// When a one-time job starts running, nextRunAt becomes null,
+		// but we still want to unlock it when stop() is called.
+		await this.collection.updateMany({ _id: { $in: objectIds } }, { $unset: { lockedAt: true } });
 	}
 
 	async lockJob(job: IJobParameters): Promise<IJobParameters | undefined> {
@@ -290,11 +326,7 @@ export class JobDbRepository implements IJobRepository {
 		};
 
 		// Lock the job in MongoDB!
-		const result = await this.collection.findOneAndUpdate(
-			criteria,
-			update,
-			options
-		);
+		const result = await this.collection.findOneAndUpdate(criteria, update, options);
 
 		if (!result) return undefined;
 
@@ -413,7 +445,9 @@ export class JobDbRepository implements IJobRepository {
 	/**
 	 * Convert MongoDB document to IJobParameters with JobId
 	 */
-	private toJobParameters<DATA = unknown>(doc: MongoJobDocument & { _id: ObjectId }): IJobParameters<DATA> {
+	private toJobParameters<DATA = unknown>(
+		doc: MongoJobDocument & { _id: ObjectId }
+	): IJobParameters<DATA> {
 		return {
 			...doc,
 			_id: toJobId(doc._id.toHexString())

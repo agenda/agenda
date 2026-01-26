@@ -1,3 +1,16 @@
+/**
+ * Test utilities for @agenda.js/mongo-backend
+ *
+ * @example
+ * ```typescript
+ * import { mockMongo } from '@agenda.js/mongo-backend/testing';
+ *
+ * const { db, disconnect } = await mockMongo();
+ * // Use db for testing
+ * await disconnect();
+ * ```
+ */
+
 import { Db, MongoClient } from 'mongodb';
 import debug from 'debug';
 import { randomUUID } from 'crypto';
@@ -11,6 +24,10 @@ export interface IMockMongo {
 	db: Db;
 }
 
+/**
+ * Create a mock MongoDB connection for testing.
+ * Requires MONGO_URI environment variable to be set (usually by mongodb-memory-server).
+ */
 export async function mockMongo(): Promise<IMockMongo> {
 	const baseUri = process.env.MONGO_URI;
 	if (!baseUri) {
@@ -37,3 +54,6 @@ export async function mockMongo(): Promise<IMockMongo> {
 		}
 	};
 }
+
+// Re-export types that test files might need
+export type { Db, MongoClient } from 'mongodb';

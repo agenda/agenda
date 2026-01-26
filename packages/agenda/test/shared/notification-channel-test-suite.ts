@@ -22,8 +22,9 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import type { INotificationChannel, IJobNotification, JobId } from '../../src';
-import { toJobId } from '../../src';
+import type { INotificationChannel, IJobNotification, JobId } from '../../src/index.js';
+import { toJobId } from '../../src/index.js';
+import { delay } from './test-utils.js';
 
 export interface NotificationChannelTestConfig {
 	/** Name for the test suite */
@@ -54,7 +55,6 @@ function createTestNotification(overrides: Partial<IJobNotification> = {}): IJob
  * Creates a test suite for INotificationChannel implementations
  */
 export function notificationChannelTestSuite(config: NotificationChannelTestConfig): void {
-	const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 	const propagationDelay = config.propagationDelay ?? 100;
 
 	describe(`${config.name} - INotificationChannel`, () => {
@@ -130,8 +130,8 @@ export function notificationChannelTestSuite(config: NotificationChannelTestConf
 				const received1: IJobNotification[] = [];
 				const received2: IJobNotification[] = [];
 
-				channel.subscribe(n => received1.push(n));
-				channel.subscribe(n => received2.push(n));
+				channel.subscribe(n => { received1.push(n); });
+				channel.subscribe(n => { received2.push(n); });
 
 				await channel.publish(createTestNotification());
 				await delay(propagationDelay);
@@ -152,20 +152,18 @@ export function notificationChannelTestSuite(config: NotificationChannelTestConf
 
 				expect(received.length).toBe(1);
 
-				// Unsubscribe
 				unsubscribe();
 
 				await channel.publish(createTestNotification({ jobName: 'second' }));
 				await delay(propagationDelay);
 
-				// Should still only have 1 notification
 				expect(received.length).toBe(1);
 				expect(received[0].jobName).toBe('first');
 			});
 
 			it('should preserve notification data through serialization', async () => {
 				const received: IJobNotification[] = [];
-				channel.subscribe(n => received.push(n));
+				channel.subscribe(n => { received.push(n); });
 
 				const originalDate = new Date('2024-01-15T10:30:00.000Z');
 				const notification = createTestNotification({
@@ -189,7 +187,7 @@ export function notificationChannelTestSuite(config: NotificationChannelTestConf
 
 			it('should handle null nextRunAt', async () => {
 				const received: IJobNotification[] = [];
-				channel.subscribe(n => received.push(n));
+				channel.subscribe(n => { received.push(n); });
 
 				await channel.publish(createTestNotification({ nextRunAt: null }));
 				await delay(propagationDelay);
@@ -200,7 +198,7 @@ export function notificationChannelTestSuite(config: NotificationChannelTestConf
 
 			it('should handle multiple rapid notifications', async () => {
 				const received: IJobNotification[] = [];
-				channel.subscribe(n => received.push(n));
+				channel.subscribe(n => { received.push(n); });
 
 				const count = 5;
 				for (let i = 0; i < count; i++) {
@@ -215,7 +213,6 @@ export function notificationChannelTestSuite(config: NotificationChannelTestConf
 
 		describe('error handling', () => {
 			it('should throw when publishing on disconnected channel', async () => {
-				// Channel is not connected
 				await expect(channel.publish(createTestNotification())).rejects.toThrow(
 					/not connected/i
 				);
@@ -244,8 +241,6 @@ export function notificationChannelTestSuite(config: NotificationChannelTestConf
 				channel.off('stateChange', handler);
 				await channel.disconnect();
 
-				// After removing listener, we shouldn't get the disconnected state
-				// (unless already captured before off was called)
 				const disconnectedCount = states.filter(s => s === 'disconnected').length;
 				expect(disconnectedCount).toBeLessThanOrEqual(1);
 			});

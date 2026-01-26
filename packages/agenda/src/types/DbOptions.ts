@@ -1,4 +1,8 @@
-import type { SortDirection } from 'mongodb';
+/**
+ * Sort direction for job queries
+ * Compatible with MongoDB and other backends
+ */
+export type SortDirection = 1 | -1 | 'asc' | 'desc' | 'ascending' | 'descending';
 
 /**
  * Database configuration options used internally by backends

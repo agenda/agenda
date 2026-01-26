@@ -4,10 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Agenda is a lightweight, MongoDB-backed job scheduling library for Node.js. It's a TypeScript rewrite of agenda.js with full typing, MongoDB 4+ driver support, and improvements for distributed job processing.
+Agenda is a lightweight job scheduling library for Node.js with pluggable storage backends. It's a TypeScript rewrite of agenda.js with full typing and improvements for distributed job processing.
 
 This is a pnpm monorepo with the following packages:
 - `packages/agenda` - Core scheduler (published as "agenda" on npm)
+- `packages/mongo-backend` - MongoDB backend (published as "@agenda.js/mongo-backend" on npm)
+- `packages/postgres-backend` - PostgreSQL backend (published as "@agenda.js/postgres-backend" on npm)
+- `packages/redis-backend` - Redis backend (published as "@agenda.js/redis-backend" on npm)
 - `packages/agendash` - Placeholder for dashboard integration
 
 ## Common Commands
@@ -44,13 +47,15 @@ pnpm lint:fix                    # ESLint with auto-fix
 ```
 Agenda (packages/agenda/src/index.ts)    # Main class, extends EventEmitter
 ├── JobProcessor                          # Handles job execution loop and concurrency
-├── MongoBackend                          # MongoDB backend implementation
-│   └── JobDbRepository                   # MongoDB data layer abstraction
 ├── Job                                   # Individual job with lifecycle methods
 ├── JobProcessingQueue                    # Priority queue for pending jobs
 └── notifications/                        # Pluggable notification channel system
     ├── BaseNotificationChannel           # Abstract base with reconnection logic
     └── InMemoryNotificationChannel       # In-memory implementation for testing
+
+MongoBackend (packages/mongo-backend)     # Separate package for MongoDB
+├── MongoBackend                          # MongoDB backend implementation
+└── MongoJobRepository                    # MongoDB data layer abstraction
 ```
 
 ### Source Structure
@@ -58,11 +63,12 @@ Agenda (packages/agenda/src/index.ts)    # Main class, extends EventEmitter
 - `packages/agenda/src/index.ts` - Agenda class: configuration, job definition, scheduling API
 - `packages/agenda/src/Job.ts` - Job class: save, remove, run, touch, schedule methods
 - `packages/agenda/src/JobProcessor.ts` - Processing loop, locking, concurrent execution
-- `packages/agenda/src/backends/MongoBackend.ts` - MongoDB backend implementation
-- `packages/agenda/src/JobDbRepository.ts` - MongoDB operations abstraction
 - `packages/agenda/src/JobProcessingQueue.ts` - Priority-based job queue
 - `packages/agenda/src/types/` - TypeScript interfaces (AgendaConfig, JobDefinition, JobParameters)
 - `packages/agenda/src/utils/` - Helpers for priority parsing, interval calculation, date handling
+- `packages/mongo-backend/src/` - MongoDB backend implementation (separate package)
+- `packages/postgres-backend/src/` - PostgreSQL backend implementation
+- `packages/redis-backend/src/` - Redis backend implementation
 
 ### Key Patterns
 
@@ -70,16 +76,16 @@ Agenda (packages/agenda/src/index.ts)    # Main class, extends EventEmitter
 - Storage (required): via `IJobRepository`
 - Notifications (optional): via `INotificationChannel`
 
-This allows:
-- MongoDB only (default): Storage with polling-based job processing
-- MongoDB + Redis: MongoDB for storage, Redis for real-time notifications
-- PostgreSQL: Single backend providing both storage AND notifications (LISTEN/NOTIFY)
+All backends are separate packages:
+- MongoDB: `@agenda.js/mongo-backend` - Storage with polling-based job processing
+- PostgreSQL: `@agenda.js/postgres-backend` - Storage + LISTEN/NOTIFY for real-time notifications
+- Redis: `@agenda.js/redis-backend` - Storage + Pub/Sub for real-time notifications
 
 **Event-Driven Architecture**: Agenda emits events for job lifecycle:
 - `start`, `complete`, `success`, `fail` (with job-specific variants like `start:jobName`)
 - `ready`, `error` for Agenda lifecycle
 
-**Distributed Locking**: Jobs use MongoDB `lockedAt` field for distributed execution:
+**Distributed Locking**: Jobs use `lockedAt` field for distributed execution:
 - Prevents duplicate execution across multiple Agenda instances
 - Default lock lifetime: 10 minutes (configurable per job)
 
@@ -98,7 +104,8 @@ Tests use mongodb-memory-server for isolation. Test helper at `packages/agenda/t
 
 ```typescript
 import { mockMongo } from './helpers/mock-mongodb';
-import { Agenda, MongoBackend } from 'agenda';
+import { Agenda } from 'agenda';
+import { MongoBackend } from '@agenda.js/mongo-backend';
 
 const { db, disconnect } = await mockMongo();
 const agenda = new Agenda({ backend: new MongoBackend({ mongo: db }) });
@@ -120,7 +127,8 @@ disconnect();
 ## Basic Usage
 
 ```typescript
-import { Agenda, MongoBackend } from 'agenda';
+import { Agenda } from 'agenda';
+import { MongoBackend } from '@agenda.js/mongo-backend';
 
 // Create agenda with MongoDB backend
 const agenda = new Agenda({
@@ -130,6 +138,11 @@ const agenda = new Agenda({
 // Or with existing connection
 const agenda = new Agenda({
   backend: new MongoBackend({ mongo: existingDb })
+});
+
+// IMPORTANT: Always attach an error handler to prevent unhandled promise rejections
+agenda.on('error', (err) => {
+  console.error('Agenda error:', err);
 });
 
 // Define and run jobs
@@ -143,7 +156,7 @@ await agenda.every('5 minutes', 'myJob');
 
 ## Database Index
 
-Agenda does not create indexes by default. Recommended index for production:
+When using MongoDB, Agenda does not create indexes by default. Recommended index for production:
 
 ```javascript
 db.agendaJobs.createIndex({
@@ -184,12 +197,16 @@ Thread 1 (API/Scheduler)          Thread 2 (Worker)
 
 ```typescript
 // Without notifications (default) - uses periodic polling only
+import { Agenda } from 'agenda';
+import { MongoBackend } from '@agenda.js/mongo-backend';
+
 const agenda = new Agenda({
   backend: new MongoBackend({ mongo: db })
 });
 
 // With in-memory notifications (single process, testing)
-import { Agenda, MongoBackend, InMemoryNotificationChannel } from 'agenda';
+import { Agenda, InMemoryNotificationChannel } from 'agenda';
+import { MongoBackend } from '@agenda.js/mongo-backend';
 
 const agenda = new Agenda({
   backend: new MongoBackend({ mongo: db }),
@@ -201,6 +218,8 @@ const agenda = new Agenda({ backend: new MongoBackend({ mongo: db }) })
   .notifyVia(new InMemoryNotificationChannel());
 
 // Unified backend with notifications (e.g., PostgreSQL with LISTEN/NOTIFY)
+import { PostgresBackend } from '@agenda.js/postgres-backend';
+
 const agenda = new Agenda({
   backend: new PostgresBackend({ connectionString: 'postgres://...' })
   // PostgresBackend provides both repository AND notificationChannel
@@ -232,6 +251,8 @@ class RedisNotificationChannel extends BaseNotificationChannel {
 }
 
 // Use with MongoDB storage
+import { MongoBackend } from '@agenda.js/mongo-backend';
+
 const agenda = new Agenda({
   backend: new MongoBackend({ mongo: db }),
   notificationChannel: new RedisNotificationChannel()
@@ -246,4 +267,3 @@ const agenda = new Agenda({
 - `IJobNotification` - Payload sent when a job is saved (jobId, jobName, nextRunAt, priority)
 - `BaseNotificationChannel` - Abstract base class with state management and reconnection logic
 - `InMemoryNotificationChannel` - In-memory implementation for testing/single-process
-- `MongoBackend` - Default MongoDB backend implementation

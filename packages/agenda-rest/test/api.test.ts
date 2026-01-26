@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
-import { Agenda, MongoBackend } from 'agenda';
+import { Agenda } from 'agenda';
+import { MongoBackend } from '@agenda.js/mongo-backend';
 import { createServer } from '../src/server.js';
 import { mockMongo, IMockMongo } from './helpers/mock-mongodb.js';
 import type Koa from 'koa';

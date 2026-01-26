@@ -53,9 +53,6 @@ importers:
       luxon:
         specifier: ^3.2.1
         version: 3.7.2
-      mongodb:
-        specifier: ^6.12.0
-        version: 6.21.0(@aws-sdk/credential-providers@3.972.0)(socks@2.8.7)
     devDependencies:
       '@types/debug':
         specifier: ^4.1.12
@@ -72,12 +69,6 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^3.1.0
         version: 3.2.4(vitest@3.2.4(@types/debug@4.1.12)(@types/node@22.19.7)(tsx@4.21.0)(yaml@2.8.2))
-      delay:
-        specifier: ^7.0.0
-        version: 7.0.0
-      mongodb-memory-server:
-        specifier: ^10.0.0
-        version: 10.4.3(@aws-sdk/credential-providers@3.972.0)(socks@2.8.7)
       sinon:
         specifier: ^19.0.0
         version: 19.0.5
@@ -93,6 +84,9 @@ importers:
 
   packages/agenda-rest:
     dependencies:
+      '@agenda.js/mongo-backend':
+        specifier: workspace:*
+        version: link:../mongo-backend
       agenda:
         specifier: workspace:*
         version: link:../agenda
@@ -167,6 +161,9 @@ importers:
         specifier: ^5.0.0
         version: 5.0.0
     devDependencies:
+      '@agenda.js/mongo-backend':
+        specifier: workspace:*
+        version: link:../mongo-backend
       '@types/express':
         specifier: ^4.17.21
         version: 4.17.25
@@ -200,6 +197,37 @@ importers:
       supertest:
         specifier: ^7.0.0
         version: 7.2.2
+      vitest:
+        specifier: ^3.1.0
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@22.19.7)(tsx@4.21.0)(yaml@2.8.2)
+
+  packages/mongo-backend:
+    dependencies:
+      debug:
+        specifier: ^4.4.0
+        version: 4.4.3
+      mongodb:
+        specifier: ^6.12.0
+        version: 6.21.0(@aws-sdk/credential-providers@3.972.0)(socks@2.8.7)
+    devDependencies:
+      '@types/debug':
+        specifier: ^4.1.12
+        version: 4.1.12
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.7
+      '@vitest/coverage-v8':
+        specifier: ^3.1.0
+        version: 3.2.4(vitest@3.2.4(@types/debug@4.1.12)(@types/node@22.19.7)(tsx@4.21.0)(yaml@2.8.2))
+      agenda:
+        specifier: workspace:*
+        version: link:../agenda
+      mongodb-memory-server:
+        specifier: ^10.0.0
+        version: 10.4.3(@aws-sdk/credential-providers@3.972.0)(socks@2.8.7)
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
       vitest:
         specifier: ^3.1.0
         version: 3.2.4(@types/debug@4.1.12)(@types/node@22.19.7)(tsx@4.21.0)(yaml@2.8.2)
@@ -1758,10 +1786,6 @@ packages:
   deep-is@0.1.4:
     resolution: {integrity: sha512-oIPzksmTg4/MriiaYGO+okXDT7ztn/w3Eptv/+gSIdMdKsJo0u4CfYNFJPy+4SKMuCqGw2wxnA+URMg3t8a/bQ==}
 
-  delay@7.0.0:
-    resolution: {integrity: sha512-C3vaGs818qzZjCvVJ98GQUMVyWeg7dr5w2Nwwb2t5K8G98jOyyVO2ti2bKYk5yoYElqH3F2yA53ykuEnwD6MCg==}
-    engines: {node: '>=20'}
-
   delayed-stream@1.0.0:
     resolution: {integrity: sha512-ZySD7Nf91aLB0RxL4KGrKHBXl7Eds1DAmEdcoVawXnLD7SDhpNgtuII2aAkg7a7QS41jxPSZ17p4VdGnMHk3MQ==}
     engines: {node: '>=0.4.0'}
@@ -2814,10 +2838,6 @@ packages:
   quick-format-unescaped@4.0.4:
     resolution: {integrity: sha512-tYC1Q1hgyRuHgloV/YXs2w15unPVh8qfu/qCTfhTYamaw7fyhumKa2yGpdSo87vY32rIclj+4fWYQXUMs9EHvg==}
 
-  random-int@3.1.0:
-    resolution: {integrity: sha512-h8CRz8cpvzj0hC/iH/1Gapgcl2TQ6xtnCpyOI5WvWfXf/yrDx2DOU+tD9rX23j36IF11xg1KqB9W11Z18JPMdw==}
-    engines: {node: '>=12'}
-
   range-parser@1.2.1:
     resolution: {integrity: sha512-Hrgsx+orqoygnmhFbKaHE6c296J+HTAQXoxEF6gNupROmmGJRoyzfG3ccAveqCBrwr/2yxQ5BVd/GTl5agOwSg==}
     engines: {node: '>= 0.6'}
@@ -3198,10 +3218,6 @@ packages:
   universalify@0.1.2:
     resolution: {integrity: sha512-rBJeI5CXAlmy1pV+617WB9J63U6XcazHHF2f2dbJix4XzpUF0RS3Zbj0FGIOCAva5P/d/GBOYaACQ1w+0azUkg==}
     engines: {node: '>= 4.0.0'}
-
-  unlimited-timeout@0.1.0:
-    resolution: {integrity: sha512-D4g+mxFeQGQHzCfnvij+R35ukJ0658Zzudw7j16p4tBBbNasKkKM4SocYxqhwT5xA7a9JYWDzKkEFyMlRi5sng==}
-    engines: {node: '>=20'}
 
   unpipe@1.0.0:
     resolution: {integrity: sha512-pjy2bYhSsufwWlKwPc+l3cN7+wuJlK6uz0YdJEOlQDbl6jo/YlPi4mb8agUkVC8BF7V8NuzeyPNqRksA3hztKQ==}
@@ -5457,11 +5473,6 @@ snapshots:
 
   deep-is@0.1.4: {}
 
-  delay@7.0.0:
-    dependencies:
-      random-int: 3.1.0
-      unlimited-timeout: 0.1.0
-
   delayed-stream@1.0.0: {}
 
   delegates@1.0.0: {}
@@ -6640,8 +6651,6 @@ snapshots:
   quick-format-unescaped@4.0.4:
     optional: true
 
-  random-int@3.1.0: {}
-
   range-parser@1.2.1:
     optional: true
 
@@ -7095,8 +7104,6 @@ snapshots:
   undici-types@6.21.0: {}
 
   universalify@0.1.2: {}
-
-  unlimited-timeout@0.1.0: {}
 
   unpipe@1.0.0: {}
 

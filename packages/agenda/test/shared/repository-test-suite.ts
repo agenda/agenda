@@ -23,7 +23,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import type { IJobRepository, IJobParameters } from '../../src';
+import type { IJobRepository, IJobParameters } from '../../src/index.js';
 
 export interface RepositoryTestConfig {
 	/** Name for the test suite */
@@ -131,12 +131,10 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 
 				const saved2 = await repo.saveJob(job2);
 
-				// Should be same job, updated
 				expect(saved2._id).toBe(saved1._id);
 				expect(saved2.priority).toBe(10);
 				expect(saved2.data).toEqual({ run: 2 });
 
-				// Verify only one job exists
 				const result = await repo.queryJobs({ name: 'single-job' });
 				expect(result.total).toBe(1);
 			});
@@ -178,7 +176,6 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 			});
 
 			it('should return null for non-existent ID', async () => {
-				// Create and delete a job to get a valid ID format
 				const job = await repo.saveJob({
 					name: 'temp-job',
 					priority: 0,
@@ -189,7 +186,6 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 
 				await repo.removeJobs({ id: job._id! });
 
-				// Query for the deleted job - should return null
 				const result = await repo.getJobById(job._id!.toString());
 				expect(result).toBeNull();
 			});
@@ -197,7 +193,6 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 
 		describe('queryJobs', () => {
 			beforeEach(async () => {
-				// Create test jobs
 				await repo.saveJob({
 					name: 'job-a',
 					priority: 10,
@@ -248,7 +243,7 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 			it('should support pagination with skip and limit', async () => {
 				const result = await repo.queryJobs({ skip: 1, limit: 1 });
 				expect(result.jobs.length).toBe(1);
-				expect(result.total).toBe(3); // Total count should still be 3
+				expect(result.total).toBe(3);
 			});
 
 			it('should filter disabled jobs when includeDisabled is false', async () => {
@@ -662,7 +657,6 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 
 		describe('getJobsOverview', () => {
 			it('should return overview of all job types', async () => {
-				// Create jobs with different states
 				await repo.saveJob({
 					name: 'overview-job',
 					priority: 0,

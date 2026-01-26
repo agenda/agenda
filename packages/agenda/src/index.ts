@@ -1,11 +1,10 @@
 import { EventEmitter } from 'events';
 import debug from 'debug';
 
-import { SortDirection } from 'mongodb';
 import { ForkOptions } from 'child_process';
 import type { IJobDefinition } from './types/JobDefinition.js';
 import type { IAgendaConfig } from './types/AgendaConfig.js';
-import type { IDbConfig } from './types/DbOptions.js';
+import type { IDbConfig, SortDirection } from './types/DbOptions.js';
 import type { IAgendaBackend } from './types/AgendaBackend.js';
 import type { INotificationChannel, IJobNotification } from './types/NotificationChannel.js';
 import type { JobId } from './types/JobParameters.js';
@@ -69,6 +68,21 @@ export interface IAgendaOptions {
 }
 
 /**
+ * Event names that Agenda emits
+ */
+export type AgendaEventName =
+	| 'ready'
+	| 'error'
+	| 'fail'
+	| 'success'
+	| 'start'
+	| 'complete'
+	| `fail:${string}`
+	| `success:${string}`
+	| `start:${string}`
+	| `complete:${string}`;
+
+/**
  * @class
  */
 export class Agenda extends EventEmitter {
@@ -87,19 +101,28 @@ export class Agenda extends EventEmitter {
 
 	private notificationChannel?: INotificationChannel;
 
+	// Lifecycle events
+	on(event: 'ready', listener: () => void): this;
+	on(event: 'error', listener: (error: Error) => void): this;
+
+	// Job events (generic)
 	on(event: 'fail', listener: (error: Error, job: JobWithId) => void): this;
 	on(event: 'success', listener: (job: JobWithId) => void): this;
 	on(event: 'start', listener: (job: JobWithId) => void): this;
 	on(event: 'complete', listener: (job: JobWithId) => void): this;
-	on(event: string, listener: (job: JobWithId) => void): this;
-	on(event: string, listener: (error: Error, job: JobWithId) => void): this;
-	on(event: 'ready', listener: () => void): this;
-	on(event: 'error', listener: (error: Error) => void): this;
+
+	// Job-specific events (e.g., 'fail:myJobName')
+	on(event: `fail:${string}`, listener: (error: Error, job: JobWithId) => void): this;
+	on(event: `success:${string}`, listener: (job: JobWithId) => void): this;
+	on(event: `start:${string}`, listener: (job: JobWithId) => void): this;
+	on(event: `complete:${string}`, listener: (job: JobWithId) => void): this;
+
+	// Implementation (eslint-disable needed because overloads provide the public type safety)
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	on(event: string, listener: (...args: any[]) => void): this {
 		if (this.forkedWorker && event !== 'ready' && event !== 'error') {
 			const warning = new Error(`calling on(${event}) during a forkedWorker has no effect!`);
-			console.warn(warning.message, warning.stack);
+			log('WARNING: %s %s', warning.message, warning.stack);
 			return this;
 		}
 		return super.on(event, listener);
@@ -196,7 +219,7 @@ export class Agenda extends EventEmitter {
 			log('%s jobs cancelled', amountOfRemovedJobs);
 			return amountOfRemovedJobs;
 		} catch (error) {
-			log('error trying to delete jobs from MongoDB');
+			log('error trying to delete jobs from database');
 			throw error;
 		}
 	}
@@ -407,11 +430,9 @@ export class Agenda extends EventEmitter {
 
 	/**
 	 * Internal helper method that uses createJob to create jobs for an array of names
-	 * @param {Number} interval run every X interval
-	 * @param {Array<String>} names Strings of jobs to schedule
-	 * @param {Object} data data to run for job
-	 * @param {Object} options options to run job for
-	 * @returns {Array<Job>} array of jobs created
+	 * @param names - Job names to schedule
+	 * @param createJob - Factory function to create each job
+	 * @returns Array of created jobs
 	 */
 	private async createJobs<DATA = unknown>(
 		names: string[],
@@ -439,8 +460,7 @@ export class Agenda extends EventEmitter {
 	create(name: string, data?: unknown): Job<any> {
 		log('Agenda.create(%s, [Object])', name);
 		const priority = this.definitions[name] ? this.definitions[name].priority : 0;
-		const job = new Job(this, { name, data, type: 'normal', priority });
-		return job;
+		return new Job(this, { name, data, type: 'normal', priority });
 	}
 
 	/**
@@ -481,16 +501,9 @@ export class Agenda extends EventEmitter {
 		options?: { timezone?: string; skipImmediate?: boolean; forkMode?: boolean }
 	): // eslint-disable-next-line @typescript-eslint/no-explicit-any
 	Promise<Job<any> | Job<any>[]> {
-		/**
-		 * Internal method to setup job that gets run every interval
-		 * @param {Number} interval run every X interval
-		 * @param {String} name String job to schedule
-		 * @param {Object} data data to run for job
-		 * @param {Object} options options to run job for
-		 * @returns {Job} instance of job
-		 */
 		log('Agenda.every(%s, %O, %O)', interval, names, options);
 
+		/** Internal method to setup job that gets run every interval */
 		const createJob = async (name: string): Promise<Job> => {
 			const job = this.create(name, data);
 			job.attrs.type = 'single';
@@ -504,15 +517,11 @@ export class Agenda extends EventEmitter {
 		};
 
 		if (typeof names === 'string') {
-			const job = await createJob(names);
-
-			return job;
+			return createJob(names);
 		}
 
 		log('Agenda.every(%s, %s, %O)', interval, names, options);
-		const jobs = await this.createJobs(names, createJob);
-
-		return jobs;
+		return this.createJobs(names, createJob);
 	}
 
 	/**
@@ -683,5 +692,3 @@ export * from './types/NotificationChannel.js';
 export * from './types/AgendaBackend.js';
 
 export * from './notifications/index.js';
-
-export * from './backends/index.js';

@@ -1,3 +1,10 @@
+/**
+ * Test setup for MongoDB backend tests
+ *
+ * This file is automatically loaded by vitest before running tests.
+ * It starts a MongoMemoryServer instance for testing.
+ */
+
 import { MongoMemoryServer } from 'mongodb-memory-server';
 
 let mongod: MongoMemoryServer | undefined;

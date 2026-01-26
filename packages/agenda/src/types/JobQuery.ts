@@ -1,4 +1,5 @@
 import type { IJobParameters, JobId } from './JobParameters.js';
+import type { SortDirection } from './DbOptions.js';
 
 /**
  * Computed job states based on job timestamps.
@@ -27,11 +28,6 @@ export interface IJobWithState<DATA = unknown> extends IJobParameters<DATA> {
 	_id: JobId;
 	state: JobState;
 }
-
-/**
- * Sort direction for job queries
- */
-export type SortDirection = 1 | -1;
 
 /**
  * Sort options for job queries (database-agnostic)

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { Agenda, MongoBackend } from 'agenda';
+import { Agenda } from 'agenda';
+import { MongoBackend } from '@agenda.js/mongo-backend';
 import { AgendashController } from '../src/AgendashController.js';
 import { mockMongo, IMockMongo } from './helpers/mock-mongodb.js';
 
