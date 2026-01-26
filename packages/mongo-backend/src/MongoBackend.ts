@@ -1,6 +1,6 @@
-import type { IAgendaBackend, IJobRepository, INotificationChannel } from 'agenda';
+import type { AgendaBackend, JobRepository, NotificationChannel } from 'agenda';
 import { MongoJobRepository } from './MongoJobRepository.js';
-import type { IMongoBackendConfig } from './types.js';
+import type { MongoBackendConfig } from './types.js';
 
 /**
  * MongoDB backend for Agenda.
@@ -20,7 +20,7 @@ import type { IMongoBackendConfig } from './types.js';
  * const agenda = new Agenda({ backend });
  * ```
  */
-export class MongoBackend implements IAgendaBackend {
+export class MongoBackend implements AgendaBackend {
 	private _repository: MongoJobRepository;
 	private _ownsConnection: boolean;
 
@@ -29,9 +29,9 @@ export class MongoBackend implements IAgendaBackend {
 	 * For real-time notifications with MongoDB, use a separate notification
 	 * channel like Redis pub/sub.
 	 */
-	readonly notificationChannel: INotificationChannel | undefined = undefined;
+	readonly notificationChannel: NotificationChannel | undefined = undefined;
 
-	constructor(private config: IMongoBackendConfig) {
+	constructor(private config: MongoBackendConfig) {
 		// Determine if we own the connection (not passed in by user)
 		this._ownsConnection = !('mongo' in config);
 		this._repository = new MongoJobRepository({
@@ -45,7 +45,7 @@ export class MongoBackend implements IAgendaBackend {
 		});
 	}
 
-	get repository(): IJobRepository {
+	get repository(): JobRepository {
 		return this._repository;
 	}
 

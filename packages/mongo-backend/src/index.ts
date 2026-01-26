@@ -33,7 +33,7 @@
 export { MongoBackend } from './MongoBackend.js';
 export { MongoJobRepository } from './MongoJobRepository.js';
 
-export type { IMongoBackendConfig, IMongoJobRepositoryConfig, IMongoDbConfig } from './types.js';
+export type { MongoBackendConfig, MongoJobRepositoryConfig, MongoDbConfig } from './types.js';
 
 // Re-export mongodb types that users might need
 export type { Db, MongoClientOptions } from 'mongodb';

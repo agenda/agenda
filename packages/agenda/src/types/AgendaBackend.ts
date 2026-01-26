@@ -1,5 +1,5 @@
-import type { IJobRepository } from './JobRepository.js';
-import type { INotificationChannel } from './NotificationChannel.js';
+import type { JobRepository } from './JobRepository.js';
+import type { NotificationChannel } from './NotificationChannel.js';
 
 /**
  * Unified backend interface for Agenda.
@@ -13,19 +13,19 @@ import type { INotificationChannel } from './NotificationChannel.js';
  * - PostgresBackend: provides repository + notificationChannel (LISTEN/NOTIFY)
  * - Custom: mix storage from one system, notifications from another
  */
-export interface IAgendaBackend {
+export interface AgendaBackend {
 	/**
 	 * The job repository for storage operations.
 	 * This is required - every backend must provide storage.
 	 */
-	readonly repository: IJobRepository;
+	readonly repository: JobRepository;
 
 	/**
 	 * Optional notification channel for real-time job notifications.
 	 * If provided, Agenda will use this for immediate job processing.
 	 * If not provided, Agenda falls back to periodic polling.
 	 */
-	readonly notificationChannel?: INotificationChannel;
+	readonly notificationChannel?: NotificationChannel;
 
 	/**
 	 * Whether the backend owns its database connection.

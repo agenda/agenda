@@ -1,7 +1,7 @@
 /**
  * Configuration options for the agenda-rest server
  */
-export interface IAgendaRestConfig {
+export interface AgendaRestConfig {
 	/** Agenda instance to use */
 	agenda?: import('agenda').Agenda;
 	/** MongoDB connection URI */
@@ -21,7 +21,7 @@ export interface IAgendaRestConfig {
 /**
  * Job definition request body
  */
-export interface IJobDefinitionRequest {
+export interface JobDefinitionRequest {
 	name: string;
 	url?: string;
 	method?: string;
@@ -37,7 +37,7 @@ export interface IJobDefinitionRequest {
 /**
  * Schedule job request body
  */
-export interface IScheduleJobRequest {
+export interface ScheduleJobRequest {
 	name: string;
 	data?: unknown;
 	interval?: string;
@@ -47,7 +47,7 @@ export interface IScheduleJobRequest {
 /**
  * Cancel job request body
  */
-export interface ICancelJobRequest {
+export interface CancelJobRequest {
 	name?: string;
 	data?: unknown;
 }
@@ -55,16 +55,16 @@ export interface ICancelJobRequest {
 /**
  * API response types
  */
-export interface IApiSuccessResponse {
+export interface ApiSuccessResponse {
 	success: boolean;
 	message?: string;
 }
 
-export interface IApiErrorResponse {
+export interface ApiErrorResponse {
 	error: string;
 }
 
-export interface IJobListResponse {
+export interface JobListResponse {
 	jobs: Array<{
 		name: string;
 		url?: string;

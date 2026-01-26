@@ -4,7 +4,7 @@ import type { SortDirection } from 'agenda';
 /**
  * Configuration options for PostgresBackend
  */
-export interface IPostgresBackendConfig {
+export interface PostgresBackendConfig {
 	/** PostgreSQL connection string (e.g., 'postgresql://user:pass@host:5432/db') */
 	connectionString?: string;
 
@@ -36,7 +36,7 @@ export interface IPostgresBackendConfig {
 /**
  * Internal row type matching PostgreSQL column names
  */
-export interface IPostgresJobRow {
+export interface PostgresJobRow {
 	id: string;
 	name: string;
 	priority: number;

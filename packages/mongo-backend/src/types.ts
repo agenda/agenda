@@ -18,7 +18,7 @@ export type MongoConnectionConfig =
 			options?: MongoClientOptions;
 	  };
 
-export type IMongoBackendConfig = MongoConnectionConfig & {
+export type MongoBackendConfig = MongoConnectionConfig & {
 	/** Collection name for jobs (default: 'agendaJobs') */
 	collection?: string;
 
@@ -32,7 +32,7 @@ export type IMongoBackendConfig = MongoConnectionConfig & {
 /**
  * Database configuration options used internally by the repository
  */
-export interface IMongoDbConfig {
+export interface MongoDbConfig {
 	ensureIndex?: boolean;
 	sort?: {
 		[key: string]: SortDirection;
@@ -42,7 +42,7 @@ export interface IMongoDbConfig {
 /**
  * Configuration options for MongoJobRepository
  */
-export type IMongoJobRepositoryConfig = IMongoDbConfig &
+export type MongoJobRepositoryConfig = MongoDbConfig &
 	(
 		| {
 				/** MongoDB connection string */

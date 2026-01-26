@@ -29,5 +29,5 @@ export { RedisBackend } from './RedisBackend.js';
 export { RedisJobRepository } from './RedisJobRepository.js';
 export { RedisNotificationChannel } from './RedisNotificationChannel.js';
 
-export type { IRedisBackendConfig, IRedisJobData } from './types.js';
-export type { IRedisNotificationChannelConfig } from './RedisNotificationChannel.js';
+export type { RedisBackendConfig, RedisJobData } from './types.js';
+export type { RedisNotificationChannelConfig } from './RedisNotificationChannel.js';

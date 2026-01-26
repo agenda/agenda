@@ -4,7 +4,7 @@ import type { Agenda } from 'agenda';
 import type { Middleware, Context, Next } from 'koa';
 import { AgendashController } from '../AgendashController.js';
 import { cspHeader } from '../csp.js';
-import type { IApiQueryParams, ICreateJobRequest, IDeleteRequest, IRequeueRequest } from '../types.js';
+import type { ApiQueryParams, CreateJobRequest, DeleteRequest, RequeueRequest } from '../types.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -70,7 +70,7 @@ export async function createKoaMiddlewareAsync(agenda: Agenda): Promise<Middlewa
 	router.get('/api', async (ctx) => {
 		const query = ctx.query as Record<string, string | undefined>;
 		try {
-			const params: IApiQueryParams = {
+			const params: ApiQueryParams = {
 				name: query.job,
 				state: query.state,
 				search: query.q,
@@ -88,7 +88,7 @@ export async function createKoaMiddlewareAsync(agenda: Agenda): Promise<Middlewa
 
 	router.post('/api/jobs/requeue', async (ctx) => {
 		try {
-			const { jobIds } = ctx.request.body as IRequeueRequest;
+			const { jobIds } = ctx.request.body as RequeueRequest;
 			ctx.body = await controller.requeueJobs(jobIds);
 		} catch (error) {
 			ctx.status = 404;
@@ -98,7 +98,7 @@ export async function createKoaMiddlewareAsync(agenda: Agenda): Promise<Middlewa
 
 	router.post('/api/jobs/delete', async (ctx) => {
 		try {
-			const { jobIds } = ctx.request.body as IDeleteRequest;
+			const { jobIds } = ctx.request.body as DeleteRequest;
 			ctx.body = await controller.deleteJobs(jobIds);
 		} catch (error) {
 			ctx.status = 404;
@@ -108,7 +108,7 @@ export async function createKoaMiddlewareAsync(agenda: Agenda): Promise<Middlewa
 
 	router.post('/api/jobs/create', async (ctx) => {
 		try {
-			const options = ctx.request.body as ICreateJobRequest;
+			const options = ctx.request.body as CreateJobRequest;
 			ctx.body = await controller.createJob(options);
 		} catch (error) {
 			ctx.status = 400;

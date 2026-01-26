@@ -29,8 +29,8 @@ export { PostgresBackend } from './PostgresBackend.js';
 export { PostgresJobRepository } from './PostgresJobRepository.js';
 export { PostgresNotificationChannel } from './PostgresNotificationChannel.js';
 
-export type { IPostgresBackendConfig, IPostgresJobRow } from './types.js';
-export type { IPostgresNotificationChannelConfig } from './PostgresNotificationChannel.js';
+export type { PostgresBackendConfig, PostgresJobRow } from './types.js';
+export type { PostgresNotificationChannelConfig } from './PostgresNotificationChannel.js';
 
 // Re-export schema utilities for advanced use cases
 export {

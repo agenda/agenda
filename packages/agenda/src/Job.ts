@@ -3,7 +3,7 @@ import debug from 'debug';
 import { ChildProcess, fork } from 'child_process';
 import type { Agenda } from './index.js';
 import type { DefinitionProcessor } from './types/JobDefinition.js';
-import { IJobParameters, datefields, TJobDatefield, JobId } from './types/JobParameters.js';
+import { JobParameters, datefields, TJobDatefield, JobId } from './types/JobParameters.js';
 import { JobPriority, parsePriority } from './utils/priority.js';
 import { computeFromInterval, computeFromRepeatAt } from './utils/nextRunAt.js';
 
@@ -13,7 +13,7 @@ const log = debug('agenda:job');
  * @class
  */
 export class Job<DATA = unknown | void> {
-	readonly attrs: IJobParameters<DATA>;
+	readonly attrs: JobParameters<DATA>;
 
 	/** this flag is set to true, if a job got canceled (e.g. due to a timeout or other exception),
 	 * you can use it for long running tasks to periodically check if canceled is true,
@@ -53,7 +53,7 @@ export class Job<DATA = unknown | void> {
 	 */
 	constructor(
 		agenda: Agenda,
-		args: Partial<IJobParameters<void>> & {
+		args: Partial<JobParameters<void>> & {
 			name: string;
 			type: 'normal' | 'single';
 		},
@@ -61,7 +61,7 @@ export class Job<DATA = unknown | void> {
 	);
 	constructor(
 		agenda: Agenda,
-		args: Partial<IJobParameters<DATA>> & {
+		args: Partial<JobParameters<DATA>> & {
 			name: string;
 			type: 'normal' | 'single';
 			data: DATA;
@@ -70,7 +70,7 @@ export class Job<DATA = unknown | void> {
 	);
 	constructor(
 		readonly agenda: Agenda,
-		args: Partial<IJobParameters<DATA>> & {
+		args: Partial<JobParameters<DATA>> & {
 			name: string;
 			type: 'normal' | 'single';
 			data: DATA;
@@ -90,8 +90,8 @@ export class Job<DATA = unknown | void> {
 	/**
 	 * Given a job, turn it into an JobParameters object
 	 */
-	toJson(): IJobParameters {
-		const result = {} as IJobParameters;
+	toJson(): JobParameters {
+		const result = {} as JobParameters;
 		const attrs = this.attrs as unknown as Record<string, unknown>;
 
 		for (const key of Object.keys(attrs)) {
@@ -170,8 +170,8 @@ export class Job<DATA = unknown | void> {
 	 * @param opts
 	 */
 	unique(
-		unique: Required<IJobParameters<DATA>>['unique'],
-		opts?: IJobParameters['uniqueOpts']
+		unique: Required<JobParameters<DATA>>['unique'],
+		opts?: JobParameters['uniqueOpts']
 	): this {
 		this.attrs.unique = unique;
 		this.attrs.uniqueOpts = opts;
@@ -511,4 +511,4 @@ export class Job<DATA = unknown | void> {
 	}
 }
 
-export type JobWithId = Job & { attrs: IJobParameters & { _id: JobId } };
+export type JobWithId = Job & { attrs: JobParameters & { _id: JobId } };

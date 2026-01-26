@@ -17,18 +17,18 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
-import type { IAgendaBackend } from '../../src/index.js';
+import type { AgendaBackend } from '../../src/index.js';
 import { Agenda } from '../../src/index.js';
 
 export interface RetryTestConfig {
 	/** Name for the test suite */
 	name: string;
 	/** Factory to create a fresh backend instance */
-	createBackend: () => Promise<IAgendaBackend>;
+	createBackend: () => Promise<AgendaBackend>;
 	/** Cleanup function called after tests */
-	cleanupBackend: (backend: IAgendaBackend) => Promise<void>;
+	cleanupBackend: (backend: AgendaBackend) => Promise<void>;
 	/** Clear all jobs between tests */
-	clearJobs: (backend: IAgendaBackend) => Promise<void>;
+	clearJobs: (backend: AgendaBackend) => Promise<void>;
 }
 
 /**
@@ -36,7 +36,7 @@ export interface RetryTestConfig {
  */
 export function retryTestSuite(config: RetryTestConfig): void {
 	describe(`${config.name} - Retry`, () => {
-		let backend: IAgendaBackend;
+		let backend: AgendaBackend;
 		let agenda: Agenda;
 
 		beforeAll(async () => {

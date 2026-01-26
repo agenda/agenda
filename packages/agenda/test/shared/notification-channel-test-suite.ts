@@ -1,8 +1,8 @@
 /**
- * Shared test suite for INotificationChannel implementations
+ * Shared test suite for NotificationChannel implementations
  *
  * This file exports test suite factories that can be used to test any
- * INotificationChannel implementation (InMemory, PostgreSQL LISTEN/NOTIFY, Redis, etc.)
+ * NotificationChannel implementation (InMemory, PostgreSQL LISTEN/NOTIFY, Redis, etc.)
  *
  * Usage:
  * ```typescript
@@ -22,7 +22,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import type { INotificationChannel, IJobNotification, JobId } from '../../src/index.js';
+import type { NotificationChannel, JobNotification, JobId } from '../../src/index.js';
 import { toJobId } from '../../src/index.js';
 import { delay } from './test-utils.js';
 
@@ -30,9 +30,9 @@ export interface NotificationChannelTestConfig {
 	/** Name for the test suite */
 	name: string;
 	/** Factory to create a fresh channel instance (not connected) */
-	createChannel: () => Promise<INotificationChannel>;
+	createChannel: () => Promise<NotificationChannel>;
 	/** Cleanup function called after each test */
-	cleanupChannel: (channel: INotificationChannel) => Promise<void>;
+	cleanupChannel: (channel: NotificationChannel) => Promise<void>;
 	/** Delay in ms to wait for notifications to propagate (default: 100) */
 	propagationDelay?: number;
 }
@@ -40,7 +40,7 @@ export interface NotificationChannelTestConfig {
 /**
  * Helper to create a test notification
  */
-function createTestNotification(overrides: Partial<IJobNotification> = {}): IJobNotification {
+function createTestNotification(overrides: Partial<JobNotification> = {}): JobNotification {
 	return {
 		jobId: toJobId('test-job-id') as JobId,
 		jobName: 'test-job',
@@ -52,13 +52,13 @@ function createTestNotification(overrides: Partial<IJobNotification> = {}): IJob
 }
 
 /**
- * Creates a test suite for INotificationChannel implementations
+ * Creates a test suite for NotificationChannel implementations
  */
 export function notificationChannelTestSuite(config: NotificationChannelTestConfig): void {
 	const propagationDelay = config.propagationDelay ?? 100;
 
-	describe(`${config.name} - INotificationChannel`, () => {
-		let channel: INotificationChannel;
+	describe(`${config.name} - NotificationChannel`, () => {
+		let channel: NotificationChannel;
 
 		beforeEach(async () => {
 			channel = await config.createChannel();
@@ -107,7 +107,7 @@ export function notificationChannelTestSuite(config: NotificationChannelTestConf
 			});
 
 			it('should publish and receive notifications', async () => {
-				const received: IJobNotification[] = [];
+				const received: JobNotification[] = [];
 
 				channel.subscribe(notification => {
 					received.push(notification);
@@ -127,8 +127,8 @@ export function notificationChannelTestSuite(config: NotificationChannelTestConf
 			});
 
 			it('should support multiple subscribers', async () => {
-				const received1: IJobNotification[] = [];
-				const received2: IJobNotification[] = [];
+				const received1: JobNotification[] = [];
+				const received2: JobNotification[] = [];
 
 				channel.subscribe(n => { received1.push(n); });
 				channel.subscribe(n => { received2.push(n); });
@@ -141,7 +141,7 @@ export function notificationChannelTestSuite(config: NotificationChannelTestConf
 			});
 
 			it('should allow unsubscribing', async () => {
-				const received: IJobNotification[] = [];
+				const received: JobNotification[] = [];
 
 				const unsubscribe = channel.subscribe(notification => {
 					received.push(notification);
@@ -162,7 +162,7 @@ export function notificationChannelTestSuite(config: NotificationChannelTestConf
 			});
 
 			it('should preserve notification data through serialization', async () => {
-				const received: IJobNotification[] = [];
+				const received: JobNotification[] = [];
 				channel.subscribe(n => { received.push(n); });
 
 				const originalDate = new Date('2024-01-15T10:30:00.000Z');
@@ -186,7 +186,7 @@ export function notificationChannelTestSuite(config: NotificationChannelTestConf
 			});
 
 			it('should handle null nextRunAt', async () => {
-				const received: IJobNotification[] = [];
+				const received: JobNotification[] = [];
 				channel.subscribe(n => { received.push(n); });
 
 				await channel.publish(createTestNotification({ nextRunAt: null }));
@@ -197,7 +197,7 @@ export function notificationChannelTestSuite(config: NotificationChannelTestConf
 			});
 
 			it('should handle multiple rapid notifications', async () => {
-				const received: IJobNotification[] = [];
+				const received: JobNotification[] = [];
 				channel.subscribe(n => { received.push(n); });
 
 				const count = 5;

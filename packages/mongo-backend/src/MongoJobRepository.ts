@@ -13,20 +13,20 @@ import {
 	WithId
 } from 'mongodb';
 import type {
-	IJobParameters,
+	JobParameters,
 	JobId,
-	IJobsQueryOptions,
-	IJobsResult,
-	IJobsOverview,
-	IJobWithState,
-	IJobsSort,
-	IJobRepository,
-	IJobRepositoryOptions,
-	IRemoveJobsOptions,
+	JobsQueryOptions,
+	JobsResult,
+	JobsOverview,
+	JobWithState,
+	JobsSort,
+	JobRepository,
+	JobRepositoryOptions,
+	RemoveJobsOptions,
 	SortDirection
 } from 'agenda';
 import { toJobId, computeJobState } from 'agenda';
-import type { IMongoJobRepositoryConfig } from './types.js';
+import type { MongoJobRepositoryConfig } from './types.js';
 import { hasMongoProtocol } from './hasMongoProtocol.js';
 
 const log = debug('agenda:mongo:repository');
@@ -38,7 +38,7 @@ function escapeRegex(str: string): string {
 	return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function computeJobObj<DATA = unknown>(job: WithId<MongoJobDocument>): IJobParameters<DATA> & { _id: JobId } {
+function computeJobObj<DATA = unknown>(job: WithId<MongoJobDocument>): JobParameters<DATA> & { _id: JobId } {
 	return {
 		_id: toJobId(job._id!.toHexString()),
 		name: job.name,
@@ -66,20 +66,20 @@ function computeJobObj<DATA = unknown>(job: WithId<MongoJobDocument>): IJobParam
 
 /**
  * Internal MongoDB document type with ObjectId for _id
- * This is what's actually stored in MongoDB, separate from the public IJobParameters interface
+ * This is what's actually stored in MongoDB, separate from the public JobParameters interface
  */
-type MongoJobDocument = Omit<IJobParameters, '_id'> & { _id?: ObjectId };
+type MongoJobDocument = Omit<JobParameters, '_id'> & { _id?: ObjectId };
 
 /**
  * @class
- * MongoDB implementation of IJobRepository
+ * MongoDB implementation of JobRepository
  */
-export class MongoJobRepository implements IJobRepository {
+export class MongoJobRepository implements JobRepository {
 	collection!: Collection<MongoJobDocument>;
 	private mongoClient?: MongoClient;
 	private ownsConnection: boolean = false;
 
-	constructor(private connectOptions: IMongoJobRepositoryConfig) {
+	constructor(private connectOptions: MongoJobRepositoryConfig) {
 		this.connectOptions.sort = this.connectOptions.sort || { nextRunAt: 'asc', priority: 'desc' };
 		// Track if we own the connection (i.e., we created it from a connection string)
 		this.ownsConnection = !('mongo' in connectOptions);
@@ -100,7 +100,7 @@ export class MongoJobRepository implements IJobRepository {
 		throw new Error('invalid db config, or db config not found');
 	}
 
-	async getJobById(id: string): Promise<IJobParameters | null> {
+	async getJobById(id: string): Promise<JobParameters | null> {
 		const doc = await this.collection.findOne({ _id: new ObjectId(id) });
 		if (!doc) return null;
 		// Convert MongoDB ObjectId to JobId
@@ -117,7 +117,7 @@ export class MongoJobRepository implements IJobRepository {
 	/**
 	 * Convert generic sort options to MongoDB sort
 	 */
-	private toMongoSort(sort?: IJobsSort): Sort {
+	private toMongoSort(sort?: JobsSort): Sort {
 		if (!sort) {
 			return { nextRunAt: -1, lastRunAt: -1 };
 		}
@@ -138,7 +138,7 @@ export class MongoJobRepository implements IJobRepository {
 	 * Query jobs with database-agnostic options.
 	 * Handles state computation and filtering internally.
 	 */
-	async queryJobs(options: IJobsQueryOptions = {}): Promise<IJobsResult> {
+	async queryJobs(options: JobsQueryOptions = {}): Promise<JobsResult> {
 		const {
 			name,
 			names,
@@ -191,7 +191,7 @@ export class MongoJobRepository implements IJobRepository {
 		}
 
 		if (data !== undefined) {
-			query.data = data as IJobParameters['data'];
+			query.data = data as JobParameters['data'];
 		}
 
 		if (!includeDisabled) {
@@ -202,7 +202,7 @@ export class MongoJobRepository implements IJobRepository {
 		const allJobs = await this.collection.find(query).sort(this.toMongoSort(sort)).toArray();
 
 		// Compute states and filter by state if specified
-		let jobsWithState: IJobWithState[] = allJobs
+		let jobsWithState: JobWithState[] = allJobs
 			.map(job => {
 				const jobOb = computeJobObj(job);
 				return {
@@ -227,14 +227,14 @@ export class MongoJobRepository implements IJobRepository {
 	 * Get overview statistics for jobs grouped by name.
 	 * Returns counts of jobs in each state for each job name.
 	 */
-	async getJobsOverview(): Promise<IJobsOverview[]> {
+	async getJobsOverview(): Promise<JobsOverview[]> {
 		const now = new Date();
 		const names = await this.getDistinctJobNames();
 
 		const overviews = await Promise.all(
 			names.map(async name => {
 				const jobs = await this.collection.find({ name }).toArray();
-				const overview: IJobsOverview = {
+				const overview: JobsOverview = {
 					name,
 					total: jobs.length,
 					running: 0,
@@ -246,7 +246,7 @@ export class MongoJobRepository implements IJobRepository {
 				};
 
 				for (const job of jobs) {
-					const state = computeJobState(job as unknown as IJobParameters, now);
+					const state = computeJobState(job as unknown as JobParameters, now);
 					overview[state]++;
 				}
 
@@ -268,7 +268,7 @@ export class MongoJobRepository implements IJobRepository {
 		return this.collection.countDocuments({ nextRunAt: { $lt: new Date() } });
 	}
 
-	async removeJobs(options: IRemoveJobsOptions): Promise<number> {
+	async removeJobs(options: RemoveJobsOptions): Promise<number> {
 		const query: Filter<MongoJobDocument> = {};
 
 		if (options.id) {
@@ -302,7 +302,7 @@ export class MongoJobRepository implements IJobRepository {
 		}
 
 		if (options.data !== undefined) {
-			query.data = options.data as IJobParameters['data'];
+			query.data = options.data as JobParameters['data'];
 		}
 
 		// If no criteria provided, don't delete anything
@@ -315,7 +315,7 @@ export class MongoJobRepository implements IJobRepository {
 		return result.deletedCount;
 	}
 
-	async unlockJob(job: IJobParameters): Promise<void> {
+	async unlockJob(job: JobParameters): Promise<void> {
 		if (!job._id) return;
 		// only unlock jobs which are not currently processed (nextRunAt is not null)
 		await this.collection.updateOne(
@@ -337,9 +337,9 @@ export class MongoJobRepository implements IJobRepository {
 	}
 
 	async lockJob(
-		job: IJobParameters,
-		options: IJobRepositoryOptions | undefined
-	): Promise<IJobParameters | undefined> {
+		job: JobParameters,
+		options: JobRepositoryOptions | undefined
+	): Promise<JobParameters | undefined> {
 		if (!job._id) return undefined;
 
 		// Query to run against collection to see if we need to lock it
@@ -374,8 +374,8 @@ export class MongoJobRepository implements IJobRepository {
 		nextScanAt: Date,
 		lockDeadline: Date,
 		now: Date | undefined,
-		options: IJobRepositoryOptions | undefined
-	): Promise<IJobParameters | undefined> {
+		options: JobRepositoryOptions | undefined
+	): Promise<JobParameters | undefined> {
 		const lockTime = now ?? new Date();
 
 		/**
@@ -485,8 +485,8 @@ export class MongoJobRepository implements IJobRepository {
 	}
 
 	async saveJobState(
-		job: IJobParameters,
-		options: IJobRepositoryOptions | undefined
+		job: JobParameters,
+		options: JobRepositoryOptions | undefined
 	): Promise<void> {
 		if (!job._id) {
 			throw new Error('Cannot save job state without job ID');
@@ -526,9 +526,9 @@ export class MongoJobRepository implements IJobRepository {
 	 * @returns The saved job parameters with ID
 	 */
 	async saveJob<DATA = unknown>(
-		job: IJobParameters<DATA>,
-		options: IJobRepositoryOptions | undefined
-	): Promise<IJobParameters<DATA>> {
+		job: JobParameters<DATA>,
+		options: JobRepositoryOptions | undefined
+	): Promise<JobParameters<DATA>> {
 		try {
 			log('attempting to save a job');
 

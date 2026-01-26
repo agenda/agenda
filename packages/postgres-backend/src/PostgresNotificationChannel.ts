@@ -1,6 +1,6 @@
 import debug from 'debug';
 import { Pool, PoolClient } from 'pg';
-import type { IJobNotification, INotificationChannelConfig, JobId } from 'agenda';
+import type { JobNotification, NotificationChannelConfig, JobId } from 'agenda';
 import { BaseNotificationChannel, toJobId } from 'agenda';
 
 const log = debug('agenda:postgres:notification');
@@ -8,7 +8,7 @@ const log = debug('agenda:postgres:notification');
 /**
  * Configuration for PostgresNotificationChannel
  */
-export interface IPostgresNotificationChannelConfig extends INotificationChannelConfig {
+export interface PostgresNotificationChannelConfig extends NotificationChannelConfig {
 	/** PostgreSQL connection pool (shared with repository) */
 	pool?: Pool;
 	/** PostgreSQL connection string (if not sharing pool) */
@@ -27,7 +27,7 @@ export class PostgresNotificationChannel extends BaseNotificationChannel {
 	private connectionString?: string;
 	private listenClient?: PoolClient;
 
-	constructor(config: IPostgresNotificationChannelConfig = {}) {
+	constructor(config: PostgresNotificationChannelConfig = {}) {
 		super(config);
 
 		if (config.pool) {
@@ -153,7 +153,7 @@ export class PostgresNotificationChannel extends BaseNotificationChannel {
 		this.setState('disconnected');
 	}
 
-	async publish(notification: IJobNotification): Promise<void> {
+	async publish(notification: JobNotification): Promise<void> {
 		if (this._state !== 'connected') {
 			throw new Error('Cannot publish: channel not connected');
 		}
@@ -174,7 +174,7 @@ export class PostgresNotificationChannel extends BaseNotificationChannel {
 	/**
 	 * Serialize notification to JSON string for NOTIFY payload
 	 */
-	private serializeNotification(notification: IJobNotification): string {
+	private serializeNotification(notification: JobNotification): string {
 		return JSON.stringify({
 			jobId: notification.jobId,
 			jobName: notification.jobName,
@@ -188,7 +188,7 @@ export class PostgresNotificationChannel extends BaseNotificationChannel {
 	/**
 	 * Parse notification from JSON string received via LISTEN
 	 */
-	private parseNotification(payload: string): IJobNotification {
+	private parseNotification(payload: string): JobNotification {
 		const data = JSON.parse(payload);
 
 		return {

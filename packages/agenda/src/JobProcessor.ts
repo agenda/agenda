@@ -1,10 +1,10 @@
 import debug from 'debug';
 import packageJson from '../package.json' with { type: 'json' };
-import type { IAgendaJobStatus, IAgendaStatus } from './types/AgendaStatus.js';
-import type { IJobDefinition } from './types/JobDefinition.js';
+import type { AgendaJobStatus, AgendaStatus } from './types/AgendaStatus.js';
+import type { JobDefinition } from './types/JobDefinition.js';
 import type { Agenda, JobWithId } from './index.js';
-import type { IJobParameters } from './types/JobParameters.js';
-import type { INotificationChannel, IJobNotification } from './types/NotificationChannel.js';
+import type { JobParameters } from './types/JobParameters.js';
+import type { NotificationChannel, JobNotification } from './types/NotificationChannel.js';
 import { Job } from './Job.js';
 import { JobProcessingQueue } from './JobProcessingQueue.js';
 const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
@@ -26,8 +26,8 @@ export class JobProcessor {
 
 	private localQueueProcessing = 0;
 
-	async getStatus(fullDetails = false): Promise<IAgendaStatus> {
-		const jobStatus = Object.keys(this.jobStatus).reduce<IAgendaJobStatus>((obj, key) => {
+	async getStatus(fullDetails = false): Promise<AgendaStatus> {
+		const jobStatus = Object.keys(this.jobStatus).reduce<AgendaJobStatus>((obj, key) => {
 			const status = this.jobStatus[key];
 			obj[key] = {
 				running: status?.running ?? 0,
@@ -35,7 +35,7 @@ export class JobProcessor {
 				config: this.agenda.definitions[key]
 			};
 			return obj;
-		}, {} as IAgendaJobStatus);
+		}, {} as AgendaJobStatus);
 
 		return {
 			version: agendaVersion,
@@ -85,7 +85,7 @@ export class JobProcessor {
 
 	private processInterval?: ReturnType<typeof setInterval>;
 
-	private notificationChannel?: INotificationChannel;
+	private notificationChannel?: NotificationChannel;
 
 	private notificationUnsubscribe?: () => void;
 
@@ -94,7 +94,7 @@ export class JobProcessor {
 		private maxConcurrency: number,
 		private totalLockLimit: number,
 		private processEvery: number,
-		notificationChannel?: INotificationChannel
+		notificationChannel?: NotificationChannel
 	) {
 		this.notificationChannel = notificationChannel;
 		this.jobQueue = new JobProcessingQueue(this.agenda);
@@ -190,7 +190,7 @@ export class JobProcessor {
 	/**
 	 * Handle incoming job notification - triggers immediate processing
 	 */
-	private async handleNotification(notification: IJobNotification): Promise<void> {
+	private async handleNotification(notification: JobNotification): Promise<void> {
 		if (!this.isRunning) {
 			log.extend('handleNotification')('JobProcessor not running, ignoring notification');
 			return;
@@ -288,7 +288,7 @@ export class JobProcessor {
 
 	private async findAndLockNextJob(
 		jobName: string,
-		definition: IJobDefinition
+		definition: JobDefinition
 	): Promise<JobWithId | undefined> {
 		const lockDeadline = new Date(Date.now().valueOf() - definition.lockLifetime);
 		log.extend('findAndLockNextJob')(
@@ -385,7 +385,7 @@ export class JobProcessor {
 	 * handledJobs keeps list of already processed jobs
 	 * @returns {undefined}
 	 */
-	private async jobProcessing(handledJobs: IJobParameters['_id'][] = []) {
+	private async jobProcessing(handledJobs: JobParameters['_id'][] = []) {
 		// Ensure we have jobs
 		if (this.jobQueue.length === 0) {
 			return;

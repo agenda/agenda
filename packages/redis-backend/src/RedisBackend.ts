@@ -1,8 +1,8 @@
 import debug from 'debug';
-import type { IAgendaBackend, IJobRepository, INotificationChannel } from 'agenda';
+import type { AgendaBackend, JobRepository, NotificationChannel } from 'agenda';
 import { RedisJobRepository } from './RedisJobRepository.js';
 import { RedisNotificationChannel } from './RedisNotificationChannel.js';
-import type { IRedisBackendConfig } from './types.js';
+import type { RedisBackendConfig } from './types.js';
 
 const log = debug('agenda:redis:backend');
 
@@ -43,13 +43,13 @@ const log = debug('agenda:redis:backend');
  * await agenda.every('5 minutes', 'myJob');
  * ```
  */
-export class RedisBackend implements IAgendaBackend {
+export class RedisBackend implements AgendaBackend {
 	private _repository: RedisJobRepository;
 	private _notificationChannel: RedisNotificationChannel;
-	private config: IRedisBackendConfig;
+	private config: RedisBackendConfig;
 	private _ownsConnection: boolean;
 
-	constructor(config: IRedisBackendConfig) {
+	constructor(config: RedisBackendConfig) {
 		this.config = config;
 
 		// Determine if we own the connection (not passed in by user)
@@ -75,14 +75,14 @@ export class RedisBackend implements IAgendaBackend {
 	/**
 	 * The job repository for storage operations
 	 */
-	get repository(): IJobRepository {
+	get repository(): JobRepository {
 		return this._repository;
 	}
 
 	/**
 	 * The notification channel for real-time notifications via Pub/Sub
 	 */
-	get notificationChannel(): INotificationChannel {
+	get notificationChannel(): NotificationChannel {
 		return this._notificationChannel;
 	}
 

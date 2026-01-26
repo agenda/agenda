@@ -2,19 +2,19 @@ import { EventEmitter } from 'events';
 import debug from 'debug';
 
 import { ForkOptions } from 'child_process';
-import type { IJobDefinition } from './types/JobDefinition.js';
-import type { IAgendaConfig } from './types/AgendaConfig.js';
-import type { IAgendaBackend } from './types/AgendaBackend.js';
-import type { INotificationChannel, IJobNotification } from './types/NotificationChannel.js';
+import type { JobDefinition } from './types/JobDefinition.js';
+import type { AgendaConfig } from './types/AgendaConfig.js';
+import type { AgendaBackend } from './types/AgendaBackend.js';
+import type { NotificationChannel, JobNotification } from './types/NotificationChannel.js';
 import type { JobId } from './types/JobParameters.js';
-import type { IJobRepository } from './types/JobRepository.js';
-import type { IAgendaStatus } from './types/AgendaStatus.js';
+import type { JobRepository } from './types/JobRepository.js';
+import type { AgendaStatus } from './types/AgendaStatus.js';
 import type {
-	IJobsQueryOptions,
-	IJobsResult,
-	IJobsOverview
+	JobsQueryOptions,
+	JobsResult,
+	JobsOverview
 } from './types/JobQuery.js';
-import type { IRemoveJobsOptions } from './types/JobRepository.js';
+import type { RemoveJobsOptions } from './types/JobRepository.js';
 import { Job, JobWithId } from './Job.js';
 import { JobPriority, parsePriority } from './utils/priority.js';
 import { JobProcessor } from './JobProcessor.js';
@@ -36,9 +36,9 @@ const DefaultOptions = {
 /**
  * Agenda configuration options
  */
-export interface IAgendaOptions {
+export interface AgendaOptions {
 	/** Unified backend for storage and optionally notifications */
-	backend: IAgendaBackend;
+	backend: AgendaBackend;
 	/** Name to identify this agenda instance */
 	name?: string;
 	/** Default number of concurrent jobs per job type */
@@ -62,7 +62,7 @@ export interface IAgendaOptions {
 	 * Use this to mix storage from one system with notifications from another.
 	 * e.g., MongoDB storage + Redis notifications
 	 */
-	notificationChannel?: INotificationChannel;
+	notificationChannel?: NotificationChannel;
 }
 
 /**
@@ -84,7 +84,7 @@ export type AgendaEventName =
  * @class
  */
 export class Agenda extends EventEmitter {
-	readonly attrs: IAgendaConfig;
+	readonly attrs: AgendaConfig;
 
 	public readonly forkedWorker?: boolean;
 
@@ -93,11 +93,11 @@ export class Agenda extends EventEmitter {
 		options?: ForkOptions;
 	};
 
-	private backend: IAgendaBackend;
+	private backend: AgendaBackend;
 
-	db: IJobRepository;
+	db: JobRepository;
 
-	private notificationChannel?: INotificationChannel;
+	private notificationChannel?: NotificationChannel;
 
 	// Lifecycle events
 	on(event: 'ready', listener: () => void): this;
@@ -127,7 +127,7 @@ export class Agenda extends EventEmitter {
 	}
 
 	readonly definitions: {
-		[name: string]: IJobDefinition;
+		[name: string]: JobDefinition;
 	} = {};
 
 	private jobProcessor?: JobProcessor;
@@ -147,7 +147,7 @@ export class Agenda extends EventEmitter {
 		await job.runJob();
 	}
 
-	async getRunningStats(fullDetails = false): Promise<IAgendaStatus> {
+	async getRunningStats(fullDetails = false): Promise<AgendaStatus> {
 		if (!this.jobProcessor) {
 			throw new Error('agenda not running!');
 		}
@@ -158,7 +158,7 @@ export class Agenda extends EventEmitter {
 	 * @param config - Agenda configuration with backend
 	 * @param cb - Optional callback after Agenda is ready
 	 */
-	constructor(config: IAgendaOptions, cb?: (error?: Error) => void) {
+	constructor(config: AgendaOptions, cb?: (error?: Error) => void) {
 		super();
 
 		this.attrs = {
@@ -198,7 +198,7 @@ export class Agenda extends EventEmitter {
 	 * Cancels any jobs matching the passed options, and removes them from the database.
 	 * @param options Options for which jobs to cancel
 	 */
-	async cancel(options: IRemoveJobsOptions): Promise<number> {
+	async cancel(options: RemoveJobsOptions): Promise<number> {
 		log('attempting to cancel all Agenda jobs', options);
 		try {
 			const amountOfRemovedJobs = await this.db.removeJobs(options);
@@ -290,13 +290,13 @@ export class Agenda extends EventEmitter {
 	 * Set a notification channel for real-time job notifications
 	 * @param channel - The notification channel implementation
 	 */
-	notifyVia(channel: INotificationChannel): Agenda {
+	notifyVia(channel: NotificationChannel): Agenda {
 		if (this.jobProcessor) {
 			throw new Error(
 				'job processor is already running, you need to set notificationChannel before calling start'
 			);
 		}
-		log('Agenda.notifyVia([INotificationChannel])');
+		log('Agenda.notifyVia([NotificationChannel])');
 		this.notificationChannel = channel;
 		return this;
 	}
@@ -318,7 +318,7 @@ export class Agenda extends EventEmitter {
 			return;
 		}
 
-		const notification: IJobNotification = {
+		const notification: JobNotification = {
 			jobId: job.attrs._id as JobId,
 			jobName: job.attrs.name,
 			nextRunAt: job.attrs.nextRunAt,
@@ -343,7 +343,7 @@ export class Agenda extends EventEmitter {
 	 * @param options - Query options (name, state, search, pagination)
 	 * @returns Jobs with computed states and total count
 	 */
-	async queryJobs(options?: IJobsQueryOptions): Promise<IJobsResult> {
+	async queryJobs(options?: JobsQueryOptions): Promise<JobsResult> {
 		return this.db.queryJobs(options);
 	}
 
@@ -353,7 +353,7 @@ export class Agenda extends EventEmitter {
 	 *
 	 * @returns Array of job overviews with state counts
 	 */
-	async getJobsOverview(): Promise<IJobsOverview[]> {
+	async getJobsOverview(): Promise<JobsOverview[]> {
 		return this.db.getJobsOverview();
 	}
 
@@ -379,7 +379,7 @@ export class Agenda extends EventEmitter {
 	define<DATA = any>(
 		name: string,
 		processor: (agendaJob: Job<DATA>, done: (error?: Error) => void) => void,
-		options?: Partial<Pick<IJobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency'>> & {
+		options?: Partial<Pick<JobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency'>> & {
 			priority?: JobPriority;
 		}
 	): void;
@@ -387,14 +387,14 @@ export class Agenda extends EventEmitter {
 	define<DATA = any>(
 		name: string,
 		processor: (agendaJob: Job<DATA>) => Promise<void>,
-		options?: Partial<Pick<IJobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency'>> & {
+		options?: Partial<Pick<JobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency'>> & {
 			priority?: JobPriority;
 		}
 	): void;
 	define(
 		name: string,
 		processor: ((job: Job) => Promise<void>) | ((job: Job, done: (err?: Error) => void) => void),
-		options?: Partial<Pick<IJobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency'>> & {
+		options?: Partial<Pick<JobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency'>> & {
 			priority?: JobPriority;
 		}
 	): void {
@@ -405,7 +405,7 @@ export class Agenda extends EventEmitter {
 		const filePath = getCallerFilePath();
 
 		this.definitions[name] = {
-			fn: processor as IJobDefinition['fn'],
+			fn: processor as JobDefinition['fn'],
 			filePath,
 			concurrency: options?.concurrency || this.attrs.defaultConcurrency,
 			lockLimit: options?.lockLimit || this.attrs.defaultLockLimit,

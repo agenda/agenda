@@ -5,19 +5,19 @@ import {
 	computeJobState
 } from 'agenda';
 import type {
-	IJobRepository,
-	IJobRepositoryOptions,
-	IRemoveJobsOptions,
-	IJobParameters,
+	JobRepository,
+	JobRepositoryOptions,
+	RemoveJobsOptions,
+	JobParameters,
 	JobId,
-	IJobsQueryOptions,
-	IJobsResult,
-	IJobsOverview,
-	IJobWithState,
-	IJobsSort,
+	JobsQueryOptions,
+	JobsResult,
+	JobsOverview,
+	JobWithState,
+	JobsSort,
 	SortDirection
 } from 'agenda';
-import type { IPostgresBackendConfig, IPostgresJobRow } from './types.js';
+import type { PostgresBackendConfig, PostgresJobRow } from './types.js';
 import {
 	getCreateTableSQL,
 	getCreateIndexesSQL,
@@ -27,9 +27,9 @@ import {
 const log = debug('agenda:postgres:repository');
 
 /**
- * PostgreSQL implementation of IJobRepository
+ * PostgreSQL implementation of JobRepository
  */
-export class PostgresJobRepository implements IJobRepository {
+export class PostgresJobRepository implements JobRepository {
 	private pool!: Pool;
 	private ownPool: boolean;
 	private tableName: string;
@@ -37,7 +37,7 @@ export class PostgresJobRepository implements IJobRepository {
 	private sort: { nextRunAt?: SortDirection; priority?: SortDirection };
 	private disconnected: boolean = false;
 
-	constructor(private config: IPostgresBackendConfig) {
+	constructor(private config: PostgresBackendConfig) {
 		this.tableName = config.tableName || 'agenda_jobs';
 		this.ensureSchema = config.ensureSchema ?? true;
 		this.sort = config.sort || { nextRunAt: 'asc', priority: 'desc' };
@@ -134,9 +134,9 @@ export class PostgresJobRepository implements IJobRepository {
 	}
 
 	/**
-	 * Convert PostgreSQL row to IJobParameters
+	 * Convert PostgreSQL row to JobParameters
 	 */
-	private rowToJob<DATA = unknown>(row: IPostgresJobRow): IJobParameters<DATA> {
+	private rowToJob<DATA = unknown>(row: PostgresJobRow): JobParameters<DATA> {
 		return {
 			_id: toJobId(row.id) as JobId,
 			name: row.name,
@@ -170,7 +170,7 @@ export class PostgresJobRepository implements IJobRepository {
 	/**
 	 * Convert sort options to PostgreSQL ORDER BY clause
 	 */
-	private toOrderByClause(sort?: IJobsSort): string {
+	private toOrderByClause(sort?: JobsSort): string {
 		if (!sort) {
 			return 'next_run_at DESC NULLS LAST, last_run_at DESC NULLS LAST';
 		}
@@ -198,8 +198,8 @@ export class PostgresJobRepository implements IJobRepository {
 			: 'next_run_at DESC NULLS LAST, last_run_at DESC NULLS LAST';
 	}
 
-	async getJobById(id: string): Promise<IJobParameters | null> {
-		const result = await this.pool.query<IPostgresJobRow>(
+	async getJobById(id: string): Promise<JobParameters | null> {
+		const result = await this.pool.query<PostgresJobRow>(
 			`SELECT * FROM "${this.tableName}" WHERE id = $1`,
 			[id]
 		);
@@ -211,7 +211,7 @@ export class PostgresJobRepository implements IJobRepository {
 		return this.rowToJob(result.rows[0]);
 	}
 
-	async queryJobs(options: IJobsQueryOptions = {}): Promise<IJobsResult> {
+	async queryJobs(options: JobsQueryOptions = {}): Promise<JobsResult> {
 		const {
 			name,
 			names,
@@ -271,10 +271,10 @@ export class PostgresJobRepository implements IJobRepository {
 			ORDER BY ${orderByClause}
 		`;
 
-		const result = await this.pool.query<IPostgresJobRow>(query, params);
+		const result = await this.pool.query<PostgresJobRow>(query, params);
 
 		// Compute states and filter by state if specified
-		let jobsWithState: IJobWithState[] = result.rows
+		let jobsWithState: JobWithState[] = result.rows
 			.map(row => {
 				const job = this.rowToJob(row);
 				return {
@@ -296,18 +296,18 @@ export class PostgresJobRepository implements IJobRepository {
 		return { jobs: jobsWithState, total };
 	}
 
-	async getJobsOverview(): Promise<IJobsOverview[]> {
+	async getJobsOverview(): Promise<JobsOverview[]> {
 		const now = new Date();
 		const names = await this.getDistinctJobNames();
 
 		const overviews = await Promise.all(
 			names.map(async name => {
-				const result = await this.pool.query<IPostgresJobRow>(
+				const result = await this.pool.query<PostgresJobRow>(
 					`SELECT * FROM "${this.tableName}" WHERE name = $1`,
 					[name]
 				);
 
-				const overview: IJobsOverview = {
+				const overview: JobsOverview = {
 					name,
 					total: result.rows.length,
 					running: 0,
@@ -345,7 +345,7 @@ export class PostgresJobRepository implements IJobRepository {
 		return parseInt(result.rows[0].count, 10);
 	}
 
-	async removeJobs(options: IRemoveJobsOptions): Promise<number> {
+	async removeJobs(options: RemoveJobsOptions): Promise<number> {
 		const conditions: string[] = [];
 		const params: unknown[] = [];
 		let paramIndex = 1;
@@ -387,7 +387,7 @@ export class PostgresJobRepository implements IJobRepository {
 		return result.rowCount || 0;
 	}
 
-	async unlockJob(job: IJobParameters): Promise<void> {
+	async unlockJob(job: JobParameters): Promise<void> {
 		if (!job._id) return;
 
 		// Only unlock jobs which are not currently processed (nextRunAt is not null)
@@ -412,15 +412,15 @@ export class PostgresJobRepository implements IJobRepository {
 	}
 
 	async lockJob(
-		job: IJobParameters,
-		options: IJobRepositoryOptions | undefined
-	): Promise<IJobParameters | undefined> {
+		job: JobParameters,
+		options: JobRepositoryOptions | undefined
+	): Promise<JobParameters | undefined> {
 		if (!job._id) return undefined;
 
 		const orderBy = `next_run_at ${this.toSqlDirection(this.sort.nextRunAt || 'asc')} NULLS LAST, priority ${this.toSqlDirection(this.sort.priority || 'desc')}`;
 
 		// Atomic lock using UPDATE ... RETURNING
-		const result = await this.pool.query<IPostgresJobRow>(
+		const result = await this.pool.query<PostgresJobRow>(
 			`UPDATE "${this.tableName}"
 			 SET locked_at = NOW(), last_modified_by = $4
 			 WHERE id = (
@@ -450,13 +450,13 @@ export class PostgresJobRepository implements IJobRepository {
 		nextScanAt: Date,
 		lockDeadline: Date,
 		now: Date | undefined,
-		options: IJobRepositoryOptions | undefined
-	): Promise<IJobParameters | undefined> {
+		options: JobRepositoryOptions | undefined
+	): Promise<JobParameters | undefined> {
 		const lockTime = now ?? new Date();
 		const orderBy = `next_run_at ${this.toSqlDirection(this.sort.nextRunAt || 'asc')} NULLS LAST, priority ${this.toSqlDirection(this.sort.priority || 'desc')}`;
 
 		// Find and lock job atomically using UPDATE ... RETURNING with subquery
-		const result = await this.pool.query<IPostgresJobRow>(
+		const result = await this.pool.query<PostgresJobRow>(
 			`UPDATE "${this.tableName}"
 			 SET locked_at = $1, last_modified_by = $5
 			 WHERE id = (
@@ -483,8 +483,8 @@ export class PostgresJobRepository implements IJobRepository {
 	}
 
 	async saveJobState(
-		job: IJobParameters,
-		options: IJobRepositoryOptions | undefined
+		job: JobParameters,
+		options: JobRepositoryOptions | undefined
 	): Promise<void> {
 		if (!job._id) {
 			throw new Error('Cannot save job state without job ID');
@@ -525,9 +525,9 @@ export class PostgresJobRepository implements IJobRepository {
 	}
 
 	async saveJob<DATA = unknown>(
-		job: IJobParameters<DATA>,
-		options: IJobRepositoryOptions | undefined
-	): Promise<IJobParameters<DATA>> {
+		job: JobParameters<DATA>,
+		options: JobRepositoryOptions | undefined
+	): Promise<JobParameters<DATA>> {
 		log('attempting to save a job');
 
 		const { _id, unique, uniqueOpts, ...props } = job;
@@ -535,7 +535,7 @@ export class PostgresJobRepository implements IJobRepository {
 		// If the job already has an ID, update it
 		if (_id) {
 			log('job already has _id, updating');
-			const result = await this.pool.query<IPostgresJobRow>(
+			const result = await this.pool.query<PostgresJobRow>(
 				`UPDATE "${this.tableName}"
 				 SET name = $2,
 					 priority = $3,
@@ -589,7 +589,7 @@ export class PostgresJobRepository implements IJobRepository {
 			const shouldProtectNextRunAt = props.nextRunAt && props.nextRunAt <= now;
 
 			// Use ON CONFLICT to upsert
-			const result = await this.pool.query<IPostgresJobRow>(
+			const result = await this.pool.query<PostgresJobRow>(
 				`INSERT INTO "${this.tableName}" (
 					name, priority, next_run_at, type, repeat_timezone,
 					repeat_interval, data, repeat_at, disabled, fork, last_modified_by
@@ -650,7 +650,7 @@ export class PostgresJobRepository implements IJobRepository {
 			}
 
 			// Check if record exists
-			const existingResult = await this.pool.query<IPostgresJobRow>(
+			const existingResult = await this.pool.query<PostgresJobRow>(
 				`SELECT * FROM "${this.tableName}" WHERE ${conditions.join(' AND ')} LIMIT 1`,
 				params
 			);
@@ -663,7 +663,7 @@ export class PostgresJobRepository implements IJobRepository {
 				}
 
 				// Update existing record
-				const updateResult = await this.pool.query<IPostgresJobRow>(
+				const updateResult = await this.pool.query<PostgresJobRow>(
 					`UPDATE "${this.tableName}"
 					 SET priority = $${paramIndex},
 						 next_run_at = $${paramIndex + 1},
@@ -698,7 +698,7 @@ export class PostgresJobRepository implements IJobRepository {
 
 		// Insert new job
 		log('inserting new job');
-		const result = await this.pool.query<IPostgresJobRow>(
+		const result = await this.pool.query<PostgresJobRow>(
 			`INSERT INTO "${this.tableName}" (
 				name, priority, next_run_at, type, repeat_timezone,
 				repeat_interval, data, repeat_at, disabled, fork, last_modified_by

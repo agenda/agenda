@@ -1,10 +1,10 @@
-import type { IJobParameters, JobId } from './JobParameters.js';
-import type { IJobsQueryOptions, IJobsResult, IJobsOverview } from './JobQuery.js';
+import type { JobParameters, JobId } from './JobParameters.js';
+import type { JobsQueryOptions, JobsResult, JobsOverview } from './JobQuery.js';
 
 /**
  * Options passed to repository methods that modify jobs
  */
-export interface IJobRepositoryOptions {
+export interface JobRepositoryOptions {
 	/** Name to set as lastModifiedBy on the job */
 	lastModifiedBy?: string;
 }
@@ -12,7 +12,7 @@ export interface IJobRepositoryOptions {
 /**
  * Options for removing jobs (database-agnostic)
  */
-export interface IRemoveJobsOptions {
+export interface RemoveJobsOptions {
 	/** Remove job by ID */
 	id?: JobId | string;
 	/** Remove jobs by IDs */
@@ -31,7 +31,7 @@ export interface IRemoveJobsOptions {
  * Database-agnostic job repository interface.
  * Implementations can be created for MongoDB, PostgreSQL, etc.
  */
-export interface IJobRepository {
+export interface JobRepository {
 	/**
 	 * Connect to the database
 	 */
@@ -40,12 +40,12 @@ export interface IJobRepository {
 	/**
 	 * Query jobs with filtering, pagination, and state computation
 	 */
-	queryJobs(options?: IJobsQueryOptions): Promise<IJobsResult>;
+	queryJobs(options?: JobsQueryOptions): Promise<JobsResult>;
 
 	/**
 	 * Get overview statistics for all job types
 	 */
-	getJobsOverview(): Promise<IJobsOverview[]>;
+	getJobsOverview(): Promise<JobsOverview[]>;
 
 	/**
 	 * Get all distinct job names
@@ -55,7 +55,7 @@ export interface IJobRepository {
 	/**
 	 * Get a single job by ID
 	 */
-	getJobById(id: string): Promise<IJobParameters | null>;
+	getJobById(id: string): Promise<JobParameters | null>;
 
 	/**
 	 * Get count of jobs ready to run (nextRunAt < now)
@@ -66,34 +66,34 @@ export interface IJobRepository {
 	 * Remove jobs matching the given options
 	 * @returns Number of jobs removed
 	 */
-	removeJobs(options: IRemoveJobsOptions): Promise<number>;
+	removeJobs(options: RemoveJobsOptions): Promise<number>;
 
 	/**
 	 * Save a job (insert or update)
 	 */
 	saveJob<DATA = unknown>(
-		job: IJobParameters<DATA>,
-		options: IJobRepositoryOptions | undefined
-	): Promise<IJobParameters<DATA>>;
+		job: JobParameters<DATA>,
+		options: JobRepositoryOptions | undefined
+	): Promise<JobParameters<DATA>>;
 
 	/**
 	 * Update job state fields (lockedAt, lastRunAt, progress, etc.)
 	 */
-	saveJobState(job: IJobParameters, options: IJobRepositoryOptions | undefined): Promise<void>;
+	saveJobState(job: JobParameters, options: JobRepositoryOptions | undefined): Promise<void>;
 
 	/**
 	 * Attempt to lock a job for processing
 	 * @returns The locked job data, or undefined if lock failed
 	 */
 	lockJob(
-		job: IJobParameters,
-		options: IJobRepositoryOptions | undefined
-	): Promise<IJobParameters | undefined>;
+		job: JobParameters,
+		options: JobRepositoryOptions | undefined
+	): Promise<JobParameters | undefined>;
 
 	/**
 	 * Unlock a single job
 	 */
-	unlockJob(job: IJobParameters): Promise<void>;
+	unlockJob(job: JobParameters): Promise<void>;
 
 	/**
 	 * Unlock multiple jobs by ID
@@ -108,6 +108,6 @@ export interface IJobRepository {
 		nextScanAt: Date,
 		lockDeadline: Date,
 		now: Date | undefined,
-		options: IJobRepositoryOptions | undefined
-	): Promise<IJobParameters | undefined>;
+		options: JobRepositoryOptions | undefined
+	): Promise<JobParameters | undefined>;
 }

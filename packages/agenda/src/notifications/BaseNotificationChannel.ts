@@ -1,8 +1,8 @@
 import { EventEmitter } from 'events';
 import type {
-	INotificationChannel,
-	INotificationChannelConfig,
-	IJobNotification,
+	NotificationChannel,
+	NotificationChannelConfig,
+	JobNotification,
 	NotificationHandler,
 	NotificationChannelState
 } from '../types/NotificationChannel.js';
@@ -10,7 +10,7 @@ import type {
 /**
  * Internal config type with all properties required
  */
-interface IResolvedNotificationChannelConfig {
+interface ResolvedNotificationChannelConfig {
 	channelName: string;
 	reconnect: {
 		enabled: boolean;
@@ -24,15 +24,15 @@ interface IResolvedNotificationChannelConfig {
  * Abstract base class for notification channels.
  * Provides common functionality like state management and reconnection logic.
  */
-export abstract class BaseNotificationChannel extends EventEmitter implements INotificationChannel {
+export abstract class BaseNotificationChannel extends EventEmitter implements NotificationChannel {
 	protected _state: NotificationChannelState = 'disconnected';
 	protected handlers = new Set<NotificationHandler>();
 	protected reconnectAttempts = 0;
 	protected reconnectTimeout?: ReturnType<typeof setTimeout>;
 
-	protected readonly config: IResolvedNotificationChannelConfig;
+	protected readonly config: ResolvedNotificationChannelConfig;
 
-	constructor(config: INotificationChannelConfig = {}) {
+	constructor(config: NotificationChannelConfig = {}) {
 		super();
 		this.config = {
 			channelName: config.channelName ?? 'agenda:jobs',
@@ -58,7 +58,7 @@ export abstract class BaseNotificationChannel extends EventEmitter implements IN
 
 	abstract connect(): Promise<void>;
 	abstract disconnect(): Promise<void>;
-	abstract publish(notification: IJobNotification): Promise<void>;
+	abstract publish(notification: JobNotification): Promise<void>;
 
 	subscribe(handler: NotificationHandler): () => void {
 		this.handlers.add(handler);
@@ -67,7 +67,7 @@ export abstract class BaseNotificationChannel extends EventEmitter implements IN
 		};
 	}
 
-	protected async notifyHandlers(notification: IJobNotification): Promise<void> {
+	protected async notifyHandlers(notification: JobNotification): Promise<void> {
 		const promises: Promise<void>[] = [];
 		for (const handler of this.handlers) {
 			try {

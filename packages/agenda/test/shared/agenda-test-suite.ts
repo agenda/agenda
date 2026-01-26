@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import type { ForkOptions } from 'child_process';
-import type { IAgendaBackend, INotificationChannel } from '../../src/index.js';
+import type { AgendaBackend, NotificationChannel } from '../../src/index.js';
 import { Agenda } from '../../src/index.js';
 import { Job } from '../../src/Job.js';
 import { delay, waitForEvent, waitForEvents } from './test-utils.js';
@@ -17,15 +17,15 @@ export interface AgendaTestConfig {
 	/** Name for the test suite */
 	name: string;
 	/** Factory to create a fresh backend instance */
-	createBackend: () => Promise<IAgendaBackend>;
+	createBackend: () => Promise<AgendaBackend>;
 	/** Cleanup function called after tests */
-	cleanupBackend: (backend: IAgendaBackend) => Promise<void>;
+	cleanupBackend: (backend: AgendaBackend) => Promise<void>;
 	/** Clear all jobs between tests */
-	clearJobs: (backend: IAgendaBackend) => Promise<void>;
+	clearJobs: (backend: AgendaBackend) => Promise<void>;
 	/** Optional notification channel factory */
-	createNotificationChannel?: () => Promise<INotificationChannel>;
+	createNotificationChannel?: () => Promise<NotificationChannel>;
 	/** Cleanup notification channel */
-	cleanupNotificationChannel?: (channel: INotificationChannel) => Promise<void>;
+	cleanupNotificationChannel?: (channel: NotificationChannel) => Promise<void>;
 	/** Fork mode configuration (required if forkMode tests are enabled) */
 	forkHelper?: ForkHelperConfig;
 	/** Skip specific tests if not supported */
@@ -36,7 +36,7 @@ export interface AgendaTestConfig {
 
 export function agendaTestSuite(config: AgendaTestConfig): void {
 	describe(`${config.name} - Agenda Integration`, () => {
-		let backend: IAgendaBackend;
+		let backend: AgendaBackend;
 		let agenda: Agenda;
 
 		const jobProcessor = () => {};
@@ -1338,7 +1338,7 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 		// Notification channel integration tests - only run if channel is provided
 		if (config.createNotificationChannel) {
 			describe('notification channel integration', () => {
-				let notificationChannel: INotificationChannel;
+				let notificationChannel: NotificationChannel;
 				let agendaWithChannel: Agenda;
 
 				beforeEach(async () => {
