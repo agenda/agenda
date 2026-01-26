@@ -331,7 +331,7 @@ export function backoffTestSuite(config: BackoffTestConfig): void {
 				expect(retryCount).toBe(0);
 			});
 
-			it('should not auto-retry repeating jobs', { timeout: 5000 }, async () => {
+			it('should auto-retry repeating jobs when backoff is configured', { timeout: 5000 }, async () => {
 				let attempts = 0;
 				let retryCount = 0;
 
@@ -356,16 +356,14 @@ export function backoffTestSuite(config: BackoffTestConfig): void {
 				await agenda.every('1 second', 'repeating-job');
 				await agenda.start();
 
-				// Wait for job to fail once
+				// Wait for job to succeed (after retry)
 				await new Promise(resolve => {
-					agenda.on('fail:repeating-job', resolve);
+					agenda.on('success:repeating-job', resolve);
 				});
 
-				// Wait a bit
-				await new Promise(r => setTimeout(r, 200));
-
-				// Should not have triggered auto-retry since it's a repeating job
-				expect(retryCount).toBe(0);
+				// Should have triggered auto-retry since backoff is configured
+				expect(retryCount).toBe(1);
+				expect(attempts).toBe(2); // First attempt failed, second succeeded
 			});
 
 			it('should work with custom backoff function', { timeout: 10000 }, async () => {

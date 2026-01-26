@@ -455,16 +455,6 @@ export class Job<DATA = unknown | void> {
 			return;
 		}
 
-		// Don't retry repeating jobs - they'll run again on their schedule
-		if (this.attrs.repeatInterval || this.attrs.repeatAt) {
-			log(
-				'[%s:%s] skipping auto-retry for repeating job',
-				this.attrs.name,
-				this.attrs._id
-			);
-			return;
-		}
-
 		const context: BackoffContext = {
 			attempt: this.attrs.failCount || 1,
 			error,

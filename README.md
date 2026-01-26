@@ -817,9 +817,9 @@ agenda.on('retry exhausted:critical-job', (error, job) => {
 
 ### Important Notes
 
-- **Repeating jobs don't auto-retry**: Jobs created with `every()` already have a schedule and won't trigger backoff on failure
 - **failCount tracks attempts**: Use `job.attrs.failCount` to see how many times a job has failed
 - **Backoff is per-definition**: Set the backoff strategy when defining the job, not when scheduling it
+- **Repeating jobs can use backoff**: If a repeating job (created with `every()`) has a backoff configured and fails, it will retry immediately rather than waiting for the next scheduled run
 - **Manual retry still works**: You can still listen to `fail` events and manually reschedule if needed
 
 ## Creating Jobs
