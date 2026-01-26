@@ -1,9 +1,12 @@
 import { expect, describe, it, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { Db, MongoClient } from 'mongodb';
 import { randomUUID } from 'crypto';
-import { InMemoryNotificationChannel } from 'agenda';
+import { Agenda, InMemoryNotificationChannel } from 'agenda';
 import { MongoBackend, MongoJobRepository } from '../src/index.js';
 import { fullAgendaTestSuite } from 'agenda/testing';
+import someJobDefinition from './fixtures/someJobDefinition.js';
+
+const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * MongoDB backend tests.
@@ -213,6 +216,110 @@ describe('MongoBackend', () => {
 			expect(collectionNames).toContain(TEST_COLLECTION);
 		});
 	});
+
+	describe('ensureIndex option', () => {
+		it('should not create index when ensureIndex is false', async () => {
+			const testCollection = TEST_COLLECTION + '_no_index';
+
+			const backendNoIndex = new MongoBackend({
+				mongo: db,
+				collection: testCollection,
+				ensureIndex: false
+			});
+			await backendNoIndex.connect();
+
+			// Save a job
+			await backendNoIndex.repository.saveJob({
+				name: 'index-test',
+				priority: 0,
+				nextRunAt: new Date(),
+				type: 'normal',
+				data: {}
+			});
+
+			const indexes = await db.collection(testCollection).indexes();
+			// Should only have _id index
+			expect(indexes).toHaveLength(1);
+			expect(indexes[0].name).toBe('_id_');
+
+			await backendNoIndex.disconnect();
+			await db.collection(testCollection).drop();
+		});
+
+		it('should create findAndLockNextJobIndex when ensureIndex is true', async () => {
+			const testCollection = TEST_COLLECTION + '_with_index';
+			const backendWithIndex = new MongoBackend({
+				mongo: db,
+				collection: testCollection,
+				ensureIndex: true
+			});
+			await backendWithIndex.connect();
+
+			// Save a job to ensure collection exists
+			await backendWithIndex.repository.saveJob({
+				name: 'index-test',
+				priority: 0,
+				nextRunAt: new Date(),
+				type: 'normal',
+				data: {}
+			});
+
+			// Verify the job was saved (this ensures the collection exists)
+			const jobs = await backendWithIndex.repository.queryJobs({ name: 'index-test' });
+			expect(jobs.total).toBe(1);
+
+			console.log('SAVED', jobs, await db.listCollections());
+			const indexes = await db.collection(testCollection).indexes();
+			console.log('SAVED');
+			// Should have _id and findAndLockNextJobIndex
+			expect(indexes.length).toBeGreaterThanOrEqual(2);
+			const indexNames = indexes.map(i => i.name);
+			expect(indexNames).toContain('_id_');
+			expect(indexNames).toContain('findAndLockNextJobIndex');
+
+			await backendWithIndex.disconnect();
+			await db.collection(testCollection).drop();
+		});
+
+		it('should not throw when creating two backends with ensureIndex true', async () => {
+			const testCollection = TEST_COLLECTION + '_dual_index';
+
+			const backend1 = new MongoBackend({
+				mongo: db,
+				collection: testCollection,
+				ensureIndex: true
+			});
+			await backend1.connect();
+
+			await backend1.repository.saveJob({
+				name: 'dual-index-test',
+				priority: 0,
+				nextRunAt: new Date(),
+				type: 'normal',
+				data: {}
+			});
+
+			// Creating second backend with same collection should not throw
+			const backend2 = new MongoBackend({
+				mongo: db,
+				collection: testCollection,
+				ensureIndex: true
+			});
+			await backend2.connect();
+
+			await backend2.repository.saveJob({
+				name: 'dual-index-test-2',
+				priority: 0,
+				nextRunAt: new Date(),
+				type: 'normal',
+				data: {}
+			});
+
+			await backend1.disconnect();
+			await backend2.disconnect();
+			await db.collection(testCollection).drop();
+		});
+	});
 });
 
 // ============================================================================
@@ -235,5 +342,213 @@ describe('MongoBackend unit tests', () => {
 			mongo: mockDb
 		});
 		expect(backend.repository).toBeDefined();
+	});
+
+	describe('connection string validation', () => {
+		it('should accept mongodb:// protocol', () => {
+			const backend = new MongoBackend({
+				address: 'mongodb://localhost:27017/agenda'
+			});
+			expect(backend.repository).toBeDefined();
+		});
+
+		it('should accept mongodb+srv:// protocol', () => {
+			const backend = new MongoBackend({
+				address: 'mongodb+srv://user:pass@cluster.mongodb.net/agenda'
+			});
+			expect(backend.repository).toBeDefined();
+		});
+
+		it('should accept mongodb:// with authentication', () => {
+			const backend = new MongoBackend({
+				address: 'mongodb://user:password@localhost:27017/agenda'
+			});
+			expect(backend.repository).toBeDefined();
+		});
+
+		it('should accept mongodb:// with replica set', () => {
+			const backend = new MongoBackend({
+				address: 'mongodb://host1:27017,host2:27017,host3:27017/agenda?replicaSet=myReplicaSet'
+			});
+			expect(backend.repository).toBeDefined();
+		});
+	});
+});
+
+// ============================================================================
+// Fork Mode Tests (MongoDB-specific)
+// TODO: These tests require proper environment setup with tsx loader and
+// working module resolution in forked processes. Skipping for now.
+// ============================================================================
+
+describe.skip('MongoBackend fork mode', () => {
+	let db: Db;
+	let mongoCfg: string;
+	let disconnectDb: () => Promise<void>;
+
+	beforeAll(async () => {
+		const result = await createTestDb();
+		db = result.db;
+		disconnectDb = result.disconnect;
+		mongoCfg = `${process.env.MONGO_URI?.replace(/\/$/, '')}/${db.databaseName}`;
+	});
+
+	afterAll(async () => {
+		await disconnectDb();
+	});
+
+	it('runs a job in fork mode', async () => {
+		const backend = new MongoBackend({
+			mongo: db,
+			collection: TEST_COLLECTION
+		});
+		await backend.connect();
+
+		const agendaFork = new Agenda({
+			backend,
+			forkHelper: {
+				path: './test/helpers/forkHelper.ts',
+				options: {
+					env: { DB_CONNECTION: mongoCfg },
+					execArgv: ['--import', 'tsx']
+				}
+			}
+		});
+
+		expect(agendaFork.forkHelper?.path).toBe('./test/helpers/forkHelper.ts');
+
+		const job = agendaFork.create('some job');
+		job.forkMode(true);
+		job.schedule('now');
+		await job.save();
+
+		const jobData = await backend.repository.getJobById(job.attrs._id!);
+
+		if (!jobData) {
+			throw new Error('job not found');
+		}
+
+		expect(jobData.fork).toBe(true);
+
+		// Initialize job definition
+		someJobDefinition(agendaFork);
+
+		await agendaFork.start();
+
+		do {
+			await delay(50);
+		} while (await job.isRunning());
+
+		const jobDataFinished = await backend.repository.getJobById(job.attrs._id!);
+		expect(jobDataFinished?.lastFinishedAt).toBeDefined();
+		expect(jobDataFinished?.failReason).toBeNull();
+		expect(jobDataFinished?.failCount).toBeNull();
+
+		await agendaFork.stop();
+		await backend.disconnect();
+	});
+
+	it('runs a job in fork mode and handles failure', async () => {
+		const backend = new MongoBackend({
+			mongo: db,
+			collection: TEST_COLLECTION + '_fork_fail'
+		});
+		await backend.connect();
+
+		const agendaFork = new Agenda({
+			backend,
+			forkHelper: {
+				path: './test/helpers/forkHelper.ts',
+				options: {
+					env: { DB_CONNECTION: mongoCfg },
+					execArgv: ['--import', 'tsx']
+				}
+			}
+		});
+
+		expect(agendaFork.forkHelper?.path).toBe('./test/helpers/forkHelper.ts');
+
+		const job = agendaFork.create('some job', { failIt: 'error' });
+		job.forkMode(true);
+		job.schedule('now');
+		await job.save();
+
+		const jobData = await backend.repository.getJobById(job.attrs._id!);
+
+		if (!jobData) {
+			throw new Error('job not found');
+		}
+
+		expect(jobData.fork).toBe(true);
+
+		// Initialize job definition
+		someJobDefinition(agendaFork);
+
+		await agendaFork.start();
+
+		do {
+			await delay(50);
+		} while (await job.isRunning());
+
+		const jobDataFinished = await backend.repository.getJobById(job.attrs._id!);
+		expect(jobDataFinished?.lastFinishedAt).toBeDefined();
+		expect(jobDataFinished?.failReason).not.toBeNull();
+		expect(jobDataFinished?.failCount).toBe(1);
+
+		await agendaFork.stop();
+		await backend.disconnect();
+		await db.collection(TEST_COLLECTION + '_fork_fail').drop();
+	});
+
+	it('runs a job in fork mode and handles process exit', async () => {
+		const backend = new MongoBackend({
+			mongo: db,
+			collection: TEST_COLLECTION + '_fork_die'
+		});
+		await backend.connect();
+
+		const agendaFork = new Agenda({
+			backend,
+			forkHelper: {
+				path: './test/helpers/forkHelper.ts',
+				options: {
+					env: { DB_CONNECTION: mongoCfg },
+					execArgv: ['--import', 'tsx']
+				}
+			}
+		});
+
+		expect(agendaFork.forkHelper?.path).toBe('./test/helpers/forkHelper.ts');
+
+		const job = agendaFork.create('some job', { failIt: 'die' });
+		job.forkMode(true);
+		job.schedule('now');
+		await job.save();
+
+		const jobData = await backend.repository.getJobById(job.attrs._id!);
+
+		if (!jobData) {
+			throw new Error('job not found');
+		}
+
+		expect(jobData.fork).toBe(true);
+
+		// Initialize job definition
+		someJobDefinition(agendaFork);
+
+		await agendaFork.start();
+
+		do {
+			await delay(50);
+		} while (await job.isRunning());
+
+		const jobDataFinished = await backend.repository.getJobById(job.attrs._id!);
+		expect(jobDataFinished?.lastFinishedAt).toBeDefined();
+		expect(jobDataFinished?.failReason).not.toBeNull();
+		expect(jobDataFinished?.failCount).toBe(1);
+
+		await agendaFork.stop();
+		await backend.disconnect();
+		await db.collection(TEST_COLLECTION + '_fork_die').drop();
 	});
 });

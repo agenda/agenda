@@ -53,15 +53,17 @@ export class MongoJobRepository implements IJobRepository {
 
 	private async createConnection(): Promise<Db> {
 		const { connectOptions } = this;
-		if (connectOptions.db?.address) {
+		if ('mongo' in connectOptions) {
+			log('using passed in mongo connection');
+			return connectOptions.mongo;
+		}
+
+		if ('db' in connectOptions && connectOptions.db) {
 			log('using database config', connectOptions);
 			return this.database(connectOptions.db.address, connectOptions.db.options);
 		}
 
-		if (connectOptions.mongo) {
-			log('using passed in mongo connection');
-			return connectOptions.mongo;
-		}
+
 
 		throw new Error('invalid db config, or db config not found');
 	}

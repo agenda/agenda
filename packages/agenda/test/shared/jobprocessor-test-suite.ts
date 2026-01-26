@@ -169,7 +169,6 @@ export function jobProcessorTestSuite(config: JobProcessorTestConfig): void {
 				{ lockLifetime: 500 }
 			);
 
-			// queue up long ones
 			agenda.now('test long');
 
 			await agenda.start();
@@ -202,7 +201,6 @@ export function jobProcessorTestSuite(config: JobProcessorTestConfig): void {
 
 			await agenda.start();
 
-			// queue up long ones
 			agenda.now('test long');
 
 			const promiseResult = await new Promise<Error | void>(resolve => {
@@ -234,7 +232,6 @@ export function jobProcessorTestSuite(config: JobProcessorTestConfig): void {
 				);
 			}
 
-			// queue up jobs
 			for (let jobI = 0; jobI < 10; jobI += 1) {
 				for (let jobJ = 0; jobJ < 25; jobJ += 1) {
 					agenda.now(`test job ${jobI}`);

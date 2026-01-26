@@ -1,35 +1,8 @@
-/**
- * Shared test suite for Agenda integration tests
- *
- * This file exports test suite factories that can be used to test Agenda
- * with any backend implementation (MongoDB, PostgreSQL, Redis, etc.)
- *
- * Usage:
- * ```typescript
- * import { agendaTestSuite } from 'agenda/test/shared';
- *
- * agendaTestSuite({
- *   name: 'Agenda with MongoDB',
- *   createBackend: async () => {
- *     const backend = new MongoBackend({ mongo: db });
- *     await backend.connect();
- *     return backend;
- *   },
- *   cleanupBackend: async (backend) => {
- *     await backend.disconnect();
- *   },
- *   clearJobs: async (backend) => {
- *     // Clear all jobs from the database
- *   }
- * });
- * ```
- */
-
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import type { IAgendaBackend, INotificationChannel } from '../../src/index.js';
 import { Agenda } from '../../src/index.js';
 import { Job } from '../../src/Job.js';
-import { waitForEvent, waitForEvents } from './test-utils.js';
+import { delay, waitForEvent, waitForEvents } from './test-utils.js';
 
 export interface AgendaTestConfig {
 	/** Name for the test suite */
@@ -50,9 +23,6 @@ export interface AgendaTestConfig {
 	};
 }
 
-/**
- * Creates a comprehensive test suite for Agenda with a specific backend
- */
 export function agendaTestSuite(config: AgendaTestConfig): void {
 	describe(`${config.name} - Agenda Integration`, () => {
 		let backend: IAgendaBackend;
@@ -72,7 +42,7 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 			await config.clearJobs(backend);
 			agenda = new Agenda({
 				backend,
-				processEvery: 100 // Fast processing for tests (100ms)
+				processEvery: 100
 			});
 			await agenda.ready;
 		});
@@ -83,9 +53,6 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 			}
 			await config.clearJobs(backend);
 		});
-
-		// Note: Basic configuration and job definition tests are in unit.test.ts
-		// This suite focuses on integration tests that require a real backend
 
 		describe('every()', () => {
 			it('should schedule a job to run at an interval', async () => {
@@ -514,6 +481,100 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 			});
 		});
 
+		describe('lock limits', () => {
+			it('should not lock more than agenda lockLimit jobs', async () => {
+				agenda.lockLimit(1);
+				agenda.processEvery(100);
+
+				agenda.define('lock-limit-job', (_job, _cb) => {
+					// This job never finishes
+				});
+
+				await agenda.start();
+
+				await Promise.all([
+					agenda.now('lock-limit-job', { i: 1 }),
+					agenda.now('lock-limit-job', { i: 2 })
+				]);
+
+				// Wait for the process interval to pick up the jobs
+				await delay(500);
+
+				expect((await agenda.getRunningStats()).lockedJobs).toBe(1);
+			});
+
+			it('should not lock more mixed jobs than agenda lockLimit', async () => {
+				agenda.lockLimit(1);
+				agenda.processEvery(100);
+
+				agenda.define('lock-mixed-1', (_job, _cb) => {});
+				agenda.define('lock-mixed-2', (_job, _cb) => {});
+				agenda.define('lock-mixed-3', (_job, _cb) => {});
+
+				await agenda.start();
+
+				await Promise.all([
+					agenda.now('lock-mixed-1', { i: 1 }),
+					agenda.now('lock-mixed-2', { i: 2 }),
+					agenda.now('lock-mixed-3', { i: 3 })
+				]);
+
+				await delay(500);
+				expect((await agenda.getRunningStats()).lockedJobs).toBe(1);
+			});
+
+			it('should not lock more than definition lockLimit jobs', async () => {
+				agenda.processEvery(100);
+				agenda.define('def-lock-limit', (_job, _cb) => {}, { lockLimit: 1 });
+
+				await agenda.start();
+
+				await Promise.all([
+					agenda.now('def-lock-limit', { i: 1 }),
+					agenda.now('def-lock-limit', { i: 2 })
+				]);
+
+				await delay(500);
+				expect((await agenda.getRunningStats()).lockedJobs).toBe(1);
+			});
+
+			it('should not lock more than agenda lockLimit during processing interval', async () => {
+				agenda.lockLimit(1);
+				agenda.processEvery(200);
+
+				agenda.define('lock-interval', (_job, _cb) => {});
+
+				await agenda.start();
+
+				const when = new Date(Date.now() + 300);
+
+				await Promise.all([
+					agenda.schedule(when, 'lock-interval', { i: 1 }),
+					agenda.schedule(when, 'lock-interval', { i: 2 })
+				]);
+
+				await delay(600);
+				expect((await agenda.getRunningStats()).lockedJobs).toBe(1);
+			});
+
+			it('should not lock more than definition lockLimit during processing interval', async () => {
+				agenda.processEvery(200);
+				agenda.define('def-lock-interval', (_job, _cb) => {}, { lockLimit: 1 });
+
+				await agenda.start();
+
+				const when = new Date(Date.now() + 300);
+
+				await Promise.all([
+					agenda.schedule(when, 'def-lock-interval', { i: 1 }),
+					agenda.schedule(when, 'def-lock-interval', { i: 2 })
+				]);
+
+				await delay(600);
+				expect((await agenda.getRunningStats()).lockedJobs).toBe(1);
+			});
+		});
+
 		// Note: getRunningStats tests are in jobprocessor-test-suite.ts (more comprehensive)
 
 		describe('purge', () => {
@@ -848,6 +909,154 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 			});
 		});
 
+		describe('async/callback job handling', () => {
+			it('should allow async functions', async () => {
+				let finished = false;
+				let successCalled = false;
+
+				agenda.define('async-job', async () => {
+					await delay(5);
+					finished = true;
+				});
+
+				agenda.once('success:async-job', () => {
+					successCalled = true;
+				});
+
+				const job = agenda.create('async-job');
+				await job.save();
+
+				expect(finished).toBe(false);
+				await job.run();
+				expect(successCalled).toBe(true);
+				expect(finished).toBe(true);
+			});
+
+			it('should handle errors from async functions', async () => {
+				let failCalled = false;
+				let failError: Error | undefined;
+				const err = new Error('async failure');
+
+				agenda.define('async-fail-job', async () => {
+					await delay(5);
+					throw err;
+				});
+
+				agenda.once('fail:async-fail-job', (error: Error) => {
+					failCalled = true;
+					failError = error;
+				});
+
+				const job = agenda.create('async-fail-job');
+				await job.save();
+				await job.run();
+
+				expect(failCalled).toBe(true);
+				expect(failError?.message).toBe('async failure');
+			});
+
+			it('should wait for callback even if function is async', async () => {
+				let finishedCb = false;
+				let successCalled = false;
+
+				agenda.define('async-cb-job', async (_job, cb) => {
+					(async () => {
+						await delay(5);
+						finishedCb = true;
+						cb();
+					})();
+				});
+
+				agenda.once('success:async-cb-job', () => {
+					successCalled = true;
+				});
+
+				const job = agenda.create('async-cb-job');
+				await job.save();
+				await job.run();
+
+				expect(finishedCb).toBe(true);
+				expect(successCalled).toBe(true);
+			});
+
+			it('should use callback error if async function did not reject', async () => {
+				let failCalled = false;
+				let failError: Error | undefined;
+				const err = new Error('callback failure');
+
+				agenda.define('async-cb-error-job', async (_job, cb) => {
+					(async () => {
+						await delay(5);
+						cb(err);
+					})();
+				});
+
+				agenda.once('fail:async-cb-error-job', (error: Error) => {
+					failCalled = true;
+					failError = error;
+				});
+
+				const job = agenda.create('async-cb-error-job');
+				await job.save();
+				await job.run();
+
+				expect(failCalled).toBe(true);
+				expect(failError?.message).toBe('callback failure');
+			});
+
+			it('should favor async error over callback error if async comes first', async () => {
+				let failCalled = false;
+				let failError: Error | undefined;
+				const fnErr = new Error('functionFailure');
+				const cbErr = new Error('callbackFailure');
+
+				agenda.define('async-first-error-job', async (_job, cb) => {
+					(async () => {
+						await delay(5);
+						cb(cbErr);
+					})();
+					throw fnErr;
+				});
+
+				agenda.on('fail:async-first-error-job', (error: Error) => {
+					failCalled = true;
+					failError = error;
+				});
+
+				const job = agenda.create('async-first-error-job');
+				await job.save();
+				await job.run();
+
+				expect(failCalled).toBe(true);
+				expect(failError?.message).toBe('functionFailure');
+			});
+
+			it('should favor callback error over async error if callback comes first', async () => {
+				let failCalled = false;
+				let failError: Error | undefined;
+				const fnErr = new Error('functionFailure');
+				const cbErr = new Error('callbackFailure');
+
+				agenda.define('cb-first-error-job', async (_job, cb) => {
+					cb(cbErr);
+					await delay(5);
+					throw fnErr;
+				});
+
+				agenda.on('fail:cb-first-error-job', (error: Error) => {
+					failCalled = true;
+					failError = error;
+				});
+
+				const job = agenda.create('cb-first-error-job');
+				await job.save();
+				await job.run();
+
+				expect(failCalled).toBe(true);
+				expect(failError?.message).toBe('callbackFailure');
+			});
+		});
+
 		describe('events', () => {
 			it('should emit start event when job begins', async () => {
 				let startEmitted = false;
@@ -1051,6 +1260,67 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 
 				const result = await agenda.queryJobs({ name: 'fail-count-test' });
 				expect(result.jobs[0].failCount).toBeGreaterThanOrEqual(2);
+			});
+
+			it('should not run failed jobs again unless rescheduled', async () => {
+				let runCount = 0;
+
+				agenda.define('no-rerun-failed', async () => {
+					runCount++;
+					throw new Error('Intentional failure');
+				});
+
+				await agenda.start();
+				await agenda.now('no-rerun-failed');
+
+				await waitForEvent(agenda, 'fail:no-rerun-failed');
+
+				// Wait a bit to ensure job is not rerun
+				await new Promise(resolve => setTimeout(resolve, 500));
+
+				expect(runCount).toBe(1);
+
+				// Verify job still exists but has no nextRunAt (won't run again)
+				const result = await agenda.queryJobs({ name: 'no-rerun-failed' });
+				expect(result.jobs.length).toBe(1);
+				expect(result.jobs[0].failReason).toBe('Intentional failure');
+				// nextRunAt should be null/undefined after failure (job is done, not rescheduled)
+				expect(result.jobs[0].nextRunAt).toBeFalsy();
+			});
+
+			it('should not cause unhandled promise rejection on job timeout', async () => {
+				const unhandledRejections: Error[] = [];
+				const rejectionHandler = (err: Error) => {
+					console.error('unhandledRejection', err);
+					unhandledRejections.push(err);
+				};
+				process.on('unhandledRejection', rejectionHandler);
+
+				try {
+					agenda.define(
+						'timeout-test',
+						async () => {
+							// Job runs longer than lockLifetime
+							await new Promise(resolve => setTimeout(resolve, 500));
+						},
+						{ lockLifetime: 100 } // Very short lock lifetime
+					);
+
+					agenda.on('error', (_err) => {
+						// err handler is required
+					})
+					await agenda.start();
+					await agenda.now('timeout-test');
+
+					// Wait for job to start and potentially timeout
+					await waitForEvent(agenda, 'start:timeout-test');
+					await new Promise(resolve => setTimeout(resolve, 700));
+
+					// Check no unhandled rejections occurred
+					expect(unhandledRejections.length).toBe(0);
+				} finally {
+					process.off('unhandledRejection', rejectionHandler);
+				}
 			});
 		});
 

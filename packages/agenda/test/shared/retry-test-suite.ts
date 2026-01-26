@@ -76,11 +76,8 @@ export function retryTestSuite(config: RetryTestConfig): void {
 				return undefined;
 			});
 
-			agenda.on('fail:a job', (err, job) => {
-				if (err) {
-					// Do nothing as this is expected to fail.
-				}
-
+			agenda.on('fail:a job', (_err, job) => {
+				// Do nothing as this is expected to fail.
 				job.schedule('now').save();
 			});
 

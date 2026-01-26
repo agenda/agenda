@@ -84,7 +84,11 @@ Install via NPM
 
     npm install agenda
 
-**For MongoDB (default):** You will need a working [MongoDB](https://www.mongodb.com/) database (v4+).
+**For MongoDB:** Install the official MongoDB backend:
+
+    npm install @agenda.js/mongo-backend
+
+You will need a working [MongoDB](https://www.mongodb.com/) database (v4+).
 
 **For PostgreSQL:** Install the official PostgreSQL backend:
 
@@ -97,7 +101,8 @@ Install via NPM
 # Example Usage
 
 ```js
-import { Agenda, MongoBackend } from 'agenda';
+import { Agenda } from 'agenda';
+import { MongoBackend } from '@agenda.js/mongo-backend';
 
 const mongoConnectionString = 'mongodb://127.0.0.1/agenda';
 
@@ -248,10 +253,11 @@ agenda.processEvery('3 days, 4 hours and 36 seconds');
 
 Agenda uses a pluggable backend system. The backend provides storage and optionally real-time notifications.
 
-**Using MongoBackend (default):**
+**Using MongoBackend:**
 
 ```js
-import { Agenda, MongoBackend } from 'agenda';
+import { Agenda } from 'agenda';
+import { MongoBackend } from '@agenda.js/mongo-backend';
 
 // Via connection string
 const agenda = new Agenda({
@@ -326,7 +332,8 @@ By default, Agenda uses periodic polling (controlled by `processEvery`) to check
 **Using the built-in InMemoryNotificationChannel (single process):**
 
 ```js
-import { Agenda, MongoBackend, InMemoryNotificationChannel } from 'agenda';
+import { Agenda, InMemoryNotificationChannel } from 'agenda';
+import { MongoBackend } from '@agenda.js/mongo-backend';
 
 const agenda = new Agenda({
 	backend: new MongoBackend({ mongo: db }),
@@ -1077,7 +1084,8 @@ Each backend provides different capabilities for storage and real-time notificat
 You can combine MongoDB storage with a separate notification channel for real-time job processing:
 
 ```js
-import { Agenda, MongoBackend } from 'agenda';
+import { Agenda } from 'agenda';
+import { MongoBackend } from '@agenda.js/mongo-backend';
 import { RedisBackend } from '@agenda.js/redis-backend';
 
 // MongoDB for storage + Redis for real-time notifications
@@ -1229,7 +1237,8 @@ module.exports = function (agenda) {
 lib/agenda.js
 
 ```js
-import { Agenda, MongoBackend } from 'agenda';
+import { Agenda } from 'agenda';
+import { MongoBackend } from '@agenda.js/mongo-backend';
 
 const agenda = new Agenda({
 	backend: new MongoBackend({
@@ -1384,9 +1393,9 @@ process.on('message', message => {
 });
 
 (async () => {
-	const mongooseConnection = /** connect to database */
+	const mongooseConnection = await connectToDatabase(); // connect to database
 
-  /** do other required initializations */
+  // do other required initializations
 
   // get process arguments (name, jobId and path to agenda definition file)
 	const [, , name, jobId, agendaDefinition] = process.argv;

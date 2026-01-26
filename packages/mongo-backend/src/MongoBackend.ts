@@ -32,10 +32,11 @@ export class MongoBackend implements IAgendaBackend {
 
 	constructor(private config: IMongoBackendConfig) {
 		this._repository = new MongoJobRepository({
-			db: config.address
-				? { address: config.address, collection: config.collection, options: config.options }
-				: undefined,
-			mongo: config.mongo,
+			...('mongo' in config
+				? { mongo: config.mongo, db: { collection: config.collection } }
+				: {
+						db: { address: config.address, collection: config.collection, options: config.options }
+					}),
 			name: config.name,
 			ensureIndex: config.ensureIndex,
 			sort: config.sort

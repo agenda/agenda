@@ -140,6 +140,11 @@ const agenda = new Agenda({
   backend: new MongoBackend({ mongo: existingDb })
 });
 
+// IMPORTANT: Always attach an error handler to prevent unhandled promise rejections
+agenda.on('error', (err) => {
+  console.error('Agenda error:', err);
+});
+
 // Define and run jobs
 agenda.define('myJob', async (job) => {
   console.log('Running job:', job.attrs.name);

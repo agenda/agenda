@@ -152,13 +152,11 @@ export function notificationChannelTestSuite(config: NotificationChannelTestConf
 
 				expect(received.length).toBe(1);
 
-				// Unsubscribe
 				unsubscribe();
 
 				await channel.publish(createTestNotification({ jobName: 'second' }));
 				await delay(propagationDelay);
 
-				// Should still only have 1 notification
 				expect(received.length).toBe(1);
 				expect(received[0].jobName).toBe('first');
 			});
@@ -215,7 +213,6 @@ export function notificationChannelTestSuite(config: NotificationChannelTestConf
 
 		describe('error handling', () => {
 			it('should throw when publishing on disconnected channel', async () => {
-				// Channel is not connected
 				await expect(channel.publish(createTestNotification())).rejects.toThrow(
 					/not connected/i
 				);
@@ -244,8 +241,6 @@ export function notificationChannelTestSuite(config: NotificationChannelTestConf
 				channel.off('stateChange', handler);
 				await channel.disconnect();
 
-				// After removing listener, we shouldn't get the disconnected state
-				// (unless already captured before off was called)
 				const disconnectedCount = states.filter(s => s === 'disconnected').length;
 				expect(disconnectedCount).toBeLessThanOrEqual(1);
 			});
