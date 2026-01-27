@@ -803,7 +803,7 @@ export class PostgresJobRepository implements JobRepository {
 			// No existing record - insert new job with debounce handling
 			if (debounce) {
 				let nextRunAt: Date | null = props.nextRunAt || null;
-				let debounceStartedAt: Date | null = now;
+				const debounceStartedAt: Date | null = now;
 
 				if (debounce.strategy === 'leading') {
 					// Leading: execute immediately (keep nextRunAt as-is)

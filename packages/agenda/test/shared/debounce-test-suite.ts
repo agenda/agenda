@@ -247,8 +247,6 @@ export function debounceTestSuite(config: DebounceTestConfig): void {
 			it('should keep debouncing while within maxWait', async () => {
 				agenda.define('debounceMaxWait', async () => {});
 
-				const beforeFirstSave = Date.now();
-
 				// First save
 				const job1 = await agenda
 					.create('debounceMaxWait', { key: 'max2' })
