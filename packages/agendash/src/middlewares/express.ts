@@ -4,9 +4,14 @@ import { fileURLToPath } from 'url';
 import type { Agenda } from 'agenda';
 import { AgendashController } from '../AgendashController.js';
 import { cspHeader } from '../csp.js';
-import type { ApiQueryParams, CreateJobRequest, DeleteRequest, RequeueRequest } from '../types.js';
+import type { ApiQueryParams, CreateJobRequest, DeleteRequest, RequeueRequest, PauseRequest, ResumeRequest } from '../types.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+export interface ExpressMiddlewareOptions {
+	/** Skip static file serving (useful for dev mode with Vite) */
+	skipStaticFiles?: boolean;
+}
 
 /**
  * Create Express middleware for Agendash
@@ -23,7 +28,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
  * app.use('/dash', createExpressMiddleware(agenda));
  * ```
  */
-export function createExpressMiddleware(agenda: Agenda): Router {
+export function createExpressMiddleware(agenda: Agenda, options: ExpressMiddlewareOptions = {}): Router {
 	const controller = new AgendashController(agenda);
 	const router = Router();
 
@@ -37,8 +42,10 @@ export function createExpressMiddleware(agenda: Agenda): Router {
 		next();
 	});
 
-	// Static files
-	router.use('/', serveStatic(join(__dirname, '../../public')));
+	// Static files (skip in dev mode when using Vite)
+	if (!options.skipStaticFiles) {
+		router.use('/', serveStatic(join(__dirname, '../../public')));
+	}
 
 	// API routes
 	router.get('/api', async (req, res) => {
@@ -87,6 +94,36 @@ export function createExpressMiddleware(agenda: Agenda): Router {
 			res.json(result);
 		} catch (error) {
 			res.status(400).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+		}
+	});
+
+	router.post('/api/jobs/pause', async (req, res) => {
+		try {
+			const { jobIds } = req.body as PauseRequest;
+			const result = await controller.pauseJobs(jobIds);
+			res.json(result);
+		} catch (error) {
+			res.status(400).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+		}
+	});
+
+	router.post('/api/jobs/resume', async (req, res) => {
+		try {
+			const { jobIds } = req.body as ResumeRequest;
+			const result = await controller.resumeJobs(jobIds);
+			res.json(result);
+		} catch (error) {
+			res.status(400).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+		}
+	});
+
+	router.get('/api/stats', async (req, res) => {
+		try {
+			const fullDetails = req.query.fullDetails === 'true';
+			const result = await controller.getStats(fullDetails);
+			res.json(result);
+		} catch (error) {
+			res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
 		}
 	});
 

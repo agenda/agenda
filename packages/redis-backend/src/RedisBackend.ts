@@ -44,6 +44,8 @@ const log = debug('agenda:redis:backend');
  * ```
  */
 export class RedisBackend implements AgendaBackend {
+	readonly name = 'Redis';
+
 	private _repository: RedisJobRepository;
 	private _notificationChannel: RedisNotificationChannel;
 	private config: RedisBackendConfig;

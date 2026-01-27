@@ -203,6 +203,7 @@ export class MongoJobRepository implements JobRepository {
 		const allJobs = await this.collection.find(query).sort(this.toMongoSort(sort)).toArray();
 
 		// Compute states and filter by state if specified
+		// Special handling for 'paused' state which is based on disabled field
 		let jobsWithState: JobWithState[] = allJobs
 			.map(job => {
 				const jobOb = computeJobObj(job);
@@ -211,7 +212,11 @@ export class MongoJobRepository implements JobRepository {
 					state: computeJobState(jobOb, now)
 				};
 			})
-			.filter(job => !state || job.state === state);
+			.filter(job => {
+				if (!state) return true;
+				if (state === 'paused') return job.disabled === true;
+				return job.state === state;
+			});
 
 		// Apply pagination after state filtering
 		const total = jobsWithState.length;
@@ -243,12 +248,16 @@ export class MongoJobRepository implements JobRepository {
 					queued: 0,
 					completed: 0,
 					failed: 0,
-					repeating: 0
+					repeating: 0,
+					paused: 0
 				};
 
 				for (const job of jobs) {
 					const state = computeJobState(job as unknown as JobParameters, now);
 					overview[state]++;
+					if (job.disabled === true) {
+						overview.paused++;
+					}
 				}
 
 				return overview;

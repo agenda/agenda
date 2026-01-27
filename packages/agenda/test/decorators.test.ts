@@ -63,6 +63,7 @@ class MockJobRepository implements JobRepository {
  * Minimal mock backend for unit tests
  */
 class MockBackend implements AgendaBackend {
+	readonly name = 'MockBackend';
 	readonly repository = new MockJobRepository();
 	async connect(): Promise<void> {}
 	async disconnect(): Promise<void> {}

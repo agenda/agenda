@@ -1,26 +1,12 @@
 /**
  * Content Security Policy configuration for Agendash
+ * Since we now bundle all frontend assets with Vite, we only need 'self'
  */
 const CSP: Record<string, string[]> = {
 	'default-src': ["'self'"],
-	'script-src': [
-		'https://code.jquery.com',
-		'https://cdn.jsdelivr.net',
-		'https://cdnjs.cloudflare.com',
-		'https://stackpath.bootstrapcdn.com',
-		"'unsafe-inline'",
-		"'unsafe-eval'",
-		"'self'"
-	],
-	'style-src': [
-		'https://cdn.jsdelivr.net',
-		'https://stackpath.bootstrapcdn.com',
-		'https://fonts.googleapis.com',
-		'https://unpkg.com',
-		"'unsafe-inline'",
-		"'self'"
-	],
-	'font-src': ['https://fonts.gstatic.com'],
+	'script-src': ["'self'"],
+	'style-src': ["'self'", "'unsafe-inline'"],
+	'font-src': ["'self'"],
 	'img-src': ["'self'", 'data:']
 };
 

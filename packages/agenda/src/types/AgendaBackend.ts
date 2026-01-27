@@ -15,6 +15,12 @@ import type { NotificationChannel } from './NotificationChannel.js';
  */
 export interface AgendaBackend {
 	/**
+	 * Human-readable name for this backend (e.g., 'MongoDB', 'PostgreSQL', 'Redis').
+	 * Used for display in dashboards and debugging.
+	 */
+	readonly name: string;
+
+	/**
 	 * The job repository for storage operations.
 	 * This is required - every backend must provide storage.
 	 */

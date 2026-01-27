@@ -244,7 +244,14 @@ export class RedisJobRepository implements JobRepository {
 			}
 
 			const jobState = computeJobState(job, now);
-			if (state && jobState !== state) continue;
+			// Special handling for 'paused' state which is based on disabled field
+			if (state) {
+				if (state === 'paused') {
+					if (job.disabled !== true) continue;
+				} else if (jobState !== state) {
+					continue;
+				}
+			}
 
 			jobs.push({
 				...job,
@@ -324,7 +331,8 @@ export class RedisJobRepository implements JobRepository {
 					queued: 0,
 					completed: 0,
 					failed: 0,
-					repeating: 0
+					repeating: 0,
+					paused: 0
 				};
 
 				for (const jobId of jobIds) {
@@ -334,6 +342,9 @@ export class RedisJobRepository implements JobRepository {
 					const job = this.hashToJob(jobData);
 					const state = computeJobState(job, now);
 					overview[state as keyof typeof overview]++;
+					if (job.disabled === true) {
+						overview.paused++;
+					}
 				}
 
 				return overview;

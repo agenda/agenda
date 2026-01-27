@@ -178,7 +178,15 @@ export class Agenda extends EventEmitter {
 		if (!this.jobProcessor) {
 			throw new Error('agenda not running!');
 		}
-		return this.jobProcessor.getStatus(fullDetails);
+		const status = await this.jobProcessor.getStatus(fullDetails);
+
+		// Add backend info (stored in Agenda, not JobProcessor)
+		status.backend = {
+			name: this.backend.name,
+			hasNotificationChannel: this.hasNotificationChannel()
+		};
+
+		return status;
 	}
 
 	/**
@@ -227,6 +235,7 @@ export class Agenda extends EventEmitter {
 	 */
 	async cancel(options: RemoveJobsOptions): Promise<number> {
 		log('attempting to cancel all Agenda jobs', options);
+		await this.ready;
 		try {
 			const amountOfRemovedJobs = await this.db.removeJobs(options);
 			log('%s jobs cancelled', amountOfRemovedJobs);
@@ -244,6 +253,7 @@ export class Agenda extends EventEmitter {
 	 */
 	async disable(options: RemoveJobsOptions): Promise<number> {
 		log('attempting to disable Agenda jobs', options);
+		await this.ready;
 		try {
 			const numDisabled = await this.db.disableJobs(options);
 			log('%s jobs disabled', numDisabled);
@@ -261,6 +271,7 @@ export class Agenda extends EventEmitter {
 	 */
 	async enable(options: RemoveJobsOptions): Promise<number> {
 		log('attempting to enable Agenda jobs', options);
+		await this.ready;
 		try {
 			const numEnabled = await this.db.enableJobs(options);
 			log('%s jobs enabled', numEnabled);
@@ -405,6 +416,7 @@ export class Agenda extends EventEmitter {
 	 * @returns Jobs with computed states and total count
 	 */
 	async queryJobs(options?: JobsQueryOptions): Promise<JobsResult> {
+		await this.ready;
 		return this.db.queryJobs(options);
 	}
 
@@ -415,6 +427,7 @@ export class Agenda extends EventEmitter {
 	 * @returns Array of job overviews with state counts
 	 */
 	async getJobsOverview(): Promise<JobsOverview[]> {
+		await this.ready;
 		return this.db.getJobsOverview();
 	}
 
@@ -912,6 +925,8 @@ export * from './types/JobRepository.js';
 export * from './types/NotificationChannel.js';
 
 export * from './types/AgendaBackend.js';
+
+export * from './types/AgendaStatus.js';
 
 export * from './notifications/index.js';
 

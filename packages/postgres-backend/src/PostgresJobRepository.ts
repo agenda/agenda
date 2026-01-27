@@ -284,7 +284,11 @@ export class PostgresJobRepository implements JobRepository {
 					state: computeJobState(job, now)
 				};
 			})
-			.filter(job => !state || job.state === state);
+			.filter(job => {
+				if (!state) return true;
+				if (state === 'paused') return job.disabled === true;
+				return job.state === state;
+			});
 
 		// Apply pagination after state filtering
 		const total = jobsWithState.length;
@@ -316,13 +320,17 @@ export class PostgresJobRepository implements JobRepository {
 					queued: 0,
 					completed: 0,
 					failed: 0,
-					repeating: 0
+					repeating: 0,
+					paused: 0
 				};
 
 				for (const row of result.rows) {
 					const job = this.rowToJob(row);
 					const state = computeJobState(job, now);
 					overview[state as keyof typeof overview]++;
+					if (job.disabled === true) {
+						overview.paused++;
+					}
 				}
 
 				return overview;

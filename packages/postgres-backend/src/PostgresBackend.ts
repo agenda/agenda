@@ -44,6 +44,8 @@ const log = debug('agenda:postgres:backend');
  * ```
  */
 export class PostgresBackend implements AgendaBackend {
+	readonly name = 'PostgreSQL';
+
 	private _repository: PostgresJobRepository;
 	private _notificationChannel?: PostgresNotificationChannel;
 	private config: PostgresBackendConfig;

@@ -4,7 +4,7 @@ import eslintConfigPrettier from 'eslint-config-prettier';
 import globals from 'globals';
 
 export default tseslint.config(
-	{ ignores: ['**/dist/**', '**/node_modules/**', '**/coverage/**', 'docs/**', 'docs-legacy/**', '**/vitest.config.ts', '**/public/**', 'packages/redis-backend/test/**'] },
+	{ ignores: ['**/dist/**', '**/node_modules/**', '**/coverage/**', 'docs/**', 'docs-legacy/**', '**/vitest.config.ts', '**/public/**', 'packages/redis-backend/test/**', '**/dev-server.ts'] },
 	js.configs.recommended,
 	...tseslint.configs.recommended,
 	{

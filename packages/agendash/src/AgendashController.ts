@@ -1,4 +1,4 @@
-import type { Agenda, JobState, JobWithState, JobsOverview } from 'agenda';
+import type { Agenda, JobState, JobWithState, JobsOverview, AgendaStatus } from 'agenda';
 import type {
 	AgendashController as IAgendashController,
 	ApiQueryParams,
@@ -7,6 +7,8 @@ import type {
 	CreateJobResponse,
 	DeleteResponse,
 	RequeueResponse,
+	PauseResponse,
+	ResumeResponse,
 	FrontendJob,
 	FrontendOverview
 } from './types.js';
@@ -40,14 +42,16 @@ export class AgendashController implements IAgendashController {
 				failCount: job.failCount,
 				failReason: job.failReason,
 				repeatInterval: job.repeatInterval,
-				repeatTimezone: job.repeatTimezone
+				repeatTimezone: job.repeatTimezone,
+				disabled: job.disabled
 			},
 			running: job.state === 'running',
 			scheduled: job.state === 'scheduled',
 			queued: job.state === 'queued',
 			completed: job.state === 'completed',
 			failed: job.state === 'failed',
-			repeating: job.state === 'repeating'
+			repeating: job.state === 'repeating',
+			paused: job.disabled === true
 		};
 	}
 
@@ -64,9 +68,10 @@ export class AgendashController implements IAgendashController {
 				queued: acc.queued + o.queued,
 				completed: acc.completed + o.completed,
 				failed: acc.failed + o.failed,
-				repeating: acc.repeating + o.repeating
+				repeating: acc.repeating + o.repeating,
+				paused: acc.paused + o.paused
 			}),
-			{ total: 0, running: 0, scheduled: 0, queued: 0, completed: 0, failed: 0, repeating: 0 }
+			{ total: 0, running: 0, scheduled: 0, queued: 0, completed: 0, failed: 0, repeating: 0, paused: 0 }
 		);
 
 		const allJobsEntry: FrontendOverview = {
@@ -82,7 +87,8 @@ export class AgendashController implements IAgendashController {
 			queued: o.queued,
 			completed: o.completed,
 			failed: o.failed,
-			repeating: o.repeating
+			repeating: o.repeating,
+			paused: o.paused
 		}));
 
 		return [allJobsEntry, ...jobOverviews];
@@ -171,5 +177,36 @@ export class AgendashController implements IAgendashController {
 		}
 
 		return { created: true };
+	}
+
+	/**
+	 * Get running stats from the Agenda processor
+	 */
+	async getStats(fullDetails = false): Promise<AgendaStatus> {
+		return this.agenda.getRunningStats(fullDetails);
+	}
+
+	/**
+	 * Pause jobs by ID (disables them so they won't run)
+	 */
+	async pauseJobs(ids: string[]): Promise<PauseResponse> {
+		if (!ids || ids.length === 0) {
+			return { pausedCount: 0 };
+		}
+
+		const pausedCount = await this.agenda.disable({ ids });
+		return { pausedCount };
+	}
+
+	/**
+	 * Resume jobs by ID (re-enables them so they can run)
+	 */
+	async resumeJobs(ids: string[]): Promise<ResumeResponse> {
+		if (!ids || ids.length === 0) {
+			return { resumedCount: 0 };
+		}
+
+		const resumedCount = await this.agenda.enable({ ids });
+		return { resumedCount };
 	}
 }

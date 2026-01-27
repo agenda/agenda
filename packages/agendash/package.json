@@ -22,7 +22,10 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b && vite build --config client/vite.config.ts",
+    "build:client": "vite build --config client/vite.config.ts",
+    "dev": "tsx dev-server.ts",
+    "dev:client": "vite --config client/vite.config.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -60,7 +63,11 @@
     "@types/koa-router": "^7.4.8",
     "@types/koa-static": "^4.0.4",
     "@types/node": "^22.0.0",
+    "@types/supertest": "^6.0.2",
+    "@vitejs/plugin-vue": "^5.2.0",
     "agenda": "workspace:*",
+    "bootstrap": "^5.3.0",
+    "date-fns": "^4.1.0",
     "express": "^4.21.2",
     "fastify": "^5.0.0",
     "@fastify/static": "^8.0.0",
@@ -73,8 +80,11 @@
     "mongodb": "^6.12.0",
     "mongodb-memory-server": "^10.0.0",
     "supertest": "^7.0.0",
-    "@types/supertest": "^6.0.2",
-    "vitest": "^3.1.0"
-  },
-  "private": true
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0",
+    "vitest": "^3.1.0",
+    "vue": "^3.5.0",
+    "vue-tsc": "^2.2.0"
+  }
 }

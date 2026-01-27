@@ -41,13 +41,18 @@ export class JobProcessor {
 			version: agendaVersion,
 			queueName: this.agenda.attrs.name,
 			totalQueueSizeDB: await this.agenda.db.getQueueSize(),
-			internal: {
-				localQueueProcessing: this.localQueueProcessing
-			},
 			config: {
 				totalLockLimit: this.totalLockLimit,
 				maxConcurrency: this.maxConcurrency,
 				processEvery: this.processEvery
+			},
+			backend: {
+				// Placeholder - will be overwritten by Agenda.getRunningStats()
+				name: 'unknown',
+				hasNotificationChannel: false
+			},
+			internal: {
+				localQueueProcessing: this.localQueueProcessing
 			},
 			jobStatus,
 			queuedJobs: !fullDetails

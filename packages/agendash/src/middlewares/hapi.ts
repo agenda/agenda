@@ -4,7 +4,7 @@ import type { Agenda } from 'agenda';
 import type { Server, Plugin, Request, ResponseToolkit } from '@hapi/hapi';
 import { AgendashController } from '../AgendashController.js';
 import { cspHeader } from '../csp.js';
-import type { ApiQueryParams, CreateJobRequest, DeleteRequest, RequeueRequest } from '../types.js';
+import type { ApiQueryParams, CreateJobRequest, DeleteRequest, RequeueRequest, PauseRequest, ResumeRequest } from '../types.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -154,6 +154,60 @@ export function createHapiPlugin(agenda: Agenda): Plugin<AgendashHapiOptions> {
 						return h
 							.response({ error: error instanceof Error ? error.message : 'Unknown error' })
 							.code(400);
+					}
+				},
+				options: {
+					auth: authConfig
+				}
+			});
+
+			server.route({
+				method: 'POST',
+				path: '/api/jobs/pause',
+				handler: async (request: Request, h: ResponseToolkit) => {
+					try {
+						const { jobIds } = request.payload as PauseRequest;
+						return await controller.pauseJobs(jobIds);
+					} catch (error) {
+						return h
+							.response({ error: error instanceof Error ? error.message : 'Unknown error' })
+							.code(400);
+					}
+				},
+				options: {
+					auth: authConfig
+				}
+			});
+
+			server.route({
+				method: 'POST',
+				path: '/api/jobs/resume',
+				handler: async (request: Request, h: ResponseToolkit) => {
+					try {
+						const { jobIds } = request.payload as ResumeRequest;
+						return await controller.resumeJobs(jobIds);
+					} catch (error) {
+						return h
+							.response({ error: error instanceof Error ? error.message : 'Unknown error' })
+							.code(400);
+					}
+				},
+				options: {
+					auth: authConfig
+				}
+			});
+
+			server.route({
+				method: 'GET',
+				path: '/api/stats',
+				handler: async (request: Request, h: ResponseToolkit) => {
+					try {
+						const fullDetails = (request.query as { fullDetails?: string }).fullDetails === 'true';
+						return await controller.getStats(fullDetails);
+					} catch (error) {
+						return h
+							.response({ error: error instanceof Error ? error.message : 'Unknown error' })
+							.code(500);
 					}
 				},
 				options: {

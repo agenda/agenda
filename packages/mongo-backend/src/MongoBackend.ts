@@ -21,6 +21,8 @@ import type { MongoBackendConfig } from './types.js';
  * ```
  */
 export class MongoBackend implements AgendaBackend {
+	readonly name = 'MongoDB';
+
 	private _repository: MongoJobRepository;
 	private _ownsConnection: boolean;
 
