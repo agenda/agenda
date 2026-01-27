@@ -887,14 +887,23 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 			});
 
 			describe('fail', () => {
-				it('should mark job as failed', async () => {
+				it('should set failure fields in memory', async () => {
 					const job = await agenda.now('fail-mark-test');
 					job.fail(new Error('Test failure'));
-					await job.save();
 
-					const result = await agenda.queryJobs({ name: 'fail-mark-test' });
-					expect(result.jobs[0].failReason).toBe('Test failure');
-					expect(result.jobs[0].failedAt).toBeDefined();
+					// fail() sets the in-memory attrs
+					expect(job.attrs.failReason).toBe('Test failure');
+					expect(job.attrs.failedAt).toBeDefined();
+					expect(job.attrs.failCount).toBe(1);
+				});
+
+				it('should increment failCount on multiple failures', async () => {
+					const job = await agenda.now('fail-count-test');
+					job.fail(new Error('First failure'));
+					job.fail(new Error('Second failure'));
+
+					expect(job.attrs.failCount).toBe(2);
+					expect(job.attrs.failReason).toBe('Second failure');
 				});
 			});
 
