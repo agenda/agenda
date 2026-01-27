@@ -281,6 +281,17 @@ await agenda.stop();
 
 // Drain - waits for running jobs to complete before stopping
 await agenda.drain();
+
+// Drain with timeout (30 seconds) - for cloud platforms with shutdown deadlines
+const result = await agenda.drain(30000);
+if (result.timedOut) {
+    console.log(`${result.running} jobs still running after timeout`);
+}
+
+// Drain with AbortSignal - for external control
+const controller = new AbortController();
+setTimeout(() => controller.abort(), 30000);
+await agenda.drain({ signal: controller.signal });
 ```
 
 Use `drain()` for graceful shutdowns where you want in-progress jobs to finish their work.

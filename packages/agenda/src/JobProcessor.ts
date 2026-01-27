@@ -5,6 +5,7 @@ import type { JobDefinition } from './types/JobDefinition.js';
 import type { Agenda, JobWithId } from './index.js';
 import type { JobParameters } from './types/JobParameters.js';
 import type { NotificationChannel, JobNotification } from './types/NotificationChannel.js';
+import type { DrainOptions, DrainResult } from './types/DrainOptions.js';
 import { Job } from './Job.js';
 import { JobProcessingQueue } from './JobProcessingQueue.js';
 const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
@@ -141,10 +142,15 @@ export class JobProcessor {
 	/**
 	 * Waits for all currently running jobs to finish, then stops the processor.
 	 * Unlike stop(), this method does not immediately return - it waits for graceful completion.
-	 * @returns Promise that resolves when all running jobs have completed
+	 * @param options - Optional timeout or AbortSignal, or timeout number directly
+	 * @returns Promise that resolves with drain result when complete, timed out, or aborted
 	 */
-	async drain(): Promise<void> {
+	async drain(options?: number | DrainOptions): Promise<DrainResult> {
 		log.extend('drain')('drain called, clearing interval for processJobs()');
+
+		// Normalize options
+		const opts: DrainOptions =
+			typeof options === 'number' ? { timeout: options } : options ?? {};
 
 		// Stop accepting new jobs
 		if (this.processInterval) {
@@ -159,31 +165,79 @@ export class JobProcessor {
 			this.notificationUnsubscribe = undefined;
 		}
 
+		const initialRunning = this.runningJobs.length;
+
 		// If no jobs are running, resolve immediately
-		if (this.runningJobs.length === 0) {
+		if (initialRunning === 0) {
 			log.extend('drain')('no running jobs, resolving immediately');
 			this.isRunning = false;
-			return;
+			return { completed: 0, running: 0, timedOut: false, aborted: false };
 		}
 
-		log.extend('drain')('waiting for %d running jobs to finish', this.runningJobs.length);
+		// Check if already aborted
+		if (opts.signal?.aborted) {
+			log.extend('drain')('signal already aborted, resolving immediately');
+			this.isRunning = false;
+			return { completed: 0, running: initialRunning, timedOut: false, aborted: true };
+		}
 
-		// Wait for all running jobs to complete
-		return new Promise<void>(resolve => {
+		log.extend('drain')('waiting for %d running jobs to finish', initialRunning);
+
+		// Wait for all running jobs to complete (or timeout/abort)
+		return new Promise<DrainResult>(resolve => {
+			let completed = 0;
+			let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+			const cleanup = () => {
+				this.agenda.off('complete', completeListener);
+				if (timeoutId) {
+					clearTimeout(timeoutId);
+				}
+				if (opts.signal) {
+					opts.signal.removeEventListener('abort', abortListener);
+				}
+			};
+
+			const finish = (result: DrainResult) => {
+				cleanup();
+				this.isRunning = false;
+				resolve(result);
+			};
+
 			const checkComplete = () => {
 				if (this.runningJobs.length === 0) {
 					log.extend('drain')('all jobs completed, resolving');
-					this.isRunning = false;
-					resolve();
+					finish({ completed, running: 0, timedOut: false, aborted: false });
 				}
 			};
 
 			// Listen for 'complete' events from the agenda
 			const completeListener = () => {
+				completed++;
 				// Running jobs are removed after the event is emitted,
 				// so we check on next tick
 				setImmediate(checkComplete);
 			};
+
+			// Handle timeout
+			if (opts.timeout !== undefined) {
+				timeoutId = setTimeout(() => {
+					const running = this.runningJobs.length;
+					log.extend('drain')('timeout reached, %d jobs still running', running);
+					finish({ completed, running, timedOut: true, aborted: false });
+				}, opts.timeout);
+			}
+
+			// Handle abort signal
+			const abortListener = () => {
+				const running = this.runningJobs.length;
+				log.extend('drain')('abort signal received, %d jobs still running', running);
+				finish({ completed, running, timedOut: false, aborted: true });
+			};
+
+			if (opts.signal) {
+				opts.signal.addEventListener('abort', abortListener);
+			}
 
 			this.agenda.on('complete', completeListener);
 

@@ -1154,9 +1154,13 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				await waitForEvent(agenda, 'start:drain-test');
 
 				// Drain should wait for all to complete
-				await agenda.drain();
+				const result = await agenda.drain();
 
 				expect(completedJobs.length).toBe(3);
+				expect(result.completed).toBe(3);
+				expect(result.running).toBe(0);
+				expect(result.timedOut).toBe(false);
+				expect(result.aborted).toBe(false);
 			});
 
 			it('should wait for running job to finish', async () => {
@@ -1178,15 +1182,128 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				expect(jobFinished).toBe(false);
 
 				// Call drain - should wait for job to complete
-				await agenda.drain();
+				const result = await agenda.drain();
 				expect(jobFinished).toBe(true);
+				expect(result.completed).toBe(1);
+				expect(result.running).toBe(0);
 			});
 
 			it('should resolve immediately if no jobs are running', async () => {
 				await agenda.start();
 				// No jobs scheduled, drain should resolve immediately
-				await agenda.drain();
-				// If we get here, the test passes
+				const result = await agenda.drain();
+				expect(result.completed).toBe(0);
+				expect(result.running).toBe(0);
+				expect(result.timedOut).toBe(false);
+				expect(result.aborted).toBe(false);
+			});
+
+			it('should timeout and return running jobs count', async () => {
+				let jobStarted = false;
+
+				agenda.define('drain-timeout-test', async () => {
+					jobStarted = true;
+					// Job takes longer than timeout
+					await new Promise(resolve => setTimeout(resolve, 5000));
+				});
+
+				await agenda.start();
+				await agenda.now('drain-timeout-test');
+
+				// Wait for job to start
+				await waitForEvent(agenda, 'start:drain-timeout-test');
+				expect(jobStarted).toBe(true);
+
+				// Drain with short timeout
+				const result = await agenda.drain(100);
+
+				expect(result.timedOut).toBe(true);
+				expect(result.aborted).toBe(false);
+				expect(result.running).toBe(1);
+				expect(result.completed).toBe(0);
+			});
+
+			it('should accept timeout as options object', async () => {
+				agenda.define('drain-timeout-opts-test', async () => {
+					await new Promise(resolve => setTimeout(resolve, 5000));
+				});
+
+				await agenda.start();
+				await agenda.now('drain-timeout-opts-test');
+
+				await waitForEvent(agenda, 'start:drain-timeout-opts-test');
+
+				const result = await agenda.drain({ timeout: 100 });
+
+				expect(result.timedOut).toBe(true);
+				expect(result.running).toBe(1);
+			});
+
+			it('should abort when signal is triggered', async () => {
+				let jobStarted = false;
+
+				agenda.define('drain-abort-test', async () => {
+					jobStarted = true;
+					await new Promise(resolve => setTimeout(resolve, 5000));
+				});
+
+				await agenda.start();
+				await agenda.now('drain-abort-test');
+
+				await waitForEvent(agenda, 'start:drain-abort-test');
+				expect(jobStarted).toBe(true);
+
+				const controller = new AbortController();
+
+				// Abort after 100ms
+				setTimeout(() => controller.abort(), 100);
+
+				const result = await agenda.drain({ signal: controller.signal });
+
+				expect(result.aborted).toBe(true);
+				expect(result.timedOut).toBe(false);
+				expect(result.running).toBe(1);
+				expect(result.completed).toBe(0);
+			});
+
+			it('should resolve immediately if signal is already aborted', async () => {
+				agenda.define('drain-pre-aborted-test', async () => {
+					await new Promise(resolve => setTimeout(resolve, 5000));
+				});
+
+				await agenda.start();
+				await agenda.now('drain-pre-aborted-test');
+
+				await waitForEvent(agenda, 'start:drain-pre-aborted-test');
+
+				const controller = new AbortController();
+				controller.abort(); // Abort before calling drain
+
+				const result = await agenda.drain({ signal: controller.signal });
+
+				expect(result.aborted).toBe(true);
+				expect(result.running).toBe(1);
+			});
+
+			it('should support both timeout and signal together', async () => {
+				agenda.define('drain-both-test', async () => {
+					await new Promise(resolve => setTimeout(resolve, 5000));
+				});
+
+				await agenda.start();
+				await agenda.now('drain-both-test');
+
+				await waitForEvent(agenda, 'start:drain-both-test');
+
+				const controller = new AbortController();
+
+				// Signal aborts first (50ms) before timeout (200ms)
+				setTimeout(() => controller.abort(), 50);
+
+				const result = await agenda.drain({ timeout: 200, signal: controller.signal });
+
+				expect(result.aborted).toBe(true);
+				expect(result.timedOut).toBe(false);
 			});
 		});
 
