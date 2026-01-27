@@ -1,5 +1,11 @@
 # agendash
 
+## 6.0.1
+
+### Patch Changes
+
+- e784be4: relative path for assets
+
 ## 6.0.0
 
 ### Minor Changes
