@@ -8,6 +8,11 @@ import type { ApiQueryParams, CreateJobRequest, DeleteRequest, RequeueRequest, P
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+export interface ExpressMiddlewareOptions {
+	/** Skip static file serving (useful for dev mode with Vite) */
+	skipStaticFiles?: boolean;
+}
+
 /**
  * Create Express middleware for Agendash
  *
@@ -23,7 +28,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
  * app.use('/dash', createExpressMiddleware(agenda));
  * ```
  */
-export function createExpressMiddleware(agenda: Agenda): Router {
+export function createExpressMiddleware(agenda: Agenda, options: ExpressMiddlewareOptions = {}): Router {
 	const controller = new AgendashController(agenda);
 	const router = Router();
 
@@ -37,8 +42,10 @@ export function createExpressMiddleware(agenda: Agenda): Router {
 		next();
 	});
 
-	// Static files
-	router.use('/', serveStatic(join(__dirname, '../../public')));
+	// Static files (skip in dev mode when using Vite)
+	if (!options.skipStaticFiles) {
+		router.use('/', serveStatic(join(__dirname, '../../public')));
+	}
 
 	// API routes
 	router.get('/api', async (req, res) => {

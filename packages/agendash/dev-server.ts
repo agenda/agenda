@@ -12,7 +12,7 @@ import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 import { Agenda } from 'agenda';
 import { MongoBackend } from '@agendajs/mongo-backend';
-import { AgendashController } from './src/AgendashController.js';
+import { createExpressMiddleware } from './src/middlewares/express.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -173,9 +173,8 @@ async function startDevServer() {
 	await agenda.schedule(oneMonthFromNow, 'future-job', { scheduled: 'for next month' });
 
 	const app = express();
-	app.use(express.json());
 
-	// Create Vite server in middleware mode
+	// Create Vite server in middleware mode for frontend hot-reloading
 	const vite = await createViteServer({
 		configFile: resolve(__dirname, 'client/vite.config.ts'),
 		server: {
@@ -184,69 +183,10 @@ async function startDevServer() {
 		appType: 'spa'
 	});
 
-	// API routes
-	const controller = new AgendashController(agenda);
+	// API routes (skip static files - Vite handles frontend in dev mode)
+	app.use('/', createExpressMiddleware(agenda, { skipStaticFiles: true }));
 
-	app.get('/api', async (req, res) => {
-		try {
-			const result = await controller.getJobs({
-				name: req.query.job as string,
-				search: req.query.q as string,
-				property: req.query.property as string,
-				isObjectId: req.query.isObjectId as string,
-				state: req.query.state as string,
-				skip: req.query.skip ? parseInt(req.query.skip as string, 10) : undefined,
-				limit: req.query.limit ? parseInt(req.query.limit as string, 10) : undefined
-			});
-			res.json(result);
-		} catch (err) {
-			console.error('API error:', err);
-			res.status(500).json({ error: 'Internal server error' });
-		}
-	});
-
-	app.post('/api/jobs/requeue', async (req, res) => {
-		try {
-			const result = await controller.requeueJobs(req.body.jobIds);
-			res.json(result);
-		} catch (err) {
-			console.error('API error:', err);
-			res.status(500).json({ error: 'Internal server error' });
-		}
-	});
-
-	app.post('/api/jobs/delete', async (req, res) => {
-		try {
-			const result = await controller.deleteJobs(req.body.jobIds);
-			res.json(result);
-		} catch (err) {
-			console.error('API error:', err);
-			res.status(500).json({ error: 'Internal server error' });
-		}
-	});
-
-	app.post('/api/jobs/create', async (req, res) => {
-		try {
-			const result = await controller.createJob(req.body);
-			res.json(result);
-		} catch (err) {
-			console.error('API error:', err);
-			res.status(500).json({ error: 'Internal server error' });
-		}
-	});
-
-	app.get('/api/stats', async (req, res) => {
-		try {
-			const fullDetails = req.query.fullDetails === 'true';
-			const result = await controller.getStats(fullDetails);
-			res.json(result);
-		} catch (err) {
-			console.error('API error:', err);
-			res.status(500).json({ error: 'Internal server error' });
-		}
-	});
-
-	// Use Vite's connect instance as middleware
+	// Use Vite for frontend (handles HMR and serves all non-API requests)
 	app.use(vite.middlewares);
 
 	const port = parseInt(process.env.PORT || '3000', 10);

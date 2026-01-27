@@ -68,9 +68,10 @@ export class AgendashController implements IAgendashController {
 				queued: acc.queued + o.queued,
 				completed: acc.completed + o.completed,
 				failed: acc.failed + o.failed,
-				repeating: acc.repeating + o.repeating
+				repeating: acc.repeating + o.repeating,
+				paused: acc.paused + o.paused
 			}),
-			{ total: 0, running: 0, scheduled: 0, queued: 0, completed: 0, failed: 0, repeating: 0 }
+			{ total: 0, running: 0, scheduled: 0, queued: 0, completed: 0, failed: 0, repeating: 0, paused: 0 }
 		);
 
 		const allJobsEntry: FrontendOverview = {
@@ -86,7 +87,8 @@ export class AgendashController implements IAgendashController {
 			queued: o.queued,
 			completed: o.completed,
 			failed: o.failed,
-			repeating: o.repeating
+			repeating: o.repeating,
+			paused: o.paused
 		}));
 
 		return [allJobsEntry, ...jobOverviews];

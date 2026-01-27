@@ -44,6 +44,9 @@ onUnmounted(() => {
 });
 
 function isSelectedJob(displayName: string): boolean {
+	// Nothing is selected when showing stats
+	if (props.showingStats) return false;
+
 	const currentName = props.currentFilters.name || '';
 	if (displayName === 'All Jobs') {
 		return currentName === '' || currentName === 'All Jobs';
@@ -57,16 +60,28 @@ function isSelectedState(displayName: string, state: string): boolean {
 	return currentState === state;
 }
 
-function toggleExpand(name: string) {
-	if (expandedItems.value.has(name)) {
-		expandedItems.value.delete(name);
-	} else {
-		expandedItems.value.add(name);
-	}
-}
-
 function isExpanded(name: string): boolean {
 	return expandedItems.value.has(name);
+}
+
+function handleJobClick(name: string) {
+	const isCurrentlySelected = isSelectedJob(name);
+	const hasStateFilter = !!props.currentFilters.state;
+
+	// Only collapse if already selected with no state filter
+	if (isCurrentlySelected && !hasStateFilter) {
+		// Toggle collapse
+		if (expandedItems.value.has(name)) {
+			expandedItems.value.delete(name);
+		} else {
+			expandedItems.value.add(name);
+		}
+	} else {
+		// Expand and select (clearing any state filter)
+		expandedItems.value.add(name);
+	}
+
+	emit('search', name, '');
 }
 
 function searchJob(name: string, state = '') {
@@ -80,7 +95,8 @@ function getStatusColor(type: string): string {
 		running: '#ffc107',
 		completed: '#28a745',
 		failed: '#dc3545',
-		repeating: '#98c1d9'
+		repeating: '#98c1d9',
+		paused: '#6c757d'
 	};
 	return colors[type] || '#6c757d';
 }
@@ -125,7 +141,7 @@ function getStatusColor(type: string): string {
 		<div v-if="overview.length > 0" class="job-list">
 			<div v-for="item in overview" :key="item.displayName" class="job-item mb-1">
 				<!-- Job Header Row -->
-				<div class="job-header d-flex align-items-center" :class="{ 'job-header-selected': isSelectedJob(item.displayName) && !currentFilters.state }" @click="toggleExpand(item.displayName); searchJob(item.displayName)">
+				<div class="job-header d-flex align-items-center" :class="{ 'job-header-selected': isSelectedJob(item.displayName) && !currentFilters.state }" @click="handleJobClick(item.displayName)">
 					<!-- Expand Toggle -->
 					<span class="expand-icon" :class="{ rotated: isExpanded(item.displayName) }">&#9658;</span>
 
@@ -140,6 +156,7 @@ function getStatusColor(type: string): string {
 						<span v-if="item.completed" class="status-dot" :style="{ backgroundColor: getStatusColor('completed') }" :title="`${item.completed} completed`"></span>
 						<span v-if="item.failed" class="status-dot" :style="{ backgroundColor: getStatusColor('failed') }" :title="`${item.failed} failed`"></span>
 						<span v-if="item.repeating" class="status-dot" :style="{ backgroundColor: getStatusColor('repeating') }" :title="`${item.repeating} repeating`"></span>
+						<span v-if="item.paused" class="status-dot" :style="{ backgroundColor: getStatusColor('paused') }" :title="`${item.paused} paused`"></span>
 					</span>
 
 					<!-- Total Count -->
@@ -172,6 +189,11 @@ function getStatusColor(type: string): string {
 						v-if="item.failed"
 						class="mini-bar"
 						:style="{ flex: item.failed, backgroundColor: getStatusColor('failed') }"
+					></div>
+					<div
+						v-if="item.paused"
+						class="mini-bar"
+						:style="{ flex: item.paused, backgroundColor: getStatusColor('paused') }"
 					></div>
 				</div>
 
@@ -206,6 +228,11 @@ function getStatusColor(type: string): string {
 						<span class="dot" :style="{ backgroundColor: getStatusColor('repeating') }"></span>
 						<span class="label">Repeating</span>
 						<span class="count">{{ item.repeating }}</span>
+					</div>
+					<div v-if="item.paused" class="detail-row" :class="{ 'detail-row-selected': isSelectedState(item.displayName, 'paused') }" @click="searchJob(item.displayName, 'paused')">
+						<span class="dot" :style="{ backgroundColor: getStatusColor('paused') }"></span>
+						<span class="label">Paused</span>
+						<span class="count">{{ item.paused }}</span>
 					</div>
 				</div>
 			</div>

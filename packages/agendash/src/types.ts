@@ -66,6 +66,7 @@ export interface FrontendOverview {
 	completed: number;
 	failed: number;
 	repeating: number;
+	paused: number;
 }
 
 /**

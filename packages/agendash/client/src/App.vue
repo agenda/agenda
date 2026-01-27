@@ -56,8 +56,20 @@ const showConfirmResumeMulti = ref(false);
 const selectedJob = ref<FrontendJob | null>(null);
 const selectedJobIds = ref<string[]>([]);
 
+// Loading state for modal actions
+const actionLoading = ref(false);
+
 // View mode - jobs or stats
 const showingStats = ref(false);
+
+// Helper to format job data for display (full JSON, pretty-printed)
+function formatJobData(data: unknown): string {
+	try {
+		return JSON.stringify(data, null, 2);
+	} catch {
+		return String(data);
+	}
+}
 
 function startRefreshTimer() {
 	if (refreshTimer) clearInterval(refreshTimer);
@@ -132,52 +144,92 @@ function handleConfirmResumeMulti(jobIds: string[]) {
 
 async function handleDelete() {
 	if (selectedJob.value) {
-		await deleteJobs([selectedJob.value.job._id]);
+		actionLoading.value = true;
+		try {
+			await deleteJobs([selectedJob.value.job._id]);
+		} finally {
+			actionLoading.value = false;
+		}
 	}
 	showConfirmDelete.value = false;
 }
 
 async function handleRequeue() {
 	if (selectedJob.value) {
-		await requeueJobs([selectedJob.value.job._id]);
+		actionLoading.value = true;
+		try {
+			await requeueJobs([selectedJob.value.job._id]);
+		} finally {
+			actionLoading.value = false;
+		}
 	}
 	showConfirmRequeue.value = false;
 }
 
 async function handleDeleteMulti() {
-	await deleteJobs(selectedJobIds.value);
+	actionLoading.value = true;
+	try {
+		await deleteJobs(selectedJobIds.value);
+	} finally {
+		actionLoading.value = false;
+	}
 	showConfirmDeleteMulti.value = false;
 	selectedJobIds.value = [];
 }
 
 async function handleRequeueMulti() {
-	await requeueJobs(selectedJobIds.value);
+	actionLoading.value = true;
+	try {
+		await requeueJobs(selectedJobIds.value);
+	} finally {
+		actionLoading.value = false;
+	}
 	showConfirmRequeueMulti.value = false;
 	selectedJobIds.value = [];
 }
 
 async function handlePause() {
 	if (selectedJob.value) {
-		await pauseJobs([selectedJob.value.job._id]);
+		actionLoading.value = true;
+		try {
+			await pauseJobs([selectedJob.value.job._id]);
+		} finally {
+			actionLoading.value = false;
+		}
 	}
 	showConfirmPause.value = false;
 }
 
 async function handleResume() {
 	if (selectedJob.value) {
-		await resumeJobs([selectedJob.value.job._id]);
+		actionLoading.value = true;
+		try {
+			await resumeJobs([selectedJob.value.job._id]);
+		} finally {
+			actionLoading.value = false;
+		}
 	}
 	showConfirmResume.value = false;
 }
 
 async function handlePauseMulti() {
-	await pauseJobs(selectedJobIds.value);
+	actionLoading.value = true;
+	try {
+		await pauseJobs(selectedJobIds.value);
+	} finally {
+		actionLoading.value = false;
+	}
 	showConfirmPauseMulti.value = false;
 	selectedJobIds.value = [];
 }
 
 async function handleResumeMulti() {
-	await resumeJobs(selectedJobIds.value);
+	actionLoading.value = true;
+	try {
+		await resumeJobs(selectedJobIds.value);
+	} finally {
+		actionLoading.value = false;
+	}
 	showConfirmResumeMulti.value = false;
 	selectedJobIds.value = [];
 }
@@ -197,6 +249,8 @@ function handleSidebarSearch(name: string, state: string) {
 
 function handleShowStats() {
 	showingStats.value = true;
+	// Clear job filters so no job entry shows as selected
+	currentFilters.value = {};
 	closeNav();
 }
 
@@ -347,120 +401,132 @@ onUnmounted(() => {
 				</div>
 			</div>
 
-			<div v-if="showConfirmDelete && selectedJob" class="modal-overlay" @click.self="showConfirmDelete = false">
+			<div v-if="showConfirmDelete && selectedJob" class="modal-overlay" @click.self="!actionLoading && (showConfirmDelete = false)">
 				<div class="modal-container" style="width: 400px">
 					<ConfirmDialog
 						title="Delete Job"
 						:message="`Delete job '${selectedJob.job.name}'?`"
 						:details="[
-							{ label: 'ID', value: selectedJob.job._id },
-							{ label: 'Name', value: selectedJob.job.name }
+							{ label: 'ID', value: selectedJob.job._id, type: 'code' },
+							{ label: 'Name', value: selectedJob.job.name },
+							{ label: 'Data', value: formatJobData(selectedJob.job.data), type: 'json' }
 						]"
 						confirm-text="Delete"
 						confirm-class="btn-danger"
+						:loading="actionLoading"
 						@confirm="handleDelete"
 						@cancel="showConfirmDelete = false"
 					/>
 				</div>
 			</div>
 
-			<div v-if="showConfirmRequeue && selectedJob" class="modal-overlay" @click.self="showConfirmRequeue = false">
+			<div v-if="showConfirmRequeue && selectedJob" class="modal-overlay" @click.self="!actionLoading && (showConfirmRequeue = false)">
 				<div class="modal-container" style="width: 400px">
 					<ConfirmDialog
 						title="Requeue Job"
 						:message="`Requeue job '${selectedJob.job.name}'?`"
 						:details="[
-							{ label: 'ID', value: selectedJob.job._id },
-							{ label: 'Name', value: selectedJob.job.name }
+							{ label: 'ID', value: selectedJob.job._id, type: 'code' },
+							{ label: 'Name', value: selectedJob.job.name },
+							{ label: 'Data', value: formatJobData(selectedJob.job.data), type: 'json' }
 						]"
 						confirm-text="Requeue"
 						confirm-class="btn-primary"
+						:loading="actionLoading"
 						@confirm="handleRequeue"
 						@cancel="showConfirmRequeue = false"
 					/>
 				</div>
 			</div>
 
-			<div v-if="showConfirmDeleteMulti" class="modal-overlay" @click.self="showConfirmDeleteMulti = false">
+			<div v-if="showConfirmDeleteMulti" class="modal-overlay" @click.self="!actionLoading && (showConfirmDeleteMulti = false)">
 				<div class="modal-container" style="width: 400px">
 					<ConfirmDialog
 						title="Delete Multiple Jobs"
 						:message="`Delete ${selectedJobIds.length} selected jobs?`"
 						confirm-text="Delete All"
 						confirm-class="btn-danger"
+						:loading="actionLoading"
 						@confirm="handleDeleteMulti"
 						@cancel="showConfirmDeleteMulti = false"
 					/>
 				</div>
 			</div>
 
-			<div v-if="showConfirmRequeueMulti" class="modal-overlay" @click.self="showConfirmRequeueMulti = false">
+			<div v-if="showConfirmRequeueMulti" class="modal-overlay" @click.self="!actionLoading && (showConfirmRequeueMulti = false)">
 				<div class="modal-container" style="width: 400px">
 					<ConfirmDialog
 						title="Requeue Multiple Jobs"
 						:message="`Requeue ${selectedJobIds.length} selected jobs?`"
 						confirm-text="Requeue All"
 						confirm-class="btn-primary"
+						:loading="actionLoading"
 						@confirm="handleRequeueMulti"
 						@cancel="showConfirmRequeueMulti = false"
 					/>
 				</div>
 			</div>
 
-			<div v-if="showConfirmPause && selectedJob" class="modal-overlay" @click.self="showConfirmPause = false">
+			<div v-if="showConfirmPause && selectedJob" class="modal-overlay" @click.self="!actionLoading && (showConfirmPause = false)">
 				<div class="modal-container" style="width: 400px">
 					<ConfirmDialog
 						title="Pause Job"
 						:message="`Pause job '${selectedJob.job.name}'?`"
 						:details="[
-							{ label: 'ID', value: selectedJob.job._id },
-							{ label: 'Name', value: selectedJob.job.name }
+							{ label: 'ID', value: selectedJob.job._id, type: 'code' },
+							{ label: 'Name', value: selectedJob.job.name },
+							{ label: 'Data', value: formatJobData(selectedJob.job.data), type: 'json' }
 						]"
 						confirm-text="Pause"
 						confirm-class="btn-secondary"
+						:loading="actionLoading"
 						@confirm="handlePause"
 						@cancel="showConfirmPause = false"
 					/>
 				</div>
 			</div>
 
-			<div v-if="showConfirmResume && selectedJob" class="modal-overlay" @click.self="showConfirmResume = false">
+			<div v-if="showConfirmResume && selectedJob" class="modal-overlay" @click.self="!actionLoading && (showConfirmResume = false)">
 				<div class="modal-container" style="width: 400px">
 					<ConfirmDialog
 						title="Resume Job"
 						:message="`Resume job '${selectedJob.job.name}'?`"
 						:details="[
-							{ label: 'ID', value: selectedJob.job._id },
-							{ label: 'Name', value: selectedJob.job.name }
+							{ label: 'ID', value: selectedJob.job._id, type: 'code' },
+							{ label: 'Name', value: selectedJob.job.name },
+							{ label: 'Data', value: formatJobData(selectedJob.job.data), type: 'json' }
 						]"
 						confirm-text="Resume"
 						confirm-class="btn-success"
+						:loading="actionLoading"
 						@confirm="handleResume"
 						@cancel="showConfirmResume = false"
 					/>
 				</div>
 			</div>
 
-			<div v-if="showConfirmPauseMulti" class="modal-overlay" @click.self="showConfirmPauseMulti = false">
+			<div v-if="showConfirmPauseMulti" class="modal-overlay" @click.self="!actionLoading && (showConfirmPauseMulti = false)">
 				<div class="modal-container" style="width: 400px">
 					<ConfirmDialog
 						title="Pause Multiple Jobs"
 						:message="`Pause ${selectedJobIds.length} selected jobs?`"
 						confirm-text="Pause All"
 						confirm-class="btn-secondary"
+						:loading="actionLoading"
 						@confirm="handlePauseMulti"
 						@cancel="showConfirmPauseMulti = false"
 					/>
 				</div>
 			</div>
 
-			<div v-if="showConfirmResumeMulti" class="modal-overlay" @click.self="showConfirmResumeMulti = false">
+			<div v-if="showConfirmResumeMulti" class="modal-overlay" @click.self="!actionLoading && (showConfirmResumeMulti = false)">
 				<div class="modal-container" style="width: 400px">
 					<ConfirmDialog
 						title="Resume Multiple Jobs"
 						:message="`Resume ${selectedJobIds.length} selected jobs?`"
 						confirm-text="Resume All"
 						confirm-class="btn-success"
+						:loading="actionLoading"
 						@confirm="handleResumeMulti"
 						@cancel="showConfirmResumeMulti = false"
 					/>

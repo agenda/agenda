@@ -4,8 +4,9 @@ import type { SortDirection } from './DbOptions.js';
 /**
  * Computed job states based on job timestamps.
  * These are derived from job data, not stored in the database.
+ * 'paused' is based on the disabled field rather than timestamps.
  */
-export type JobState = 'running' | 'scheduled' | 'queued' | 'completed' | 'failed' | 'repeating';
+export type JobState = 'running' | 'scheduled' | 'queued' | 'completed' | 'failed' | 'repeating' | 'paused';
 
 /**
  * Overview statistics for a single job name
@@ -19,6 +20,7 @@ export interface JobsOverview {
 	completed: number;
 	failed: number;
 	repeating: number;
+	paused: number;
 }
 
 /**
