@@ -206,7 +206,7 @@ export function backoffTestSuite(config: BackoffTestConfig): void {
 		});
 
 		describe('auto-retry integration', () => {
-			it('should automatically retry with backoff strategy', { timeout: 10000 }, async () => {
+			it('should automatically retry with backoff strategy', async () => {
 				let attempts = 0;
 				const retryDelays: number[] = [];
 
@@ -241,7 +241,7 @@ export function backoffTestSuite(config: BackoffTestConfig): void {
 				expect(retryDelays[1]).toBe(100);
 			});
 
-			it('should emit retry exhausted when max retries reached', { timeout: 10000 }, async () => {
+			it('should emit retry exhausted when max retries reached', async () => {
 				let attempts = 0;
 
 				agenda.define(
@@ -271,7 +271,7 @@ export function backoffTestSuite(config: BackoffTestConfig): void {
 				expect(job.attrs.failCount).toBe(3);
 			});
 
-			it('should provide retry details in event', { timeout: 10000 }, async () => {
+			it('should provide retry details in event', async () => {
 				let retryDetails: RetryDetails | null = null;
 
 				agenda.define(
@@ -366,7 +366,7 @@ export function backoffTestSuite(config: BackoffTestConfig): void {
 				expect(attempts).toBe(2); // First attempt failed, second succeeded
 			});
 
-			it('should work with custom backoff function', { timeout: 10000 }, async () => {
+			it('should work with custom backoff function', async () => {
 				let attempts = 0;
 				const delays: number[] = [];
 
