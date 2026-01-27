@@ -58,6 +58,20 @@ function getUniqueCollectionName(): string {
 	return `${TEST_COLLECTION}_${randomUUID().replace(/-/g, '').slice(0, 8)}`;
 }
 
+// Helper to wait for a condition with timeout (for flaky async operations like Change Streams)
+async function waitFor(
+	condition: () => boolean,
+	{ timeout = 5000, interval = 50 }: { timeout?: number; interval?: number } = {}
+): Promise<void> {
+	const start = Date.now();
+	while (!condition()) {
+		if (Date.now() - start > timeout) {
+			throw new Error(`waitFor timed out after ${timeout}ms`);
+		}
+		await new Promise(resolve => setTimeout(resolve, interval));
+	}
+}
+
 // ============================================================================
 // Unit Tests (no database connection required)
 // ============================================================================
@@ -306,8 +320,8 @@ describe('MongoChangeStreamNotificationChannel change stream tests', () => {
 			data: {}
 		});
 
-		// Wait for change stream to process
-		await new Promise(resolve => setTimeout(resolve, 100));
+		// Wait for change stream to process (with retry for CI environments)
+		await waitFor(() => notifications.length >= 1);
 
 		expect(notifications.length).toBe(1);
 		expect(notifications[0].jobName).toBe('test-job');
@@ -315,6 +329,11 @@ describe('MongoChangeStreamNotificationChannel change stream tests', () => {
 
 	it('should detect job updates', async () => {
 		await channel.connect();
+
+		const notifications: JobNotification[] = [];
+		channel.subscribe(async notification => {
+			notifications.push(notification);
+		});
 
 		// Insert a job first
 		const result = await db.collection(collectionName).insertOne({
@@ -325,13 +344,8 @@ describe('MongoChangeStreamNotificationChannel change stream tests', () => {
 			data: {}
 		});
 
-		const notifications: JobNotification[] = [];
-		channel.subscribe(async notification => {
-			notifications.push(notification);
-		});
-
-		// Clear initial insert notification
-		await new Promise(resolve => setTimeout(resolve, 100));
+		// Wait for initial insert notification
+		await waitFor(() => notifications.length >= 1);
 		notifications.length = 0;
 
 		// Update the job
@@ -340,8 +354,8 @@ describe('MongoChangeStreamNotificationChannel change stream tests', () => {
 			{ $set: { priority: 10 } }
 		);
 
-		// Wait for change stream to process
-		await new Promise(resolve => setTimeout(resolve, 100));
+		// Wait for update notification
+		await waitFor(() => notifications.length >= 1);
 
 		expect(notifications.length).toBe(1);
 		expect(notifications[0].priority).toBe(10);
@@ -363,8 +377,8 @@ describe('MongoChangeStreamNotificationChannel change stream tests', () => {
 			data: {}
 		});
 
-		// Wait for change stream to process
-		await new Promise(resolve => setTimeout(resolve, 100));
+		// Fixed timeout for negative test (can't wait for something that shouldn't happen)
+		await new Promise(resolve => setTimeout(resolve, 300));
 
 		expect(notifications.length).toBe(0);
 	});
@@ -387,8 +401,8 @@ describe('MongoChangeStreamNotificationChannel change stream tests', () => {
 			data: {}
 		});
 
-		// Wait for change stream to process
-		await new Promise(resolve => setTimeout(resolve, 100));
+		// Fixed timeout for negative test (can't wait for something that shouldn't happen)
+		await new Promise(resolve => setTimeout(resolve, 300));
 
 		expect(notifications.length).toBe(0);
 	});
