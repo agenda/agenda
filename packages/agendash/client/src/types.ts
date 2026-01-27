@@ -28,6 +28,7 @@ export interface FrontendJobData {
 	failReason?: string;
 	repeatInterval?: string | number;
 	repeatTimezone?: string;
+	disabled?: boolean;
 }
 
 /**
@@ -41,6 +42,7 @@ export interface FrontendJob {
 	completed: boolean;
 	failed: boolean;
 	repeating: boolean;
+	paused: boolean;
 }
 
 /**
@@ -80,6 +82,20 @@ export interface RequeueResponse {
 export interface DeleteResponse {
 	deleted: boolean;
 	deletedCount?: number;
+}
+
+/**
+ * Response from pause operation
+ */
+export interface PauseResponse {
+	pausedCount: number;
+}
+
+/**
+ * Response from resume operation
+ */
+export interface ResumeResponse {
+	resumedCount: number;
 }
 
 /**
@@ -153,6 +169,10 @@ export interface AgendaStats {
 		totalLockLimit: number;
 		maxConcurrency: number;
 		processEvery: string | number;
+	};
+	backend: {
+		name: string;
+		hasNotificationChannel: boolean;
 	};
 	internal: {
 		localQueueProcessing: number;

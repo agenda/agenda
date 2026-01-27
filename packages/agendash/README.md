@@ -104,6 +104,33 @@ await server.start();
 console.log('Dashboard: http://localhost:3000/dash');
 ```
 
+## Security
+
+**Important:** The Agendash dashboard provides full access to view, create, requeue, and delete jobs. You should **always protect it with authentication** before deploying to production.
+
+Example with basic auth (Express):
+
+```typescript
+import basicAuth from 'express-basic-auth';
+
+// Protect the dashboard with basic auth
+app.use('/dash', basicAuth({
+  users: { 'admin': 'secure-password' },
+  challenge: true
+}));
+
+// Then mount agendash
+app.use('/dash', expressMiddleware(agenda));
+```
+
+For production environments, consider using:
+- Session-based authentication with your existing auth system
+- OAuth/SSO integration
+- IP-based access control (e.g., only accessible from internal network)
+- A reverse proxy with authentication (e.g., nginx with auth_basic)
+
+**Never expose the dashboard to the public internet without authentication.**
+
 ## Features
 
 - **Job Overview**: View all jobs organized by name with status counts

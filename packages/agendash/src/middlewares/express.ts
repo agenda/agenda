@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import type { Agenda } from 'agenda';
 import { AgendashController } from '../AgendashController.js';
 import { cspHeader } from '../csp.js';
-import type { ApiQueryParams, CreateJobRequest, DeleteRequest, RequeueRequest } from '../types.js';
+import type { ApiQueryParams, CreateJobRequest, DeleteRequest, RequeueRequest, PauseRequest, ResumeRequest } from '../types.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -84,6 +84,26 @@ export function createExpressMiddleware(agenda: Agenda): Router {
 		try {
 			const options = req.body as CreateJobRequest;
 			const result = await controller.createJob(options);
+			res.json(result);
+		} catch (error) {
+			res.status(400).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+		}
+	});
+
+	router.post('/api/jobs/pause', async (req, res) => {
+		try {
+			const { jobIds } = req.body as PauseRequest;
+			const result = await controller.pauseJobs(jobIds);
+			res.json(result);
+		} catch (error) {
+			res.status(400).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+		}
+	});
+
+	router.post('/api/jobs/resume', async (req, res) => {
+		try {
+			const { jobIds } = req.body as ResumeRequest;
+			const result = await controller.resumeJobs(jobIds);
 			res.json(result);
 		} catch (error) {
 			res.status(400).json({ error: error instanceof Error ? error.message : 'Unknown error' });

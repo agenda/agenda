@@ -4,7 +4,7 @@ import type { Agenda } from 'agenda';
 import type { FastifyInstance, FastifyPluginCallback, FastifyRequest, FastifyReply } from 'fastify';
 import { AgendashController } from '../AgendashController.js';
 import { cspHeader } from '../csp.js';
-import type { ApiQueryParams, CreateJobRequest, DeleteRequest, RequeueRequest } from '../types.js';
+import type { ApiQueryParams, CreateJobRequest, DeleteRequest, RequeueRequest, PauseRequest, ResumeRequest } from '../types.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -109,6 +109,36 @@ export function createFastifyPlugin(agenda: Agenda): FastifyPluginCallback {
 			async (request: FastifyRequest<{ Body: CreateJobRequest }>, reply: FastifyReply) => {
 				try {
 					const result = await controller.createJob(request.body);
+					return reply.send(result);
+				} catch (error) {
+					return reply
+						.status(400)
+						.send({ error: error instanceof Error ? error.message : 'Unknown error' });
+				}
+			}
+		);
+
+		instance.post<{ Body: PauseRequest }>(
+			'/api/jobs/pause',
+			async (request: FastifyRequest<{ Body: PauseRequest }>, reply: FastifyReply) => {
+				try {
+					const { jobIds } = request.body;
+					const result = await controller.pauseJobs(jobIds);
+					return reply.send(result);
+				} catch (error) {
+					return reply
+						.status(400)
+						.send({ error: error instanceof Error ? error.message : 'Unknown error' });
+				}
+			}
+		);
+
+		instance.post<{ Body: ResumeRequest }>(
+			'/api/jobs/resume',
+			async (request: FastifyRequest<{ Body: ResumeRequest }>, reply: FastifyReply) => {
+				try {
+					const { jobIds } = request.body;
+					const result = await controller.resumeJobs(jobIds);
 					return reply.send(result);
 				} catch (error) {
 					return reply

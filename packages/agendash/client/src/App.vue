@@ -24,6 +24,8 @@ const {
 	fetchJobs,
 	requeueJobs,
 	deleteJobs,
+	pauseJobs,
+	resumeJobs,
 	createJob,
 	nextPage,
 	prevPage,
@@ -43,8 +45,12 @@ const showJobDetail = ref(false);
 const showNewJob = ref(false);
 const showConfirmDelete = ref(false);
 const showConfirmRequeue = ref(false);
+const showConfirmPause = ref(false);
+const showConfirmResume = ref(false);
 const showConfirmDeleteMulti = ref(false);
 const showConfirmRequeueMulti = ref(false);
+const showConfirmPauseMulti = ref(false);
+const showConfirmResumeMulti = ref(false);
 
 // Selected job/jobs for modals
 const selectedJob = ref<FrontendJob | null>(null);
@@ -104,6 +110,26 @@ function handleConfirmRequeueMulti(jobIds: string[]) {
 	showConfirmRequeueMulti.value = true;
 }
 
+function handleConfirmPause(job: FrontendJob) {
+	selectedJob.value = job;
+	showConfirmPause.value = true;
+}
+
+function handleConfirmResume(job: FrontendJob) {
+	selectedJob.value = job;
+	showConfirmResume.value = true;
+}
+
+function handleConfirmPauseMulti(jobIds: string[]) {
+	selectedJobIds.value = jobIds;
+	showConfirmPauseMulti.value = true;
+}
+
+function handleConfirmResumeMulti(jobIds: string[]) {
+	selectedJobIds.value = jobIds;
+	showConfirmResumeMulti.value = true;
+}
+
 async function handleDelete() {
 	if (selectedJob.value) {
 		await deleteJobs([selectedJob.value.job._id]);
@@ -127,6 +153,32 @@ async function handleDeleteMulti() {
 async function handleRequeueMulti() {
 	await requeueJobs(selectedJobIds.value);
 	showConfirmRequeueMulti.value = false;
+	selectedJobIds.value = [];
+}
+
+async function handlePause() {
+	if (selectedJob.value) {
+		await pauseJobs([selectedJob.value.job._id]);
+	}
+	showConfirmPause.value = false;
+}
+
+async function handleResume() {
+	if (selectedJob.value) {
+		await resumeJobs([selectedJob.value.job._id]);
+	}
+	showConfirmResume.value = false;
+}
+
+async function handlePauseMulti() {
+	await pauseJobs(selectedJobIds.value);
+	showConfirmPauseMulti.value = false;
+	selectedJobIds.value = [];
+}
+
+async function handleResumeMulti() {
+	await resumeJobs(selectedJobIds.value);
+	showConfirmResumeMulti.value = false;
 	selectedJobIds.value = [];
 }
 
@@ -268,8 +320,12 @@ onUnmounted(() => {
 						@show-job-detail="handleShowJobDetail"
 						@confirm-delete="handleConfirmDelete"
 						@confirm-requeue="handleConfirmRequeue"
+						@confirm-pause="handleConfirmPause"
+						@confirm-resume="handleConfirmResume"
 						@confirm-delete-multi="handleConfirmDeleteMulti"
 						@confirm-requeue-multi="handleConfirmRequeueMulti"
+						@confirm-pause-multi="handleConfirmPauseMulti"
+						@confirm-resume-multi="handleConfirmResumeMulti"
 						@page-next="nextPage"
 						@page-prev="prevPage"
 					/>
@@ -347,6 +403,66 @@ onUnmounted(() => {
 						confirm-class="btn-primary"
 						@confirm="handleRequeueMulti"
 						@cancel="showConfirmRequeueMulti = false"
+					/>
+				</div>
+			</div>
+
+			<div v-if="showConfirmPause && selectedJob" class="modal-overlay" @click.self="showConfirmPause = false">
+				<div class="modal-container" style="width: 400px">
+					<ConfirmDialog
+						title="Pause Job"
+						:message="`Pause job '${selectedJob.job.name}'?`"
+						:details="[
+							{ label: 'ID', value: selectedJob.job._id },
+							{ label: 'Name', value: selectedJob.job.name }
+						]"
+						confirm-text="Pause"
+						confirm-class="btn-secondary"
+						@confirm="handlePause"
+						@cancel="showConfirmPause = false"
+					/>
+				</div>
+			</div>
+
+			<div v-if="showConfirmResume && selectedJob" class="modal-overlay" @click.self="showConfirmResume = false">
+				<div class="modal-container" style="width: 400px">
+					<ConfirmDialog
+						title="Resume Job"
+						:message="`Resume job '${selectedJob.job.name}'?`"
+						:details="[
+							{ label: 'ID', value: selectedJob.job._id },
+							{ label: 'Name', value: selectedJob.job.name }
+						]"
+						confirm-text="Resume"
+						confirm-class="btn-success"
+						@confirm="handleResume"
+						@cancel="showConfirmResume = false"
+					/>
+				</div>
+			</div>
+
+			<div v-if="showConfirmPauseMulti" class="modal-overlay" @click.self="showConfirmPauseMulti = false">
+				<div class="modal-container" style="width: 400px">
+					<ConfirmDialog
+						title="Pause Multiple Jobs"
+						:message="`Pause ${selectedJobIds.length} selected jobs?`"
+						confirm-text="Pause All"
+						confirm-class="btn-secondary"
+						@confirm="handlePauseMulti"
+						@cancel="showConfirmPauseMulti = false"
+					/>
+				</div>
+			</div>
+
+			<div v-if="showConfirmResumeMulti" class="modal-overlay" @click.self="showConfirmResumeMulti = false">
+				<div class="modal-container" style="width: 400px">
+					<ConfirmDialog
+						title="Resume Multiple Jobs"
+						:message="`Resume ${selectedJobIds.length} selected jobs?`"
+						confirm-text="Resume All"
+						confirm-class="btn-success"
+						@confirm="handleResumeMulti"
+						@cancel="showConfirmResumeMulti = false"
 					/>
 				</div>
 			</div>

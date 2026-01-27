@@ -5,6 +5,8 @@ import type {
 	CreateJobResponse,
 	DeleteResponse,
 	RequeueResponse,
+	PauseResponse,
+	ResumeResponse,
 	AgendaStats
 } from '../types';
 
@@ -59,6 +61,20 @@ export async function createJob(options: CreateJobRequest): Promise<CreateJobRes
 	return fetchJson<CreateJobResponse>(`${BASE_URL}/jobs/create`, {
 		method: 'POST',
 		body: JSON.stringify(options)
+	});
+}
+
+export async function pauseJobs(jobIds: string[]): Promise<PauseResponse> {
+	return fetchJson<PauseResponse>(`${BASE_URL}/jobs/pause`, {
+		method: 'POST',
+		body: JSON.stringify({ jobIds })
+	});
+}
+
+export async function resumeJobs(jobIds: string[]): Promise<ResumeResponse> {
+	return fetchJson<ResumeResponse>(`${BASE_URL}/jobs/resume`, {
+		method: 'POST',
+		body: JSON.stringify({ jobIds })
 	});
 }
 

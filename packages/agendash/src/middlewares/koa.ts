@@ -4,7 +4,7 @@ import type { Agenda } from 'agenda';
 import type { Middleware, Context, Next } from 'koa';
 import { AgendashController } from '../AgendashController.js';
 import { cspHeader } from '../csp.js';
-import type { ApiQueryParams, CreateJobRequest, DeleteRequest, RequeueRequest } from '../types.js';
+import type { ApiQueryParams, CreateJobRequest, DeleteRequest, RequeueRequest, PauseRequest, ResumeRequest } from '../types.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -110,6 +110,26 @@ export async function createKoaMiddlewareAsync(agenda: Agenda): Promise<Middlewa
 		try {
 			const options = ctx.request.body as CreateJobRequest;
 			ctx.body = await controller.createJob(options);
+		} catch (error) {
+			ctx.status = 400;
+			ctx.body = { error: error instanceof Error ? error.message : 'Unknown error' };
+		}
+	});
+
+	router.post('/api/jobs/pause', async (ctx) => {
+		try {
+			const { jobIds } = ctx.request.body as PauseRequest;
+			ctx.body = await controller.pauseJobs(jobIds);
+		} catch (error) {
+			ctx.status = 400;
+			ctx.body = { error: error instanceof Error ? error.message : 'Unknown error' };
+		}
+	});
+
+	router.post('/api/jobs/resume', async (ctx) => {
+		try {
+			const { jobIds } = ctx.request.body as ResumeRequest;
+			ctx.body = await controller.resumeJobs(jobIds);
 		} catch (error) {
 			ctx.status = 400;
 			ctx.body = { error: error instanceof Error ? error.message : 'Unknown error' };

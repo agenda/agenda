@@ -178,7 +178,15 @@ export class Agenda extends EventEmitter {
 		if (!this.jobProcessor) {
 			throw new Error('agenda not running!');
 		}
-		return this.jobProcessor.getStatus(fullDetails);
+		const status = await this.jobProcessor.getStatus(fullDetails);
+
+		// Add backend info (stored in Agenda, not JobProcessor)
+		status.backend = {
+			name: this.backend.name,
+			hasNotificationChannel: this.hasNotificationChannel()
+		};
+
+		return status;
 	}
 
 	/**

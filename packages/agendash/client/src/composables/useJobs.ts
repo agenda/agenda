@@ -71,6 +71,7 @@ export function useJobs() {
 			totalPages.value = response.totalPages;
 			total.value = response.total;
 		} catch (err) {
+			// eslint-disable-next-line no-console
 			console.error('Failed to fetch jobs:', err);
 			jobs.value = [];
 			error('Failed to fetch jobs');
@@ -90,6 +91,7 @@ export function useJobs() {
 			success('Jobs requeued successfully');
 			await fetchJobs();
 		} catch (err) {
+			// eslint-disable-next-line no-console
 			console.error('Failed to requeue jobs:', err);
 			error('Failed to requeue jobs');
 		}
@@ -101,8 +103,33 @@ export function useJobs() {
 			success('Jobs deleted successfully');
 			await fetchJobs();
 		} catch (err) {
+			// eslint-disable-next-line no-console
 			console.error('Failed to delete jobs:', err);
 			error('Failed to delete jobs');
+		}
+	}
+
+	async function pauseJobs(jobIds: string[]) {
+		try {
+			await api.pauseJobs(jobIds);
+			success('Jobs paused successfully');
+			await fetchJobs();
+		} catch (err) {
+			// eslint-disable-next-line no-console
+			console.error('Failed to pause jobs:', err);
+			error('Failed to pause jobs');
+		}
+	}
+
+	async function resumeJobs(jobIds: string[]) {
+		try {
+			await api.resumeJobs(jobIds);
+			success('Jobs resumed successfully');
+			await fetchJobs();
+		} catch (err) {
+			// eslint-disable-next-line no-console
+			console.error('Failed to resume jobs:', err);
+			error('Failed to resume jobs');
 		}
 	}
 
@@ -117,6 +144,7 @@ export function useJobs() {
 			success('Job created successfully');
 			await fetchJobs();
 		} catch (err) {
+			// eslint-disable-next-line no-console
 			console.error('Failed to create job:', err);
 			error('Failed to create job');
 		}
@@ -166,6 +194,8 @@ export function useJobs() {
 		fetchJobs,
 		requeueJobs,
 		deleteJobs,
+		pauseJobs,
+		resumeJobs,
 		createJob,
 		setPage,
 		nextPage,

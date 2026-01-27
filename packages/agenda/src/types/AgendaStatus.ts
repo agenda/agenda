@@ -18,6 +18,12 @@ export interface AgendaStatus {
 		maxConcurrency: number;
 		processEvery: string | number;
 	};
+	backend: {
+		/** Backend name (e.g., 'MongoDB', 'PostgreSQL', 'Redis') */
+		name: string;
+		/** Whether a notification channel is configured for real-time processing */
+		hasNotificationChannel: boolean;
+	};
 	internal: {
 		localQueueProcessing: number;
 	};

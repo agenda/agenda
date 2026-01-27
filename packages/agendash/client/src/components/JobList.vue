@@ -16,8 +16,12 @@ const emit = defineEmits<{
 	'show-job-detail': [job: FrontendJob];
 	'confirm-delete': [job: FrontendJob];
 	'confirm-requeue': [job: FrontendJob];
+	'confirm-pause': [job: FrontendJob];
+	'confirm-resume': [job: FrontendJob];
 	'confirm-delete-multi': [jobIds: string[]];
 	'confirm-requeue-multi': [jobIds: string[]];
+	'confirm-pause-multi': [jobIds: string[]];
+	'confirm-resume-multi': [jobIds: string[]];
 	'page-next': [];
 	'page-prev': [];
 }>();
@@ -99,6 +103,14 @@ function sendDelete() {
 	emit('confirm-delete-multi', [...selectedIds.value]);
 }
 
+function sendPause() {
+	emit('confirm-pause-multi', [...selectedIds.value]);
+}
+
+function sendResume() {
+	emit('confirm-resume-multi', [...selectedIds.value]);
+}
+
 function getSortIcon(column: string): string {
 	if (currentSort.value !== column) return '';
 	return currentSortDir.value === 'asc' ? '\u25B2' : '\u25BC';
@@ -108,15 +120,31 @@ function getSortIcon(column: string): string {
 <template>
 	<div>
 		<!-- Multi-select actions -->
-		<div class="d-flex justify-content-end mb-2">
-			<span class="me-2">{{ selectedIds.length }} jobs selected</span>
+		<div class="d-flex justify-content-end mb-2 flex-wrap gap-2">
+			<span class="me-2 align-self-center">{{ selectedIds.length }} jobs selected</span>
 			<button
 				:disabled="!selectedIds.length"
-				class="btn btn-primary me-2"
+				class="btn btn-primary"
 				title="Requeue list of selected jobs"
 				@click="sendRequeue"
 			>
 				Multiple Requeue
+			</button>
+			<button
+				:disabled="!selectedIds.length"
+				class="btn btn-secondary"
+				title="Pause list of selected jobs"
+				@click="sendPause"
+			>
+				Multiple Pause
+			</button>
+			<button
+				:disabled="!selectedIds.length"
+				class="btn btn-success"
+				title="Resume list of selected jobs"
+				@click="sendResume"
+			>
+				Multiple Resume
 			</button>
 			<button
 				:disabled="!selectedIds.length"
@@ -204,6 +232,9 @@ function getSortIcon(column: string): string {
 						/>
 					</td>
 					<td scope="row" class="job-name">
+						<span v-if="job.paused" class="pill-own bg-secondary pill-without-icon">
+							<span>Paused</span>
+						</span>
 						<span v-if="job.repeating" class="pill-own bg-info">
 							<span>{{ job.job.repeatInterval }}</span>
 						</span>
@@ -258,6 +289,20 @@ function getSortIcon(column: string): string {
 							title="Requeue"
 							@click="$emit('confirm-requeue', job)"
 							>&#x21BB;</span
+						>
+						<span
+							v-if="job.paused"
+							class="action-btn text-success"
+							title="Resume job"
+							@click="$emit('confirm-resume', job)"
+							>&#x25B6;</span
+						>
+						<span
+							v-else
+							class="action-btn text-secondary"
+							title="Pause job"
+							@click="$emit('confirm-pause', job)"
+							>&#x23F8;</span
 						>
 						<span
 							class="action-btn text-success"
@@ -321,6 +366,20 @@ function getSortIcon(column: string): string {
 									>&#x21BB;</span
 								>
 								<span
+									v-if="job.paused"
+									class="action-btn text-success material-icons-size me-1"
+									title="Resume job"
+									@click="$emit('confirm-resume', job)"
+									>&#x25B6;</span
+								>
+								<span
+									v-else
+									class="action-btn text-secondary material-icons-size me-1"
+									title="Pause job"
+									@click="$emit('confirm-pause', job)"
+									>&#x23F8;</span
+								>
+								<span
 									class="action-btn text-success material-icons-size me-1"
 									title="Job Data"
 									@click="$emit('show-job-detail', job)"
@@ -335,7 +394,10 @@ function getSortIcon(column: string): string {
 							</div>
 						</div>
 						<div class="card-body">
-							<div class="d-flex justify-content-center mb-2">
+							<div class="d-flex justify-content-center mb-2 flex-wrap">
+								<span v-if="job.paused" class="pill-own me-2 bg-secondary pill-without-icon pill-own-card">
+									<span class="pill-own-card-info">Paused</span>
+								</span>
 								<span v-if="job.repeating" class="pill-own me-2 bg-info pill-own-card">
 									<span class="pill-own-card-info">{{ job.job.repeatInterval }}</span>
 								</span>

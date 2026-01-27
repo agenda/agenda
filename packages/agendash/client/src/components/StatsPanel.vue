@@ -61,6 +61,16 @@ onUnmounted(() => {
 							<span class="stat-value">{{ stats.version }}</span>
 						</div>
 						<div class="stat-item">
+							<span class="stat-label">Backend</span>
+							<span class="stat-value">{{ stats.backend?.name || 'unknown' }}</span>
+						</div>
+						<div class="stat-item">
+							<span class="stat-label">Notifications</span>
+							<span class="stat-value" :class="{ 'stat-enabled': stats.backend?.hasNotificationChannel }">
+								{{ stats.backend?.hasNotificationChannel ? 'enabled' : 'polling' }}
+							</span>
+						</div>
+						<div class="stat-item">
 							<span class="stat-label">Queue Name</span>
 							<span class="stat-value">{{ stats.queueName || 'default' }}</span>
 						</div>
@@ -195,6 +205,10 @@ onUnmounted(() => {
 
 .stat-locked {
 	color: #6c757d;
+}
+
+.stat-enabled {
+	color: #28a745;
 }
 
 .stat-badge {

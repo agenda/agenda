@@ -37,6 +37,7 @@ export interface FrontendJobData {
 	failReason?: string;
 	repeatInterval?: string | number;
 	repeatTimezone?: string;
+	disabled?: boolean;
 }
 
 /**
@@ -50,6 +51,7 @@ export interface FrontendJob {
 	completed: boolean;
 	failed: boolean;
 	repeating: boolean;
+	paused: boolean;
 }
 
 /**
@@ -123,6 +125,34 @@ export interface CreateJobResponse {
 }
 
 /**
+ * Options for pausing jobs
+ */
+export interface PauseRequest {
+	jobIds: string[];
+}
+
+/**
+ * Response from pause operation
+ */
+export interface PauseResponse {
+	pausedCount: number;
+}
+
+/**
+ * Options for resuming jobs
+ */
+export interface ResumeRequest {
+	jobIds: string[];
+}
+
+/**
+ * Response from resume operation
+ */
+export interface ResumeResponse {
+	resumedCount: number;
+}
+
+/**
  * Agendash controller interface
  */
 export interface AgendashController {
@@ -130,6 +160,8 @@ export interface AgendashController {
 	requeueJobs(ids: string[]): Promise<RequeueResponse>;
 	deleteJobs(ids: string[]): Promise<DeleteResponse>;
 	createJob(options: CreateJobRequest): Promise<CreateJobResponse>;
+	pauseJobs(ids: string[]): Promise<PauseResponse>;
+	resumeJobs(ids: string[]): Promise<ResumeResponse>;
 }
 
 /**

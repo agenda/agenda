@@ -7,6 +7,8 @@ import type {
 	CreateJobResponse,
 	DeleteResponse,
 	RequeueResponse,
+	PauseResponse,
+	ResumeResponse,
 	FrontendJob,
 	FrontendOverview
 } from './types.js';
@@ -40,14 +42,16 @@ export class AgendashController implements IAgendashController {
 				failCount: job.failCount,
 				failReason: job.failReason,
 				repeatInterval: job.repeatInterval,
-				repeatTimezone: job.repeatTimezone
+				repeatTimezone: job.repeatTimezone,
+				disabled: job.disabled
 			},
 			running: job.state === 'running',
 			scheduled: job.state === 'scheduled',
 			queued: job.state === 'queued',
 			completed: job.state === 'completed',
 			failed: job.state === 'failed',
-			repeating: job.state === 'repeating'
+			repeating: job.state === 'repeating',
+			paused: job.disabled === true
 		};
 	}
 
@@ -178,5 +182,29 @@ export class AgendashController implements IAgendashController {
 	 */
 	async getStats(fullDetails = false): Promise<AgendaStatus> {
 		return this.agenda.getRunningStats(fullDetails);
+	}
+
+	/**
+	 * Pause jobs by ID (disables them so they won't run)
+	 */
+	async pauseJobs(ids: string[]): Promise<PauseResponse> {
+		if (!ids || ids.length === 0) {
+			return { pausedCount: 0 };
+		}
+
+		const pausedCount = await this.agenda.disable({ ids });
+		return { pausedCount };
+	}
+
+	/**
+	 * Resume jobs by ID (re-enables them so they can run)
+	 */
+	async resumeJobs(ids: string[]): Promise<ResumeResponse> {
+		if (!ids || ids.length === 0) {
+			return { resumedCount: 0 };
+		}
+
+		const resumedCount = await this.agenda.enable({ ids });
+		return { resumedCount };
 	}
 }
