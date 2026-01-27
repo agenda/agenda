@@ -253,6 +253,16 @@ function getSortIcon(column: string): string {
 						<span v-if="job.running" class="pill-own bg-warning pill-without-icon">
 							<span>Running</span>
 						</span>
+						<div v-if="job.running && job.job.progress != null" class="progress mt-1" style="height: 4px; min-width: 60px;">
+							<div
+								class="progress-bar progress-bar-striped progress-bar-animated"
+								role="progressbar"
+								:style="{ width: job.job.progress + '%' }"
+								:aria-valuenow="job.job.progress"
+								aria-valuemin="0"
+								aria-valuemax="100"
+							></div>
+						</div>
 					</td>
 					<td class="job-name" @click="toggleSelection(job)">{{ job.job.name }}</td>
 					<td
@@ -422,6 +432,19 @@ function getSortIcon(column: string): string {
 								>
 									<span class="pill-own-card-info">Running</span>
 								</span>
+							</div>
+							<div v-if="job.running && job.job.progress != null" class="w-100 px-3 mb-2">
+								<div class="progress" style="height: 6px;">
+									<div
+										class="progress-bar progress-bar-striped progress-bar-animated"
+										role="progressbar"
+										:style="{ width: job.job.progress + '%' }"
+										:aria-valuenow="job.job.progress"
+										aria-valuemin="0"
+										aria-valuemax="100"
+									></div>
+								</div>
+								<small class="text-muted d-block text-center mt-1">{{ job.job.progress }}%</small>
 							</div>
 							<div class="row">
 								<div class="col col-md-6 text-center">

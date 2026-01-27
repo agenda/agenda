@@ -96,8 +96,31 @@ const rawJob = computed(() => {
 				</div>
 
 				<div class="mb-3">
-					<small class="text-muted d-block">Priority</small>
-					<strong>{{ job.job.priority ?? 0 }}</strong>
+					<div class="row">
+						<div class="col-6">
+							<small class="text-muted d-block">Priority</small>
+							<strong>{{ job.job.priority ?? 0 }}</strong>
+						</div>
+						<div class="col-6">
+							<small class="text-muted d-block">Progress</small>
+							<div v-if="job.job.progress != null" class="progress-container">
+								<div class="progress" style="height: 20px;">
+									<div
+										class="progress-bar"
+										:class="{ 'progress-bar-striped progress-bar-animated': job.running }"
+										role="progressbar"
+										:style="{ width: job.job.progress + '%' }"
+										:aria-valuenow="job.job.progress"
+										aria-valuemin="0"
+										aria-valuemax="100"
+									>
+										{{ job.job.progress }}%
+									</div>
+								</div>
+							</div>
+							<strong v-else>Not set</strong>
+						</div>
+					</div>
 				</div>
 
 				<div class="mb-3">

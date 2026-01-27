@@ -43,7 +43,8 @@ export class AgendashController implements IAgendashController {
 				failReason: job.failReason,
 				repeatInterval: job.repeatInterval,
 				repeatTimezone: job.repeatTimezone,
-				disabled: job.disabled
+				disabled: job.disabled,
+				progress: job.progress
 			},
 			running: job.state === 'running',
 			scheduled: job.state === 'scheduled',
