@@ -198,4 +198,94 @@ describe('AgendashController', () => {
 			expect(result.requeuedCount).toBe(0);
 		});
 	});
+
+	describe('pauseJobs', () => {
+		it('should pause jobs by ID', async () => {
+			await agenda.now('test-job', { id: 1 });
+			const jobs = await controller.getJobs({});
+			const jobId = jobs.jobs[0].job._id;
+
+			const result = await controller.pauseJobs([jobId]);
+
+			expect(result.pausedCount).toBe(1);
+
+			// Verify job is now paused
+			const updatedJobs = await controller.getJobs({});
+			expect(updatedJobs.jobs[0].paused).toBe(true);
+			expect(updatedJobs.jobs[0].job.disabled).toBe(true);
+		});
+
+		it('should return 0 for empty array', async () => {
+			const result = await controller.pauseJobs([]);
+
+			expect(result.pausedCount).toBe(0);
+		});
+
+		it('should pause multiple jobs', async () => {
+			await agenda.now('test-job', { id: 1 });
+			await agenda.now('test-job', { id: 2 });
+
+			const jobs = await controller.getJobs({});
+			const jobIds = jobs.jobs.map((j) => j.job._id);
+
+			const result = await controller.pauseJobs(jobIds);
+
+			expect(result.pausedCount).toBe(2);
+
+			// Verify all jobs are paused
+			const updatedJobs = await controller.getJobs({});
+			expect(updatedJobs.jobs.every((j) => j.paused)).toBe(true);
+		});
+	});
+
+	describe('resumeJobs', () => {
+		it('should resume paused jobs by ID', async () => {
+			await agenda.now('test-job', { id: 1 });
+			const jobs = await controller.getJobs({});
+			const jobId = jobs.jobs[0].job._id;
+
+			// First pause the job
+			await controller.pauseJobs([jobId]);
+
+			// Verify it's paused
+			const pausedJobs = await controller.getJobs({});
+			expect(pausedJobs.jobs[0].paused).toBe(true);
+
+			// Resume the job
+			const result = await controller.resumeJobs([jobId]);
+
+			expect(result.resumedCount).toBe(1);
+
+			// Verify job is resumed
+			const resumedJobs = await controller.getJobs({});
+			expect(resumedJobs.jobs[0].paused).toBe(false);
+			expect(resumedJobs.jobs[0].job.disabled).toBeFalsy();
+		});
+
+		it('should return 0 for empty array', async () => {
+			const result = await controller.resumeJobs([]);
+
+			expect(result.resumedCount).toBe(0);
+		});
+
+		it('should resume multiple jobs', async () => {
+			await agenda.now('test-job', { id: 1 });
+			await agenda.now('test-job', { id: 2 });
+
+			const jobs = await controller.getJobs({});
+			const jobIds = jobs.jobs.map((j) => j.job._id);
+
+			// Pause all jobs
+			await controller.pauseJobs(jobIds);
+
+			// Resume all jobs
+			const result = await controller.resumeJobs(jobIds);
+
+			expect(result.resumedCount).toBe(2);
+
+			// Verify all jobs are resumed
+			const resumedJobs = await controller.getJobs({});
+			expect(resumedJobs.jobs.every((j) => !j.paused)).toBe(true);
+		});
+	});
 });

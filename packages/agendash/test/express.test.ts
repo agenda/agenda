@@ -139,6 +139,69 @@ describe('Express Middleware', () => {
 		});
 	});
 
+	describe('POST /api/jobs/pause', () => {
+		it('should pause jobs', async () => {
+			await agenda.now('test-job', { id: 1 });
+			const jobsRes = await request(app).get('/dash/api');
+			const jobId = jobsRes.body.jobs[0].job._id;
+
+			const res = await request(app)
+				.post('/dash/api/jobs/pause')
+				.send({ jobIds: [jobId] })
+				.expect(200);
+
+			expect(res.body.pausedCount).toBe(1);
+
+			// Verify job is now paused
+			const updatedJobs = await request(app).get('/dash/api');
+			expect(updatedJobs.body.jobs[0].paused).toBe(true);
+			expect(updatedJobs.body.jobs[0].job.disabled).toBe(true);
+		});
+
+		it('should return 0 for empty array', async () => {
+			const res = await request(app)
+				.post('/dash/api/jobs/pause')
+				.send({ jobIds: [] })
+				.expect(200);
+
+			expect(res.body.pausedCount).toBe(0);
+		});
+	});
+
+	describe('POST /api/jobs/resume', () => {
+		it('should resume paused jobs', async () => {
+			await agenda.now('test-job', { id: 1 });
+			const jobsRes = await request(app).get('/dash/api');
+			const jobId = jobsRes.body.jobs[0].job._id;
+
+			// First pause the job
+			await request(app)
+				.post('/dash/api/jobs/pause')
+				.send({ jobIds: [jobId] });
+
+			// Then resume it
+			const res = await request(app)
+				.post('/dash/api/jobs/resume')
+				.send({ jobIds: [jobId] })
+				.expect(200);
+
+			expect(res.body.resumedCount).toBe(1);
+
+			// Verify job is resumed
+			const updatedJobs = await request(app).get('/dash/api');
+			expect(updatedJobs.body.jobs[0].paused).toBe(false);
+		});
+
+		it('should return 0 for empty array', async () => {
+			const res = await request(app)
+				.post('/dash/api/jobs/resume')
+				.send({ jobIds: [] })
+				.expect(200);
+
+			expect(res.body.resumedCount).toBe(0);
+		});
+	});
+
 	describe('Static files', () => {
 		it('should serve index.html', async () => {
 			const res = await request(app).get('/dash/').expect(200);

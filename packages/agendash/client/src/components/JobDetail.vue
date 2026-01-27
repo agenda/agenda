@@ -58,6 +58,11 @@ const rawJob = computed(() => {
 		<div class="modal-body">
 			<!-- Details Tab -->
 			<div v-if="activeTab === 'details'">
+				<div v-if="job.paused" class="alert alert-secondary mb-3">
+					<strong>Status: Paused</strong>
+					<div class="small">This job is paused and will not run until resumed.</div>
+				</div>
+
 				<div class="mb-3">
 					<div class="row">
 						<div class="col-6">
