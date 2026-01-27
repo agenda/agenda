@@ -56,6 +56,7 @@ export interface PostgresJobRow {
 	progress: number | null;
 	fork: boolean;
 	last_modified_by: string | null;
+	debounce_started_at: Date | null;
 	created_at: Date;
 	updated_at: Date;
 }

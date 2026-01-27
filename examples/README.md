@@ -41,6 +41,7 @@ Depending on the example, you'll need one of these databases running:
 | [unique-jobs.ts](./unique-jobs.ts) | Preventing duplicate jobs with `unique()` |
 | [job-data-types.ts](./job-data-types.ts) | TypeScript generics for type-safe job data |
 | [backoff-retry.ts](./backoff-retry.ts) | Automatic retry with backoff strategies (constant, linear, exponential) |
+| [debounce.ts](./debounce.ts) | Job debouncing to combine rapid submissions into single execution |
 
 ## Quick Start
 
@@ -140,6 +141,31 @@ agenda.on('retry', (job, details) => {
 agenda.on('retry exhausted', (err, job) => {
   console.log(`Job ${job.attrs.name} failed after ${job.attrs.failCount} attempts`);
 });
+```
+
+### Job Debouncing
+
+```typescript
+// Combine rapid job submissions into single execution
+// Requires unique() constraint to identify jobs to debounce together
+
+// Trailing debounce (default): execute after quiet period
+await agenda.create('updateSearchIndex', { entityType: 'products' })
+  .unique({ 'data.entityType': 'products' })
+  .debounce(2000)  // Wait 2s after last save
+  .save();
+
+// Leading debounce: execute immediately, ignore subsequent calls
+await agenda.create('sendAlert', { channel: '#alerts' })
+  .unique({ 'data.channel': '#alerts' })
+  .debounce(60000, { strategy: 'leading' })
+  .save();
+
+// With maxWait: guarantee execution within max time
+await agenda.create('syncUserData', { userId: 123 })
+  .unique({ 'data.userId': 123 })
+  .debounce(5000, { maxWait: 30000 })
+  .save();
 ```
 
 ### Graceful Shutdown

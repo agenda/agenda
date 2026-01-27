@@ -26,6 +26,7 @@
  * - notificationChannelTestSuite - Tests INotificationChannel interface
  * - jobProcessorTestSuite - JobProcessor concurrency and stats tests
  * - retryTestSuite - Job retry behavior tests
+ * - debounceTestSuite - Job debouncing with unique constraints
  */
 
 // Test utilities
@@ -44,3 +45,4 @@ export { agendaTestSuite, type AgendaTestConfig, type ForkHelperConfig } from '.
 export { jobProcessorTestSuite, type JobProcessorTestConfig } from './jobprocessor-test-suite.js';
 export { retryTestSuite, type RetryTestConfig } from './retry-test-suite.js';
 export { backoffTestSuite, type BackoffTestConfig } from './backoff-test-suite.js';
+export { debounceTestSuite, type DebounceTestConfig } from './debounce-test-suite.js';

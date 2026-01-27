@@ -308,3 +308,81 @@ const channel = new MongoChangeStreamNotificationChannel({
 - `BaseNotificationChannel` - Abstract base class with state management and reconnection logic
 - `InMemoryNotificationChannel` - In-memory implementation for testing/single-process
 - `MongoChangeStreamNotificationChannel` - MongoDB Change Streams for native real-time notifications (from `@agendajs/mongo-backend`)
+
+## Job Debouncing
+
+Debouncing allows you to combine multiple rapid job submissions into a single execution. This is useful for scenarios like:
+- Updating a search index after rapid document changes
+- Syncing user data after multiple rapid updates
+- Rate-limiting notifications
+
+### How It Works
+
+Debouncing uses the `unique()` constraint combined with a `.debounce()` modifier. When multiple saves occur for the same unique key within the debounce window, only one job execution happens.
+
+```
+Timeline: job.save() calls for same unique key
+          ↓       ↓       ↓
+          T=0     T=2s    T=4s                 T=9s
+
+TRAILING (default):
+  nextRunAt: 5s  →  7s  →  9s        executes→ ✓
+  Effect: Waits for "quiet period", runs once at end
+
+LEADING:
+  nextRunAt: 0   →  0   →  0         executes→ ✓ (at T=0)
+  Effect: Runs immediately on first call, ignores rest during window
+```
+
+### Usage
+
+```typescript
+// Basic trailing debounce - execute 2s after last save
+await agenda.create('updateSearchIndex', { entityType: 'products' })
+  .unique({ 'data.entityType': 'products' })
+  .debounce(2000)
+  .save();
+
+// Multiple rapid calls → single execution after 2s quiet period
+for (const change of rapidChanges) {
+  await agenda.create('updateSearchIndex', { entityType: 'products', change })
+    .unique({ 'data.entityType': 'products' })
+    .debounce(2000)
+    .save();
+}
+// → Executes once with the last change's data
+
+// With maxWait - guarantee execution within 30s
+await agenda.create('syncUserActivity', { userId: 123 })
+  .unique({ 'data.userId': 123 })
+  .debounce(5000, { maxWait: 30000 })
+  .save();
+// → Even with continuous saves, job runs within 30s
+
+// Leading strategy - execute immediately, ignore subsequent calls
+await agenda.create('sendNotification', { channel: '#alerts' })
+  .unique({ 'data.channel': '#alerts' })
+  .debounce(60000, { strategy: 'leading' })
+  .save();
+// → First call executes immediately, subsequent calls within 60s are ignored
+```
+
+### Debounce Options
+
+```typescript
+interface DebounceOptions {
+  delay: number;                        // Debounce window in milliseconds (required)
+  maxWait?: number;                     // Max time before forced execution
+  strategy?: 'trailing' | 'leading';    // Default: 'trailing'
+}
+```
+
+- **trailing** (default): Execute after quiet period ends. Each save resets the timer.
+- **leading**: Execute immediately on first call, ignore subsequent calls during window.
+- **maxWait**: With trailing strategy, guarantees execution within maxWait even if saves keep coming.
+
+### Requirements
+
+- Debounce requires a `unique()` constraint to identify which jobs should be debounced together
+- Without `unique()`, each save creates a new job (no debouncing occurs)
+- The debounce state (`debounceStartedAt`) is persisted in the database, so it survives process restarts

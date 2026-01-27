@@ -11,6 +11,50 @@ export function toJobId(id: string): JobId {
 	return id as JobId;
 }
 
+/**
+ * Options for debouncing job execution.
+ * Debouncing delays job execution and resets the timer on subsequent saves,
+ * ensuring the job only runs once after a quiet period.
+ */
+export interface DebounceOptions {
+	/**
+	 * Debounce window in milliseconds.
+	 * The job will be scheduled to run this many ms after the last save.
+	 */
+	delay: number;
+
+	/**
+	 * Maximum time to wait before forcing execution (in milliseconds).
+	 * If set, the job will execute within maxWait even if new saves keep coming.
+	 * Without maxWait, continuous saves could delay execution indefinitely.
+	 */
+	maxWait?: number;
+
+	/**
+	 * Debounce strategy:
+	 * - 'trailing' (default): Execute after quiet period ends (last call wins)
+	 * - 'leading': Execute immediately on first call, ignore subsequent calls during window
+	 */
+	strategy?: 'trailing' | 'leading';
+}
+
+/**
+ * Options for unique constraint behavior during job save.
+ */
+export interface UniqueOpts {
+	/**
+	 * If true, only insert if no matching job exists.
+	 * Existing jobs are returned unchanged.
+	 */
+	insertOnly?: boolean;
+
+	/**
+	 * Debounce options for combining rapid job saves.
+	 * Requires a unique constraint to be set.
+	 */
+	debounce?: DebounceOptions;
+}
+
 export interface JobParameters<DATA = unknown | void> {
 	/** Job ID */
 	_id?: JobId;
@@ -43,9 +87,13 @@ export interface JobParameters<DATA = unknown | void> {
 	 * The implementation interprets this for upsert operations.
 	 */
 	unique?: Record<string, unknown>;
-	uniqueOpts?: {
-		insertOnly: boolean;
-	};
+	uniqueOpts?: UniqueOpts;
+
+	/**
+	 * Tracks when debounce window started.
+	 * Used internally for maxWait calculations.
+	 */
+	debounceStartedAt?: Date;
 
 	lastModifiedBy?: string;
 
@@ -73,7 +121,7 @@ export interface JobParameters<DATA = unknown | void> {
 
 export type TJobDatefield = keyof Pick<
 	JobParameters,
-	'lastRunAt' | 'lastFinishedAt' | 'nextRunAt' | 'failedAt' | 'lockedAt' | 'startDate' | 'endDate'
+	'lastRunAt' | 'lastFinishedAt' | 'nextRunAt' | 'failedAt' | 'lockedAt' | 'startDate' | 'endDate' | 'debounceStartedAt'
 >;
 
 export const datefields: Array<TJobDatefield> = [
@@ -83,5 +131,6 @@ export const datefields: Array<TJobDatefield> = [
 	'failedAt',
 	'lockedAt',
 	'startDate',
-	'endDate'
+	'endDate',
+	'debounceStartedAt'
 ];

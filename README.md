@@ -57,7 +57,7 @@ better suits your needs.
 | Delayed jobs               |        ✓        |        ✓        |          |          ✓          |            ✓            |
 | Global events              |        ✓        |        ✓        |          |                     |            ✓            |
 | Rate Limiter               |        ✓        |        ✓        |          |          ✓          |                         |
-| Debouncing                 |        ✓        |                 |          |          ✓          |                         |
+| Debouncing                 |        ✓        |                 |          |          ✓          |            ✓            |
 | Pause/Resume               |        ✓        |        ✓        |          |                     |            ✓            |
 | Sandboxed worker           |        ✓        |        ✓        |          |                     |            ✓            |
 | Repeatable jobs            |        ✓        |        ✓        |          |          ✓          |            ✓            |
@@ -177,6 +177,7 @@ mapped to a database collection and load the jobs from within.
 - [Agenda Events](#agenda-events)
 - [Defining job processors](#defining-job-processors)
 - [Automatic Retry with Backoff](#automatic-retry-with-backoff)
+- [Job Debouncing](#job-debouncing)
 - [Creating jobs](#creating-jobs)
 - [Managing jobs](#managing-jobs)
 - [Starting the job processor](#starting-the-job-processor)
@@ -822,6 +823,122 @@ agenda.on('retry exhausted:critical-job', (error, job) => {
 - **Repeating jobs can use backoff**: If a repeating job (created with `every()`) has a backoff configured and fails, it will retry immediately rather than waiting for the next scheduled run
 - **Manual retry still works**: You can still listen to `fail` events and manually reschedule if needed
 
+## Job Debouncing
+
+Debouncing allows you to combine multiple rapid job submissions into a single execution. This is useful for scenarios like:
+- Updating a search index after rapid document changes
+- Syncing user data after multiple rapid updates
+- Rate-limiting notifications
+
+### How It Works
+
+Debouncing uses the `unique()` constraint combined with a `.debounce()` modifier. When multiple saves occur for the same unique key within the debounce window, only one job execution happens.
+
+```
+Timeline: job.save() calls for same unique key
+          ↓       ↓       ↓
+          T=0     T=2s    T=4s                 T=9s
+
+TRAILING (default):
+  nextRunAt: 5s  →  7s  →  9s        executes→ ✓
+  Effect: Waits for "quiet period", runs once at end
+
+LEADING:
+  nextRunAt: 0   →  0   →  0         executes→ ✓ (at T=0)
+  Effect: Runs immediately on first call, ignores rest during window
+```
+
+### Basic Usage
+
+```js
+import { Agenda } from 'agenda';
+import { MongoBackend } from '@agendajs/mongo-backend';
+
+const agenda = new Agenda({
+	backend: new MongoBackend({ address: 'mongodb://localhost/agenda' })
+});
+
+// Debounce job - execute 2s after last save
+await agenda.create('updateSearchIndex', { entityType: 'products' })
+  .unique({ 'data.entityType': 'products' })
+  .debounce(2000)
+  .save();
+
+// Multiple rapid calls → single execution after 2s quiet period
+for (const change of rapidChanges) {
+  await agenda.create('updateSearchIndex', { entityType: 'products', change })
+    .unique({ 'data.entityType': 'products' })
+    .debounce(2000)
+    .save();
+}
+// → Executes once with the last change's data
+```
+
+### Debounce Strategies
+
+#### Trailing (Default)
+
+The job executes after a quiet period. Each save resets the timer.
+
+```js
+await agenda.create('syncUserActivity', { userId: 123 })
+  .unique({ 'data.userId': 123 })
+  .debounce(5000)  // Wait 5s after last save
+  .save();
+```
+
+#### Leading
+
+The job executes immediately on first call. Subsequent calls within the window are ignored.
+
+```js
+await agenda.create('sendNotification', { channel: '#alerts' })
+  .unique({ 'data.channel': '#alerts' })
+  .debounce(60000, { strategy: 'leading' })
+  .save();
+// → First call executes immediately, subsequent calls within 60s are ignored
+```
+
+### maxWait Option
+
+With trailing strategy, `maxWait` guarantees execution within a maximum time even if saves keep coming.
+
+```js
+await agenda.create('syncUserActivity', { userId: 123 })
+  .unique({ 'data.userId': 123 })
+  .debounce(5000, { maxWait: 30000 })
+  .save();
+// → Even with continuous saves, job runs within 30s
+```
+
+### Debounce Options Reference
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `delay` | number | - | Debounce window in milliseconds (required, first argument) |
+| `strategy` | `'trailing'` \| `'leading'` | `'trailing'` | When to execute the job |
+| `maxWait` | number | - | Max time before forced execution (trailing only) |
+
+### Requirements
+
+- **Requires `unique()` constraint**: Debounce identifies which jobs to combine using the unique key
+- **Without `unique()`**: Each save creates a new job (no debouncing occurs)
+- **Persistence**: Debounce state is stored in the database, surviving process restarts
+
+### Helper Method: nowDebounced()
+
+For convenience, use `nowDebounced()` to create a debounced job in one call:
+
+```js
+// Equivalent to create().unique().debounce().save()
+await agenda.nowDebounced(
+  'updateSearchIndex',
+  { entityType: 'products' },
+  { 'data.entityType': 'products' },  // unique query
+  { delay: 2000 }                      // debounce options
+);
+```
+
 ## Creating Jobs
 
 ### every(interval, name, [data], [options])
@@ -1216,6 +1333,27 @@ await job.save();
 ```
 
 _IMPORTANT:_ To avoid high CPU usage by MongoDB, make sure to create an index on the used fields, like `data.type` and `data.userId` for the example above.
+
+### debounce(delay, [options])
+
+Configures debouncing for the job. Requires a `unique()` constraint to be set. See [Job Debouncing](#job-debouncing) for detailed documentation.
+
+`delay` is the debounce window in milliseconds.
+
+`options` is an optional argument:
+- `strategy`: `'trailing'` (default) or `'leading'` - when to execute the job
+- `maxWait`: number - maximum time before forced execution (trailing only)
+
+```js
+job.unique({ 'data.userId': 123 });
+job.debounce(5000);  // 5 second debounce
+await job.save();
+
+// With options
+job.unique({ 'data.channel': '#alerts' });
+job.debounce(60000, { strategy: 'leading' });
+await job.save();
+```
 
 ### fail(reason)
 

@@ -733,6 +733,60 @@ export class Agenda extends EventEmitter {
 	}
 
 	/**
+	 * Create a debounced job that combines rapid submissions into a single execution.
+	 * Requires a unique key to identify which jobs should be debounced together.
+	 *
+	 * @param name - Job name
+	 * @param data - Job data
+	 * @param uniqueKey - Unique constraint to identify jobs (e.g., { 'data.userId': 123 })
+	 * @param debounceMs - Debounce delay in milliseconds
+	 * @param options - Optional debounce options (maxWait, strategy)
+	 *
+	 * @example
+	 * ```ts
+	 * // Debounce search index updates by entity type
+	 * await agenda.nowDebounced(
+	 *   'updateSearchIndex',
+	 *   { entityType: 'products' },
+	 *   { 'data.entityType': 'products' },
+	 *   2000
+	 * );
+	 *
+	 * // With maxWait to guarantee execution within 30s
+	 * await agenda.nowDebounced(
+	 *   'syncUser',
+	 *   { userId: 123 },
+	 *   { 'data.userId': 123 },
+	 *   5000,
+	 *   { maxWait: 30000 }
+	 * );
+	 * ```
+	 */
+	async nowDebounced<DATA = unknown>(
+		name: string,
+		data: DATA,
+		uniqueKey: Record<string, unknown>,
+		debounceMs: number,
+		options?: { maxWait?: number; strategy?: 'trailing' | 'leading' }
+	): Promise<Job<DATA>> {
+		log('Agenda.nowDebounced(%s, [Object], %O, %d)', name, uniqueKey, debounceMs);
+		try {
+			const job = this.create(name, data);
+
+			job.schedule(new Date())
+				.unique(uniqueKey)
+				.debounce(debounceMs, options);
+
+			await job.save();
+
+			return job;
+		} catch (error) {
+			log('error trying to create a debounced job');
+			throw error;
+		}
+	}
+
+	/**
 	 * Starts processing jobs using processJobs() methods, storing an interval ID
 	 * This method will only resolve if a db has been set up beforehand.
 	 */
