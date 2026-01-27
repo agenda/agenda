@@ -4,6 +4,7 @@
  *
  * Usage: pnpm --filter agendash dev
  * With external MongoDB: MONGO_URL=mongodb://localhost:27017/mydb pnpm --filter agendash dev
+ * Fill with 10,000 jobs: FILL_JOBS=true pnpm --filter agendash dev
  */
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
@@ -35,6 +36,82 @@ async function getMongoUrl(): Promise<{ url: string; cleanup?: () => Promise<voi
 			await mongod.stop();
 		}
 	};
+}
+
+async function fillWithJobs(agenda: Agenda, count: number): Promise<void> {
+	console.log(`\nFilling database with ${count} jobs...`);
+	const startTime = Date.now();
+
+	const jobTypes = ['test-job', 'failing-job', 'slow-job', 'future-job'];
+	const priorities = ['lowest', 'low', 'normal', 'high', 'highest'] as const;
+	const batchSize = 500;
+
+	for (let i = 0; i < count; i += batchSize) {
+		const jobs = [];
+		const currentBatchSize = Math.min(batchSize, count - i);
+
+		for (let j = 0; j < currentBatchSize; j++) {
+			const index = i + j;
+			const jobType = jobTypes[index % jobTypes.length];
+			const priority = priorities[index % priorities.length];
+
+			// Create varied scheduling times
+			let scheduleDate: Date;
+			const variation = index % 10;
+
+			if (variation < 3) {
+				// 30% scheduled in the past (completed/failed simulation)
+				scheduleDate = new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000);
+			} else if (variation < 6) {
+				// 30% scheduled for near future (queued)
+				scheduleDate = new Date(Date.now() + Math.random() * 60 * 60 * 1000);
+			} else if (variation < 8) {
+				// 20% scheduled for days ahead
+				scheduleDate = new Date(Date.now() + Math.random() * 30 * 24 * 60 * 60 * 1000);
+			} else {
+				// 20% scheduled for months ahead
+				scheduleDate = new Date(Date.now() + Math.random() * 365 * 24 * 60 * 60 * 1000);
+			}
+
+			const job = agenda.create(jobType, {
+				index,
+				batch: Math.floor(index / 100),
+				category: ['email', 'notification', 'sync', 'cleanup', 'report'][index % 5],
+				userId: `user-${index % 1000}`,
+				createdAt: new Date().toISOString()
+			});
+
+			job.schedule(scheduleDate);
+			job.priority(priority);
+
+			// Simulate some completed/failed jobs by setting lastFinishedAt
+			if (variation < 2) {
+				// ~20% completed successfully
+				job.attrs.lastFinishedAt = new Date(scheduleDate.getTime() + 1000);
+				job.attrs.lastRunAt = scheduleDate;
+				job.attrs.nextRunAt = undefined;
+			} else if (variation === 2) {
+				// ~10% failed
+				job.attrs.lastFinishedAt = new Date(scheduleDate.getTime() + 1000);
+				job.attrs.lastRunAt = scheduleDate;
+				job.attrs.failedAt = new Date(scheduleDate.getTime() + 1000);
+				job.attrs.failReason = 'Simulated failure for testing';
+				job.attrs.failCount = Math.floor(Math.random() * 5) + 1;
+				job.attrs.nextRunAt = undefined;
+			}
+
+			jobs.push(job);
+		}
+
+		// Save batch
+		await Promise.all(jobs.map((job) => job.save()));
+
+		const progress = Math.min(100, Math.round(((i + currentBatchSize) / count) * 100));
+		process.stdout.write(`\r  Progress: ${progress}% (${i + currentBatchSize}/${count} jobs)`);
+	}
+
+	const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+	console.log(`\n  Completed in ${elapsed}s\n`);
 }
 
 async function startDevServer() {
@@ -73,6 +150,11 @@ async function startDevServer() {
 	});
 
 	await agenda.start();
+
+	// Fill with 10,000 jobs if FILL_JOBS is set
+	if (process.env.FILL_JOBS === 'true') {
+		await fillWithJobs(agenda, 10000);
+	}
 
 	// Schedule some recurring jobs for testing
 	await agenda.every('1 minute', 'test-job', { example: 'data' });
