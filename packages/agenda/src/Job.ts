@@ -31,6 +31,17 @@ export class Job<DATA = unknown | void> {
 
 	private forkedChild?: ChildProcess;
 
+	/**
+	 * Internal storage for nextRunAt value
+	 */
+	private _nextRunAt: Date | null | undefined;
+
+	/**
+	 * Flag to track if nextRunAt was explicitly set by user code.
+	 * When true, save() won't overwrite nextRunAt from DB result to avoid race conditions.
+	 */
+	private _nextRunAtExplicitlySet = false;
+
 	cancel(error?: Error) {
 		this.canceled = error || true;
 		if (this.forkedChild) {
@@ -79,25 +90,60 @@ export class Job<DATA = unknown | void> {
 		},
 		private readonly byJobProcessor = false
 	) {
-		// Set attrs to args
-		this.attrs = {
-			...args,
+		// Initialize internal nextRunAt storage
+		this._nextRunAt = args.nextRunAt === undefined ? new Date() : args.nextRunAt;
+
+		// Create attrs object without nextRunAt first (nextRunAt handled via getter/setter)
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		const { nextRunAt: _unusedNextRunAt, ...restArgs } = args;
+		const attrsBase = {
+			...restArgs,
 			// Set defaults if undefined
 			priority: parsePriority(args.priority),
-			nextRunAt: args.nextRunAt === undefined ? new Date() : args.nextRunAt,
 			type: args.type
 		};
+
+		// Set attrs and define getter/setter for nextRunAt to track explicit modifications
+		this.attrs = attrsBase as JobParameters<DATA>;
+		Object.defineProperty(this.attrs, 'nextRunAt', {
+			get: () => this._nextRunAt,
+			set: (value: Date | null | undefined) => {
+				this._nextRunAt = value;
+				this._nextRunAtExplicitlySet = true;
+			},
+			enumerable: true,
+			configurable: true
+		});
 	}
 
 	/**
-	 * Given a job, turn it into an JobParameters object
+	 * Fields managed by the job processor that should not be overwritten
+	 * when user code explicitly sets nextRunAt (e.g., via schedule()).
 	 */
-	toJson(): JobParameters {
+	private static readonly PROCESSOR_MANAGED_FIELDS = new Set([
+		'lockedAt',
+		'lastRunAt',
+		'lastFinishedAt',
+		'failedAt',
+		'failCount',
+		'failReason',
+		'progress'
+	]);
+
+	/**
+	 * Given a job, turn it into an JobParameters object
+	 * @param excludeProcessorFields - If true, excludes fields managed by the job processor
+	 */
+	toJson(excludeProcessorFields = false): JobParameters {
 		const result = {} as JobParameters;
 		const attrs = this.attrs as unknown as Record<string, unknown>;
 
 		for (const key of Object.keys(attrs)) {
 			if (Object.hasOwnProperty.call(attrs, key)) {
+				// Skip processor-managed fields if requested
+				if (excludeProcessorFields && Job.PROCESSOR_MANAGED_FIELDS.has(key)) {
+					continue;
+				}
 				(result as unknown as Record<string, unknown>)[key] =
 					datefields.includes(key as TJobDatefield) && attrs[key]
 						? new Date(attrs[key] as string | number | Date)
@@ -334,12 +380,20 @@ export class Job<DATA = unknown | void> {
 		}
 		// ensure db connection is ready
 		await this.agenda.ready;
-		const result = await this.agenda.db.saveJob(this.toJson(), {
+
+		// Capture whether nextRunAt was explicitly set before we potentially overwrite it
+		const wasNextRunAtExplicitlySet = this._nextRunAtExplicitlySet;
+		this._nextRunAtExplicitlySet = false;
+
+		// When nextRunAt was explicitly set (e.g., via schedule()), only save user fields,
+		// not processor-managed fields like lockedAt, failCount, etc.
+		// This prevents race conditions when save() is called without awaiting.
+		const result = await this.agenda.db.saveJob(this.toJson(wasNextRunAtExplicitlySet), {
 			lastModifiedBy: this.agenda.attrs.name || undefined
 		});
 		// Update attrs from result
 		this.attrs._id = result._id;
-		this.attrs.nextRunAt = result.nextRunAt;
+		this._nextRunAt = result.nextRunAt;
 
 		// Publish notification for real-time processing if channel is configured
 		if (this.agenda.hasNotificationChannel()) {
@@ -399,7 +453,7 @@ export class Job<DATA = unknown | void> {
 		try {
 			if (this.attrs.repeatInterval) {
 				const nextRunAt = computeFromInterval(this.attrs);
-				this.attrs.nextRunAt = nextRunAt;
+				this._nextRunAt = nextRunAt;
 				if (nextRunAt) {
 					log(
 						'[%s:%s] nextRunAt set to [%s]',
@@ -416,7 +470,7 @@ export class Job<DATA = unknown | void> {
 				}
 			} else if (this.attrs.repeatAt) {
 				const nextRunAt = computeFromRepeatAt(this.attrs);
-				this.attrs.nextRunAt = nextRunAt;
+				this._nextRunAt = nextRunAt;
 
 				if (nextRunAt) {
 					log(
@@ -433,10 +487,10 @@ export class Job<DATA = unknown | void> {
 					);
 				}
 			} else {
-				this.attrs.nextRunAt = null;
+				this._nextRunAt = null;
 			}
 		} catch (error) {
-			this.attrs.nextRunAt = null;
+			this._nextRunAt = null;
 			this.fail(error as Error);
 		}
 
@@ -477,9 +531,9 @@ export class Job<DATA = unknown | void> {
 			return;
 		}
 
-		// Schedule retry
+		// Schedule retry (use internal setter to not mark as user-explicit)
 		const nextRunAt = new Date(Date.now() + retryDelay);
-		this.attrs.nextRunAt = nextRunAt;
+		this._nextRunAt = nextRunAt;
 
 		log(
 			'[%s:%s] scheduling retry #%d in %dms (at %s)',

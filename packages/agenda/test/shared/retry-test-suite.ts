@@ -63,7 +63,35 @@ export function retryTestSuite(config: RetryTestConfig): void {
 			await config.clearJobs(backend);
 		});
 
-		it('should retry a job', { timeout: 100000 }, async () => {
+		it('should retry a job - via attrs.nextRunAt', async () => {
+			let shouldFail = true;
+
+			agenda.define('a job', (_job, done) => {
+				if (shouldFail) {
+					shouldFail = false;
+					return done(new Error('test failure'));
+				}
+
+				done();
+				return undefined;
+			});
+
+			agenda.on('fail:a job', (_err, job) => {
+				// Do nothing as this is expected to fail.
+				job.attrs.nextRunAt = new Date();
+			});
+
+			const successPromise = new Promise(resolve => {
+				agenda.on('success:a job', resolve);
+			});
+
+			await agenda.now('a job');
+
+			await agenda.start();
+			await successPromise;
+		});
+
+		it('should retry a job - via schedule()', async () => {
 			let shouldFail = true;
 
 			agenda.define('a job', (_job, done) => {
@@ -91,7 +119,32 @@ export function retryTestSuite(config: RetryTestConfig): void {
 			await successPromise;
 		});
 
-		it('should track failCount on retry', async () => {
+		it('should track failCount on retry - via attrs.nextRunAt', async () => {
+			let attempts = 0;
+
+			agenda.define('failing-job', async () => {
+				attempts++;
+				if (attempts < 3) {
+					throw new Error(`Attempt ${attempts} failed`);
+				}
+			});
+
+			agenda.on('fail:failing-job', (_err, job) => {
+				// Retry immediately
+				job.attrs.nextRunAt = new Date();
+			});
+
+			const successPromise = new Promise(resolve => {
+				agenda.on('success:failing-job', resolve);
+			});
+
+			await agenda.now('failing-job');
+			await agenda.start();
+			await successPromise;
+			expect(attempts).toBe(3);
+		});
+
+		it('should track failCount on retry - via schedule()', async () => {
 			let attempts = 0;
 
 			agenda.define('failing-job', async () => {
