@@ -90,5 +90,15 @@ export function createExpressMiddleware(agenda: Agenda): Router {
 		}
 	});
 
+	router.get('/api/stats', async (req, res) => {
+		try {
+			const fullDetails = req.query.fullDetails === 'true';
+			const result = await controller.getStats(fullDetails);
+			res.json(result);
+		} catch (error) {
+			res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+		}
+	});
+
 	return router;
 }

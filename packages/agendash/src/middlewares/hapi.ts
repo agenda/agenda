@@ -160,6 +160,24 @@ export function createHapiPlugin(agenda: Agenda): Plugin<AgendashHapiOptions> {
 					auth: authConfig
 				}
 			});
+
+			server.route({
+				method: 'GET',
+				path: '/api/stats',
+				handler: async (request: Request, h: ResponseToolkit) => {
+					try {
+						const fullDetails = (request.query as { fullDetails?: string }).fullDetails === 'true';
+						return await controller.getStats(fullDetails);
+					} catch (error) {
+						return h
+							.response({ error: error instanceof Error ? error.message : 'Unknown error' })
+							.code(500);
+					}
+				},
+				options: {
+					auth: authConfig
+				}
+			});
 		}
 	};
 }

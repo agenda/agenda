@@ -913,6 +913,8 @@ export * from './types/NotificationChannel.js';
 
 export * from './types/AgendaBackend.js';
 
+export * from './types/AgendaStatus.js';
+
 export * from './notifications/index.js';
 
 export {

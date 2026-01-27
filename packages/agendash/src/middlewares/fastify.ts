@@ -117,5 +117,20 @@ export function createFastifyPlugin(agenda: Agenda): FastifyPluginCallback {
 				}
 			}
 		);
+
+		instance.get<{ Querystring: { fullDetails?: string } }>(
+			'/api/stats',
+			async (request: FastifyRequest<{ Querystring: { fullDetails?: string } }>, reply: FastifyReply) => {
+				try {
+					const fullDetails = request.query.fullDetails === 'true';
+					const result = await controller.getStats(fullDetails);
+					return reply.send(result);
+				} catch (error) {
+					return reply
+						.status(500)
+						.send({ error: error instanceof Error ? error.message : 'Unknown error' });
+				}
+			}
+		);
 	};
 }

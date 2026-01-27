@@ -1,4 +1,4 @@
-import type { Agenda, JobState, JobWithState, JobsOverview } from 'agenda';
+import type { Agenda, JobState, JobWithState, JobsOverview, AgendaStatus } from 'agenda';
 import type {
 	AgendashController as IAgendashController,
 	ApiQueryParams,
@@ -171,5 +171,12 @@ export class AgendashController implements IAgendashController {
 		}
 
 		return { created: true };
+	}
+
+	/**
+	 * Get running stats from the Agenda processor
+	 */
+	async getStats(fullDetails = false): Promise<AgendaStatus> {
+		return this.agenda.getRunningStats(fullDetails);
 	}
 }

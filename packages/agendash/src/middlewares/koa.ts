@@ -116,6 +116,16 @@ export async function createKoaMiddlewareAsync(agenda: Agenda): Promise<Middlewa
 		}
 	});
 
+	router.get('/api/stats', async (ctx) => {
+		try {
+			const fullDetails = ctx.query.fullDetails === 'true';
+			ctx.body = await controller.getStats(fullDetails);
+		} catch (error) {
+			ctx.status = 500;
+			ctx.body = { error: error instanceof Error ? error.message : 'Unknown error' };
+		}
+	});
+
 	middlewares.push(router.routes() as Middleware);
 	middlewares.push(router.allowedMethods() as Middleware);
 
