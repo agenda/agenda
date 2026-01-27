@@ -3,7 +3,7 @@ import type { ForkOptions } from 'child_process';
 import type { AgendaBackend, NotificationChannel } from '../../src/index.js';
 import { Agenda } from '../../src/index.js';
 import { Job } from '../../src/Job.js';
-import { delay, waitForEvent, waitForEvents } from './test-utils.js';
+import { delay, waitForEvent, waitForEvents, runJobAndWait } from './test-utils.js';
 import someJobDefinition from '../fixtures/someJobDefinition.js';
 
 export interface ForkHelperConfig {
@@ -324,9 +324,7 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				});
 
 				await agenda.start();
-				await agenda.now('process-test');
-
-				await waitForEvent(agenda, 'complete:process-test');
+				await runJobAndWait(agenda, 'process-test', 'complete:process-test');
 				expect(processed).toBe(true);
 			});
 
@@ -337,9 +335,7 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				});
 
 				await agenda.start();
-				await agenda.now('job-instance-test', { testData: 123 });
-
-				await waitForEvent(agenda, 'complete:job-instance-test');
+				await runJobAndWait(agenda, 'job-instance-test', 'complete:job-instance-test', { testData: 123 });
 				expect(receivedJob).toBeDefined();
 				expect(receivedJob?.attrs.name).toBe('job-instance-test');
 				expect(receivedJob?.attrs.data).toEqual({ testData: 123 });
@@ -354,9 +350,7 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				});
 
 				await agenda.start();
-				await agenda.now('success-event-test');
-
-				await waitForEvent(agenda, 'complete:success-event-test');
+				await runJobAndWait(agenda, 'success-event-test', 'complete:success-event-test');
 				expect(successEmitted).toBe(true);
 			});
 
@@ -373,9 +367,7 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				});
 
 				await agenda.start();
-				await agenda.now('fail-event-test');
-
-				await waitForEvent(agenda, 'complete:fail-event-test');
+				await runJobAndWait(agenda, 'fail-event-test', 'complete:fail-event-test');
 				expect(failEmitted).toBe(true);
 				expect(failError?.message).toBe('Test error');
 			});
@@ -391,9 +383,7 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				});
 
 				await agenda.start();
-				await agenda.now('lock-test');
-
-				await waitForEvent(agenda, 'complete:lock-test');
+				await runJobAndWait(agenda, 'lock-test', 'complete:lock-test');
 				expect(lockedDuringProcessing).toBe(true);
 			});
 
@@ -403,10 +393,8 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				});
 
 				await agenda.start();
-				await agenda.now('clear-lock-test');
-
-				// Wait for job to start
-				await waitForEvent(agenda, 'start:clear-lock-test');
+				// Wait for job to start (set up listener before scheduling to avoid race)
+				await runJobAndWait(agenda, 'clear-lock-test', 'start:clear-lock-test');
 				await agenda.stop();
 
 				const result = await agenda.queryJobs({ name: 'clear-lock-test' });
@@ -877,9 +865,7 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 					});
 
 					await agenda.start();
-					await agenda.now('touch-test');
-
-					await waitForEvent(agenda, 'complete:touch-test');
+					await runJobAndWait(agenda, 'touch-test', 'complete:touch-test');
 					expect(initialLockedAt).toBeDefined();
 					expect(touchedLockedAt).toBeDefined();
 					expect(touchedLockedAt!.getTime()).toBeGreaterThan(initialLockedAt!.getTime());
@@ -1095,9 +1081,7 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				});
 
 				await agenda.start();
-				await agenda.now('start-event-test');
-
-				await waitForEvent(agenda, 'complete:start-event-test');
+				await runJobAndWait(agenda, 'start-event-test', 'complete:start-event-test');
 				expect(startEmitted).toBe(true);
 			});
 
@@ -1110,9 +1094,7 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				});
 
 				await agenda.start();
-				await agenda.now('complete-event-test');
-
-				await waitForEvent(agenda, 'complete:complete-event-test');
+				await runJobAndWait(agenda, 'complete-event-test', 'complete:complete-event-test');
 				expect(completeEmitted).toBe(true);
 			});
 
@@ -1125,9 +1107,7 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				});
 
 				await agenda.start();
-				await agenda.now('generic-start-test');
-
-				await waitForEvent(agenda, 'complete:generic-start-test');
+				await runJobAndWait(agenda, 'generic-start-test', 'complete:generic-start-test');
 				expect(genericStartEmitted).toBe(true);
 			});
 		});
@@ -1143,6 +1123,9 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 
 				await agenda.start();
 
+				// Set up listener before scheduling to avoid race condition
+				const startEvent = waitForEvent(agenda, 'start:drain-test');
+
 				// Schedule multiple jobs
 				await Promise.all([
 					agenda.now('drain-test'),
@@ -1150,8 +1133,8 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 					agenda.now('drain-test')
 				]);
 
-				// Wait for at least one job to start (processEvery is 100ms)
-				await waitForEvent(agenda, 'start:drain-test');
+				// Wait for at least one job to start
+				await startEvent;
 
 				// Drain should wait for all to complete
 				await agenda.drain();
@@ -1170,10 +1153,8 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				});
 
 				await agenda.start();
-				await agenda.now('drainWaitJob');
-
-				// Wait for job to actually start
-				await waitForEvent(agenda, 'start:drainWaitJob');
+				// Set up listener before scheduling to avoid race condition
+				await runJobAndWait(agenda, 'drainWaitJob', 'start:drainWaitJob');
 				expect(jobStarted).toBe(true);
 				expect(jobFinished).toBe(false);
 
@@ -1246,9 +1227,7 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				});
 
 				await agenda.start();
-				await agenda.now('error-test');
-
-				await waitForEvent(agenda, 'complete:error-test');
+				await runJobAndWait(agenda, 'error-test', 'complete:error-test');
 				expect(errorEmitted).toBe(true);
 				expect(errorJob?.attrs.name).toBe('error-test');
 			});
@@ -1259,9 +1238,7 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				});
 
 				await agenda.start();
-				await agenda.now('fail-save-test');
-
-				await waitForEvent(agenda, 'complete:fail-save-test');
+				await runJobAndWait(agenda, 'fail-save-test', 'complete:fail-save-test');
 
 				const result = await agenda.queryJobs({ name: 'fail-save-test' });
 				expect(result.jobs[0].failReason).toBe('Failure reason');
@@ -1278,12 +1255,15 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				});
 
 				await agenda.start();
+				// Set up listeners before scheduling to avoid race condition
+				const failEvents = waitForEvents(agenda, 'fail:fail-count-test', 2, 10000);
+				const completeEvents = waitForEvents(agenda, 'complete:fail-count-test', 2, 10000);
 				await agenda.now('fail-count-test');
 
 				// Wait for 2 failures (give enough time for job pickup and retries)
 				await Promise.all([
-					waitForEvents(agenda, 'fail:fail-count-test', 2, 10000), // fail is called before we save hte result to the db
-					waitForEvents(agenda, 'complete:fail-count-test', 2, 10000) // therefore we also wait for complete events (emitted after the db commit)
+					failEvents, // fail is called before we save the result to the db
+					completeEvents // therefore we also wait for complete events (emitted after the db commit)
 				]);
 
 				const result = await agenda.queryJobs({ name: 'fail-count-test' });
@@ -1299,10 +1279,10 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				});
 
 				await agenda.start();
+				const event = waitForEvent(agenda, 'fail:no-rerun-failed', 10000);
 				await agenda.now('no-rerun-failed');
 
-				await waitForEvent(agenda, 'fail:no-rerun-failed');
-
+				await event;
 				// Wait a bit to ensure job is not rerun
 				await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -1338,10 +1318,8 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 						// err handler is required
 					})
 					await agenda.start();
-					await agenda.now('timeout-test');
-
-					// Wait for job to start and potentially timeout
-					await waitForEvent(agenda, 'start:timeout-test');
+					// Set up listener before scheduling to avoid race condition
+					await runJobAndWait(agenda, 'timeout-test', 'start:timeout-test');
 					await new Promise(resolve => setTimeout(resolve, 700));
 
 					// Check no unhandled rejections occurred
