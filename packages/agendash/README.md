@@ -2,9 +2,9 @@
 
 A modern dashboard for [Agenda](https://github.com/agenda/agenda) job scheduler.
 
-![Agendash Screenshot](agendash.png)
+![Agendash Screenshot](https://raw.githubusercontent.com/agenda/agenda/main/packages/agendash/agendash.png)
 
-![Agendash Status View](agendash-status.png)
+![Agendash Status View](https://raw.githubusercontent.com/agenda/agenda/main/packages/agendash/agendash-status.png)
 
 ## Installation
 
