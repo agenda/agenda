@@ -30,7 +30,7 @@
  */
 
 // Test utilities
-export { delay, waitForEvent, waitForEvents } from './test-utils.js';
+export { delay, waitForEvent, waitForEvents, runJobAndWait } from './test-utils.js';
 
 // Main entry point - runs all test suites
 export { fullAgendaTestSuite, type FullAgendaTestConfig } from './full-test-suite.js';

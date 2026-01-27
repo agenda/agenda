@@ -31,6 +31,22 @@ export function waitForEvent(
 }
 
 /**
+ * Schedule a job with agenda.now() and wait for an event (race-condition safe).
+ * Sets up the event listener BEFORE scheduling the job to avoid missing fast events.
+ */
+export async function runJobAndWait(
+	agenda: Agenda,
+	jobName: string,
+	eventName: AgendaEventName,
+	data?: Record<string, unknown>,
+	timeoutMs: number = 5000
+): Promise<unknown> {
+	const eventPromise = waitForEvent(agenda, eventName, timeoutMs);
+	await agenda.now(jobName, data);
+	return eventPromise;
+}
+
+/**
  * Wait for multiple occurrences of an event with timeout
  */
 export function waitForEvents(
