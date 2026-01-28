@@ -22,6 +22,7 @@
     "node": ">=18.0.0"
   },
   "scripts": {
+    "prepublishOnly": "pnpm build",
     "build": "tsc -b && vite build --config client/vite.config.ts",
     "build:client": "vite build --config client/vite.config.ts",
     "dev": "tsx dev-server.ts",

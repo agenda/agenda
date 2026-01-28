@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import type { FrontendJob } from '../types';
 import { formatDateTime } from '../utils/date';
 
@@ -10,6 +10,21 @@ const props = defineProps<{
 const emit = defineEmits<{
 	close: [];
 }>();
+
+function handleKeydown(e: KeyboardEvent) {
+	if (e.key === 'Escape') {
+		e.preventDefault();
+		emit('close');
+	}
+}
+
+onMounted(() => {
+	document.addEventListener('keydown', handleKeydown);
+});
+
+onUnmounted(() => {
+	document.removeEventListener('keydown', handleKeydown);
+});
 
 const activeTab = ref<'details' | 'raw'>('details');
 

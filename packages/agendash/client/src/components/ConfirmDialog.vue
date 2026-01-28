@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted, onUnmounted } from 'vue';
 
 export interface DetailItem {
 	label: string;
@@ -20,6 +20,25 @@ const emit = defineEmits<{
 	confirm: [];
 	cancel: [];
 }>();
+
+function handleKeydown(e: KeyboardEvent) {
+	if (props.loading) return;
+	if (e.key === 'Enter') {
+		e.preventDefault();
+		emit('confirm');
+	} else if (e.key === 'Escape') {
+		e.preventDefault();
+		emit('cancel');
+	}
+}
+
+onMounted(() => {
+	document.addEventListener('keydown', handleKeydown);
+});
+
+onUnmounted(() => {
+	document.removeEventListener('keydown', handleKeydown);
+});
 
 // Separate regular details from JSON details
 const regularDetails = computed(() => props.details?.filter(d => d.type !== 'json') ?? []);
