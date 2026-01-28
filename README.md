@@ -1202,6 +1202,43 @@ process.on('SIGTERM', graceful);
 process.on('SIGINT', graceful);
 ```
 
+**With timeout** - useful when you need to shutdown within a time limit (e.g., cloud platforms like Heroku give 30 seconds):
+
+```js
+async function graceful() {
+	const result = await agenda.drain(30000); // 30 second timeout
+	if (result.timedOut) {
+		console.log(`Shutdown timeout: ${result.running} jobs still running`);
+	}
+	process.exit(0);
+}
+```
+
+**With AbortSignal** - for external control over the drain operation:
+
+```js
+const controller = new AbortController();
+
+// Abort drain after 30 seconds
+setTimeout(() => controller.abort(), 30000);
+
+const result = await agenda.drain({ signal: controller.signal });
+if (result.aborted) {
+	console.log(`Drain aborted: ${result.running} jobs still running`);
+}
+```
+
+**DrainResult** - `drain()` returns information about what happened:
+
+```ts
+interface DrainResult {
+	completed: number;  // jobs that finished during drain
+	running: number;    // jobs still running (if timed out or aborted)
+	timedOut: boolean;  // true if timeout was reached
+	aborted: boolean;   // true if signal was aborted
+}
+```
+
 **Comparison of `stop()` vs `drain()`:**
 
 | Method | Running Jobs | New Jobs | Use Case |

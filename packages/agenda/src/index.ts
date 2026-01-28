@@ -15,6 +15,7 @@ import type {
 	JobsOverview
 } from './types/JobQuery.js';
 import type { RemoveJobsOptions } from './types/JobRepository.js';
+import type { DrainOptions, DrainResult } from './types/DrainOptions.js';
 import { Job, JobWithId } from './Job.js';
 import { JobPriority, parsePriority } from './utils/priority.js';
 import { JobProcessor } from './JobProcessor.js';
@@ -880,19 +881,43 @@ export class Agenda extends EventEmitter {
 	 * Waits for all currently running jobs to finish before stopping.
 	 * This allows for a graceful shutdown where jobs complete their work.
 	 * Unlike stop(), this method waits for running jobs to complete instead of unlocking them.
-	 * @param closeConnection - Whether to close the database connection.
-	 *   Defaults to backend.ownsConnection (true if backend created the connection,
-	 *   false if connection was passed in by user).
+	 *
+	 * @param options - Drain options or timeout in milliseconds
+	 *   - `timeout`: Maximum time to wait for jobs to complete
+	 *   - `signal`: AbortSignal to cancel the drain operation
+	 *   - `closeConnection`: Whether to close the database connection (default: backend.ownsConnection)
+	 * @returns DrainResult with completion statistics
+	 *
+	 * @example
+	 * // Wait indefinitely for all jobs to complete
+	 * await agenda.drain();
+	 *
+	 * @example
+	 * // Wait up to 30 seconds
+	 * const result = await agenda.drain(30000);
+	 * if (result.timedOut) console.log(`${result.running} jobs still running`);
+	 *
+	 * @example
+	 * // Use AbortSignal for external control
+	 * const controller = new AbortController();
+	 * setTimeout(() => controller.abort(), 30000);
+	 * await agenda.drain({ signal: controller.signal });
 	 */
-	async drain(closeConnection?: boolean): Promise<void> {
+	async drain(
+		options?: number | (DrainOptions & { closeConnection?: boolean })
+	): Promise<DrainResult> {
 		if (!this.jobProcessor) {
 			log('Agenda.drain called, but agenda has never started!');
-			return;
+			return { completed: 0, running: 0, timedOut: false, aborted: false };
 		}
+
+		// Normalize options
+		const opts =
+			typeof options === 'number' ? { timeout: options } : options ?? {};
 
 		log('Agenda.drain called, waiting for jobs to finish');
 
-		await this.jobProcessor.drain();
+		const result = await this.jobProcessor.drain(opts);
 
 		// Disconnect notification channel if configured (we always disconnect since we connected it in start)
 		if (this.notificationChannel) {
@@ -901,7 +926,7 @@ export class Agenda extends EventEmitter {
 		}
 
 		// Determine whether to close backend connection
-		const shouldClose = closeConnection ?? this.backend.ownsConnection ?? true;
+		const shouldClose = opts.closeConnection ?? this.backend.ownsConnection ?? true;
 
 		// Disconnect the backend
 		if (shouldClose) {
@@ -910,6 +935,8 @@ export class Agenda extends EventEmitter {
 		}
 
 		this.jobProcessor = undefined;
+
+		return result;
 	}
 }
 
@@ -932,6 +959,8 @@ export * from './types/NotificationChannel.js';
 export * from './types/AgendaBackend.js';
 
 export * from './types/AgendaStatus.js';
+
+export * from './types/DrainOptions.js';
 
 export * from './notifications/index.js';
 
