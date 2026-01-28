@@ -1,10 +1,25 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 
 const emit = defineEmits<{
 	close: [];
 	create: [jobName: string, jobSchedule: string, jobRepeatEvery: string, jobData: unknown];
 }>();
+
+function handleKeydown(e: KeyboardEvent) {
+	if (e.key === 'Escape') {
+		e.preventDefault();
+		cancel();
+	}
+}
+
+onMounted(() => {
+	document.addEventListener('keydown', handleKeydown);
+});
+
+onUnmounted(() => {
+	document.removeEventListener('keydown', handleKeydown);
+});
 
 const jobName = ref('');
 const jobSchedule = ref('');
