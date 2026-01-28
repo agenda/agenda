@@ -30,7 +30,8 @@ const DefaultOptions = {
 	defaultLockLimit: 0,
 	lockLimit: 0,
 	defaultLockLifetime: 10 * 60 * 1000,
-	forkHelper: { path: 'dist/childWorker.js' }
+	forkHelper: { path: 'dist/childWorker.js' },
+	removeOnComplete: false
 };
 
 /**
@@ -53,6 +54,8 @@ export interface AgendaOptions {
 	lockLimit?: number;
 	/** Default lock lifetime in milliseconds */
 	defaultLockLifetime?: number;
+	/** Automatically remove one-time jobs from database after successful completion */
+	removeOnComplete?: boolean;
 	/** Fork helper configuration for sandboxed workers */
 	forkHelper?: { path: string; options?: ForkOptions };
 	/** Whether this is a forked worker instance */
@@ -203,7 +206,8 @@ export class Agenda extends EventEmitter {
 			maxConcurrency: config.maxConcurrency || DefaultOptions.maxConcurrency,
 			defaultLockLimit: config.defaultLockLimit || DefaultOptions.defaultLockLimit,
 			lockLimit: config.lockLimit || DefaultOptions.lockLimit,
-			defaultLockLifetime: config.defaultLockLifetime || DefaultOptions.defaultLockLifetime
+			defaultLockLifetime: config.defaultLockLifetime || DefaultOptions.defaultLockLifetime,
+			removeOnComplete: config.removeOnComplete ?? DefaultOptions.removeOnComplete
 		};
 
 		this.forkedWorker = config.forkedWorker;
@@ -454,7 +458,7 @@ export class Agenda extends EventEmitter {
 		name: string,
 		processor: (agendaJob: Job<DATA>, done: (error?: Error) => void) => void,
 		options?: Partial<
-			Pick<JobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency' | 'backoff'>
+			Pick<JobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency' | 'backoff' | 'removeOnComplete'>
 		> & {
 			priority?: JobPriority;
 		}
@@ -464,7 +468,7 @@ export class Agenda extends EventEmitter {
 		name: string,
 		processor: (agendaJob: Job<DATA>) => Promise<void>,
 		options?: Partial<
-			Pick<JobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency' | 'backoff'>
+			Pick<JobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency' | 'backoff' | 'removeOnComplete'>
 		> & {
 			priority?: JobPriority;
 		}
@@ -473,7 +477,7 @@ export class Agenda extends EventEmitter {
 		name: string,
 		processor: ((job: Job) => Promise<void>) | ((job: Job, done: (err?: Error) => void) => void),
 		options?: Partial<
-			Pick<JobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency' | 'backoff'>
+			Pick<JobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency' | 'backoff' | 'removeOnComplete'>
 		> & {
 			priority?: JobPriority;
 		}
@@ -491,7 +495,8 @@ export class Agenda extends EventEmitter {
 			lockLimit: options?.lockLimit || this.attrs.defaultLockLimit,
 			priority: parsePriority(options?.priority),
 			lockLifetime: options?.lockLifetime || this.attrs.defaultLockLifetime,
-			backoff: options?.backoff
+			backoff: options?.backoff,
+			removeOnComplete: options?.removeOnComplete ?? this.attrs.removeOnComplete
 		};
 		log('job [%s] defined with following options: \n%O', name, this.definitions[name]);
 	}

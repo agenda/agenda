@@ -12,4 +12,6 @@ export interface AgendaConfig {
 	lockLimit: number;
 
 	defaultLockLifetime: number;
+
+	removeOnComplete: boolean;
 }
