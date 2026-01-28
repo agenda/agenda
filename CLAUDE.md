@@ -122,6 +122,7 @@ disconnect();
   defaultConcurrency: 5,        // Per-job concurrency
   maxConcurrency: 20,           // Global max running jobs
   defaultLockLifetime: 600000,  // 10 minutes
+  removeOnComplete: false,      // Auto-remove completed one-time jobs
 }
 ```
 

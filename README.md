@@ -178,6 +178,7 @@ mapped to a database collection and load the jobs from within.
 - [Defining job processors](#defining-job-processors)
 - [Automatic Retry with Backoff](#automatic-retry-with-backoff)
 - [Job Debouncing](#job-debouncing)
+- [Auto-Cleanup of Completed Jobs](#auto-cleanup-of-completed-jobs)
 - [Creating jobs](#creating-jobs)
 - [Managing jobs](#managing-jobs)
 - [Starting the job processor](#starting-the-job-processor)
@@ -209,6 +210,8 @@ Possible agenda config options:
 	defaultLockLimit?: number;
 	lockLimit?: number;
 	defaultLockLifetime?: number;
+	// Auto-remove one-time jobs after successful completion
+	removeOnComplete?: boolean;
 	// Fork mode options
 	forkHelper?: { path: string; options?: ForkOptions };
 	forkedWorker?: boolean;
@@ -558,6 +561,7 @@ the following:
   below
 - `shouldSaveResult`: `boolean` flag that specifies whether the result of the job should also be stored in the database. Defaults to false
 - `backoff`: `BackoffStrategy` a function that determines retry delay on failure. See [Automatic Retry with Backoff](#automatic-retry-with-backoff) for details
+- `removeOnComplete`: `boolean` automatically remove the job from the database after successful completion (one-time jobs only). Overrides the global `removeOnComplete` setting. See [Auto-Cleanup of Completed Jobs](#auto-cleanup-of-completed-jobs) for details
 
 Priority mapping:
 
@@ -938,6 +942,46 @@ await agenda.nowDebounced(
   { delay: 2000 }                      // debounce options
 );
 ```
+
+## Auto-Cleanup of Completed Jobs
+
+By default, one-time jobs remain in the database after completion. If you want to automatically remove them after they succeed, use the `removeOnComplete` option.
+
+### Global Setting
+
+Set `removeOnComplete` in the Agenda constructor to apply to all jobs:
+
+```js
+const agenda = new Agenda({
+	backend: new MongoBackend({ address: 'mongodb://localhost/agenda' }),
+	removeOnComplete: true
+});
+```
+
+With this setting, any one-time job (i.e. a job with no `nextRunAt` after completion) will be removed from the database after it succeeds. Recurring jobs are never removed, and failed jobs are always kept.
+
+### Per-Job Override
+
+You can override the global setting for specific job types via `define()`:
+
+```js
+// Global removeOnComplete is false (default), but this job type opts in
+agenda.define('send-welcome-email', async job => {
+	await sendEmail(job.attrs.data.to);
+}, { removeOnComplete: true });
+
+// Global removeOnComplete is true, but this job type opts out
+agenda.define('audit-log', async job => {
+	await writeAuditLog(job.attrs.data);
+}, { removeOnComplete: false });
+```
+
+### Behavior Details
+
+- **Only one-time jobs**: Recurring jobs (created with `every()`) are never removed, since they always have a `nextRunAt`
+- **Only on success**: Failed jobs are always kept in the database regardless of the setting
+- **Events fire first**: The `complete` and `success` events are emitted before the job is removed, so listeners can still access job data
+- **Safe removal**: If the removal fails (e.g. due to a database error), the error is logged but does not affect the processing loop
 
 ## Creating Jobs
 
