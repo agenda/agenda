@@ -301,9 +301,7 @@ describe('MongoBackend', () => {
 			const jobs = await backendWithIndex.repository.queryJobs({ name: 'index-test' });
 			expect(jobs.total).toBe(1);
 
-			console.log('SAVED', jobs, await db.listCollections());
 			const indexes = await db.collection(testCollection).indexes();
-			console.log('SAVED');
 			// Should have _id and findAndLockNextJobIndex
 			expect(indexes.length).toBeGreaterThanOrEqual(2);
 			const indexNames = indexes.map(i => i.name);

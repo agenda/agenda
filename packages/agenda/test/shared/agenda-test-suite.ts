@@ -870,6 +870,25 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 					expect(touchedLockedAt).toBeDefined();
 					expect(touchedLockedAt!.getTime()).toBeGreaterThan(initialLockedAt!.getTime());
 				});
+
+				it('should persist progress value', async () => {
+					let jobId: string | undefined;
+
+					agenda.define('touch-progress-test', async (job: Job) => {
+						jobId = job.attrs._id?.toString();
+						await job.touch(50);
+						expect(job.attrs.progress).toBe(50);
+					});
+
+					await agenda.start();
+					await agenda.now('touch-progress-test');
+
+					await waitForEvent(agenda, 'complete:touch-progress-test');
+					expect(jobId).toBeDefined();
+
+					const result = await agenda.queryJobs({ id: jobId });
+					expect(result.jobs[0].progress).toBe(50);
+				});
 			});
 
 			describe('fail', () => {

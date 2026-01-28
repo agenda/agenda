@@ -29,6 +29,7 @@ export interface FrontendJobData {
 	repeatInterval?: string | number;
 	repeatTimezone?: string;
 	disabled?: boolean;
+	progress?: number;
 }
 
 /**

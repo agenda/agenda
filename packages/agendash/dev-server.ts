@@ -145,6 +145,18 @@ async function startDevServer() {
 		console.log('Long running job completed');
 	});
 
+	agenda.define('progress-job', async (job) => {
+		console.log('Progress job started...');
+		const steps = 10;
+		for (let i = 1; i <= steps; i++) {
+			await new Promise((resolve) => setTimeout(resolve, 3000)); // 3 seconds per step
+			const progress = Math.round((i / steps) * 100);
+			await job.touch(progress);
+			console.log(`Progress job: ${progress}%`);
+		}
+		console.log('Progress job completed');
+	});
+
 	agenda.define('future-job', async (job) => {
 		console.log('Future job executed:', job.attrs.data);
 	});
@@ -161,6 +173,9 @@ async function startDevServer() {
 
 	// Schedule a long-running job that starts immediately
 	await agenda.now('long-running-job');
+
+	// Schedule a job that updates its progress
+	await agenda.now('progress-job');
 
 	// Schedule a job far in the future (1 year from now)
 	const oneYearFromNow = new Date();
