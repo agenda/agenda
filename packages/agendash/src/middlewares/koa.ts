@@ -146,6 +146,41 @@ export async function createKoaMiddlewareAsync(agenda: Agenda): Promise<Middlewa
 		}
 	});
 
+	// SSE endpoint for real-time job state notifications
+	router.get('/api/events', async (ctx) => {
+		// Check if state notifications are available
+		if (!controller.hasStateNotifications()) {
+			ctx.status = 501;
+			ctx.body = { error: 'State notifications not available. Configure a notification channel that supports state subscriptions.' };
+			return;
+		}
+
+		// Set up SSE headers
+		ctx.set('Content-Type', 'text/event-stream');
+		ctx.set('Cache-Control', 'no-cache');
+		ctx.set('Connection', 'keep-alive');
+		ctx.set('X-Accel-Buffering', 'no'); // Disable nginx buffering
+
+		// Use a passthrough stream for SSE
+		const { PassThrough } = await import('stream');
+		const stream = new PassThrough();
+		ctx.body = stream;
+
+		// Send initial connection message
+		stream.write('event: connected\ndata: {"connected":true}\n\n');
+
+		// Subscribe to state notifications
+		const unsubscribe = controller.createStateStream((notification) => {
+			stream.write(`data: ${JSON.stringify(notification)}\n\n`);
+		});
+
+		// Clean up on client disconnect
+		ctx.req.on('close', () => {
+			unsubscribe();
+			stream.end();
+		});
+	});
+
 	middlewares.push(router.routes() as Middleware);
 	middlewares.push(router.allowedMethods() as Middleware);
 

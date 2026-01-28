@@ -184,3 +184,27 @@ export interface AgendaStats {
 	runningJobs: number | unknown[];
 	lockedJobs: number | unknown[];
 }
+
+/**
+ * Types of job state events
+ */
+export type JobStateType = 'start' | 'progress' | 'success' | 'fail' | 'complete' | 'retry';
+
+/**
+ * Job state notification received via SSE
+ */
+export interface JobStateNotification {
+	type: JobStateType;
+	jobId: string;
+	jobName: string;
+	timestamp: string;
+	source?: string;
+	progress?: number;
+	error?: string;
+	failCount?: number;
+	retryAt?: string;
+	retryAttempt?: number;
+	duration?: number;
+	lastRunAt?: string;
+	lastFinishedAt?: string;
+}

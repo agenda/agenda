@@ -1,6 +1,7 @@
 import type {
 	NotificationChannelConfig,
-	JobNotification
+	JobNotification,
+	JobStateNotification
 } from '../types/NotificationChannel.js';
 import { BaseNotificationChannel } from './BaseNotificationChannel.js';
 
@@ -21,6 +22,7 @@ export class InMemoryNotificationChannel extends BaseNotificationChannel {
 	async disconnect(): Promise<void> {
 		this.clearReconnect();
 		this.handlers.clear();
+		this.stateHandlers.clear();
 		this.setState('disconnected');
 	}
 
@@ -29,5 +31,12 @@ export class InMemoryNotificationChannel extends BaseNotificationChannel {
 			throw new Error('Cannot publish: channel not connected');
 		}
 		await this.notifyHandlers(notification);
+	}
+
+	async publishState(notification: JobStateNotification): Promise<void> {
+		if (this._state !== 'connected') {
+			throw new Error('Cannot publish state: channel not connected');
+		}
+		await this.notifyStateHandlers(notification);
 	}
 }

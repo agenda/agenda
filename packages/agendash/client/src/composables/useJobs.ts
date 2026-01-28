@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue';
-import type { FrontendJob, FrontendOverview, SearchParams } from '../types';
+import type { FrontendJob, FrontendOverview, SearchParams, JobStateNotification } from '../types';
 import * as api from '../api/client';
 import { useToast } from './useToast';
 
@@ -12,6 +12,9 @@ const total = ref(0);
 const currentPage = ref(1);
 const pageSize = ref(50);
 const currentFilters = ref<Partial<SearchParams>>({});
+const realTimeConnected = ref(false);
+
+let realTimeUnsubscribe: (() => void) | null = null;
 
 let loadingTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -179,6 +182,85 @@ export function useJobs() {
 		fetchJobs({ ...params, skip: 0 });
 	}
 
+	/**
+	 * Handle incoming real-time job state notification.
+	 * Updates job state in-place for progress/start, refetches for completion events.
+	 */
+	function handleStateNotification(notification: JobStateNotification) {
+		const jobIndex = jobs.value.findIndex(j => j.job._id === notification.jobId);
+
+		if (notification.type === 'progress') {
+			// Update progress in-place (spread to trigger Vue reactivity)
+			if (jobIndex !== -1 && notification.progress !== undefined) {
+				const job = jobs.value[jobIndex];
+				jobs.value[jobIndex] = {
+					...job,
+					job: { ...job.job, progress: notification.progress }
+				};
+			}
+		} else if (notification.type === 'start') {
+			// Mark job as running in-place
+			if (jobIndex !== -1) {
+				const job = jobs.value[jobIndex];
+				jobs.value[jobIndex] = {
+					...job,
+					running: true,
+					job: { ...job.job, progress: 0 }
+				};
+			}
+		} else if (['success', 'fail', 'complete'].includes(notification.type)) {
+			// For completion events, refetch to get updated state
+			debouncedRefetch();
+		}
+	}
+
+	// Simple debounce for refetch to avoid too many API calls
+	let refetchTimeout: ReturnType<typeof setTimeout> | null = null;
+	function debouncedRefetch() {
+		if (refetchTimeout) {
+			clearTimeout(refetchTimeout);
+		}
+		refetchTimeout = setTimeout(() => {
+			fetchJobs();
+			refetchTimeout = null;
+		}, 500);
+	}
+
+	/**
+	 * Start real-time updates via Server-Sent Events.
+	 * Subscribes to job state notifications and updates the UI accordingly.
+	 */
+	function startRealTimeUpdates() {
+		if (realTimeUnsubscribe) {
+			// Already subscribed
+			return;
+		}
+
+		realTimeUnsubscribe = api.subscribeToEvents(
+			handleStateNotification,
+			(errorEvent) => {
+				// eslint-disable-next-line no-console
+				console.error('SSE connection error:', errorEvent);
+				realTimeConnected.value = false;
+			},
+			() => {
+				realTimeConnected.value = true;
+			}
+		);
+	}
+
+	/**
+	 * Stop real-time updates.
+	 * Closes the SSE connection.
+	 */
+	function stopRealTimeUpdates() {
+		if (realTimeUnsubscribe) {
+			realTimeUnsubscribe();
+			realTimeUnsubscribe = null;
+			realTimeConnected.value = false;
+		}
+	}
+
 	return {
 		jobs,
 		overview,
@@ -191,6 +273,7 @@ export function useJobs() {
 		pageSize,
 		currentFilters,
 		currentFilterDisplay,
+		realTimeConnected,
 		fetchJobs,
 		requeueJobs,
 		deleteJobs,
@@ -201,6 +284,8 @@ export function useJobs() {
 		nextPage,
 		prevPage,
 		setPageSize,
-		search
+		search,
+		startRealTimeUpdates,
+		stopRealTimeUpdates
 	};
 }

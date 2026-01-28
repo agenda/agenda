@@ -214,6 +214,47 @@ export function createHapiPlugin(agenda: Agenda): Plugin<AgendashHapiOptions> {
 					auth: authConfig
 				}
 			});
+
+			// SSE endpoint for real-time job state notifications
+			server.route({
+				method: 'GET',
+				path: '/api/events',
+				handler: (request: Request, h: ResponseToolkit) => {
+					// Check if state notifications are available
+					if (!controller.hasStateNotifications()) {
+						return h
+							.response({ error: 'State notifications not available. Configure a notification channel that supports state subscriptions.' })
+							.code(501);
+					}
+
+					// Create a PassThrough stream for SSE
+					const { PassThrough } = require('stream');
+					const stream = new PassThrough();
+
+					// Send initial connection message
+					stream.write('event: connected\ndata: {"connected":true}\n\n');
+
+					// Subscribe to state notifications
+					const unsubscribe = controller.createStateStream((notification) => {
+						stream.write(`data: ${JSON.stringify(notification)}\n\n`);
+					});
+
+					// Clean up on client disconnect
+					request.raw.req.on('close', () => {
+						unsubscribe();
+						stream.end();
+					});
+
+					return h.response(stream)
+						.type('text/event-stream')
+						.header('Cache-Control', 'no-cache')
+						.header('Connection', 'keep-alive')
+						.header('X-Accel-Buffering', 'no');
+				},
+				options: {
+					auth: authConfig
+				}
+			});
 		}
 	};
 }

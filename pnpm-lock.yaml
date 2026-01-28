@@ -186,6 +186,9 @@ importers:
       '@agendajs/mongo-backend':
         specifier: workspace:*
         version: link:../mongo-backend
+      '@agendajs/postgres-backend':
+        specifier: workspace:*
+        version: link:../postgres-backend
       '@types/express':
         specifier: ^4.17.21
         version: 4.17.25
@@ -225,6 +228,9 @@ importers:
       mongodb-memory-server:
         specifier: ^10.0.0
         version: 10.4.3(@aws-sdk/credential-providers@3.972.0)(socks@2.8.7)
+      pg:
+        specifier: ^8.13.0
+        version: 8.17.2
       supertest:
         specifier: ^7.0.0
         version: 7.2.2

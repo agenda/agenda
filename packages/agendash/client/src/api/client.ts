@@ -7,7 +7,8 @@ import type {
 	RequeueResponse,
 	PauseResponse,
 	ResumeResponse,
-	AgendaStats
+	AgendaStats,
+	JobStateNotification
 } from '../types';
 
 const BASE_URL = 'api';
@@ -81,4 +82,41 @@ export async function resumeJobs(jobIds: string[]): Promise<ResumeResponse> {
 export async function getStats(fullDetails = false): Promise<AgendaStats> {
 	const url = fullDetails ? `${BASE_URL}/stats?fullDetails=true` : `${BASE_URL}/stats`;
 	return fetchJson<AgendaStats>(url);
+}
+
+/**
+ * Subscribe to real-time job state notifications via Server-Sent Events.
+ *
+ * @param onEvent - Callback function called for each state notification
+ * @param onError - Optional callback for error handling
+ * @param onConnect - Optional callback when connection is established
+ * @returns Unsubscribe function to close the connection
+ */
+export function subscribeToEvents(
+	onEvent: (notification: JobStateNotification) => void,
+	onError?: (error: Event) => void,
+	onConnect?: () => void
+): () => void {
+	const eventSource = new EventSource(`${BASE_URL}/events`);
+
+	eventSource.onmessage = (event) => {
+		try {
+			const notification = JSON.parse(event.data) as JobStateNotification;
+			onEvent(notification);
+		} catch {
+			// Ignore parse errors (e.g., heartbeat messages)
+		}
+	};
+
+	eventSource.addEventListener('connected', () => {
+		onConnect?.();
+	});
+
+	eventSource.onerror = (error) => {
+		onError?.(error);
+	};
+
+	return () => {
+		eventSource.close();
+	};
 }

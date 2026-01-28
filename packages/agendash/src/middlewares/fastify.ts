@@ -162,5 +162,37 @@ export function createFastifyPlugin(agenda: Agenda): FastifyPluginCallback {
 				}
 			}
 		);
+
+		// SSE endpoint for real-time job state notifications
+		instance.get('/api/events', async (request: FastifyRequest, reply: FastifyReply) => {
+			// Check if state notifications are available
+			if (!controller.hasStateNotifications()) {
+				return reply
+					.status(501)
+					.send({ error: 'State notifications not available. Configure a notification channel that supports state subscriptions.' });
+			}
+
+			// Set up SSE headers
+			reply.raw.setHeader('Content-Type', 'text/event-stream');
+			reply.raw.setHeader('Cache-Control', 'no-cache');
+			reply.raw.setHeader('Connection', 'keep-alive');
+			reply.raw.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
+
+			// Send initial connection message
+			reply.raw.write('event: connected\ndata: {"connected":true}\n\n');
+
+			// Subscribe to state notifications
+			const unsubscribe = controller.createStateStream((notification) => {
+				reply.raw.write(`data: ${JSON.stringify(notification)}\n\n`);
+			});
+
+			// Clean up on client disconnect
+			request.raw.on('close', () => {
+				unsubscribe();
+			});
+
+			// Don't return anything - keep connection open
+			return reply;
+		});
 	};
 }

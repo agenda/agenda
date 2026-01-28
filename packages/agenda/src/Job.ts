@@ -465,6 +465,13 @@ export class Job<DATA = unknown | void> {
 		await this.agenda.db.saveJobState(this.attrs, {
 			lastModifiedBy: this.agenda.attrs.name || undefined
 		});
+
+		// Publish progress state notification if progress was provided (fire-and-forget)
+		if (progress !== undefined) {
+			this.agenda.publishJobStateNotification(this, 'progress', {
+				progress
+			});
+		}
 	}
 
 	private computeNextRunAt() {
@@ -574,6 +581,13 @@ export class Job<DATA = unknown | void> {
 			nextRunAt,
 			error
 		});
+
+		// Publish retry state notification for cross-process event propagation (fire-and-forget)
+		this.agenda.publishJobStateNotification(this, 'retry', {
+			retryAt: nextRunAt,
+			retryAttempt: this.attrs.failCount,
+			error: error.message
+		});
 	}
 
 	async run(): Promise<void> {
@@ -594,6 +608,11 @@ export class Job<DATA = unknown | void> {
 			this.agenda.emit('start', this);
 			this.agenda.emit(`start:${this.attrs.name}`, this);
 			log('[%s:%s] starting job', this.attrs.name, this.attrs._id);
+
+			// Publish start state notification for cross-process event propagation (fire-and-forget)
+			this.agenda.publishJobStateNotification(this, 'start', {
+				lastRunAt: this.attrs.lastRunAt
+			});
 
 			if (this.attrs.fork) {
 				if (!this.agenda.forkHelper) {
@@ -652,6 +671,13 @@ export class Job<DATA = unknown | void> {
 			this.agenda.emit(`success:${this.attrs.name}`, this);
 			log('[%s:%s] has succeeded', this.attrs.name, this.attrs._id);
 			succeeded = true;
+
+			// Publish success state notification for cross-process event propagation (fire-and-forget)
+			this.agenda.publishJobStateNotification(this, 'success', {
+				lastRunAt: this.attrs.lastRunAt,
+				lastFinishedAt: this.attrs.lastFinishedAt,
+				duration: this.attrs.lastFinishedAt.getTime() - (this.attrs.lastRunAt?.getTime() || 0)
+			});
 		} catch (error) {
 			log('[%s:%s] unknown error occurred', this.attrs.name, this.attrs._id);
 
@@ -660,6 +686,12 @@ export class Job<DATA = unknown | void> {
 			this.agenda.emit('fail', error, this);
 			this.agenda.emit(`fail:${this.attrs.name}`, error, this);
 			log('[%s:%s] has failed [%s]', this.attrs.name, this.attrs._id, (error as Error).message);
+
+			// Publish fail state notification for cross-process event propagation (fire-and-forget)
+			this.agenda.publishJobStateNotification(this, 'fail', {
+				error: (error as Error).message,
+				failCount: this.attrs.failCount
+			});
 
 			// Handle automatic retry with backoff strategy
 			await this.handleRetry(error as Error);
@@ -685,6 +717,17 @@ export class Job<DATA = unknown | void> {
 				this.attrs._id,
 				this.attrs.lastFinishedAt
 			);
+
+			// Publish complete state notification for cross-process event propagation (fire-and-forget)
+			const duration = this.attrs.lastFinishedAt && this.attrs.lastRunAt
+				? this.attrs.lastFinishedAt.getTime() - this.attrs.lastRunAt.getTime()
+				: undefined;
+			this.agenda.publishJobStateNotification(this, 'complete', {
+				lastRunAt: this.attrs.lastRunAt,
+				lastFinishedAt: this.attrs.lastFinishedAt,
+				duration
+			});
+
 
 			// Auto-remove completed one-time jobs
 			if (succeeded && !this.attrs.nextRunAt) {

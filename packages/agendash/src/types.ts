@@ -1,4 +1,4 @@
-import type { Agenda } from 'agenda';
+import type { Agenda, JobStateNotification, StateNotificationHandler } from 'agenda';
 
 /**
  * Query parameters for the API
@@ -164,7 +164,11 @@ export interface AgendashController {
 	createJob(options: CreateJobRequest): Promise<CreateJobResponse>;
 	pauseJobs(ids: string[]): Promise<PauseResponse>;
 	resumeJobs(ids: string[]): Promise<ResumeResponse>;
+	createStateStream(onNotification: StateNotificationHandler): () => void;
+	hasStateNotifications(): boolean;
 }
+
+export type { JobStateNotification, StateNotificationHandler };
 
 /**
  * Factory type for creating Agendash middleware

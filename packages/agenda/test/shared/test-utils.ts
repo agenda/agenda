@@ -40,10 +40,12 @@ export async function runJobAndWait(
 	eventName: AgendaEventName,
 	data?: Record<string, unknown>,
 	timeoutMs: number = 5000
-): Promise<unknown> {
+): Promise<void> {
 	const eventPromise = waitForEvent(agenda, eventName, timeoutMs);
 	await agenda.now(jobName, data);
-	return eventPromise;
+
+	await eventPromise;
+	await new Promise(resolve => process.nextTick(resolve));
 }
 
 /**

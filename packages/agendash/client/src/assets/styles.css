@@ -54,6 +54,27 @@ body {
 	letter-spacing: 0.5px;
 }
 
+/* Real-time connection indicator */
+.realtime-dot {
+	width: 8px;
+	height: 8px;
+	background-color: var(--success-color);
+	border-radius: 50%;
+	animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+	0% {
+		box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.5);
+	}
+	70% {
+		box-shadow: 0 0 0 6px rgba(40, 167, 69, 0);
+	}
+	100% {
+		box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+	}
+}
+
 /* Sidebar */
 .sidebar {
 	background-color: var(--light-bg);

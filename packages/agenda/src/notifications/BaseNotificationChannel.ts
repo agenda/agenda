@@ -4,7 +4,9 @@ import type {
 	NotificationChannelConfig,
 	JobNotification,
 	NotificationHandler,
-	NotificationChannelState
+	NotificationChannelState,
+	JobStateNotification,
+	StateNotificationHandler
 } from '../types/NotificationChannel.js';
 
 /**
@@ -27,6 +29,7 @@ interface ResolvedNotificationChannelConfig {
 export abstract class BaseNotificationChannel extends EventEmitter implements NotificationChannel {
 	protected _state: NotificationChannelState = 'disconnected';
 	protected handlers = new Set<NotificationHandler>();
+	protected stateHandlers = new Set<StateNotificationHandler>();
 	protected reconnectAttempts = 0;
 	protected reconnectTimeout?: ReturnType<typeof setTimeout>;
 
@@ -80,6 +83,36 @@ export abstract class BaseNotificationChannel extends EventEmitter implements No
 			}
 		}
 		await Promise.allSettled(promises);
+	}
+
+	/**
+	 * Notify all registered state handlers of a state notification.
+	 * Subclasses should call this when receiving state notifications.
+	 */
+	protected async notifyStateHandlers(notification: JobStateNotification): Promise<void> {
+		const promises: Promise<void>[] = [];
+		for (const handler of this.stateHandlers) {
+			try {
+				const result = handler(notification);
+				if (result instanceof Promise) {
+					promises.push(result);
+				}
+			} catch (error) {
+				this.emit('error', error);
+			}
+		}
+		await Promise.allSettled(promises);
+	}
+
+	/**
+	 * Subscribe to state notifications.
+	 * Default implementation manages the stateHandlers set.
+	 */
+	subscribeState(handler: StateNotificationHandler): () => void {
+		this.stateHandlers.add(handler);
+		return () => {
+			this.stateHandlers.delete(handler);
+		};
 	}
 
 	protected scheduleReconnect(): void {

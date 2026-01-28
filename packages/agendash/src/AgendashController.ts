@@ -1,4 +1,4 @@
-import type { Agenda, JobState, JobWithState, JobsOverview, AgendaStatus } from 'agenda';
+import type { Agenda, JobState, JobWithState, JobsOverview, AgendaStatus, StateNotificationHandler } from 'agenda';
 import type {
 	AgendashController as IAgendashController,
 	ApiQueryParams,
@@ -209,5 +209,35 @@ export class AgendashController implements IAgendashController {
 
 		const resumedCount = await this.agenda.enable({ ids });
 		return { resumedCount };
+	}
+
+	/**
+	 * Check if state notifications are available
+	 */
+	hasStateNotifications(): boolean {
+		// Access the notification channel via the internal property
+		// @ts-expect-error Accessing private property for state notification check
+		const channel = this.agenda.notificationChannel;
+		return !!channel?.subscribeState;
+	}
+
+	/**
+	 * Create a subscription to job state notifications for real-time updates (SSE).
+	 * This subscribes directly to the notification channel, bypassing the event re-emitting.
+	 *
+	 * @param onNotification - Callback function called for each state notification
+	 * @returns Unsubscribe function to stop receiving notifications
+	 * @throws Error if notification channel doesn't support state subscriptions
+	 */
+	createStateStream(onNotification: StateNotificationHandler): () => void {
+		// Access the notification channel via the internal property
+		// @ts-expect-error Accessing private property for state subscription
+		const channel = this.agenda.notificationChannel;
+
+		if (!channel?.subscribeState) {
+			throw new Error('Notification channel does not support state subscriptions');
+		}
+
+		return channel.subscribeState(onNotification);
 	}
 }
