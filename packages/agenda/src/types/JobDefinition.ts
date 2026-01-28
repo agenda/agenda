@@ -37,6 +37,9 @@ export interface JobDefinition<DATA = unknown> {
 	 */
 	backoff?: BackoffStrategy;
 
+	/** Automatically remove this job from database after successful completion (one-time jobs only) */
+	removeOnComplete?: boolean;
+
 	filePath: string | undefined;
 	fn: DefinitionProcessor<DATA, void | ((error?: Error) => void)>;
 }

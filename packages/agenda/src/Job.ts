@@ -589,6 +589,7 @@ export class Job<DATA = unknown | void> {
 			lastModifiedBy: this.agenda.attrs.name || undefined
 		});
 
+		let succeeded = false;
 		try {
 			this.agenda.emit('start', this);
 			this.agenda.emit(`start:${this.attrs.name}`, this);
@@ -650,6 +651,7 @@ export class Job<DATA = unknown | void> {
 			this.agenda.emit('success', this);
 			this.agenda.emit(`success:${this.attrs.name}`, this);
 			log('[%s:%s] has succeeded', this.attrs.name, this.attrs._id);
+			succeeded = true;
 		} catch (error) {
 			log('[%s:%s] unknown error occurred', this.attrs.name, this.attrs._id);
 
@@ -683,6 +685,20 @@ export class Job<DATA = unknown | void> {
 				this.attrs._id,
 				this.attrs.lastFinishedAt
 			);
+
+			// Auto-remove completed one-time jobs
+			if (succeeded && !this.attrs.nextRunAt) {
+				const definition = this.agenda.definitions[this.attrs.name];
+				const shouldRemove = definition?.removeOnComplete ?? this.agenda.attrs.removeOnComplete;
+				if (shouldRemove) {
+					try {
+						await this.remove();
+						log('[%s:%s] auto-removed completed one-time job', this.attrs.name, this.attrs._id);
+					} catch (err) {
+						log('[%s:%s] failed to auto-remove job', this.attrs.name, this.attrs._id, err);
+					}
+				}
+			}
 		}
 	}
 
