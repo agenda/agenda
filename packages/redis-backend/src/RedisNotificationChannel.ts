@@ -1,7 +1,7 @@
 import debug from 'debug';
 import { Redis } from 'ioredis';
 import type { RedisOptions } from 'ioredis';
-import type { JobNotification, NotificationChannelConfig, JobId } from 'agenda';
+import type { JobNotification, NotificationChannelConfig, JobId, JobStateNotification } from 'agenda';
 import { BaseNotificationChannel, toJobId } from 'agenda';
 
 const log = debug('agenda:redis:notification');
@@ -33,6 +33,11 @@ export class RedisNotificationChannel extends BaseNotificationChannel {
 	private ownClient: boolean = false;
 	private connectionString?: string;
 	private redisOptions?: RedisOptions;
+
+	/** State channel name (derived from main channel name) */
+	private get stateChannelName(): string {
+		return `${this.config.channelName}:state`;
+	}
 
 	constructor(config: RedisNotificationChannelConfig = {}) {
 		super(config);
@@ -106,12 +111,23 @@ export class RedisNotificationChannel extends BaseNotificationChannel {
 						log('error parsing notification: %O', error);
 						this.emit('error', error as Error);
 					}
+				} else if (channel === this.stateChannelName) {
+					try {
+						const notification = this.parseStateNotification(message);
+						log('received state notification: %O', notification);
+						this.notifyStateHandlers(notification).catch((err: Error) => {
+							this.emit('error', err);
+						});
+					} catch (error) {
+						log('error parsing state notification: %O', error);
+						this.emit('error', error as Error);
+					}
 				}
 			});
 
-			// Subscribe to the channel
-			await this.subscribeClient.subscribe(this.config.channelName);
-			log('subscribed to channel: %s', this.config.channelName);
+			// Subscribe to both channels
+			await this.subscribeClient.subscribe(this.config.channelName, this.stateChannelName);
+			log('subscribed to channels: %s, %s', this.config.channelName, this.stateChannelName);
 
 			this.setState('connected');
 		} catch (error) {
@@ -144,7 +160,7 @@ export class RedisNotificationChannel extends BaseNotificationChannel {
 
 		if (this.subscribeClient) {
 			try {
-				await this.subscribeClient.unsubscribe(this.config.channelName);
+				await this.subscribeClient.unsubscribe(this.config.channelName, this.stateChannelName);
 			} catch {
 				// Ignore unsubscribe errors
 			}
@@ -164,6 +180,7 @@ export class RedisNotificationChannel extends BaseNotificationChannel {
 		}
 
 		this.handlers.clear();
+		this.stateHandlers.clear();
 		this.setState('disconnected');
 	}
 
@@ -182,6 +199,21 @@ export class RedisNotificationChannel extends BaseNotificationChannel {
 		await this.publishClient.publish(this.config.channelName, payload);
 	}
 
+	async publishState(notification: JobStateNotification): Promise<void> {
+		if (this._state !== 'connected') {
+			throw new Error('Cannot publish state: channel not connected');
+		}
+
+		if (!this.publishClient) {
+			throw new Error('Cannot publish state: no Redis client available');
+		}
+
+		const payload = this.serializeStateNotification(notification);
+		log('publishing state notification: %s', payload);
+
+		await this.publishClient.publish(this.stateChannelName, payload);
+	}
+
 	/**
 	 * Serialize notification to JSON string for Redis Pub/Sub
 	 */
@@ -193,6 +225,27 @@ export class RedisNotificationChannel extends BaseNotificationChannel {
 			priority: notification.priority,
 			timestamp: notification.timestamp.toISOString(),
 			source: notification.source
+		});
+	}
+
+	/**
+	 * Serialize state notification to JSON string for Redis Pub/Sub
+	 */
+	private serializeStateNotification(notification: JobStateNotification): string {
+		return JSON.stringify({
+			type: notification.type,
+			jobId: notification.jobId,
+			jobName: notification.jobName,
+			timestamp: notification.timestamp.toISOString(),
+			source: notification.source,
+			progress: notification.progress,
+			error: notification.error,
+			failCount: notification.failCount,
+			retryAt: notification.retryAt?.toISOString(),
+			retryAttempt: notification.retryAttempt,
+			duration: notification.duration,
+			lastRunAt: notification.lastRunAt?.toISOString(),
+			lastFinishedAt: notification.lastFinishedAt?.toISOString()
 		});
 	}
 
@@ -209,6 +262,29 @@ export class RedisNotificationChannel extends BaseNotificationChannel {
 			priority: data.priority,
 			timestamp: new Date(data.timestamp),
 			source: data.source
+		};
+	}
+
+	/**
+	 * Parse state notification from JSON string received via Pub/Sub
+	 */
+	private parseStateNotification(payload: string): JobStateNotification {
+		const data = JSON.parse(payload);
+
+		return {
+			type: data.type,
+			jobId: toJobId(data.jobId) as JobId,
+			jobName: data.jobName,
+			timestamp: new Date(data.timestamp),
+			source: data.source,
+			progress: data.progress,
+			error: data.error,
+			failCount: data.failCount,
+			retryAt: data.retryAt ? new Date(data.retryAt) : undefined,
+			retryAttempt: data.retryAttempt,
+			duration: data.duration,
+			lastRunAt: data.lastRunAt ? new Date(data.lastRunAt) : undefined,
+			lastFinishedAt: data.lastFinishedAt ? new Date(data.lastFinishedAt) : undefined
 		};
 	}
 }

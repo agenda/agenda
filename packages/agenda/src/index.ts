@@ -5,15 +5,16 @@ import { ForkOptions } from 'child_process';
 import type { JobDefinition } from './types/JobDefinition.js';
 import type { AgendaConfig } from './types/AgendaConfig.js';
 import type { AgendaBackend } from './types/AgendaBackend.js';
-import type { NotificationChannel, JobNotification } from './types/NotificationChannel.js';
+import type {
+	NotificationChannel,
+	JobNotification,
+	JobStateNotification,
+	JobStateType
+} from './types/NotificationChannel.js';
 import type { JobId } from './types/JobParameters.js';
 import type { JobRepository } from './types/JobRepository.js';
 import type { AgendaStatus } from './types/AgendaStatus.js';
-import type {
-	JobsQueryOptions,
-	JobsResult,
-	JobsOverview
-} from './types/JobQuery.js';
+import type { JobsQueryOptions, JobsResult, JobsOverview } from './types/JobQuery.js';
 import type { RemoveJobsOptions } from './types/JobRepository.js';
 import type { DrainOptions, DrainResult } from './types/DrainOptions.js';
 import { Job, JobWithId } from './Job.js';
@@ -121,30 +122,47 @@ export class Agenda extends EventEmitter {
 
 	private notificationChannel?: NotificationChannel;
 
+	private stateSubscriptionUnsubscribe?: () => void;
+
 	// Lifecycle events
 	on(event: 'ready', listener: () => void): this;
 	on(event: 'error', listener: (error: Error) => void): this;
 
 	// Job events (generic)
-	on(event: 'fail', listener: (error: Error, job: JobWithId) => void): this;
-	on(event: 'success', listener: (job: JobWithId) => void): this;
-	on(event: 'start', listener: (job: JobWithId) => void): this;
-	on(event: 'complete', listener: (job: JobWithId) => void): this;
+	// Local events: `remote` is undefined, first param is JobWithId
+	// Remote events: `remote` is true, first param is JobStateNotification
+	on(event: 'fail', listener: (error: Error, job: JobWithId, remote?: false) => void): this;
+	on(event: 'fail', listener: (error: string, job: JobStateNotification, remote: true) => void): this;
+	on(event: 'success', listener: (job: JobWithId, remote?: false) => void): this;
+	on(event: 'success', listener: (job: JobStateNotification, remote: true) => void): this;
+	on(event: 'start', listener: (job: JobWithId, remote?: false) => void): this;
+	on(event: 'start', listener: (job: JobStateNotification, remote: true) => void): this;
+	on(event: 'complete', listener: (job: JobWithId, remote?: false) => void): this;
+	on(event: 'complete', listener: (job: JobStateNotification, remote: true) => void): this;
+	on(event: 'progress', listener: (job: JobWithId, remote?: false) => void): this;
+	on(event: 'progress', listener: (job: JobStateNotification, remote: true) => void): this;
 
 	// Retry events (generic)
-	on(event: 'retry', listener: (job: JobWithId, details: RetryDetails) => void): this;
+	on(event: 'retry', listener: (job: JobWithId, details: RetryDetails, remote?: false) => void): this;
+	on(event: 'retry', listener: (job: JobStateNotification, details: RetryDetails, remote: true) => void): this;
 	on(event: 'retry exhausted', listener: (error: Error, job: JobWithId) => void): this;
 
 	// Job-specific events (e.g., 'fail:myJobName')
-	on(event: `fail:${string}`, listener: (error: Error, job: JobWithId) => void): this;
-	on(event: `success:${string}`, listener: (job: JobWithId) => void): this;
-	on(event: `start:${string}`, listener: (job: JobWithId) => void): this;
-	on(event: `complete:${string}`, listener: (job: JobWithId) => void): this;
-	on(event: `retry:${string}`, listener: (job: JobWithId, details: RetryDetails) => void): this;
-	on(
-		event: `retry exhausted:${string}`,
-		listener: (error: Error, job: JobWithId) => void
-	): this;
+	// Local events: `remote` is undefined, first param is JobWithId
+	// Remote events: `remote` is true, first param is JobStateNotification
+	on(event: `fail:${string}`, listener: (error: Error, job: JobWithId, remote?: false) => void): this;
+	on(event: `fail:${string}`, listener: (error: string, job: JobStateNotification, remote: true) => void): this;
+	on(event: `success:${string}`, listener: (job: JobWithId, remote?: false) => void): this;
+	on(event: `success:${string}`, listener: (job: JobStateNotification, remote: true) => void): this;
+	on(event: `start:${string}`, listener: (job: JobWithId, remote?: false) => void): this;
+	on(event: `start:${string}`, listener: (job: JobStateNotification, remote: true) => void): this;
+	on(event: `complete:${string}`, listener: (job: JobWithId, remote?: false) => void): this;
+	on(event: `complete:${string}`, listener: (job: JobStateNotification, remote: true) => void): this;
+	on(event: `progress:${string}`, listener: (job: JobWithId, remote?: false) => void): this;
+	on(event: `progress:${string}`, listener: (job: JobStateNotification, remote: true) => void): this;
+	on(event: `retry:${string}`, listener: (job: JobWithId, details: RetryDetails, remote?: false) => void): this;
+	on(event: `retry:${string}`, listener: (job: JobStateNotification, details: RetryDetails, remote: true) => void): this;
+	on(event: `retry exhausted:${string}`, listener: (error: Error, job: JobWithId) => void): this;
 
 	// Implementation (eslint-disable needed because overloads provide the public type safety)
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -411,6 +429,113 @@ export class Agenda extends EventEmitter {
 			log('failed to publish job notification for [%s:%s]', job.attrs.name, job.attrs._id, error);
 			this.emit('error', error);
 		}
+	}
+
+	/**
+	 * Publish a job state notification to the notification channel.
+	 * This enables bi-directional communication so that all subscribers
+	 * can receive job lifecycle events (start, success, fail, complete, etc.)
+	 * @internal
+	 */
+	publishJobStateNotification(
+		job: Job,
+		type: JobStateType,
+		extra?: Partial<
+			Omit<JobStateNotification, 'type' | 'jobId' | 'jobName' | 'timestamp' | 'source'>
+		>
+	): void {
+		if (
+			!this.notificationChannel ||
+			this.notificationChannel.state !== 'connected' ||
+			!this.notificationChannel.publishState
+		) {
+			// Channel not configured, not connected, or doesn't support state notifications
+			return;
+		}
+
+		const notification: JobStateNotification = {
+			type,
+			jobId: job.attrs._id as JobId,
+			jobName: job.attrs.name,
+			timestamp: new Date(),
+			source: this.attrs.name || undefined,
+			...extra
+		};
+
+		// fire+forget
+		this.notificationChannel
+			.publishState(notification)
+			.then(() => {
+				log(
+					'published job state notification [%s] for [%s:%s]',
+					type,
+					job.attrs.name,
+					job.attrs._id
+				);
+			})
+			.catch(error => {
+				log(
+					'failed to publish job state notification [%s] for [%s:%s]',
+					type,
+					job.attrs.name,
+					job.attrs._id,
+					error
+				);
+				this.emit('error', error);
+			});
+	}
+
+	/**
+	 * Subscribe to state notifications and re-emit them as regular events.
+	 * This allows `agenda.on('success:jobName', ...)` to work across processes.
+	 * @internal
+	 */
+	private subscribeToStateNotifications(): () => void {
+		if (!this.notificationChannel?.subscribeState) {
+			return () => {};
+		}
+
+		return this.notificationChannel.subscribeState(notification => {
+			// Skip events from our own instance to avoid double-firing
+			// (we already emit locally in Job.run())
+			// Handle both empty strings and undefined as "same source" when both are falsy
+			const notificationSource = notification.source || '';
+			const ourSource = this.attrs.name || '';
+			if (notificationSource === ourSource) {
+				return;
+			}
+
+			log(
+				'received remote state notification [%s] for [%s:%s]',
+				notification.type,
+				notification.jobName,
+				notification.jobId
+			);
+
+			// Use nextTick to ensure local events are processed first
+			// This prevents race conditions where remote events arrive before local processing completes
+			process.nextTick(() => {
+				// Re-emit as regular events with remote=true flag
+				// For 'fail' events, the first argument is the error
+				if (notification.type === 'fail') {
+					this.emit('fail', notification.error, notification, true);
+					this.emit(`fail:${notification.jobName}`, notification.error, notification, true);
+				} else if (notification.type === 'retry') {
+					// For 'retry' events, pass retry details as second argument
+					const retryDetails: RetryDetails = {
+						attempt: notification.retryAttempt || 1,
+						delay: 0, // Not available in notification
+						nextRunAt: notification.retryAt || new Date(),
+						error: new Error(notification.error || 'Unknown error')
+					};
+					this.emit('retry', notification, retryDetails, true);
+					this.emit(`retry:${notification.jobName}`, notification, retryDetails, true);
+				} else {
+					this.emit(notification.type, notification, true);
+					this.emit(`${notification.type}:${notification.jobName}`, notification, true);
+				}
+			});
+		});
 	}
 
 	/**
@@ -792,9 +917,7 @@ export class Agenda extends EventEmitter {
 		try {
 			const job = this.create(name, data);
 
-			job.schedule(new Date())
-				.unique(uniqueKey)
-				.debounce(debounceMs, options);
+			job.schedule(new Date()).unique(uniqueKey).debounce(debounceMs, options);
 
 			await job.save();
 
@@ -824,6 +947,9 @@ export class Agenda extends EventEmitter {
 		if (this.notificationChannel) {
 			log('Agenda.start connecting notification channel');
 			await this.notificationChannel.connect();
+
+			// Subscribe to state notifications for cross-process event propagation
+			this.stateSubscriptionUnsubscribe = this.subscribeToStateNotifications();
 		}
 
 		this.jobProcessor = new JobProcessor(
@@ -857,6 +983,12 @@ export class Agenda extends EventEmitter {
 		if (jobIds.length > 0) {
 			log('about to unlock jobs with ids: %O', jobIds);
 			await this.db.unlockJobs(jobIds);
+		}
+
+		// Unsubscribe from state notifications
+		if (this.stateSubscriptionUnsubscribe) {
+			this.stateSubscriptionUnsubscribe();
+			this.stateSubscriptionUnsubscribe = undefined;
 		}
 
 		// Disconnect notification channel if configured (we always disconnect since we connected it in start)
@@ -918,6 +1050,12 @@ export class Agenda extends EventEmitter {
 		log('Agenda.drain called, waiting for jobs to finish');
 
 		const result = await this.jobProcessor.drain(opts);
+
+		// Unsubscribe from state notifications
+		if (this.stateSubscriptionUnsubscribe) {
+			this.stateSubscriptionUnsubscribe();
+			this.stateSubscriptionUnsubscribe = undefined;
+		}
 
 		// Disconnect notification channel if configured (we always disconnect since we connected it in start)
 		if (this.notificationChannel) {

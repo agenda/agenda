@@ -1,6 +1,6 @@
 import debug from 'debug';
 import { Pool, PoolClient } from 'pg';
-import type { JobNotification, NotificationChannelConfig, JobId } from 'agenda';
+import type { JobNotification, NotificationChannelConfig, JobId, JobStateNotification } from 'agenda';
 import { BaseNotificationChannel, toJobId } from 'agenda';
 
 const log = debug('agenda:postgres:notification');
@@ -26,6 +26,11 @@ export class PostgresNotificationChannel extends BaseNotificationChannel {
 	private ownPool: boolean = false;
 	private connectionString?: string;
 	private listenClient?: PoolClient;
+
+	/** State channel name (derived from main channel name) */
+	private get stateChannelName(): string {
+		return `${this.config.channelName}:state`;
+	}
 
 	constructor(config: PostgresNotificationChannelConfig = {}) {
 		super(config);
@@ -81,6 +86,17 @@ export class PostgresNotificationChannel extends BaseNotificationChannel {
 						log('error parsing notification: %O', error);
 						this.emit('error', error as Error);
 					}
+				} else if (msg.channel === this.stateChannelName && msg.payload) {
+					try {
+						const notification = this.parseStateNotification(msg.payload);
+						log('received state notification: %O', notification);
+						this.notifyStateHandlers(notification).catch(err => {
+							this.emit('error', err);
+						});
+					} catch (error) {
+						log('error parsing state notification: %O', error);
+						this.emit('error', error as Error);
+					}
 				}
 			});
 
@@ -95,9 +111,10 @@ export class PostgresNotificationChannel extends BaseNotificationChannel {
 				}
 			});
 
-			// Start listening
+			// Start listening to both channels
 			await this.listenClient.query(`LISTEN "${this.config.channelName}"`);
-			log('listening on channel: %s', this.config.channelName);
+			await this.listenClient.query(`LISTEN "${this.stateChannelName}"`);
+			log('listening on channels: %s, %s', this.config.channelName, this.stateChannelName);
 
 			this.setState('connected');
 		} catch (error) {
@@ -131,6 +148,7 @@ export class PostgresNotificationChannel extends BaseNotificationChannel {
 		if (this.listenClient) {
 			try {
 				await this.listenClient.query(`UNLISTEN "${this.config.channelName}"`);
+				await this.listenClient.query(`UNLISTEN "${this.stateChannelName}"`);
 			} catch {
 				// Ignore UNLISTEN errors (connection might be dead)
 			}
@@ -150,6 +168,7 @@ export class PostgresNotificationChannel extends BaseNotificationChannel {
 		}
 
 		this.handlers.clear();
+		this.stateHandlers.clear();
 		this.setState('disconnected');
 	}
 
@@ -171,6 +190,24 @@ export class PostgresNotificationChannel extends BaseNotificationChannel {
 		await this.pool.query(`NOTIFY "${this.config.channelName}", '${escapedPayload}'`);
 	}
 
+	async publishState(notification: JobStateNotification): Promise<void> {
+		if (this._state !== 'connected') {
+			throw new Error('Cannot publish state: channel not connected');
+		}
+
+		if (!this.pool) {
+			throw new Error('Cannot publish state: no pool available');
+		}
+
+		const payload = this.serializeStateNotification(notification);
+		log('publishing state notification: %s', payload);
+
+		// NOTIFY doesn't support parameterized queries, so we must escape the payload
+		// PostgreSQL escapes single quotes by doubling them
+		const escapedPayload = payload.replace(/'/g, "''");
+		await this.pool.query(`NOTIFY "${this.stateChannelName}", '${escapedPayload}'`);
+	}
+
 	/**
 	 * Serialize notification to JSON string for NOTIFY payload
 	 */
@@ -182,6 +219,27 @@ export class PostgresNotificationChannel extends BaseNotificationChannel {
 			priority: notification.priority,
 			timestamp: notification.timestamp.toISOString(),
 			source: notification.source
+		});
+	}
+
+	/**
+	 * Serialize state notification to JSON string for NOTIFY payload
+	 */
+	private serializeStateNotification(notification: JobStateNotification): string {
+		return JSON.stringify({
+			type: notification.type,
+			jobId: notification.jobId,
+			jobName: notification.jobName,
+			timestamp: notification.timestamp.toISOString(),
+			source: notification.source,
+			progress: notification.progress,
+			error: notification.error,
+			failCount: notification.failCount,
+			retryAt: notification.retryAt?.toISOString(),
+			retryAttempt: notification.retryAttempt,
+			duration: notification.duration,
+			lastRunAt: notification.lastRunAt?.toISOString(),
+			lastFinishedAt: notification.lastFinishedAt?.toISOString()
 		});
 	}
 
@@ -198,6 +256,29 @@ export class PostgresNotificationChannel extends BaseNotificationChannel {
 			priority: data.priority,
 			timestamp: new Date(data.timestamp),
 			source: data.source
+		};
+	}
+
+	/**
+	 * Parse state notification from JSON string received via LISTEN
+	 */
+	private parseStateNotification(payload: string): JobStateNotification {
+		const data = JSON.parse(payload);
+
+		return {
+			type: data.type,
+			jobId: toJobId(data.jobId) as JobId,
+			jobName: data.jobName,
+			timestamp: new Date(data.timestamp),
+			source: data.source,
+			progress: data.progress,
+			error: data.error,
+			failCount: data.failCount,
+			retryAt: data.retryAt ? new Date(data.retryAt) : undefined,
+			retryAttempt: data.retryAttempt,
+			duration: data.duration,
+			lastRunAt: data.lastRunAt ? new Date(data.lastRunAt) : undefined,
+			lastFinishedAt: data.lastFinishedAt ? new Date(data.lastFinishedAt) : undefined
 		};
 	}
 }

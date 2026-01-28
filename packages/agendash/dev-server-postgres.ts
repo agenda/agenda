@@ -1,41 +1,148 @@
 /**
- * Development server that runs both Vite (frontend) and Express API (backend)
- * Uses mongodb-memory-server by default for easy testing
+ * Development server that runs both Vite (frontend) and Express API (backend) with PostgreSQL
+ * Automatically starts a Docker container if PostgreSQL is not available.
  *
- * Usage: pnpm --filter agendash dev
- * With external MongoDB: MONGO_URL=mongodb://localhost:27017/mydb pnpm --filter agendash dev
- * Fill with 10,000 jobs: FILL_JOBS=true pnpm --filter agendash dev
+ * Usage: pnpm --filter agendash dev:postgres
+ * With custom connection: POSTGRES_URL=postgres://user:pass@localhost:5432/mydb pnpm --filter agendash dev:postgres
+ * Fill with 10,000 jobs: FILL_JOBS=true pnpm --filter agendash dev:postgres
  */
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
+import { exec } from 'node:child_process';
+import { promisify } from 'node:util';
+import { Pool } from 'pg';
 import { Agenda } from 'agenda';
-import { MongoBackend } from '@agendajs/mongo-backend';
+import { PostgresBackend } from '@agendajs/postgres-backend';
 import { createExpressMiddleware } from './src/middlewares/express.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const execAsync = promisify(exec);
 
-async function getMongoUrl(): Promise<{ url: string; cleanup?: () => Promise<void> }> {
-	// Use external MongoDB if MONGO_URL is set
-	if (process.env.MONGO_URL) {
-		console.log(`Using external MongoDB: ${process.env.MONGO_URL}`);
-		return { url: process.env.MONGO_URL };
+const DEFAULT_POSTGRES_URL = 'postgresql://agenda:agenda@localhost:5433/agenda_dev';
+const CONTAINER_NAME = 'agendash-postgres-dev';
+let containerStartedByUs = false;
+
+async function isPostgresReady(url: string): Promise<boolean> {
+	const pool = new Pool({ connectionString: url, connectionTimeoutMillis: 2000 });
+	try {
+		await pool.query('SELECT 1');
+		return true;
+	} catch {
+		return false;
+	} finally {
+		await pool.end();
+	}
+}
+
+async function isDockerAvailable(): Promise<boolean> {
+	try {
+		// First check if docker command exists
+		await execAsync('which docker', { shell: '/bin/bash' });
+		// Then verify Docker daemon is running
+		const { stdout } = await execAsync('docker info 2>&1 | head -1', { shell: '/bin/bash', timeout: 10000 });
+		return stdout.includes('Client');
+	} catch (error) {
+		console.error('Docker check failed:', (error as Error).message);
+		return false;
+	}
+}
+
+async function startDockerContainer(): Promise<boolean> {
+	console.log('🐳 Starting PostgreSQL Docker container...');
+	try {
+		// Check if container already exists
+		try {
+			const { stdout } = await execAsync(`docker inspect ${CONTAINER_NAME} --format='{{.State.Running}}'`, { shell: '/bin/bash' });
+			if (stdout.trim() === "'true'" || stdout.trim() === 'true') {
+				console.log('✓ PostgreSQL container is already running');
+				return true;
+			}
+			// Container exists but not running, start it
+			await execAsync(`docker start ${CONTAINER_NAME}`, { shell: '/bin/bash' });
+			console.log('✓ PostgreSQL container started');
+			return true;
+		} catch {
+			// Container doesn't exist, create it
+		}
+
+		// Start a new container (using port 5433 to avoid conflicts with system PostgreSQL)
+		await execAsync(
+			`docker run -d --name ${CONTAINER_NAME} ` +
+				`-e POSTGRES_USER=agenda ` +
+				`-e POSTGRES_PASSWORD=agenda ` +
+				`-e POSTGRES_DB=agenda_dev ` +
+				`-p 5433:5432 ` +
+				`--tmpfs /var/lib/postgresql/data ` +
+				`postgres:16-alpine`,
+			{ shell: '/bin/bash' }
+		);
+		containerStartedByUs = true;
+		console.log('✓ PostgreSQL container started');
+		return true;
+	} catch (error) {
+		console.error('Failed to start Docker container:', (error as Error).message);
+		return false;
+	}
+}
+
+async function waitForPostgres(url: string, maxAttempts = 30): Promise<boolean> {
+	for (let i = 0; i < maxAttempts; i++) {
+		if (await isPostgresReady(url)) {
+			return true;
+		}
+		process.stdout.write('.');
+		await new Promise((resolve) => setTimeout(resolve, 1000));
+	}
+	return false;
+}
+
+async function stopDockerContainer(): Promise<void> {
+	if (containerStartedByUs) {
+		console.log('\n🐳 Stopping PostgreSQL Docker container...');
+		try {
+			await execAsync(`docker stop ${CONTAINER_NAME}`, { shell: '/bin/bash' });
+			await execAsync(`docker rm ${CONTAINER_NAME}`, { shell: '/bin/bash' });
+			console.log('✓ PostgreSQL container stopped and removed');
+		} catch (error) {
+			console.error('Failed to stop container:', (error as Error).message);
+		}
+	}
+}
+
+async function ensurePostgres(): Promise<string> {
+	const testUrl = process.env.POSTGRES_URL || DEFAULT_POSTGRES_URL;
+
+	// First, check if PostgreSQL is already available
+	if (await isPostgresReady(testUrl)) {
+		console.log('✓ Connected to PostgreSQL');
+		return testUrl;
 	}
 
-	// Otherwise, start an in-memory MongoDB server
-	console.log('Starting in-memory MongoDB server...');
-	const { MongoMemoryServer } = await import('mongodb-memory-server');
-	const mongod = await MongoMemoryServer.create();
-	const url = mongod.getUri();
-	console.log(`In-memory MongoDB started: ${url}`);
+	// PostgreSQL not available - try to start Docker container
+	console.log('PostgreSQL not available, attempting to start Docker container...');
 
-	return {
-		url,
-		cleanup: async () => {
-			await mongod.stop();
-		}
-	};
+	if (!(await isDockerAvailable())) {
+		throw new Error(
+			'PostgreSQL is not available and Docker is not installed.\n' +
+				'Please either:\n' +
+				'  1. Install Docker\n' +
+				'  2. Set POSTGRES_URL to an existing PostgreSQL database'
+		);
+	}
+
+	if (!(await startDockerContainer())) {
+		throw new Error('Failed to start PostgreSQL Docker container.');
+	}
+
+	console.log('⏳ Waiting for PostgreSQL to be ready');
+	if (await waitForPostgres(testUrl)) {
+		console.log('\n✓ PostgreSQL is ready');
+		return testUrl;
+	}
+
+	throw new Error('PostgreSQL container started but failed to become ready in time.');
 }
 
 async function fillWithJobs(agenda: Agenda, count: number): Promise<void> {
@@ -115,10 +222,14 @@ async function fillWithJobs(agenda: Agenda, count: number): Promise<void> {
 }
 
 async function startDevServer() {
-	const { url: mongoUrl, cleanup } = await getMongoUrl();
+	const postgresUrl = await ensurePostgres();
+
+	// PostgresBackend provides both storage AND real-time notifications via LISTEN/NOTIFY
+	const backend = new PostgresBackend({ connectionString: postgresUrl });
 
 	const agenda = new Agenda({
-		backend: new MongoBackend({ address: mongoUrl })
+		backend,
+		name: 'agendash-dev-postgres'
 	});
 
 	agenda.on('error', (err) => {
@@ -169,6 +280,7 @@ async function startDevServer() {
 	});
 
 	await agenda.start();
+	console.log('Agenda started with PostgreSQL backend (LISTEN/NOTIFY enabled for real-time updates)');
 
 	// Fill with 10,000 jobs if FILL_JOBS is set
 	if (process.env.FILL_JOBS === 'true') {
@@ -211,11 +323,12 @@ async function startDevServer() {
 	// Use Vite for frontend (handles HMR and serves all non-API requests)
 	app.use(vite.middlewares);
 
-	const port = parseInt(process.env.PORT || '3000', 10);
+	const port = parseInt(process.env.PORT || '3001', 10);
 
 	app.listen(port, () => {
-		console.log(`\n  Agendash dev server running at:`);
-		console.log(`  > http://localhost:${port}\n`);
+		console.log(`\n  Agendash dev server (PostgreSQL) running at:`);
+		console.log(`  > http://localhost:${port}`);
+		console.log(`  > Real-time updates: ENABLED (via PostgreSQL LISTEN/NOTIFY)\n`);
 	});
 
 	// Graceful shutdown
@@ -223,7 +336,8 @@ async function startDevServer() {
 		console.log('\nShutting down...');
 		await agenda.stop();
 		await vite.close();
-		if (cleanup) await cleanup();
+		await backend.disconnect();
+		await stopDockerContainer();
 		process.exit(0);
 	});
 }

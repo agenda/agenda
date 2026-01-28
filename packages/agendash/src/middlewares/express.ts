@@ -127,5 +127,33 @@ export function createExpressMiddleware(agenda: Agenda, options: ExpressMiddlewa
 		}
 	});
 
+	// SSE endpoint for real-time job state notifications
+	router.get('/api/events', (req, res) => {
+		// Check if state notifications are available
+		if (!controller.hasStateNotifications()) {
+			res.status(501).json({ error: 'State notifications not available. Configure a notification channel that supports state subscriptions.' });
+			return;
+		}
+
+		// Set up SSE headers
+		res.setHeader('Content-Type', 'text/event-stream');
+		res.setHeader('Cache-Control', 'no-cache');
+		res.setHeader('Connection', 'keep-alive');
+		res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
+
+		// Send initial connection message
+		res.write('event: connected\ndata: {"connected":true}\n\n');
+
+		// Subscribe to state notifications
+		const unsubscribe = controller.createStateStream((notification) => {
+			res.write(`data: ${JSON.stringify(notification)}\n\n`);
+		});
+
+		// Clean up on client disconnect
+		req.on('close', () => {
+			unsubscribe();
+		});
+	});
+
 	return router;
 }

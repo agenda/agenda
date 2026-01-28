@@ -22,7 +22,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import type { NotificationChannel, JobNotification, JobId } from '../../src/index.js';
+import type { NotificationChannel, JobNotification, JobId, JobStateNotification, JobStateType } from '../../src/index.js';
 import { toJobId } from '../../src/index.js';
 import { delay } from './test-utils.js';
 
@@ -46,6 +46,22 @@ function createTestNotification(overrides: Partial<JobNotification> = {}): JobNo
 		jobName: 'test-job',
 		nextRunAt: new Date(),
 		priority: 0,
+		timestamp: new Date(),
+		...overrides
+	};
+}
+
+/**
+ * Helper to create a test state notification
+ */
+function createTestStateNotification(
+	type: JobStateType,
+	overrides: Partial<Omit<JobStateNotification, 'type'>> = {}
+): JobStateNotification {
+	return {
+		type,
+		jobId: toJobId('test-job-id') as JobId,
+		jobName: 'test-job',
 		timestamp: new Date(),
 		...overrides
 	};
@@ -243,6 +259,212 @@ export function notificationChannelTestSuite(config: NotificationChannelTestConf
 
 				const disconnectedCount = states.filter(s => s === 'disconnected').length;
 				expect(disconnectedCount).toBeLessThanOrEqual(1);
+			});
+		});
+
+		describe('state notifications (bi-directional)', () => {
+			beforeEach(async () => {
+				await channel.connect();
+			});
+
+			it('should have subscribeState method', () => {
+				expect(typeof channel.subscribeState).toBe('function');
+			});
+
+			it('should have publishState method', () => {
+				expect(typeof channel.publishState).toBe('function');
+			});
+
+			it('should publish and receive state notifications', async () => {
+				if (!channel.publishState || !channel.subscribeState) {
+					// Skip if not supported
+					return;
+				}
+
+				const received: JobStateNotification[] = [];
+
+				channel.subscribeState(notification => {
+					received.push(notification);
+				});
+
+				const notification = createTestStateNotification('start', {
+					jobName: 'state-test',
+					lastRunAt: new Date()
+				});
+
+				await channel.publishState(notification);
+				await delay(propagationDelay);
+
+				expect(received.length).toBe(1);
+				expect(received[0].type).toBe('start');
+				expect(received[0].jobName).toBe('state-test');
+			});
+
+			it('should support multiple state subscribers', async () => {
+				if (!channel.publishState || !channel.subscribeState) {
+					return;
+				}
+
+				const received1: JobStateNotification[] = [];
+				const received2: JobStateNotification[] = [];
+
+				channel.subscribeState(n => { received1.push(n); });
+				channel.subscribeState(n => { received2.push(n); });
+
+				await channel.publishState(createTestStateNotification('success'));
+				await delay(propagationDelay);
+
+				expect(received1.length).toBe(1);
+				expect(received2.length).toBe(1);
+			});
+
+			it('should allow unsubscribing from state notifications', async () => {
+				if (!channel.publishState || !channel.subscribeState) {
+					return;
+				}
+
+				const received: JobStateNotification[] = [];
+
+				const unsubscribe = channel.subscribeState(notification => {
+					received.push(notification);
+				});
+
+				await channel.publishState(createTestStateNotification('start', { jobName: 'first' }));
+				await delay(propagationDelay);
+
+				expect(received.length).toBe(1);
+
+				unsubscribe();
+
+				await channel.publishState(createTestStateNotification('complete', { jobName: 'second' }));
+				await delay(propagationDelay);
+
+				expect(received.length).toBe(1);
+				expect(received[0].jobName).toBe('first');
+			});
+
+			it('should preserve state notification data through serialization', async () => {
+				if (!channel.publishState || !channel.subscribeState) {
+					return;
+				}
+
+				const received: JobStateNotification[] = [];
+				channel.subscribeState(n => { received.push(n); });
+
+				const lastRunAt = new Date('2024-01-15T10:30:00.000Z');
+				const lastFinishedAt = new Date('2024-01-15T10:31:00.000Z');
+				const notification = createTestStateNotification('complete', {
+					jobId: toJobId('specific-id') as JobId,
+					jobName: 'data-test',
+					source: 'test-source',
+					lastRunAt,
+					lastFinishedAt,
+					duration: 60000
+				});
+
+				await channel.publishState(notification);
+				await delay(propagationDelay);
+
+				expect(received.length).toBe(1);
+				expect(received[0].type).toBe('complete');
+				expect(received[0].jobId.toString()).toBe('specific-id');
+				expect(received[0].jobName).toBe('data-test');
+				expect(received[0].source).toBe('test-source');
+				expect(received[0].lastRunAt?.toISOString()).toBe(lastRunAt.toISOString());
+				expect(received[0].lastFinishedAt?.toISOString()).toBe(lastFinishedAt.toISOString());
+				expect(received[0].duration).toBe(60000);
+			});
+
+			it('should handle fail notifications with error info', async () => {
+				if (!channel.publishState || !channel.subscribeState) {
+					return;
+				}
+
+				const received: JobStateNotification[] = [];
+				channel.subscribeState(n => { received.push(n); });
+
+				await channel.publishState(createTestStateNotification('fail', {
+					error: 'Something went wrong',
+					failCount: 3
+				}));
+				await delay(propagationDelay);
+
+				expect(received.length).toBe(1);
+				expect(received[0].type).toBe('fail');
+				expect(received[0].error).toBe('Something went wrong');
+				expect(received[0].failCount).toBe(3);
+			});
+
+			it('should handle retry notifications', async () => {
+				if (!channel.publishState || !channel.subscribeState) {
+					return;
+				}
+
+				const received: JobStateNotification[] = [];
+				channel.subscribeState(n => { received.push(n); });
+
+				const retryAt = new Date('2024-01-15T11:00:00.000Z');
+				await channel.publishState(createTestStateNotification('retry', {
+					retryAt,
+					retryAttempt: 2,
+					error: 'Temporary failure'
+				}));
+				await delay(propagationDelay);
+
+				expect(received.length).toBe(1);
+				expect(received[0].type).toBe('retry');
+				expect(received[0].retryAt?.toISOString()).toBe(retryAt.toISOString());
+				expect(received[0].retryAttempt).toBe(2);
+				expect(received[0].error).toBe('Temporary failure');
+			});
+
+			it('should handle progress notifications', async () => {
+				if (!channel.publishState || !channel.subscribeState) {
+					return;
+				}
+
+				const received: JobStateNotification[] = [];
+				channel.subscribeState(n => { received.push(n); });
+
+				await channel.publishState(createTestStateNotification('progress', {
+					progress: 75
+				}));
+				await delay(propagationDelay);
+
+				expect(received.length).toBe(1);
+				expect(received[0].type).toBe('progress');
+				expect(received[0].progress).toBe(75);
+			});
+
+			it('should handle multiple rapid state notifications', async () => {
+				if (!channel.publishState || !channel.subscribeState) {
+					return;
+				}
+
+				const received: JobStateNotification[] = [];
+				channel.subscribeState(n => { received.push(n); });
+
+				const types: JobStateType[] = ['start', 'progress', 'success', 'complete'];
+				for (const type of types) {
+					await channel.publishState(createTestStateNotification(type));
+				}
+
+				await delay(propagationDelay * 2);
+
+				expect(received.length).toBe(types.length);
+				expect(received.map(n => n.type)).toEqual(types);
+			});
+
+			it('should throw when publishing state on disconnected channel', async () => {
+				if (!channel.publishState) {
+					return;
+				}
+
+				await channel.disconnect();
+
+				await expect(channel.publishState(createTestStateNotification('start'))).rejects.toThrow(
+					/not connected/i
+				);
 			});
 		});
 	});

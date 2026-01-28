@@ -1178,6 +1178,7 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				await agenda.start();
 				// Set up listener before scheduling to avoid race condition
 				await runJobAndWait(agenda, 'drainWaitJob', 'start:drainWaitJob');
+
 				expect(jobStarted).toBe(true);
 				expect(jobFinished).toBe(false);
 

@@ -21,6 +21,7 @@ const {
 	pageSize,
 	currentFilters,
 	currentFilterDisplay,
+	realTimeConnected,
 	fetchJobs,
 	requeueJobs,
 	deleteJobs,
@@ -29,7 +30,9 @@ const {
 	createJob,
 	nextPage,
 	prevPage,
-	search
+	search,
+	startRealTimeUpdates,
+	stopRealTimeUpdates
 } = useJobs();
 
 // Mobile sidebar state
@@ -267,10 +270,13 @@ async function handleCreateJob(
 onMounted(() => {
 	fetchJobs();
 	startRefreshTimer();
+	// Try to start real-time updates (will gracefully fail if not supported)
+	startRealTimeUpdates();
 });
 
 onUnmounted(() => {
 	if (refreshTimer) clearInterval(refreshTimer);
+	stopRealTimeUpdates();
 });
 </script>
 
@@ -280,6 +286,11 @@ onUnmounted(() => {
 		<nav class="navbar navbar-custom navbar-dark sticky-top px-3 py-2">
 			<span class="navbar-brand mb-0">Agendash</span>
 			<div class="d-flex align-items-center gap-3">
+				<!-- Real-time indicator -->
+				<div v-if="realTimeConnected" class="d-none d-md-flex align-items-center gap-1 text-success" title="Real-time updates active">
+					<span class="realtime-dot"></span>
+					<small>Live</small>
+				</div>
 				<!-- Refresh indicator -->
 				<div class="d-none d-md-flex align-items-center gap-2 text-white-50">
 					<button

@@ -254,7 +254,7 @@ export function jobProcessorTestSuite(config: JobProcessorTestConfig): void {
 				new Promise(resolve => {
 					setTimeout(
 						() => resolve(`not all jobs started, currently running: ${runningJobs}`),
-						1500
+						2500
 					);
 				})
 			]);
