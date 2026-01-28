@@ -1,5 +1,15 @@
 # @agendajs/mongo-backend
 
+## 2.0.0
+
+### Patch Changes
+
+- 304c764: flacky test
+- Updated dependencies [c34ae31]
+- Updated dependencies [9c6843e]
+- Updated dependencies [605ba67]
+  - agenda@6.1.0
+
 ## 1.0.0
 
 ### Minor Changes

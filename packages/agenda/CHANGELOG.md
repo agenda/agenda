@@ -1,5 +1,16 @@
 # agenda
 
+## 6.1.0
+
+### Minor Changes
+
+- 9c6843e: auto cleanup on job completion
+- 605ba67: bi-directional state notificatoins
+
+### Patch Changes
+
+- c34ae31: configurable drain timeouts
+
 ## 6.0.0
 
 ### Major Changes

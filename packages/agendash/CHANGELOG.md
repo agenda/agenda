@@ -1,5 +1,20 @@
 # agendash
 
+## 7.0.0
+
+### Minor Changes
+
+- 605ba67: bi-directional state notificatoins
+- 71cd27d: keyboard events
+
+### Patch Changes
+
+- 4df1f8f: add progress bar
+- Updated dependencies [c34ae31]
+- Updated dependencies [9c6843e]
+- Updated dependencies [605ba67]
+  - agenda@6.1.0
+
 ## 6.0.1
 
 ### Patch Changes
