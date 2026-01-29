@@ -1,5 +1,6 @@
 import type { JobRepository } from './JobRepository.js';
 import type { NotificationChannel } from './NotificationChannel.js';
+import type { JobLogger } from './JobLogger.js';
 
 /**
  * Unified backend interface for Agenda.
@@ -32,6 +33,14 @@ export interface AgendaBackend {
 	 * If not provided, Agenda falls back to periodic polling.
 	 */
 	readonly notificationChannel?: NotificationChannel;
+
+	/**
+	 * Optional job logger for persistent job event logging.
+	 * When the backend is configured with `logging: true`, it creates a
+	 * logger that stores events in a dedicated table/collection.
+	 * Agenda uses this logger when the user enables logging via `logging: true`.
+	 */
+	readonly logger?: JobLogger;
 
 	/**
 	 * Whether the backend owns its database connection.

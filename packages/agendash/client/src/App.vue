@@ -8,6 +8,7 @@ import NewJob from './components/NewJob.vue';
 import ConfirmDialog from './components/ConfirmDialog.vue';
 import Toast from './components/Toast.vue';
 import StatsPanel from './components/StatsPanel.vue';
+import JobLogs from './components/JobLogs.vue';
 import { useJobs } from './composables/useJobs';
 import type { FrontendJob, SearchParams } from './types';
 
@@ -62,8 +63,9 @@ const selectedJobIds = ref<string[]>([]);
 // Loading state for modal actions
 const actionLoading = ref(false);
 
-// View mode - jobs or stats
+// View mode - jobs, stats, or logs
 const showingStats = ref(false);
+const showingLogs = ref(false);
 
 // Helper to format job data for display (full JSON, pretty-printed)
 function formatJobData(data: unknown): string {
@@ -245,6 +247,7 @@ function handleSearch(params: Partial<SearchParams>) {
 
 function handleSidebarSearch(name: string, state: string) {
 	showingStats.value = false;
+	showingLogs.value = false;
 	search({ name: name === 'All Jobs' ? '' : name, state, skip: 0 });
 	closeNav();
 	secondsUntilRefresh.value = refreshInterval.value;
@@ -252,7 +255,14 @@ function handleSidebarSearch(name: string, state: string) {
 
 function handleShowStats() {
 	showingStats.value = true;
-	// Clear job filters so no job entry shows as selected
+	showingLogs.value = false;
+	currentFilters.value = {};
+	closeNav();
+}
+
+function handleShowLogs() {
+	showingLogs.value = true;
+	showingStats.value = false;
 	currentFilters.value = {};
 	closeNav();
 }
@@ -319,9 +329,11 @@ onUnmounted(() => {
 				:loading="loading"
 				:current-filters="currentFilters"
 				:showing-stats="showingStats"
+				:showing-logs="showingLogs"
 				@search="handleSidebarSearch"
 				@new-job="showNewJob = true"
 				@show-stats="handleShowStats"
+				@show-logs="handleShowLogs"
 			/>
 		</div>
 
@@ -335,9 +347,11 @@ onUnmounted(() => {
 					:loading="loading"
 					:current-filters="currentFilters"
 					:showing-stats="showingStats"
+					:showing-logs="showingLogs"
 					@search="handleSidebarSearch"
 					@new-job="showNewJob = true"
 					@show-stats="handleShowStats"
+					@show-logs="handleShowLogs"
 				/>
 			</aside>
 
@@ -360,6 +374,12 @@ onUnmounted(() => {
 				<div v-if="showingStats">
 					<h4 class="mb-4">Agenda Status</h4>
 					<StatsPanel />
+				</div>
+
+				<!-- Logs View -->
+				<div v-else-if="showingLogs">
+					<h4 class="mb-4">Job Logs</h4>
+					<JobLogs />
 				</div>
 
 				<!-- Jobs View -->

@@ -424,6 +424,13 @@ export class JobProcessor {
 					job.attrs._id
 				);
 				this.agenda.logger.debug('[%s:%s] job locked', name, job.attrs._id);
+				this.agenda.logJobEvent({
+					level: 'debug',
+					event: 'locked',
+					jobId: job.attrs._id?.toString(),
+					jobName: name,
+					message: 'job locked'
+				});
 				this.updateStatus(name, 'locked', +1);
 				this.lockedJobs.push(job);
 
@@ -603,6 +610,13 @@ export class JobProcessor {
 								job.attrs.name,
 								job.attrs._id
 							);
+							this.agenda.logJobEvent({
+								level: 'warn',
+								event: 'expired',
+								jobId: job.attrs._id?.toString(),
+								jobName: job.attrs.name,
+								message: `job expired (lock lifetime exceeded)`
+							});
 
 							throw new Error(
 								`execution of '${job.attrs.name}' canceled, execution took more than ${
@@ -657,6 +671,14 @@ export class JobProcessor {
 					job.attrs._id,
 					error instanceof Error ? error.message : String(error)
 				);
+				this.agenda.logJobEvent({
+					level: 'error',
+					event: 'fail',
+					jobId: job.attrs._id?.toString(),
+					jobName: job.attrs.name,
+					message: `job processing error: ${error instanceof Error ? error.message : String(error)}`,
+					error: error instanceof Error ? error.message : String(error)
+				});
 				this.agenda.emit('error', error instanceof Error ? error : new Error(String(error)));
 			} finally {
 				jobIsRunning = false;

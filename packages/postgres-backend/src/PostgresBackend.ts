@@ -1,6 +1,7 @@
 import debug from 'debug';
-import type { AgendaBackend, JobRepository, NotificationChannel } from 'agenda';
+import type { AgendaBackend, JobRepository, NotificationChannel, JobLogger } from 'agenda';
 import { PostgresJobRepository } from './PostgresJobRepository.js';
+import { PostgresJobLogger } from './PostgresJobLogger.js';
 import { PostgresNotificationChannel } from './PostgresNotificationChannel.js';
 import type { PostgresBackendConfig } from './types.js';
 
@@ -48,6 +49,7 @@ export class PostgresBackend implements AgendaBackend {
 
 	private _repository: PostgresJobRepository;
 	private _notificationChannel?: PostgresNotificationChannel;
+	private _logger?: PostgresJobLogger;
 	private config: PostgresBackendConfig;
 	private _ownsConnection: boolean;
 
@@ -70,11 +72,17 @@ export class PostgresBackend implements AgendaBackend {
 			});
 		}
 
+		// Create job logger if logging is enabled
+		if (config.logging) {
+			this._logger = new PostgresJobLogger(config.logTableName, config.ensureSchema);
+		}
+
 		log('PostgresBackend created with config: %O', {
 			tableName: config.tableName || 'agenda_jobs',
 			channelName: config.channelName || 'agenda_jobs',
 			ensureSchema: config.ensureSchema ?? true,
 			disableNotifications: config.disableNotifications ?? false,
+			logging: config.logging ?? false,
 			ownsConnection: this._ownsConnection
 		});
 	}
@@ -92,6 +100,14 @@ export class PostgresBackend implements AgendaBackend {
 	 */
 	get ownsConnection(): boolean {
 		return this._ownsConnection;
+	}
+
+	/**
+	 * The job logger for persistent event logging.
+	 * Only available when `logging: true` is set in config.
+	 */
+	get logger(): JobLogger | undefined {
+		return this._logger;
 	}
 
 	/**
@@ -118,6 +134,11 @@ export class PostgresBackend implements AgendaBackend {
 		// Share the pool with notification channel (if enabled)
 		if (this._notificationChannel) {
 			this._notificationChannel.setPool(this._repository.getPool());
+		}
+
+		// Initialize the job logger with the shared pool
+		if (this._logger) {
+			await this._logger.setPool(this._repository.getPool());
 		}
 
 		// Note: notification channel is connected by Agenda.start()

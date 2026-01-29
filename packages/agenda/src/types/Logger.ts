@@ -1,9 +1,4 @@
 /**
- * Log level for the Agenda logger.
- */
-export type LogLevel = 'info' | 'warn' | 'error' | 'debug';
-
-/**
  * Pluggable logger interface for Agenda.
  *
  * Implement this interface to integrate with any logging library

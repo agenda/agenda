@@ -27,6 +27,16 @@ export type MongoBackendConfig = MongoConnectionConfig & {
 
 	/** Sort order for job queries */
 	sort?: { [key: string]: SortDirection };
+
+	/**
+	 * Enable persistent job event logging.
+	 * When true, creates a MongoDB collection (default: 'agenda_logs') to store job lifecycle events.
+	 * @default false
+	 */
+	logging?: boolean;
+
+	/** Collection name for log entries (default: 'agenda_logs'). Only used when `logging: true`. */
+	logCollection?: string;
 };
 
 /**

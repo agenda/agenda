@@ -25,6 +25,13 @@ export interface RedisBackendConfig {
 		nextRunAt?: SortDirection;
 		priority?: SortDirection;
 	};
+
+	/**
+	 * Enable persistent job event logging.
+	 * When true, stores job lifecycle events in Redis using sorted sets and hashes.
+	 * @default false
+	 */
+	logging?: boolean;
 }
 
 /**

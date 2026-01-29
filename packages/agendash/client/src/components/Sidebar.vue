@@ -10,12 +10,14 @@ const props = defineProps<{
 	loading: boolean;
 	currentFilters: Partial<SearchParams>;
 	showingStats: boolean;
+	showingLogs: boolean;
 }>();
 
 const emit = defineEmits<{
 	search: [name: string, state: string];
 	'new-job': [];
 	'show-stats': [];
+	'show-logs': [];
 }>();
 
 const expandedItems = ref<Set<string>>(new Set(['All Jobs']));
@@ -129,6 +131,15 @@ function getStatusColor(type: string): string {
 				<span class="stats-badge queued">{{ typeof stats.queuedJobs === 'number' ? stats.queuedJobs : stats.queuedJobs.length }} queued</span>
 				<span class="stats-badge locked">{{ typeof stats.lockedJobs === 'number' ? stats.lockedJobs : stats.lockedJobs.length }} locked</span>
 			</div>
+		</div>
+
+		<!-- Logs Button -->
+		<div
+			class="logs-nav-card mb-3"
+			:class="{ 'logs-selected': showingLogs }"
+			@click="$emit('show-logs')"
+		>
+			<span class="logs-nav-title">Job Logs</span>
 		</div>
 
 		<!-- Initial Loading State (only when no data yet) -->
@@ -463,5 +474,31 @@ function getStatusColor(type: string): string {
 .stats-badge.locked {
 	background-color: rgba(255, 255, 255, 0.15);
 	color: rgba(255, 255, 255, 0.9);
+}
+
+/* Logs Navigation Card */
+.logs-nav-card {
+	background: #f8f9fa;
+	border: 1px solid #dee2e6;
+	border-radius: 8px;
+	padding: 8px 12px;
+	cursor: pointer;
+	transition: all 0.15s;
+}
+
+.logs-nav-card:hover {
+	background: #e9ecef;
+	border-color: #adb5bd;
+}
+
+.logs-nav-card.logs-selected {
+	background: #d4e5f7;
+	border-color: #1a5fb4;
+}
+
+.logs-nav-title {
+	font-weight: 600;
+	font-size: 0.85rem;
+	color: #293241;
 }
 </style>

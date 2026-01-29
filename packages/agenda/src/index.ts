@@ -18,6 +18,7 @@ import type { JobsQueryOptions, JobsResult, JobsOverview } from './types/JobQuer
 import type { RemoveJobsOptions } from './types/JobRepository.js';
 import type { DrainOptions, DrainResult } from './types/DrainOptions.js';
 import type { Logger } from './types/Logger.js';
+import type { JobLogger, JobLogEntry, JobLogQuery, JobLogQueryResult } from './types/JobLogger.js';
 import { Job, JobWithId } from './Job.js';
 import { JobPriority, parsePriority } from './utils/priority.js';
 import { JobProcessor } from './JobProcessor.js';
@@ -72,25 +73,47 @@ export interface AgendaOptions {
 	 */
 	notificationChannel?: NotificationChannel;
 	/**
-	 * Pluggable logger for job lifecycle events and Agenda operations.
+	 * Pluggable logger for console/debug output of job lifecycle events.
 	 *
-	 * - Pass a `Logger` implementation to use a custom logger (e.g., winston, pino)
-	 * - Pass `false` to disable logging entirely
-	 * - Omit to use the default `DebugLogger` (uses the `debug` library, controlled via `DEBUG=agenda:*`)
+	 * Disabled by default. Must be explicitly enabled:
+	 * - Pass `true` to enable the default `DebugLogger` (uses the `debug` library, controlled via `DEBUG=agenda:*`)
+	 * - Pass a `Logger` implementation for custom logging (e.g., winston, pino)
+	 * - Omit or pass `false` to disable (default)
 	 *
 	 * @example
 	 * ```typescript
+	 * // Enable default debug logger
+	 * const agenda = new Agenda({ backend, logger: true });
+	 *
 	 * // Custom logger
 	 * const agenda = new Agenda({ backend, logger: myWinstonLogger });
-	 *
-	 * // Disable logging
-	 * const agenda = new Agenda({ backend, logger: false });
-	 *
-	 * // Default (DebugLogger)
-	 * const agenda = new Agenda({ backend });
 	 * ```
 	 */
-	logger?: Logger | false;
+	logger?: Logger | boolean;
+	/**
+	 * Enable persistent job event logging (stored in the backend's database).
+	 *
+	 * Disabled by default. Must be explicitly enabled:
+	 * - Pass `true` to use the backend's built-in job logger (backend must support it via `logging: true`)
+	 * - Pass a `JobLogger` implementation for custom persistent logging
+	 * - Omit or pass `false` to disable (default)
+	 *
+	 * When enabled, all job lifecycle events (start, success, fail, complete, retry, etc.)
+	 * are persisted and can be queried via `agenda.getLogs()` or viewed in agendash.
+	 *
+	 * @example
+	 * ```typescript
+	 * // Enable with backend's built-in logger
+	 * const agenda = new Agenda({
+	 *   backend: new PostgresBackend({ connectionString: '...', logging: true }),
+	 *   logging: true
+	 * });
+	 *
+	 * // Query logs
+	 * const { entries } = await agenda.getLogs({ jobName: 'myJob', limit: 100 });
+	 * ```
+	 */
+	logging?: JobLogger | boolean;
 }
 
 /**
@@ -148,11 +171,17 @@ export class Agenda extends EventEmitter {
 	private stateSubscriptionUnsubscribe?: () => void;
 
 	/**
-	 * The pluggable logger instance used for job lifecycle events and Agenda operations.
-	 * Defaults to `DebugLogger` (uses the `debug` library).
-	 * Set via constructor options or `logVia()`.
+	 * The pluggable logger instance for console/debug output.
+	 * Disabled by default (NoopLogger). Enable via `logger: true` or a custom Logger.
 	 */
 	public logger: Logger;
+
+	/**
+	 * The persistent job logger for storing job lifecycle events in the database.
+	 * Disabled by default. Enable via `logging: true` (uses backend's built-in logger)
+	 * or by passing a custom `JobLogger` implementation.
+	 */
+	public jobLogger?: JobLogger;
 
 	// Lifecycle events
 	on(event: 'ready', listener: () => void): this;
@@ -262,11 +291,22 @@ export class Agenda extends EventEmitter {
 		this.forkedWorker = config.forkedWorker;
 		this.forkHelper = config.forkHelper;
 
-		// Initialize logger: false = disabled, undefined = default DebugLogger, or custom
-		if (config.logger === false) {
-			this.logger = new NoopLogger();
+		// Initialize console/debug logger: disabled by default
+		if (config.logger === true) {
+			this.logger = new DebugLogger();
+		} else if (typeof config.logger === 'object') {
+			this.logger = config.logger;
 		} else {
-			this.logger = config.logger ?? new DebugLogger();
+			this.logger = new NoopLogger();
+		}
+
+		// Initialize persistent job logger: disabled by default
+		if (config.logging === true) {
+			// Use backend's built-in logger (must be configured on the backend)
+			this.jobLogger = config.backend.logger;
+		} else if (typeof config.logging === 'object') {
+			// Use custom JobLogger
+			this.jobLogger = config.logging;
 		}
 
 		// Store backend and get repository
@@ -434,17 +474,23 @@ export class Agenda extends EventEmitter {
 	}
 
 	/**
-	 * Set a pluggable logger for job lifecycle events and Agenda operations.
-	 * @param logger - The logger implementation, or `false` to disable logging
+	 * Set a pluggable logger for console/debug output.
+	 * @param logger - The logger implementation, `true` for DebugLogger, or `false` to disable
 	 */
-	logVia(logger: Logger | false): Agenda {
+	logVia(logger: Logger | boolean): Agenda {
 		if (this.jobProcessor) {
 			throw new Error(
 				'job processor is already running, you need to set logger before calling start'
 			);
 		}
 		log('Agenda.logVia([Logger])');
-		this.logger = logger === false ? new NoopLogger() : logger;
+		if (logger === true) {
+			this.logger = new DebugLogger();
+		} else if (logger === false) {
+			this.logger = new NoopLogger();
+		} else {
+			this.logger = logger;
+		}
 		return this;
 	}
 
@@ -453,6 +499,54 @@ export class Agenda extends EventEmitter {
 	 */
 	hasNotificationChannel(): boolean {
 		return !!this.notificationChannel;
+	}
+
+	/**
+	 * Check if persistent job logging is enabled
+	 */
+	hasJobLogger(): boolean {
+		return !!this.jobLogger;
+	}
+
+	/**
+	 * Log a job lifecycle event to the persistent job logger (fire-and-forget).
+	 * Does nothing if no job logger is configured.
+	 * @internal
+	 */
+	logJobEvent(entry: Omit<JobLogEntry, '_id' | 'timestamp' | 'agendaName'>): void {
+		if (!this.jobLogger) return;
+
+		this.jobLogger
+			.log({
+				...entry,
+				timestamp: new Date(),
+				agendaName: this.attrs.name || undefined
+			})
+			.catch(err => {
+				log('failed to write job log entry: %O', err);
+			});
+	}
+
+	/**
+	 * Query persistent job logs.
+	 * Returns empty result if no job logger is configured.
+	 */
+	async getLogs(query?: JobLogQuery): Promise<JobLogQueryResult> {
+		if (!this.jobLogger) {
+			return { entries: [], total: 0 };
+		}
+		return this.jobLogger.getLogs(query);
+	}
+
+	/**
+	 * Clear persistent job logs matching the query.
+	 * Returns 0 if no job logger is configured.
+	 */
+	async clearLogs(query?: JobLogQuery): Promise<number> {
+		if (!this.jobLogger) {
+			return 0;
+		}
+		return this.jobLogger.clearLogs(query);
 	}
 
 	/**
@@ -1170,6 +1264,8 @@ export * from './types/DrainOptions.js';
 export * from './notifications/index.js';
 
 export * from './types/Logger.js';
+
+export * from './types/JobLogger.js';
 
 export * from './logging/index.js';
 

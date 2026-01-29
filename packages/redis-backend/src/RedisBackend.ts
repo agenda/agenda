@@ -1,6 +1,7 @@
 import debug from 'debug';
-import type { AgendaBackend, JobRepository, NotificationChannel } from 'agenda';
+import type { AgendaBackend, JobRepository, NotificationChannel, JobLogger } from 'agenda';
 import { RedisJobRepository } from './RedisJobRepository.js';
+import { RedisJobLogger } from './RedisJobLogger.js';
 import { RedisNotificationChannel } from './RedisNotificationChannel.js';
 import type { RedisBackendConfig } from './types.js';
 
@@ -48,6 +49,7 @@ export class RedisBackend implements AgendaBackend {
 
 	private _repository: RedisJobRepository;
 	private _notificationChannel: RedisNotificationChannel;
+	private _logger?: RedisJobLogger;
 	private config: RedisBackendConfig;
 	private _ownsConnection: boolean;
 
@@ -68,9 +70,15 @@ export class RedisBackend implements AgendaBackend {
 			}
 		});
 
+		// Create job logger if logging is enabled
+		if (config.logging) {
+			this._logger = new RedisJobLogger(config.keyPrefix);
+		}
+
 		log('RedisBackend created with config: %O', {
 			keyPrefix: config.keyPrefix || 'agenda:',
-			channelName: config.channelName || 'agenda:jobs'
+			channelName: config.channelName || 'agenda:jobs',
+			logging: config.logging ?? false
 		});
 	}
 
@@ -79,6 +87,14 @@ export class RedisBackend implements AgendaBackend {
 	 */
 	get repository(): JobRepository {
 		return this._repository;
+	}
+
+	/**
+	 * The job logger for persistent event logging.
+	 * Only available when `logging: true` is set in config.
+	 */
+	get logger(): JobLogger | undefined {
+		return this._logger;
 	}
 
 	/**
@@ -110,6 +126,11 @@ export class RedisBackend implements AgendaBackend {
 
 		// Share the Redis client with notification channel
 		this._notificationChannel.setRedis(this._repository.getRedis());
+
+		// Initialize the job logger with the shared Redis client
+		if (this._logger) {
+			this._logger.setRedis(this._repository.getRedis());
+		}
 
 		// Note: notification channel is connected by Agenda.start()
 		// when it's needed, so we don't connect it here

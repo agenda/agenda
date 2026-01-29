@@ -27,6 +27,7 @@
 
 export { PostgresBackend } from './PostgresBackend.js';
 export { PostgresJobRepository } from './PostgresJobRepository.js';
+export { PostgresJobLogger } from './PostgresJobLogger.js';
 export { PostgresNotificationChannel } from './PostgresNotificationChannel.js';
 
 export type { PostgresBackendConfig, PostgresJobRow } from './types.js';
@@ -39,3 +40,4 @@ export {
 	getDropTableSQL,
 	getUpdateTimestampTriggerSQL
 } from './schema.js';
+export { getCreateLogsTableSQL, getCreateLogsIndexesSQL } from './PostgresJobLogger.js';
