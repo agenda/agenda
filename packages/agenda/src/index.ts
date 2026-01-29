@@ -17,11 +17,14 @@ import type { AgendaStatus } from './types/AgendaStatus.js';
 import type { JobsQueryOptions, JobsResult, JobsOverview } from './types/JobQuery.js';
 import type { RemoveJobsOptions } from './types/JobRepository.js';
 import type { DrainOptions, DrainResult } from './types/DrainOptions.js';
+import type { Logger } from './types/Logger.js';
 import { Job, JobWithId } from './Job.js';
 import { JobPriority, parsePriority } from './utils/priority.js';
 import { JobProcessor } from './JobProcessor.js';
 import { calculateProcessEvery } from './utils/processEvery.js';
 import { getCallerFilePath } from './utils/stack.js';
+import { DebugLogger } from './logging/DebugLogger.js';
+import { NoopLogger } from './logging/NoopLogger.js';
 
 const log = debug('agenda');
 
@@ -68,6 +71,26 @@ export interface AgendaOptions {
 	 * e.g., MongoDB storage + Redis notifications
 	 */
 	notificationChannel?: NotificationChannel;
+	/**
+	 * Pluggable logger for job lifecycle events and Agenda operations.
+	 *
+	 * - Pass a `Logger` implementation to use a custom logger (e.g., winston, pino)
+	 * - Pass `false` to disable logging entirely
+	 * - Omit to use the default `DebugLogger` (uses the `debug` library, controlled via `DEBUG=agenda:*`)
+	 *
+	 * @example
+	 * ```typescript
+	 * // Custom logger
+	 * const agenda = new Agenda({ backend, logger: myWinstonLogger });
+	 *
+	 * // Disable logging
+	 * const agenda = new Agenda({ backend, logger: false });
+	 *
+	 * // Default (DebugLogger)
+	 * const agenda = new Agenda({ backend });
+	 * ```
+	 */
+	logger?: Logger | false;
 }
 
 /**
@@ -123,6 +146,13 @@ export class Agenda extends EventEmitter {
 	private notificationChannel?: NotificationChannel;
 
 	private stateSubscriptionUnsubscribe?: () => void;
+
+	/**
+	 * The pluggable logger instance used for job lifecycle events and Agenda operations.
+	 * Defaults to `DebugLogger` (uses the `debug` library).
+	 * Set via constructor options or `logVia()`.
+	 */
+	public logger: Logger;
 
 	// Lifecycle events
 	on(event: 'ready', listener: () => void): this;
@@ -231,6 +261,13 @@ export class Agenda extends EventEmitter {
 
 		this.forkedWorker = config.forkedWorker;
 		this.forkHelper = config.forkHelper;
+
+		// Initialize logger: false = disabled, undefined = default DebugLogger, or custom
+		if (config.logger === false) {
+			this.logger = new NoopLogger();
+		} else {
+			this.logger = config.logger ?? new DebugLogger();
+		}
 
 		// Store backend and get repository
 		this.backend = config.backend;
@@ -393,6 +430,21 @@ export class Agenda extends EventEmitter {
 		}
 		log('Agenda.notifyVia([NotificationChannel])');
 		this.notificationChannel = channel;
+		return this;
+	}
+
+	/**
+	 * Set a pluggable logger for job lifecycle events and Agenda operations.
+	 * @param logger - The logger implementation, or `false` to disable logging
+	 */
+	logVia(logger: Logger | false): Agenda {
+		if (this.jobProcessor) {
+			throw new Error(
+				'job processor is already running, you need to set logger before calling start'
+			);
+		}
+		log('Agenda.logVia([Logger])');
+		this.logger = logger === false ? new NoopLogger() : logger;
 		return this;
 	}
 
@@ -959,6 +1011,12 @@ export class Agenda extends EventEmitter {
 			this.attrs.processEvery,
 			this.notificationChannel
 		);
+
+		this.logger.info(
+			'Agenda started (processEvery=%dms, maxConcurrency=%d)',
+			this.attrs.processEvery,
+			this.attrs.maxConcurrency
+		);
 	}
 
 	/**
@@ -1007,6 +1065,8 @@ export class Agenda extends EventEmitter {
 		}
 
 		this.jobProcessor = undefined;
+
+		this.logger.info('Agenda stopped');
 	}
 
 	/**
@@ -1074,6 +1134,13 @@ export class Agenda extends EventEmitter {
 
 		this.jobProcessor = undefined;
 
+		this.logger.info(
+			'Agenda drained (completed=%d, running=%d, timedOut=%s)',
+			result.completed,
+			result.running,
+			result.timedOut
+		);
+
 		return result;
 	}
 }
@@ -1101,6 +1168,10 @@ export * from './types/AgendaStatus.js';
 export * from './types/DrainOptions.js';
 
 export * from './notifications/index.js';
+
+export * from './types/Logger.js';
+
+export * from './logging/index.js';
 
 export {
 	applyAllDateConstraints,
