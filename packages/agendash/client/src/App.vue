@@ -66,6 +66,7 @@ const actionLoading = ref(false);
 // View mode - jobs, stats, or logs
 const showingStats = ref(false);
 const showingLogs = ref(false);
+const logsJobName = ref('');
 
 // Helper to format job data for display (full JSON, pretty-printed)
 function formatJobData(data: unknown): string {
@@ -260,7 +261,8 @@ function handleShowStats() {
 	closeNav();
 }
 
-function handleShowLogs() {
+function handleShowJobLogs(name: string) {
+	logsJobName.value = name;
 	showingLogs.value = true;
 	showingStats.value = false;
 	currentFilters.value = {};
@@ -329,11 +331,10 @@ onUnmounted(() => {
 				:loading="loading"
 				:current-filters="currentFilters"
 				:showing-stats="showingStats"
-				:showing-logs="showingLogs"
 				@search="handleSidebarSearch"
 				@new-job="showNewJob = true"
 				@show-stats="handleShowStats"
-				@show-logs="handleShowLogs"
+				@show-job-logs="handleShowJobLogs"
 			/>
 		</div>
 
@@ -347,11 +348,10 @@ onUnmounted(() => {
 					:loading="loading"
 					:current-filters="currentFilters"
 					:showing-stats="showingStats"
-					:showing-logs="showingLogs"
 					@search="handleSidebarSearch"
 					@new-job="showNewJob = true"
 					@show-stats="handleShowStats"
-					@show-logs="handleShowLogs"
+					@show-job-logs="handleShowJobLogs"
 				/>
 			</aside>
 
@@ -376,10 +376,10 @@ onUnmounted(() => {
 					<StatsPanel />
 				</div>
 
-				<!-- Logs View -->
+				<!-- Logs View (per-job-type) -->
 				<div v-else-if="showingLogs">
-					<h4 class="mb-4">Job Logs</h4>
-					<JobLogs />
+					<h4 class="mb-4">Logs: {{ logsJobName }}</h4>
+					<JobLogs :job-name="logsJobName" />
 				</div>
 
 				<!-- Jobs View -->

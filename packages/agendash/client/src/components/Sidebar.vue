@@ -10,14 +10,13 @@ const props = defineProps<{
 	loading: boolean;
 	currentFilters: Partial<SearchParams>;
 	showingStats: boolean;
-	showingLogs: boolean;
 }>();
 
 const emit = defineEmits<{
 	search: [name: string, state: string];
 	'new-job': [];
 	'show-stats': [];
-	'show-logs': [];
+	'show-job-logs': [name: string];
 }>();
 
 const expandedItems = ref<Set<string>>(new Set(['All Jobs']));
@@ -133,15 +132,6 @@ function getStatusColor(type: string): string {
 			</div>
 		</div>
 
-		<!-- Logs Button -->
-		<div
-			class="logs-nav-card mb-3"
-			:class="{ 'logs-selected': showingLogs }"
-			@click="$emit('show-logs')"
-		>
-			<span class="logs-nav-title">Job Logs</span>
-		</div>
-
 		<!-- Initial Loading State (only when no data yet) -->
 		<div v-if="loading && overview.length === 0" class="text-center py-4 text-muted">
 			<div class="spinner-border spinner-border-sm mb-2"></div>
@@ -244,6 +234,10 @@ function getStatusColor(type: string): string {
 						<span class="dot" :style="{ backgroundColor: getStatusColor('paused') }"></span>
 						<span class="label">Paused</span>
 						<span class="count">{{ item.paused }}</span>
+					</div>
+					<div v-if="item.displayName !== 'All Jobs'" class="detail-row logs-row" @click.stop="$emit('show-job-logs', item.displayName)">
+						<span class="logs-icon">&#128220;</span>
+						<span class="label">Logs</span>
 					</div>
 				</div>
 			</div>
@@ -476,29 +470,16 @@ function getStatusColor(type: string): string {
 	color: rgba(255, 255, 255, 0.9);
 }
 
-/* Logs Navigation Card */
-.logs-nav-card {
-	background: #f8f9fa;
-	border: 1px solid #dee2e6;
-	border-radius: 8px;
-	padding: 8px 12px;
-	cursor: pointer;
-	transition: all 0.15s;
+/* Logs row in job details */
+.logs-row {
+	margin-top: 4px;
+	border-top: 1px solid #e9ecef;
+	padding-top: 6px;
 }
 
-.logs-nav-card:hover {
-	background: #e9ecef;
-	border-color: #adb5bd;
-}
-
-.logs-nav-card.logs-selected {
-	background: #d4e5f7;
-	border-color: #1a5fb4;
-}
-
-.logs-nav-title {
-	font-weight: 600;
-	font-size: 0.85rem;
-	color: #293241;
+.logs-icon {
+	font-size: 12px;
+	margin-right: 8px;
+	flex-shrink: 0;
 }
 </style>
