@@ -3,9 +3,10 @@ import Redis from 'ioredis';
 import {
 	RedisBackend,
 	RedisJobRepository,
-	RedisNotificationChannel
+	RedisNotificationChannel,
+	RedisJobLogger
 } from '../src/index.js';
-import { fullAgendaTestSuite } from 'agenda/testing';
+import { fullAgendaTestSuite, jobLoggerTestSuite } from 'agenda/testing';
 
 /**
  * Redis backend tests.
@@ -293,4 +294,21 @@ describe('RedisBackend unit tests', () => {
 		expect(backend.repository).toBeDefined();
 		expect(backend.notificationChannel).toBeDefined();
 	});
+});
+
+// ============================================================================
+// RedisJobLogger Tests (shared test suite)
+// ============================================================================
+
+const TEST_LOG_PREFIX = 'agenda_test_log:';
+
+jobLoggerTestSuite({
+	name: 'RedisJobLogger',
+	createLogger: async () => {
+		const logger = new RedisJobLogger({ redis: sharedRedis, keyPrefix: TEST_LOG_PREFIX });
+		return logger;
+	},
+	cleanupLogger: async (logger) => {
+		await logger.clearLogs();
+	}
 });

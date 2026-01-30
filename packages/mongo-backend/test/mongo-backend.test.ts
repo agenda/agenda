@@ -2,8 +2,8 @@ import { expect, describe, it, beforeAll, afterAll, beforeEach, afterEach } from
 import { Db, MongoClient } from 'mongodb';
 import { randomUUID } from 'crypto';
 import { InMemoryNotificationChannel } from 'agenda';
-import { MongoBackend, MongoJobRepository } from '../src/index.js';
-import { fullAgendaTestSuite } from 'agenda/testing';
+import { MongoBackend, MongoJobRepository, MongoJobLogger } from '../src/index.js';
+import { fullAgendaTestSuite, jobLoggerTestSuite } from 'agenda/testing';
 
 /**
  * MongoDB backend tests.
@@ -404,4 +404,19 @@ describe('MongoBackend unit tests', () => {
 			expect(backend.repository).toBeDefined();
 		});
 	});
+});
+
+// ============================================================================
+// MongoJobLogger Tests (shared test suite)
+// ============================================================================
+
+jobLoggerTestSuite({
+	name: 'MongoJobLogger',
+	createLogger: async () => {
+		const logger = new MongoJobLogger({ db: sharedDb, collectionName: 'agenda_logs' });
+		return logger;
+	},
+	cleanupLogger: async (logger) => {
+		await logger.clearLogs();
+	}
 });

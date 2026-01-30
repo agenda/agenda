@@ -4,9 +4,10 @@ import {
 	PostgresBackend,
 	PostgresJobRepository,
 	PostgresNotificationChannel,
+	PostgresJobLogger,
 	getDropTableSQL
 } from '../src/index.js';
-import { fullAgendaTestSuite } from 'agenda/testing';
+import { fullAgendaTestSuite, jobLoggerTestSuite } from 'agenda/testing';
 
 /**
  * PostgreSQL backend tests.
@@ -256,4 +257,22 @@ describe('PostgresBackend unit tests', () => {
 		expect(backend.repository).toBeDefined();
 		expect(backend.notificationChannel).toBeDefined();
 	});
+});
+
+// ============================================================================
+// PostgresJobLogger Tests (shared test suite)
+// ============================================================================
+
+const TEST_LOG_TABLE = 'agenda_logs_test';
+
+jobLoggerTestSuite({
+	name: 'PostgresJobLogger',
+	createLogger: async () => {
+		const logger = new PostgresJobLogger({ pool: sharedPool, tableName: TEST_LOG_TABLE });
+		await logger.setPool(sharedPool);
+		return logger;
+	},
+	cleanupLogger: async (logger) => {
+		await logger.clearLogs();
+	}
 });
