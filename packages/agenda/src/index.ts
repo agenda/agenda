@@ -510,11 +510,16 @@ export class Agenda extends EventEmitter {
 
 	/**
 	 * Log a job lifecycle event to the persistent job logger (fire-and-forget).
-	 * Does nothing if no job logger is configured.
+	 * Does nothing if no job logger is configured or if the job definition
+	 * has `logging: false`.
 	 * @internal
 	 */
 	logJobEvent(entry: Omit<JobLogEntry, '_id' | 'timestamp' | 'agendaName'>): void {
 		if (!this.jobLogger) return;
+
+		// Check per-definition logging override
+		const definition = this.definitions[entry.jobName];
+		if (definition?.logging === false) return;
 
 		this.jobLogger
 			.log({
@@ -749,7 +754,7 @@ export class Agenda extends EventEmitter {
 		name: string,
 		processor: ((job: Job) => Promise<void>) | ((job: Job, done: (err?: Error) => void) => void),
 		options?: Partial<
-			Pick<JobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency' | 'backoff' | 'removeOnComplete'>
+			Pick<JobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency' | 'backoff' | 'removeOnComplete' | 'logging'>
 		> & {
 			priority?: JobPriority;
 		}
@@ -768,7 +773,8 @@ export class Agenda extends EventEmitter {
 			priority: parsePriority(options?.priority),
 			lockLifetime: options?.lockLifetime || this.attrs.defaultLockLifetime,
 			backoff: options?.backoff,
-			removeOnComplete: options?.removeOnComplete ?? this.attrs.removeOnComplete
+			removeOnComplete: options?.removeOnComplete ?? this.attrs.removeOnComplete,
+			logging: options?.logging
 		};
 		log('job [%s] defined with following options: \n%O', name, this.definitions[name]);
 	}
