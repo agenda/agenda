@@ -32,14 +32,7 @@ export interface PostgresBackendConfig {
 	/** Disable LISTEN/NOTIFY notification channel (default: false) */
 	disableNotifications?: boolean;
 
-	/**
-	 * Enable persistent job event logging.
-	 * When true, creates a PostgreSQL table (default: 'agenda_logs') to store job lifecycle events.
-	 * @default false
-	 */
-	logging?: boolean;
-
-	/** Table name for log entries (default: 'agenda_logs'). Only used when `logging: true`. */
+	/** Table name for log entries (default: 'agenda_logs'). */
 	logTableName?: string;
 }
 

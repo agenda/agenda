@@ -35,10 +35,10 @@ export interface AgendaBackend {
 	readonly notificationChannel?: NotificationChannel;
 
 	/**
-	 * Optional job logger for persistent job event logging.
-	 * When the backend is configured with `logging: true`, it creates a
-	 * logger that stores events in a dedicated table/collection.
-	 * Agenda uses this logger when the user enables logging via `logging: true`.
+	 * Job logger for persistent job event logging.
+	 * Backends provide a logger that stores events in a dedicated table/collection.
+	 * The logger is lightweight and only initializes its storage on first use.
+	 * Agenda activates this logger when the user enables logging via `logging: true`.
 	 */
 	readonly logger?: JobLogger;
 

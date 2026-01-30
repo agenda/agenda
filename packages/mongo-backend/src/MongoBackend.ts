@@ -29,7 +29,7 @@ export class MongoBackend implements AgendaBackend {
 
 	private _repository: MongoJobRepository;
 	private _ownsConnection: boolean;
-	private _logger?: MongoJobLogger;
+	private _logger: MongoJobLogger;
 
 	/**
 	 * MongoDB does not provide a notification channel.
@@ -51,10 +51,8 @@ export class MongoBackend implements AgendaBackend {
 			sort: config.sort
 		});
 
-		// Create job logger if logging is enabled
-		if (config.logging) {
-			this._logger = new MongoJobLogger(config.logCollection);
-		}
+		// Always create the logger (lightweight; only initializes on first use when Agenda activates it)
+		this._logger = new MongoJobLogger(config.logCollection);
 	}
 
 	get repository(): JobRepository {
@@ -63,9 +61,9 @@ export class MongoBackend implements AgendaBackend {
 
 	/**
 	 * The job logger for persistent event logging.
-	 * Only available when `logging: true` is set in config.
+	 * Always available; Agenda decides whether to activate it via its `logging` config.
 	 */
-	get logger(): JobLogger | undefined {
+	get logger(): JobLogger {
 		return this._logger;
 	}
 
@@ -84,9 +82,7 @@ export class MongoBackend implements AgendaBackend {
 		await this._repository.connect();
 
 		// Initialize the job logger with the shared database connection
-		if (this._logger) {
-			await this._logger.setDb(this._repository.getDb());
-		}
+		await this._logger.setDb(this._repository.getDb());
 	}
 
 	/**

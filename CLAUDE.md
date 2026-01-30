@@ -387,3 +387,128 @@ interface DebounceOptions {
 - Debounce requires a `unique()` constraint to identify which jobs should be debounced together
 - Without `unique()`, each save creates a new job (no debouncing occurs)
 - The debounce state (`debounceStartedAt`) is persisted in the database, so it survives process restarts
+
+## Logging
+
+Agenda has two separate logging systems:
+
+### Console/Debug Logger (`logger`)
+
+Pluggable logger for console/debug output. Disabled by default.
+
+```typescript
+// Enable the default DebugLogger (uses `debug` library, controlled via DEBUG=agenda:*)
+const agenda = new Agenda({ backend, logger: true });
+
+// Use a custom Logger implementation (e.g., winston, pino)
+const agenda = new Agenda({ backend, logger: myWinstonLogger });
+```
+
+The `Logger` interface has `info`, `warn`, `error`, and `debug` methods.
+Built-in implementations: `DebugLogger`, `ConsoleLogger`, `NoopLogger`.
+
+### Persistent Job Logger (`logging`)
+
+Stores structured job lifecycle events (start, success, fail, complete, retry, etc.) in the backend's database. Events can be queried via `agenda.getLogs()` or viewed in agendash. Disabled by default.
+
+All backends (Mongo, Postgres, Redis) provide a built-in `JobLogger` that stores events in a dedicated table/collection. The logger is lightweight and only initializes its storage schema on first use.
+
+#### Configuration
+
+The `logging` option in `AgendaOptions` controls everything:
+
+```typescript
+// Enable — log all jobs using the backend's built-in logger
+const agenda = new Agenda({ backend, logging: true });
+
+// Enable — opt-in per job (logger active, but jobs are NOT logged by default)
+const agenda = new Agenda({ backend, logging: { default: false } });
+agenda.define('important', handler, { logging: true });  // this job IS logged
+agenda.define('noisy', handler);                         // this job is NOT logged
+
+// Enable — custom logger (e.g., log to Postgres while using Mongo for storage)
+import { PostgresJobLogger } from '@agendajs/postgres-backend';
+const pgLogger = new PostgresJobLogger({ pool: myPool });
+const agenda = new Agenda({
+  backend: new MongoBackend({ mongo: db }),
+  logging: pgLogger
+});
+
+// Enable — custom logger + opt-in per job
+const agenda = new Agenda({
+  backend,
+  logging: { logger: pgLogger, default: false }
+});
+```
+
+**`logging` option values:**
+
+| Value | Logger used | Jobs logged by default |
+|-------|-------------|----------------------|
+| `false` / omitted | none | n/a |
+| `true` | backend's built-in | all |
+| `JobLogger` instance | the provided logger | all |
+| `{ default: false }` | backend's built-in | none (opt-in per job) |
+| `{ logger: JobLogger }` | the provided logger | all |
+| `{ logger: JobLogger, default: false }` | the provided logger | none (opt-in per job) |
+
+#### Per-Job Definition Control
+
+Each job definition can override the global default:
+
+```typescript
+agenda.define('important-job', handler, { logging: true });   // always logged
+agenda.define('noisy-job', handler, { logging: false });      // never logged
+agenda.define('default-job', handler);                        // follows global default
+```
+
+#### Querying Logs
+
+```typescript
+// Get recent logs for a specific job
+const { entries, total } = await agenda.getLogs({
+  jobName: 'myJob',
+  limit: 100,
+  sort: 'desc'
+});
+
+// Filter by level, event, time range
+const { entries } = await agenda.getLogs({
+  level: 'error',
+  event: ['fail', 'retry:exhausted'],
+  from: new Date('2025-01-01'),
+  to: new Date()
+});
+
+// Clear old logs
+await agenda.clearLogs({ to: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) });
+```
+
+#### Standalone Loggers (Cross-Backend)
+
+Each logger can be used independently with its own connection, enabling cross-backend logging (e.g., log to Redis while using MongoDB for storage):
+
+```typescript
+import { RedisJobLogger } from '@agendajs/redis-backend';
+import Redis from 'ioredis';
+
+const logger = new RedisJobLogger({ redis: new Redis('redis://localhost:6379') });
+const agenda = new Agenda({
+  backend: new MongoBackend({ mongo: db }),
+  logging: logger
+});
+```
+
+Available standalone loggers:
+- `MongoJobLogger` from `@agendajs/mongo-backend` — stores in a MongoDB collection (`agenda_logs`)
+- `PostgresJobLogger` from `@agendajs/postgres-backend` — stores in a PostgreSQL table (`agenda_logs`)
+- `RedisJobLogger` from `@agendajs/redis-backend` — stores in Redis sorted sets + hashes
+
+#### Key Types
+
+- `JobLogger` — interface for persistent log storage (`log`, `getLogs`, `clearLogs`)
+- `JobLogEntry` — structured log entry (timestamp, level, event, jobId, jobName, message, duration, error, etc.)
+- `JobLogQuery` — query filter (jobId, jobName, level, event, from, to, limit, offset, sort)
+- `JobLogQueryResult` — query result (`{ entries: JobLogEntry[], total: number }`)
+- `LogLevel` — `'info' | 'warn' | 'error' | 'debug'`
+- `JobLogEvent` — `'start' | 'success' | 'fail' | 'complete' | 'retry' | 'retry:exhausted' | 'locked' | 'expired'`

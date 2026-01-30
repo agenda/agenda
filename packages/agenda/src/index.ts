@@ -93,51 +93,46 @@ export interface AgendaOptions {
 	/**
 	 * Enable persistent job event logging (stored in the backend's database).
 	 *
-	 * Disabled by default. Must be explicitly enabled:
-	 * - Pass `true` to use the backend's built-in job logger (backend must support it via `logging: true`)
-	 * - Pass a `JobLogger` implementation for custom persistent logging
-	 * - Omit or pass `false` to disable (default)
+	 * Disabled by default. When enabled, all job lifecycle events (start, success,
+	 * fail, complete, retry, etc.) are persisted and can be queried via
+	 * `agenda.getLogs()` or viewed in agendash.
 	 *
-	 * When enabled, all job lifecycle events (start, success, fail, complete, retry, etc.)
-	 * are persisted and can be queried via `agenda.getLogs()` or viewed in agendash.
+	 * Options:
+	 * - `true` — use the backend's built-in logger, all jobs are logged
+	 * - `false` / omitted — no logging (default)
+	 * - `JobLogger` — use a custom logger instance, all jobs are logged
+	 * - `{ logger?: JobLogger, default?: boolean }` — fine-grained control:
+	 *   - `logger`: custom `JobLogger` (omit to use backend's built-in logger)
+	 *   - `default`: whether job definitions are logged by default (`true` = all logged,
+	 *     `false` = only jobs with `logging: true` in their definition are logged).
+	 *     Defaults to `true`.
+	 *
+	 * Per-job definitions can override the default via `define('job', fn, { logging: false })`.
 	 *
 	 * @example
 	 * ```typescript
-	 * // Enable with backend's built-in logger
+	 * // Enable — log all jobs using backend's logger
+	 * const agenda = new Agenda({ backend, logging: true });
+	 *
+	 * // Enable — opt-in per job (logger configured, but off by default)
+	 * const agenda = new Agenda({ backend, logging: { default: false } });
+	 * agenda.define('important', handler, { logging: true });  // logged
+	 * agenda.define('noisy', handler);                         // NOT logged
+	 *
+	 * // Enable — custom logger (e.g., log to Postgres while using Mongo for storage)
+	 * const agenda = new Agenda({ backend, logging: myPostgresJobLogger });
+	 *
+	 * // Enable — custom logger + opt-in per job
 	 * const agenda = new Agenda({
-	 *   backend: new PostgresBackend({ connectionString: '...', logging: true }),
-	 *   logging: true
+	 *   backend,
+	 *   logging: { logger: myPostgresJobLogger, default: false }
 	 * });
 	 *
 	 * // Query logs
 	 * const { entries } = await agenda.getLogs({ jobName: 'myJob', limit: 100 });
 	 * ```
 	 */
-	logging?: JobLogger | boolean;
-	/**
-	 * Default logging behavior for job definitions that don't specify `logging`.
-	 *
-	 * - `true` (default): all jobs are logged unless a definition sets `logging: false`
-	 * - `false`: no jobs are logged unless a definition explicitly sets `logging: true`
-	 *
-	 * This allows you to configure a logger but keep it off by default,
-	 * enabling it only for specific job definitions.
-	 *
-	 * @example
-	 * ```typescript
-	 * const agenda = new Agenda({
-	 *   backend: new MongoBackend({ mongo: db, logging: true }),
-	 *   logging: true,
-	 *   loggingDefault: false // logger configured but off by default
-	 * });
-	 *
-	 * agenda.define('important', handler, { logging: true });  // logged
-	 * agenda.define('noisy', handler);                         // NOT logged
-	 * ```
-	 *
-	 * @default true
-	 */
-	loggingDefault?: boolean;
+	logging?: boolean | JobLogger | { logger?: JobLogger; default?: boolean };
 }
 
 /**
@@ -209,7 +204,8 @@ export class Agenda extends EventEmitter {
 
 	/**
 	 * Default logging behavior for job definitions that don't explicitly set `logging`.
-	 * When `true` (default), all jobs are logged. When `false`, only jobs with `logging: true` are logged.
+	 * When `true` (default when logging is enabled), all jobs are logged.
+	 * When `false`, only jobs with `logging: true` in their definition are logged.
 	 */
 	public loggingDefault: boolean;
 
@@ -332,15 +328,22 @@ export class Agenda extends EventEmitter {
 
 		// Initialize persistent job logger: disabled by default
 		if (config.logging === true) {
-			// Use backend's built-in logger (must be configured on the backend)
+			// Use backend's built-in logger, all jobs logged
 			this.jobLogger = config.backend.logger;
-		} else if (typeof config.logging === 'object') {
-			// Use custom JobLogger
-			this.jobLogger = config.logging;
+			this.loggingDefault = true;
+		} else if (config.logging && typeof config.logging === 'object' && 'log' in config.logging) {
+			// Passed a JobLogger instance directly — all jobs logged
+			this.jobLogger = config.logging as JobLogger;
+			this.loggingDefault = true;
+		} else if (config.logging && typeof config.logging === 'object') {
+			// Options object: { logger?, default? }
+			const opts = config.logging as { logger?: JobLogger; default?: boolean };
+			this.jobLogger = opts.logger ?? config.backend.logger;
+			this.loggingDefault = opts.default ?? true;
+		} else {
+			// Logging disabled (false / omitted)
+			this.loggingDefault = true;
 		}
-
-		// Set the default logging behavior for job definitions
-		this.loggingDefault = config.loggingDefault ?? true;
 
 		// Store backend and get repository
 		this.backend = config.backend;
@@ -770,7 +773,7 @@ export class Agenda extends EventEmitter {
 		name: string,
 		processor: (agendaJob: Job<DATA>, done: (error?: Error) => void) => void,
 		options?: Partial<
-			Pick<JobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency' | 'backoff' | 'removeOnComplete'>
+			Pick<JobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency' | 'backoff' | 'removeOnComplete' | 'logging'>
 		> & {
 			priority?: JobPriority;
 		}
@@ -780,7 +783,7 @@ export class Agenda extends EventEmitter {
 		name: string,
 		processor: (agendaJob: Job<DATA>) => Promise<void>,
 		options?: Partial<
-			Pick<JobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency' | 'backoff' | 'removeOnComplete'>
+			Pick<JobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency' | 'backoff' | 'removeOnComplete' | 'logging'>
 		> & {
 			priority?: JobPriority;
 		}
