@@ -104,7 +104,7 @@ onMounted(() => {
 		<div v-if="loggingEnabled === false" class="logs-disabled">
 			<p>Logging is not enabled.</p>
 			<p class="text-muted small">
-				Enable persistent logging by setting <code>logging: true</code> on both your backend and Agenda config.
+				Enable persistent logging by setting <code>logging: true</code> in your Agenda config.
 			</p>
 		</div>
 
