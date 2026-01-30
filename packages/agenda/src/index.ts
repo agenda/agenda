@@ -114,6 +114,30 @@ export interface AgendaOptions {
 	 * ```
 	 */
 	logging?: JobLogger | boolean;
+	/**
+	 * Default logging behavior for job definitions that don't specify `logging`.
+	 *
+	 * - `true` (default): all jobs are logged unless a definition sets `logging: false`
+	 * - `false`: no jobs are logged unless a definition explicitly sets `logging: true`
+	 *
+	 * This allows you to configure a logger but keep it off by default,
+	 * enabling it only for specific job definitions.
+	 *
+	 * @example
+	 * ```typescript
+	 * const agenda = new Agenda({
+	 *   backend: new MongoBackend({ mongo: db, logging: true }),
+	 *   logging: true,
+	 *   loggingDefault: false // logger configured but off by default
+	 * });
+	 *
+	 * agenda.define('important', handler, { logging: true });  // logged
+	 * agenda.define('noisy', handler);                         // NOT logged
+	 * ```
+	 *
+	 * @default true
+	 */
+	loggingDefault?: boolean;
 }
 
 /**
@@ -182,6 +206,12 @@ export class Agenda extends EventEmitter {
 	 * or by passing a custom `JobLogger` implementation.
 	 */
 	public jobLogger?: JobLogger;
+
+	/**
+	 * Default logging behavior for job definitions that don't explicitly set `logging`.
+	 * When `true` (default), all jobs are logged. When `false`, only jobs with `logging: true` are logged.
+	 */
+	public loggingDefault: boolean;
 
 	// Lifecycle events
 	on(event: 'ready', listener: () => void): this;
@@ -308,6 +338,9 @@ export class Agenda extends EventEmitter {
 			// Use custom JobLogger
 			this.jobLogger = config.logging;
 		}
+
+		// Set the default logging behavior for job definitions
+		this.loggingDefault = config.loggingDefault ?? true;
 
 		// Store backend and get repository
 		this.backend = config.backend;
@@ -510,16 +543,18 @@ export class Agenda extends EventEmitter {
 
 	/**
 	 * Log a job lifecycle event to the persistent job logger (fire-and-forget).
-	 * Does nothing if no job logger is configured or if the job definition
-	 * has `logging: false`.
+	 * Does nothing if no job logger is configured or if logging is disabled
+	 * for the job definition (respects per-definition `logging` and the global `loggingDefault`).
 	 * @internal
 	 */
 	logJobEvent(entry: Omit<JobLogEntry, '_id' | 'timestamp' | 'agendaName'>): void {
 		if (!this.jobLogger) return;
 
-		// Check per-definition logging override
+		// Per-definition logging overrides the global default.
+		// If definition.logging is undefined, fall back to loggingDefault.
 		const definition = this.definitions[entry.jobName];
-		if (definition?.logging === false) return;
+		const enabled = definition?.logging ?? this.loggingDefault;
+		if (!enabled) return;
 
 		this.jobLogger
 			.log({
