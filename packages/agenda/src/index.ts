@@ -17,16 +17,12 @@ import type { AgendaStatus } from './types/AgendaStatus.js';
 import type { JobsQueryOptions, JobsResult, JobsOverview } from './types/JobQuery.js';
 import type { RemoveJobsOptions } from './types/JobRepository.js';
 import type { DrainOptions, DrainResult } from './types/DrainOptions.js';
-import type { Logger } from './types/Logger.js';
 import type { JobLogger, JobLogEntry, JobLogQuery, JobLogQueryResult } from './types/JobLogger.js';
 import { Job, JobWithId } from './Job.js';
 import { JobPriority, parsePriority } from './utils/priority.js';
 import { JobProcessor } from './JobProcessor.js';
 import { calculateProcessEvery } from './utils/processEvery.js';
 import { getCallerFilePath } from './utils/stack.js';
-import { DebugLogger } from './logging/DebugLogger.js';
-import { NoopLogger } from './logging/NoopLogger.js';
-
 const log = debug('agenda');
 
 const DefaultOptions = {
@@ -72,24 +68,6 @@ export interface AgendaOptions {
 	 * e.g., MongoDB storage + Redis notifications
 	 */
 	notificationChannel?: NotificationChannel;
-	/**
-	 * Pluggable logger for console/debug output of job lifecycle events.
-	 *
-	 * Disabled by default. Must be explicitly enabled:
-	 * - Pass `true` to enable the default `DebugLogger` (uses the `debug` library, controlled via `DEBUG=agenda:*`)
-	 * - Pass a `Logger` implementation for custom logging (e.g., winston, pino)
-	 * - Omit or pass `false` to disable (default)
-	 *
-	 * @example
-	 * ```typescript
-	 * // Enable default debug logger
-	 * const agenda = new Agenda({ backend, logger: true });
-	 *
-	 * // Custom logger
-	 * const agenda = new Agenda({ backend, logger: myWinstonLogger });
-	 * ```
-	 */
-	logger?: Logger | boolean;
 	/**
 	 * Enable persistent job event logging (stored in the backend's database).
 	 *
@@ -188,12 +166,6 @@ export class Agenda extends EventEmitter {
 	private notificationChannel?: NotificationChannel;
 
 	private stateSubscriptionUnsubscribe?: () => void;
-
-	/**
-	 * The pluggable logger instance for console/debug output.
-	 * Disabled by default (NoopLogger). Enable via `logger: true` or a custom Logger.
-	 */
-	public logger: Logger;
 
 	/**
 	 * The persistent job logger for storing job lifecycle events in the database.
@@ -316,15 +288,6 @@ export class Agenda extends EventEmitter {
 
 		this.forkedWorker = config.forkedWorker;
 		this.forkHelper = config.forkHelper;
-
-		// Initialize console/debug logger: disabled by default
-		if (config.logger === true) {
-			this.logger = new DebugLogger();
-		} else if (typeof config.logger === 'object') {
-			this.logger = config.logger;
-		} else {
-			this.logger = new NoopLogger();
-		}
 
 		// Initialize persistent job logger: disabled by default
 		if (config.logging === true) {
@@ -506,27 +469,6 @@ export class Agenda extends EventEmitter {
 		}
 		log('Agenda.notifyVia([NotificationChannel])');
 		this.notificationChannel = channel;
-		return this;
-	}
-
-	/**
-	 * Set a pluggable logger for console/debug output.
-	 * @param logger - The logger implementation, `true` for DebugLogger, or `false` to disable
-	 */
-	logVia(logger: Logger | boolean): Agenda {
-		if (this.jobProcessor) {
-			throw new Error(
-				'job processor is already running, you need to set logger before calling start'
-			);
-		}
-		log('Agenda.logVia([Logger])');
-		if (logger === true) {
-			this.logger = new DebugLogger();
-		} else if (logger === false) {
-			this.logger = new NoopLogger();
-		} else {
-			this.logger = logger;
-		}
 		return this;
 	}
 
@@ -1150,11 +1092,6 @@ export class Agenda extends EventEmitter {
 			this.notificationChannel
 		);
 
-		this.logger.info(
-			'Agenda started (processEvery=%dms, maxConcurrency=%d)',
-			this.attrs.processEvery,
-			this.attrs.maxConcurrency
-		);
 	}
 
 	/**
@@ -1203,8 +1140,6 @@ export class Agenda extends EventEmitter {
 		}
 
 		this.jobProcessor = undefined;
-
-		this.logger.info('Agenda stopped');
 	}
 
 	/**
@@ -1272,13 +1207,6 @@ export class Agenda extends EventEmitter {
 
 		this.jobProcessor = undefined;
 
-		this.logger.info(
-			'Agenda drained (completed=%d, running=%d, timedOut=%s)',
-			result.completed,
-			result.running,
-			result.timedOut
-		);
-
 		return result;
 	}
 }
@@ -1307,11 +1235,7 @@ export * from './types/DrainOptions.js';
 
 export * from './notifications/index.js';
 
-export * from './types/Logger.js';
-
 export * from './types/JobLogger.js';
-
-export * from './logging/index.js';
 
 export {
 	applyAllDateConstraints,

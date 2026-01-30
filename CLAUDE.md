@@ -388,26 +388,7 @@ interface DebounceOptions {
 - Without `unique()`, each save creates a new job (no debouncing occurs)
 - The debounce state (`debounceStartedAt`) is persisted in the database, so it survives process restarts
 
-## Logging
-
-Agenda has two separate logging systems:
-
-### Console/Debug Logger (`logger`)
-
-Pluggable logger for console/debug output. Disabled by default.
-
-```typescript
-// Enable the default DebugLogger (uses `debug` library, controlled via DEBUG=agenda:*)
-const agenda = new Agenda({ backend, logger: true });
-
-// Use a custom Logger implementation (e.g., winston, pino)
-const agenda = new Agenda({ backend, logger: myWinstonLogger });
-```
-
-The `Logger` interface has `info`, `warn`, `error`, and `debug` methods.
-Built-in implementations: `DebugLogger`, `ConsoleLogger`, `NoopLogger`.
-
-### Persistent Job Logger (`logging`)
+## Persistent Job Logging
 
 Stores structured job lifecycle events (start, success, fail, complete, retry, etc.) in the backend's database. Events can be queried via `agenda.getLogs()` or viewed in agendash. Disabled by default.
 

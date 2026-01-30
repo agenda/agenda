@@ -423,7 +423,6 @@ export class JobProcessor {
 					name,
 					job.attrs._id
 				);
-				this.agenda.logger.debug('[%s:%s] job locked', name, job.attrs._id);
 				this.agenda.logJobEvent({
 					level: 'debug',
 					event: 'locked',
@@ -605,11 +604,6 @@ export class JobProcessor {
 								job.attrs.name,
 								job.attrs._id
 							);
-							this.agenda.logger.warn(
-								'[%s:%s] job expired (lock lifetime exceeded), killing',
-								job.attrs.name,
-								job.attrs._id
-							);
 							this.agenda.logJobEvent({
 								level: 'warn',
 								event: 'expired',
@@ -664,12 +658,6 @@ export class JobProcessor {
 					job.attrs.name,
 					job.attrs._id,
 					error
-				);
-				this.agenda.logger.error(
-					'[%s:%s] job processing error: %s',
-					job.attrs.name,
-					job.attrs._id,
-					error instanceof Error ? error.message : String(error)
 				);
 				this.agenda.logJobEvent({
 					level: 'error',

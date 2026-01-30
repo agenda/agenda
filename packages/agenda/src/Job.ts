@@ -551,13 +551,6 @@ export class Job<DATA = unknown | void> {
 				this.attrs._id,
 				this.attrs.failCount
 			);
-			this.agenda.logger.warn(
-				'[%s:%s] retry exhausted after %d failures: %s',
-				this.attrs.name,
-				this.attrs._id,
-				this.attrs.failCount,
-				error.message
-			);
 			this.agenda.logJobEvent({
 				level: 'warn',
 				event: 'retry:exhausted',
@@ -578,14 +571,6 @@ export class Job<DATA = unknown | void> {
 
 		log(
 			'[%s:%s] scheduling retry #%d in %dms (at %s)',
-			this.attrs.name,
-			this.attrs._id,
-			this.attrs.failCount,
-			retryDelay,
-			nextRunAt.toISOString()
-		);
-		this.agenda.logger.info(
-			'[%s:%s] retry #%d scheduled in %dms (at %s)',
 			this.attrs.name,
 			this.attrs._id,
 			this.attrs.failCount,
@@ -642,7 +627,6 @@ export class Job<DATA = unknown | void> {
 			this.agenda.emit('start', this);
 			this.agenda.emit(`start:${this.attrs.name}`, this);
 			log('[%s:%s] starting job', this.attrs.name, this.attrs._id);
-			this.agenda.logger.info('[%s:%s] job started', this.attrs.name, this.attrs._id);
 			this.agenda.logJobEvent({
 				level: 'info',
 				event: 'start',
@@ -713,12 +697,6 @@ export class Job<DATA = unknown | void> {
 			this.agenda.emit(`success:${this.attrs.name}`, this);
 			log('[%s:%s] has succeeded', this.attrs.name, this.attrs._id);
 			const successDuration = this.attrs.lastFinishedAt!.getTime() - (this.attrs.lastRunAt?.getTime() || 0);
-			this.agenda.logger.info(
-				'[%s:%s] job succeeded (duration=%dms)',
-				this.attrs.name,
-				this.attrs._id,
-				successDuration
-			);
 			this.agenda.logJobEvent({
 				level: 'info',
 				event: 'success',
@@ -743,12 +721,6 @@ export class Job<DATA = unknown | void> {
 			this.agenda.emit('fail', error, this);
 			this.agenda.emit(`fail:${this.attrs.name}`, error, this);
 			log('[%s:%s] has failed [%s]', this.attrs.name, this.attrs._id, (error as Error).message);
-			this.agenda.logger.error(
-				'[%s:%s] job failed: %s',
-				this.attrs.name,
-				this.attrs._id,
-				(error as Error).message
-			);
 			this.agenda.logJobEvent({
 				level: 'error',
 				event: 'fail',
@@ -793,12 +765,6 @@ export class Job<DATA = unknown | void> {
 			const completeDuration = this.attrs.lastFinishedAt && this.attrs.lastRunAt
 				? this.attrs.lastFinishedAt.getTime() - this.attrs.lastRunAt.getTime()
 				: undefined;
-			this.agenda.logger.info(
-				'[%s:%s] job complete (duration=%s)',
-				this.attrs.name,
-				this.attrs._id,
-				completeDuration !== undefined ? `${completeDuration}ms` : 'unknown'
-			);
 			this.agenda.logJobEvent({
 				level: 'info',
 				event: 'complete',
