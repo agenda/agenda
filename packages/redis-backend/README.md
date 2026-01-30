@@ -125,6 +125,43 @@ This means:
 
 The backend uses Redis WATCH/MULTI/EXEC transactions to atomically lock jobs for processing, preventing duplicate execution across multiple Agenda instances.
 
+## Job Logging
+
+RedisBackend includes a built-in `RedisJobLogger` that stores structured job lifecycle events using Redis sorted sets and hashes. The logger is lightweight and only creates its keys on first use.
+
+### Automatic Usage
+
+When you enable logging in Agenda, the backend's built-in logger is used automatically:
+
+```typescript
+const agenda = new Agenda({
+  backend: new RedisBackend({ connectionString: 'redis://localhost:6379' }),
+  logging: true  // Uses RedisJobLogger automatically
+});
+```
+
+### Standalone Usage
+
+You can also use `RedisJobLogger` independently — for example, to log to Redis while using a different backend for storage:
+
+```typescript
+import { RedisJobLogger } from '@agendajs/redis-backend';
+import Redis from 'ioredis';
+
+const logger = new RedisJobLogger({
+  redis: new Redis('redis://localhost:6379')
+});
+
+// Use with any backend
+import { MongoBackend } from '@agendajs/mongo-backend';
+const agenda = new Agenda({
+  backend: new MongoBackend({ mongo: db }),
+  logging: logger
+});
+```
+
+See the [Agenda README](https://github.com/agenda/agenda#persistent-job-logging) for full logging documentation.
+
 ## Persistence
 
 By default, Redis keeps data in memory. For production use with Agenda, configure Redis persistence:

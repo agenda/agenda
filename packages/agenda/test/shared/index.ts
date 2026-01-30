@@ -47,3 +47,4 @@ export { retryTestSuite, type RetryTestConfig } from './retry-test-suite.js';
 export { backoffTestSuite, type BackoffTestConfig } from './backoff-test-suite.js';
 export { debounceTestSuite, type DebounceTestConfig } from './debounce-test-suite.js';
 export { removeOnCompleteTestSuite, type RemoveOnCompleteTestConfig } from './removeoncomplete-test-suite.js';
+export { jobLoggerTestSuite, type JobLoggerTestConfig } from './joblogger-test-suite.js';

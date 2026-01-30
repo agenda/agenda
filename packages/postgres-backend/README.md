@@ -155,6 +155,44 @@ CREATE INDEX agenda_jobs_next_run_at_idx
   ON agenda_jobs (next_run_at) WHERE next_run_at IS NOT NULL;
 ```
 
+## Job Logging
+
+PostgresBackend includes a built-in `PostgresJobLogger` that stores structured job lifecycle events in a dedicated table (`agenda_logs` by default). The logger is lightweight and only creates its table on first use.
+
+### Automatic Usage
+
+When you enable logging in Agenda, the backend's built-in logger is used automatically:
+
+```typescript
+const agenda = new Agenda({
+  backend: new PostgresBackend({ connectionString: 'postgresql://...' }),
+  logging: true  // Uses PostgresJobLogger automatically
+});
+```
+
+### Standalone Usage
+
+You can also use `PostgresJobLogger` independently — for example, to log to PostgreSQL while using a different backend for storage:
+
+```typescript
+import { PostgresJobLogger } from '@agendajs/postgres-backend';
+import { Pool } from 'pg';
+
+const logger = new PostgresJobLogger({
+  pool: new Pool({ connectionString: 'postgresql://...' }),
+  logTableName: 'agenda_logs'       // Optional: table name (default: 'agenda_logs')
+});
+
+// Use with any backend
+import { MongoBackend } from '@agendajs/mongo-backend';
+const agenda = new Agenda({
+  backend: new MongoBackend({ mongo: db }),
+  logging: logger
+});
+```
+
+See the [Agenda README](https://github.com/agenda/agenda#persistent-job-logging) for full logging documentation.
+
 ## Manual Schema Management
 
 If you prefer to manage the schema yourself (set `ensureSchema: false`):

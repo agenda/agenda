@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import type { AgendaStats } from '../types';
 import * as api from '../api/client';
+import JobLogs from './JobLogs.vue';
 
 const stats = ref<AgendaStats | null>(null);
 const loading = ref(false);
@@ -129,6 +130,12 @@ onUnmounted(() => {
 							</div>
 						</div>
 					</div>
+				</div>
+
+				<!-- Recent Job Logs -->
+				<div class="stats-section">
+					<div class="stats-section-title">Recent Job Logs</div>
+					<JobLogs />
 				</div>
 		</div>
 	</div>

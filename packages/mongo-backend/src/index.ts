@@ -32,6 +32,7 @@
 
 export { MongoBackend } from './MongoBackend.js';
 export { MongoJobRepository } from './MongoJobRepository.js';
+export { MongoJobLogger } from './MongoJobLogger.js';
 export { MongoChangeStreamNotificationChannel } from './MongoChangeStreamNotificationChannel.js';
 
 export type { MongoBackendConfig, MongoJobRepositoryConfig, MongoDbConfig } from './types.js';

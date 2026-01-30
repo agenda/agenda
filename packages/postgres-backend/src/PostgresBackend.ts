@@ -1,6 +1,7 @@
 import debug from 'debug';
-import type { AgendaBackend, JobRepository, NotificationChannel } from 'agenda';
+import type { AgendaBackend, JobRepository, NotificationChannel, JobLogger } from 'agenda';
 import { PostgresJobRepository } from './PostgresJobRepository.js';
+import { PostgresJobLogger } from './PostgresJobLogger.js';
 import { PostgresNotificationChannel } from './PostgresNotificationChannel.js';
 import type { PostgresBackendConfig } from './types.js';
 
@@ -48,6 +49,7 @@ export class PostgresBackend implements AgendaBackend {
 
 	private _repository: PostgresJobRepository;
 	private _notificationChannel?: PostgresNotificationChannel;
+	private _logger: PostgresJobLogger;
 	private config: PostgresBackendConfig;
 	private _ownsConnection: boolean;
 
@@ -69,6 +71,12 @@ export class PostgresBackend implements AgendaBackend {
 				}
 			});
 		}
+
+		// Always create the logger (lightweight; only initializes on first use when Agenda activates it)
+		this._logger = new PostgresJobLogger({
+			tableName: config.logTableName,
+			ensureSchema: config.ensureSchema
+		});
 
 		log('PostgresBackend created with config: %O', {
 			tableName: config.tableName || 'agenda_jobs',
@@ -92,6 +100,14 @@ export class PostgresBackend implements AgendaBackend {
 	 */
 	get ownsConnection(): boolean {
 		return this._ownsConnection;
+	}
+
+	/**
+	 * The job logger for persistent event logging.
+	 * Always available; Agenda decides whether to activate it via its `logging` config.
+	 */
+	get logger(): JobLogger {
+		return this._logger;
 	}
 
 	/**
@@ -119,6 +135,9 @@ export class PostgresBackend implements AgendaBackend {
 		if (this._notificationChannel) {
 			this._notificationChannel.setPool(this._repository.getPool());
 		}
+
+		// Initialize the job logger with the shared pool
+		await this._logger.setPool(this._repository.getPool());
 
 		// Note: notification channel is connected by Agenda.start()
 		// when it's needed, so we don't connect it here

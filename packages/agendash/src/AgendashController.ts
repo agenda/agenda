@@ -1,4 +1,4 @@
-import type { Agenda, JobState, JobWithState, JobsOverview, AgendaStatus, StateNotificationHandler } from 'agenda';
+import type { Agenda, JobState, JobWithState, JobsOverview, AgendaStatus, StateNotificationHandler, JobLogQuery, LogLevel, JobLogEvent } from 'agenda';
 import type {
 	AgendashController as IAgendashController,
 	ApiQueryParams,
@@ -10,7 +10,9 @@ import type {
 	PauseResponse,
 	ResumeResponse,
 	FrontendJob,
-	FrontendOverview
+	FrontendOverview,
+	LogsQueryParams,
+	LogsResponse
 } from './types.js';
 
 /**
@@ -239,5 +241,55 @@ export class AgendashController implements IAgendashController {
 		}
 
 		return channel.subscribeState(onNotification);
+	}
+
+	/**
+	 * Check if persistent job logging is enabled
+	 */
+	hasLogging(): boolean {
+		return this.agenda.hasJobLogger();
+	}
+
+	/**
+	 * Get job log entries with filtering and pagination
+	 */
+	async getLogs(params: LogsQueryParams): Promise<LogsResponse> {
+		if (!this.agenda.hasJobLogger()) {
+			return { entries: [], total: 0, loggingEnabled: false };
+		}
+
+		const query: JobLogQuery = {
+			jobId: params.jobId,
+			jobName: params.jobName,
+			limit: params.limit ?? 50,
+			offset: params.offset ?? 0,
+			sort: params.sort ?? 'desc'
+		};
+
+		if (params.level) {
+			const levels = params.level.split(',') as LogLevel[];
+			query.level = levels.length === 1 ? levels[0] : levels;
+		}
+		if (params.event) {
+			const events = params.event.split(',') as JobLogEvent[];
+			query.event = events.length === 1 ? events[0] : events;
+		}
+		if (params.from) {
+			query.from = new Date(params.from);
+		}
+		if (params.to) {
+			query.to = new Date(params.to);
+		}
+
+		const result = await this.agenda.getLogs(query);
+
+		return {
+			entries: result.entries.map(entry => ({
+				...entry,
+				timestamp: entry.timestamp.toISOString()
+			})),
+			total: result.total,
+			loggingEnabled: true
+		};
 	}
 }

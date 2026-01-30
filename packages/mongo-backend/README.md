@@ -203,6 +203,57 @@ db.agendaJobs.createIndex({
 }, { name: "findAndLockDeadJobs" })
 ```
 
+## Job Logging
+
+MongoBackend includes a built-in `MongoJobLogger` that stores structured job lifecycle events in a dedicated MongoDB collection (`agenda_logs` by default). The logger is lightweight and only creates its collection on first use.
+
+### Automatic Usage
+
+When you enable logging in Agenda, the backend's built-in logger is used automatically:
+
+```typescript
+const agenda = new Agenda({
+  backend: new MongoBackend({ mongo: db }),
+  logging: true  // Uses MongoJobLogger automatically
+});
+```
+
+### Standalone Usage
+
+You can also use `MongoJobLogger` independently — for example, to log to MongoDB while using a different backend for storage:
+
+```typescript
+import { MongoJobLogger } from '@agendajs/mongo-backend';
+
+const logger = new MongoJobLogger({
+  mongo: db,                        // Required: MongoDB database instance
+  logCollection: 'agenda_logs'      // Optional: collection name (default: 'agenda_logs')
+});
+
+// Use with any backend
+import { RedisBackend } from '@agendajs/redis-backend';
+const agenda = new Agenda({
+  backend: new RedisBackend({ connectionString: 'redis://...' }),
+  logging: logger
+});
+```
+
+### Querying Logs
+
+```typescript
+const { entries, total } = await agenda.getLogs({
+  jobName: 'send-email',
+  level: 'error',
+  limit: 50,
+  sort: 'desc'
+});
+
+// Clear old logs
+await agenda.clearLogs({ to: new Date(Date.now() - 30 * 86400000) });
+```
+
+See the [Agenda README](https://github.com/agenda/agenda#persistent-job-logging) for full logging documentation.
+
 ## Related Packages
 
 - [agenda](https://www.npmjs.com/package/agenda) - Core scheduler

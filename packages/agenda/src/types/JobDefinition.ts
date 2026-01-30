@@ -40,6 +40,14 @@ export interface JobDefinition<DATA = unknown> {
 	/** Automatically remove this job from database after successful completion (one-time jobs only) */
 	removeOnComplete?: boolean;
 
+	/**
+	 * Enable or disable persistent logging for this job definition.
+	 * When `false`, no log entries are written for jobs of this type,
+	 * even if a global job logger is configured.
+	 * Defaults to `true` (logging enabled when a job logger is configured).
+	 */
+	logging?: boolean;
+
 	filePath: string | undefined;
 	fn: DefinitionProcessor<DATA, void | ((error?: Error) => void)>;
 }

@@ -16,6 +16,7 @@ const emit = defineEmits<{
 	search: [name: string, state: string];
 	'new-job': [];
 	'show-stats': [];
+	'show-job-logs': [name: string];
 }>();
 
 const expandedItems = ref<Set<string>>(new Set(['All Jobs']));
@@ -233,6 +234,10 @@ function getStatusColor(type: string): string {
 						<span class="dot" :style="{ backgroundColor: getStatusColor('paused') }"></span>
 						<span class="label">Paused</span>
 						<span class="count">{{ item.paused }}</span>
+					</div>
+					<div v-if="item.displayName !== 'All Jobs'" class="detail-row logs-row" @click.stop="$emit('show-job-logs', item.displayName)">
+						<span class="logs-icon">&#128220;</span>
+						<span class="label">Logs</span>
 					</div>
 				</div>
 			</div>
@@ -463,5 +468,18 @@ function getStatusColor(type: string): string {
 .stats-badge.locked {
 	background-color: rgba(255, 255, 255, 0.15);
 	color: rgba(255, 255, 255, 0.9);
+}
+
+/* Logs row in job details */
+.logs-row {
+	margin-top: 4px;
+	border-top: 1px solid #e9ecef;
+	padding-top: 6px;
+}
+
+.logs-icon {
+	font-size: 12px;
+	margin-right: 8px;
+	flex-shrink: 0;
 }
 </style>

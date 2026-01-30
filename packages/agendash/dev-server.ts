@@ -118,7 +118,8 @@ async function startDevServer() {
 	const { url: mongoUrl, cleanup } = await getMongoUrl();
 
 	const agenda = new Agenda({
-		backend: new MongoBackend({ address: mongoUrl })
+		backend: new MongoBackend({ address: mongoUrl }),
+		logging: true
 	});
 
 	agenda.on('error', (err) => {

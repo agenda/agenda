@@ -16,6 +16,7 @@
 - **Pluggable backend system** - New `IAgendaBackend` interface for storage and notifications
 - **Real-time notifications** - Optional notification channels for instant job processing
 - **MongoDB 6 driver** - Updated to latest MongoDB driver
+- **Persistent job logging** - Optional structured logging of job lifecycle events to database
 - **Monorepo** - Now includes `agenda`, `agendash`, and `agenda-rest` packages
 
 ## Key Features
@@ -179,6 +180,7 @@ mapped to a database collection and load the jobs from within.
 - [Automatic Retry with Backoff](#automatic-retry-with-backoff)
 - [Job Debouncing](#job-debouncing)
 - [Auto-Cleanup of Completed Jobs](#auto-cleanup-of-completed-jobs)
+- [Persistent Job Logging](#persistent-job-logging)
 - [Creating jobs](#creating-jobs)
 - [Managing jobs](#managing-jobs)
 - [Starting the job processor](#starting-the-job-processor)
@@ -212,6 +214,8 @@ Possible agenda config options:
 	defaultLockLifetime?: number;
 	// Auto-remove one-time jobs after successful completion
 	removeOnComplete?: boolean;
+	// Persistent job logging
+	logging?: boolean | JobLogger | { logger?: JobLogger; default?: boolean };
 	// Fork mode options
 	forkHelper?: { path: string; options?: ForkOptions };
 	forkedWorker?: boolean;
@@ -562,6 +566,7 @@ the following:
 - `shouldSaveResult`: `boolean` flag that specifies whether the result of the job should also be stored in the database. Defaults to false
 - `backoff`: `BackoffStrategy` a function that determines retry delay on failure. See [Automatic Retry with Backoff](#automatic-retry-with-backoff) for details
 - `removeOnComplete`: `boolean` automatically remove the job from the database after successful completion (one-time jobs only). Overrides the global `removeOnComplete` setting. See [Auto-Cleanup of Completed Jobs](#auto-cleanup-of-completed-jobs) for details
+- `logging`: `boolean` override whether this job type's lifecycle events are persisted. See [Persistent Job Logging](#persistent-job-logging)
 
 Priority mapping:
 
@@ -982,6 +987,125 @@ agenda.define('audit-log', async job => {
 - **Only on success**: Failed jobs are always kept in the database regardless of the setting
 - **Events fire first**: The `complete` and `success` events are emitted before the job is removed, so listeners can still access job data
 - **Safe removal**: If the removal fails (e.g. due to a database error), the error is logged but does not affect the processing loop
+
+## Persistent Job Logging
+
+Agenda can persist structured job lifecycle events (start, success, fail, complete, retry, etc.) to the backend's database. This is useful for auditing, debugging, and monitoring — events can be queried programmatically via `agenda.getLogs()` or viewed in [Agendash](https://github.com/agenda/agendash).
+
+Logging is **disabled by default** and must be explicitly enabled via the `logging` option.
+
+### Enabling Logging
+
+```typescript
+import { Agenda } from 'agenda';
+import { MongoBackend } from '@agendajs/mongo-backend';
+
+// Enable — log all jobs using the backend's built-in logger
+const agenda = new Agenda({
+  backend: new MongoBackend({ mongo: db }),
+  logging: true
+});
+
+// Enable — opt-in per job (logger active, but jobs are NOT logged by default)
+const agenda = new Agenda({
+  backend: new MongoBackend({ mongo: db }),
+  logging: { default: false }
+});
+agenda.define('important', handler, { logging: true });  // this job IS logged
+agenda.define('noisy', handler);                         // this job is NOT logged
+
+// Enable — custom logger (e.g., log to Postgres while using Mongo for storage)
+import { PostgresJobLogger } from '@agendajs/postgres-backend';
+const pgLogger = new PostgresJobLogger({ pool: myPool });
+const agenda = new Agenda({
+  backend: new MongoBackend({ mongo: db }),
+  logging: pgLogger
+});
+
+// Enable — custom logger + opt-in per job
+const agenda = new Agenda({
+  backend: new MongoBackend({ mongo: db }),
+  logging: { logger: pgLogger, default: false }
+});
+```
+
+### `logging` Option Values
+
+| Value | Logger used | Jobs logged by default |
+|-------|-------------|----------------------|
+| `false` / omitted | none | n/a |
+| `true` | backend's built-in | all |
+| `JobLogger` instance | the provided logger | all |
+| `{ default: false }` | backend's built-in | none (opt-in per job) |
+| `{ logger: JobLogger }` | the provided logger | all |
+| `{ logger: JobLogger, default: false }` | the provided logger | none (opt-in per job) |
+
+### Per-Job Definition Control
+
+Each job definition can override the global default:
+
+```typescript
+agenda.define('important-job', handler, { logging: true });   // always logged
+agenda.define('noisy-job', handler, { logging: false });      // never logged
+agenda.define('default-job', handler);                        // follows global default
+```
+
+### Querying Logs
+
+```typescript
+// Get recent logs for a specific job
+const { entries, total } = await agenda.getLogs({
+  jobName: 'myJob',
+  limit: 100,
+  sort: 'desc'
+});
+
+// Filter by level, event, time range
+const { entries } = await agenda.getLogs({
+  level: 'error',
+  event: ['fail', 'retry:exhausted'],
+  from: new Date('2025-01-01'),
+  to: new Date()
+});
+
+// Clear old logs
+await agenda.clearLogs({ to: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) });
+```
+
+### Cross-Backend Logging
+
+Each backend provides a standalone `JobLogger` that can be used independently. This lets you store jobs in one backend while logging to another:
+
+```typescript
+import { RedisJobLogger } from '@agendajs/redis-backend';
+import Redis from 'ioredis';
+
+const logger = new RedisJobLogger({ redis: new Redis('redis://localhost:6379') });
+const agenda = new Agenda({
+  backend: new MongoBackend({ mongo: db }),
+  logging: logger
+});
+```
+
+Available standalone loggers:
+- `MongoJobLogger` from `@agendajs/mongo-backend` — stores in a MongoDB collection (`agenda_logs`)
+- `PostgresJobLogger` from `@agendajs/postgres-backend` — stores in a PostgreSQL table (`agenda_logs`)
+- `RedisJobLogger` from `@agendajs/redis-backend` — stores in Redis sorted sets + hashes
+
+### Log Events
+
+The following lifecycle events are recorded:
+
+| Event | Level | Description |
+|-------|-------|-------------|
+| `start` | info | Job started executing |
+| `success` | info | Job completed successfully |
+| `fail` | error | Job threw an error |
+| `complete` | info | Job finished (regardless of outcome) |
+| `retry` | warn | Job scheduled for retry after failure |
+| `retry:exhausted` | error | All retry attempts exhausted |
+| `locked` | debug | Job was locked for processing |
+| `expired` | warn | Job lock expired (timed out) |
 
 ## Creating Jobs
 

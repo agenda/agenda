@@ -8,7 +8,9 @@ import type {
 	PauseResponse,
 	ResumeResponse,
 	AgendaStats,
-	JobStateNotification
+	JobStateNotification,
+	LogsQueryParams,
+	LogsResponse
 } from '../types';
 
 const BASE_URL = 'api';
@@ -82,6 +84,23 @@ export async function resumeJobs(jobIds: string[]): Promise<ResumeResponse> {
 export async function getStats(fullDetails = false): Promise<AgendaStats> {
 	const url = fullDetails ? `${BASE_URL}/stats?fullDetails=true` : `${BASE_URL}/stats`;
 	return fetchJson<AgendaStats>(url);
+}
+
+export async function getLogs(params: LogsQueryParams = {}): Promise<LogsResponse> {
+	const searchParams = new URLSearchParams();
+
+	if (params.jobId) searchParams.set('jobId', params.jobId);
+	if (params.jobName) searchParams.set('jobName', params.jobName);
+	if (params.level) searchParams.set('level', params.level);
+	if (params.event) searchParams.set('event', params.event);
+	if (params.from) searchParams.set('from', params.from);
+	if (params.to) searchParams.set('to', params.to);
+	if (params.limit !== undefined) searchParams.set('limit', String(params.limit));
+	if (params.offset !== undefined) searchParams.set('offset', String(params.offset));
+	if (params.sort) searchParams.set('sort', params.sort);
+
+	const url = `${BASE_URL}/logs?${searchParams.toString()}`;
+	return fetchJson<LogsResponse>(url);
 }
 
 /**

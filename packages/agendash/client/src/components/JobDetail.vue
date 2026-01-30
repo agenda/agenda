@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import type { FrontendJob } from '../types';
 import { formatDateTime } from '../utils/date';
+import JobLogs from './JobLogs.vue';
 
 const props = defineProps<{
 	job: FrontendJob;
@@ -26,7 +27,7 @@ onUnmounted(() => {
 	document.removeEventListener('keydown', handleKeydown);
 });
 
-const activeTab = ref<'details' | 'raw'>('details');
+const activeTab = ref<'details' | 'logs' | 'raw'>('details');
 
 const formattedData = computed(() => {
 	try {
@@ -60,6 +61,13 @@ const rawJob = computed(() => {
 				@click="activeTab = 'details'"
 			>
 				Details
+			</button>
+			<button
+				class="tab-btn"
+				:class="{ active: activeTab === 'logs' }"
+				@click="activeTab = 'logs'"
+			>
+				Logs
 			</button>
 			<button
 				class="tab-btn"
@@ -158,6 +166,11 @@ const rawJob = computed(() => {
 					<small class="d-block">Reason</small>
 					<code>{{ job.job.failReason }}</code>
 				</div>
+			</div>
+
+			<!-- Logs Tab -->
+			<div v-else-if="activeTab === 'logs'">
+				<JobLogs :job-id="job.job._id" :job-name="job.job.name" />
 			</div>
 
 			<!-- Raw Data Tab -->

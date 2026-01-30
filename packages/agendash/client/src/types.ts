@@ -186,6 +186,50 @@ export interface AgendaStats {
 }
 
 /**
+ * Query parameters for the logs API
+ */
+export interface LogsQueryParams {
+	jobId?: string;
+	jobName?: string;
+	level?: string;
+	event?: string;
+	from?: string;
+	to?: string;
+	limit?: number;
+	offset?: number;
+	sort?: 'asc' | 'desc';
+}
+
+/**
+ * A log entry from the backend
+ */
+export interface FrontendLogEntry {
+	_id?: string;
+	timestamp: string;
+	level: string;
+	event: string;
+	jobId?: string;
+	jobName: string;
+	message: string;
+	duration?: number;
+	error?: string;
+	failCount?: number;
+	retryDelay?: number;
+	retryAttempt?: number;
+	agendaName?: string;
+	meta?: Record<string, unknown>;
+}
+
+/**
+ * Response from the logs API
+ */
+export interface LogsResponse {
+	entries: FrontendLogEntry[];
+	total: number;
+	loggingEnabled: boolean;
+}
+
+/**
  * Types of job state events
  */
 export type JobStateType = 'start' | 'progress' | 'success' | 'fail' | 'complete' | 'retry';

@@ -25,6 +25,7 @@ export interface RedisBackendConfig {
 		nextRunAt?: SortDirection;
 		priority?: SortDirection;
 	};
+
 }
 
 /**
