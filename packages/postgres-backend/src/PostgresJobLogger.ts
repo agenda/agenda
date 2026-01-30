@@ -48,11 +48,22 @@ export function getCreateLogsIndexesSQL(tableName: string): string[] {
  *
  * @example
  * ```typescript
+ * // Via backend (automatic connection sharing):
  * import { PostgresBackend } from '@agendajs/postgres-backend';
  *
  * const backend = new PostgresBackend({
  *   connectionString: 'postgresql://...',
  *   logging: true // enables PostgresJobLogger with 'agenda_logs' table
+ * });
+ *
+ * // Standalone (e.g., log to Postgres while using Mongo for storage):
+ * import { PostgresJobLogger } from '@agendajs/postgres-backend';
+ * import { Pool } from 'pg';
+ *
+ * const logger = new PostgresJobLogger({ pool: new Pool({ connectionString: '...' }) });
+ * const agenda = new Agenda({
+ *   backend: new MongoBackend({ address: 'mongodb://...' }),
+ *   logging: logger
  * });
  * ```
  */
@@ -60,31 +71,46 @@ export class PostgresJobLogger implements JobLogger {
 	private pool!: Pool;
 	private readonly tableName: string;
 	private readonly ensureSchema: boolean;
+	private initialized = false;
 
-	constructor(tableName = 'agenda_logs', ensureSchema = true) {
-		this.tableName = tableName;
-		this.ensureSchema = ensureSchema;
+	constructor(options?: { pool?: Pool; tableName?: string; ensureSchema?: boolean } | string) {
+		if (typeof options === 'string') {
+			// Legacy: constructor(tableName)
+			this.tableName = options;
+			this.ensureSchema = true;
+		} else {
+			this.tableName = options?.tableName ?? 'agenda_logs';
+			this.ensureSchema = options?.ensureSchema ?? true;
+			if (options?.pool) {
+				this.pool = options.pool;
+			}
+		}
 	}
 
 	/**
 	 * Set the pool and initialize the table schema.
-	 * Called by PostgresBackend after the repository connects.
+	 * Called by PostgresBackend after the repository connects,
+	 * or automatically when a pool is provided in the constructor.
 	 */
 	async setPool(pool: Pool): Promise<void> {
 		this.pool = pool;
+		await this.ensureInitialized();
+	}
 
-		if (this.ensureSchema) {
-			log('creating schema for %s table', this.tableName);
-			const client = await this.pool.connect();
-			try {
-				await client.query(getCreateLogsTableSQL(this.tableName));
-				for (const sql of getCreateLogsIndexesSQL(this.tableName)) {
-					await client.query(sql);
-				}
-				log('schema created for %s table', this.tableName);
-			} finally {
-				client.release();
+	private async ensureInitialized(): Promise<void> {
+		if (this.initialized || !this.pool || !this.ensureSchema) return;
+		this.initialized = true;
+
+		log('creating schema for %s table', this.tableName);
+		const client = await this.pool.connect();
+		try {
+			await client.query(getCreateLogsTableSQL(this.tableName));
+			for (const sql of getCreateLogsIndexesSQL(this.tableName)) {
+				await client.query(sql);
 			}
+			log('schema created for %s table', this.tableName);
+		} finally {
+			client.release();
 		}
 	}
 
@@ -93,6 +119,8 @@ export class PostgresJobLogger implements JobLogger {
 			log('pool not initialized, skipping log entry');
 			return;
 		}
+
+		await this.ensureInitialized();
 
 		await this.pool.query(
 			`INSERT INTO "${this.tableName}"

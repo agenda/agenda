@@ -10,30 +10,55 @@ const log = debug('agenda:mongo:logger');
  *
  * @example
  * ```typescript
+ * // Via backend (automatic connection sharing):
  * import { MongoBackend } from '@agendajs/mongo-backend';
  *
  * const backend = new MongoBackend({
  *   mongo: db,
  *   logging: true // enables MongoJobLogger with 'agenda_logs' collection
  * });
+ *
+ * // Standalone (e.g., log to Mongo while using Postgres for storage):
+ * import { MongoJobLogger } from '@agendajs/mongo-backend';
+ *
+ * const logger = new MongoJobLogger({ db: existingDb });
+ * const agenda = new Agenda({
+ *   backend: new PostgresBackend({ connectionString: '...' }),
+ *   logging: logger
+ * });
  * ```
  */
 export class MongoJobLogger implements JobLogger {
 	private collection!: Collection;
 	private readonly collectionName: string;
+	private initialized = false;
 
-	constructor(collectionName = 'agenda_logs') {
-		this.collectionName = collectionName;
+	constructor(options?: { db?: Db; collectionName?: string } | string) {
+		if (typeof options === 'string') {
+			// Legacy: constructor(collectionName)
+			this.collectionName = options;
+		} else {
+			this.collectionName = options?.collectionName ?? 'agenda_logs';
+			if (options?.db) {
+				this.collection = options.db.collection(this.collectionName);
+			}
+		}
 	}
 
 	/**
 	 * Set the database instance and initialize the collection.
-	 * Called by MongoBackend after the repository connects.
+	 * Called by MongoBackend after the repository connects,
+	 * or automatically when a db is provided in the constructor.
 	 */
 	async setDb(db: Db): Promise<void> {
 		this.collection = db.collection(this.collectionName);
+		await this.ensureIndexes();
+	}
 
-		// Create indexes for efficient querying
+	private async ensureIndexes(): Promise<void> {
+		if (this.initialized || !this.collection) return;
+		this.initialized = true;
+
 		log('creating indexes for %s collection', this.collectionName);
 		await this.collection.createIndex(
 			{ timestamp: -1 },
@@ -55,6 +80,8 @@ export class MongoJobLogger implements JobLogger {
 			log('collection not initialized, skipping log entry');
 			return;
 		}
+
+		await this.ensureIndexes();
 		await this.collection.insertOne({ ...entry });
 	}
 

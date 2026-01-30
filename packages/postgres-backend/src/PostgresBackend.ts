@@ -74,7 +74,10 @@ export class PostgresBackend implements AgendaBackend {
 
 		// Create job logger if logging is enabled
 		if (config.logging) {
-			this._logger = new PostgresJobLogger(config.logTableName, config.ensureSchema);
+			this._logger = new PostgresJobLogger({
+				tableName: config.logTableName,
+				ensureSchema: config.ensureSchema
+			});
 		}
 
 		log('PostgresBackend created with config: %O', {

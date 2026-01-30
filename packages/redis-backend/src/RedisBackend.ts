@@ -72,7 +72,7 @@ export class RedisBackend implements AgendaBackend {
 
 		// Create job logger if logging is enabled
 		if (config.logging) {
-			this._logger = new RedisJobLogger(config.keyPrefix);
+			this._logger = new RedisJobLogger({ keyPrefix: config.keyPrefix });
 		}
 
 		log('RedisBackend created with config: %O', {

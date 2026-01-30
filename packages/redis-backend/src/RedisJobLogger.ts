@@ -16,11 +16,22 @@ const log = debug('agenda:redis:logger');
  *
  * @example
  * ```typescript
+ * // Via backend (automatic connection sharing):
  * import { RedisBackend } from '@agendajs/redis-backend';
  *
  * const backend = new RedisBackend({
  *   connectionString: 'redis://localhost:6379',
  *   logging: true // enables RedisJobLogger
+ * });
+ *
+ * // Standalone (e.g., log to Redis while using Mongo for storage):
+ * import { RedisJobLogger } from '@agendajs/redis-backend';
+ * import Redis from 'ioredis';
+ *
+ * const logger = new RedisJobLogger({ redis: new Redis('redis://localhost:6379') });
+ * const agenda = new Agenda({
+ *   backend: new MongoBackend({ address: 'mongodb://...' }),
+ *   logging: logger
  * });
  * ```
  */
@@ -29,8 +40,16 @@ export class RedisJobLogger implements JobLogger {
 	private readonly keyPrefix: string;
 	private idCounter = 0;
 
-	constructor(keyPrefix = 'agenda:') {
-		this.keyPrefix = keyPrefix;
+	constructor(options?: { redis?: Redis; keyPrefix?: string } | string) {
+		if (typeof options === 'string') {
+			// Legacy: constructor(keyPrefix)
+			this.keyPrefix = options;
+		} else {
+			this.keyPrefix = options?.keyPrefix ?? 'agenda:';
+			if (options?.redis) {
+				this.redis = options.redis;
+			}
+		}
 	}
 
 	private key(suffix: string): string {
