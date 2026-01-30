@@ -229,7 +229,8 @@ async function startDevServer() {
 
 	const agenda = new Agenda({
 		backend,
-		name: 'agendash-dev-postgres'
+		name: 'agendash-dev-postgres',
+		logging: true
 	});
 
 	agenda.on('error', (err) => {
