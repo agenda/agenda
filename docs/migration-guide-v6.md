@@ -6,7 +6,7 @@ This guide covers all breaking changes and new features in Agenda v6.
 
 1. **ESM-only** - CommonJS is no longer supported
 2. **Separate backend packages** - MongoDB, PostgreSQL, Redis are separate packages
-3. **Unified Backend API** - New `IAgendaBackend` interface replaces direct database configuration
+3. **Unified Backend API** - New `AgendaBackend` interface replaces direct database configuration
 4. **Monorepo structure** - Now includes `agenda`, `agendash`, and `agenda-rest` packages
 5. **Node.js 18+** - Minimum Node.js version is now 18
 6. **TypeScript improvements** - Better typing throughout
@@ -129,7 +129,7 @@ Options have been split between Agenda and MongoBackend:
 | `db.collection` | Agenda | `MongoBackend({ collection })` |
 | `db.options` | Agenda | `MongoBackend({ options })` |
 | `mongo` | Agenda | `MongoBackend({ mongo })` |
-| `repository` | Agenda | Use custom `IAgendaBackend` |
+| `repository` | Agenda | Use custom `AgendaBackend` |
 | `ensureIndex` | Agenda | `MongoBackend({ ensureIndex })` |
 | `sort` | Agenda | `MongoBackend({ sort })` |
 | `processEvery` | Agenda | Agenda (unchanged) |
@@ -167,7 +167,7 @@ The following features from agenda.js v4 are **not supported** in v6:
 | Feature | Status | Alternative |
 |---------|--------|-------------|
 | `shouldSaveResult` | Removed | Store results manually in job data |
-| `_collection` internal access | Removed | Use `agenda.db` (IJobRepository) |
+| `_collection` internal access | Removed | Use `agenda.db` (JobRepository) |
 
 ### 7. Node.js Version Requirement
 
@@ -206,7 +206,7 @@ const agenda = new Agenda({ backend: new MongoBackend({ mongo: db }) })
 
 **Custom notification channel (e.g., Redis):**
 ```javascript
-import { BaseNotificationChannel, IJobNotification } from 'agenda';
+import { BaseNotificationChannel, JobNotification } from 'agenda';
 
 class RedisNotificationChannel extends BaseNotificationChannel {
   async connect() {
@@ -223,7 +223,7 @@ class RedisNotificationChannel extends BaseNotificationChannel {
     this.setState('disconnected');
   }
 
-  async publish(notification: IJobNotification) {
+  async publish(notification: JobNotification) {
     await this.redis.publish(this.config.channelName, JSON.stringify(notification));
   }
 }
@@ -231,12 +231,12 @@ class RedisNotificationChannel extends BaseNotificationChannel {
 
 ### 2. Unified Backend Interface
 
-The new `IAgendaBackend` interface allows creating backends that provide both storage AND notifications:
+The new `AgendaBackend` interface allows creating backends that provide both storage AND notifications:
 
 ```javascript
-class PostgresBackend implements IAgendaBackend {
-  readonly repository: IJobRepository;
-  readonly notificationChannel: INotificationChannel;
+class PostgresBackend implements AgendaBackend {
+  readonly repository: JobRepository;
+  readonly notificationChannel: NotificationChannel;
 
   constructor(config) {
     this.repository = new PostgresRepository(config);
@@ -262,12 +262,12 @@ const agenda = new Agenda({
 
 ### 3. Database-Agnostic Repository Interface
 
-The `IJobRepository` interface allows implementing custom storage backends:
+The `JobRepository` interface allows implementing custom storage backends:
 
 ```javascript
-import { IJobRepository, IJobParameters } from 'agenda';
+import { JobRepository, JobParameters } from 'agenda';
 
-class SQLiteRepository implements IJobRepository {
+class SQLiteRepository implements JobRepository {
   async connect() { /* ... */ }
   async queryJobs(options) { /* ... */ }
   async saveJob(job) { /* ... */ }
@@ -450,7 +450,7 @@ const agenda = new Agenda({
 
 ### Step 6: Update Custom Repository Usage
 
-If using a custom repository, implement `IAgendaBackend`:
+If using a custom repository, implement `AgendaBackend`:
 
 ```javascript
 // Before
@@ -459,7 +459,7 @@ const agenda = new Agenda({
 });
 
 // After
-class MyCustomBackend implements IAgendaBackend {
+class MyCustomBackend implements AgendaBackend {
   readonly repository = myCustomRepo;
   readonly notificationChannel = undefined; // Optional
 

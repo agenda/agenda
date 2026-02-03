@@ -311,14 +311,14 @@ agenda.on('fail:send email', (err, job) => { /* ... */ });
 
 ## Custom Backend
 
-For databases other than MongoDB, PostgreSQL, or Redis, implement `IAgendaBackend`:
+For databases other than MongoDB, PostgreSQL, or Redis, implement `AgendaBackend`:
 
 ```javascript
-import { IAgendaBackend, IJobRepository } from 'agenda';
+import { AgendaBackend, JobRepository } from 'agenda';
 
-class SQLiteBackend implements IAgendaBackend {
-  readonly repository: IJobRepository;
-  readonly notificationChannel = undefined; // Or implement INotificationChannel
+class SQLiteBackend implements AgendaBackend {
+  readonly repository: JobRepository;
+  readonly notificationChannel = undefined; // Or implement NotificationChannel
 
   async connect() { /* ... */ }
   async disconnect() { /* ... */ }
