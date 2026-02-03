@@ -1,5 +1,15 @@
 # agenda
 
+## 6.2.0
+
+### Minor Changes
+
+- 09e7b54: persistent log with pluggable architecture
+
+### Patch Changes
+
+- 758cb99: Remove `I` prefix from interface names for cleaner API
+
 ## 6.1.0
 
 ### Minor Changes
