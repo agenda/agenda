@@ -1,5 +1,13 @@
 # agendash
 
+## 8.0.0
+
+### Patch Changes
+
+- Updated dependencies [758cb99]
+- Updated dependencies [09e7b54]
+  - agenda@6.2.0
+
 ## 7.0.0
 
 ### Minor Changes
