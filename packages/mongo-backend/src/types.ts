@@ -27,6 +27,9 @@ export type MongoBackendConfig = MongoConnectionConfig & {
 
 	/** Sort order for job queries */
 	sort?: { [key: string]: SortDirection };
+
+	/** Collection name for log entries (default: 'agenda_logs'). */
+	logCollection?: string;
 };
 
 /**

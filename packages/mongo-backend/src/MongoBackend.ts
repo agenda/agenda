@@ -1,5 +1,6 @@
-import type { AgendaBackend, JobRepository, NotificationChannel } from 'agenda';
+import type { AgendaBackend, JobRepository, NotificationChannel, JobLogger } from 'agenda';
 import { MongoJobRepository } from './MongoJobRepository.js';
+import { MongoJobLogger } from './MongoJobLogger.js';
 import type { MongoBackendConfig } from './types.js';
 
 /**
@@ -17,7 +18,10 @@ import type { MongoBackendConfig } from './types.js';
  * // Via existing connection
  * const backend = new MongoBackend({ mongo: existingDb });
  *
- * const agenda = new Agenda({ backend });
+ * // With persistent job event logging
+ * const backend = new MongoBackend({ mongo: existingDb, logging: true });
+ *
+ * const agenda = new Agenda({ backend, logging: true });
  * ```
  */
 export class MongoBackend implements AgendaBackend {
@@ -25,6 +29,7 @@ export class MongoBackend implements AgendaBackend {
 
 	private _repository: MongoJobRepository;
 	private _ownsConnection: boolean;
+	private _logger: MongoJobLogger;
 
 	/**
 	 * MongoDB does not provide a notification channel.
@@ -45,10 +50,21 @@ export class MongoBackend implements AgendaBackend {
 			ensureIndex: config.ensureIndex,
 			sort: config.sort
 		});
+
+		// Always create the logger (lightweight; only initializes on first use when Agenda activates it)
+		this._logger = new MongoJobLogger(config.logCollection);
 	}
 
 	get repository(): JobRepository {
 		return this._repository;
+	}
+
+	/**
+	 * The job logger for persistent event logging.
+	 * Always available; Agenda decides whether to activate it via its `logging` config.
+	 */
+	get logger(): JobLogger {
+		return this._logger;
 	}
 
 	/**
@@ -64,6 +80,9 @@ export class MongoBackend implements AgendaBackend {
 	 */
 	async connect(): Promise<void> {
 		await this._repository.connect();
+
+		// Initialize the job logger with the shared database connection
+		await this._logger.setDb(this._repository.getDb());
 	}
 
 	/**

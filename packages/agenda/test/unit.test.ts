@@ -3,9 +3,9 @@
  * These tests verify pure logic without database interaction.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Agenda, Job, toJobId } from '../src/index.js';
-import type { AgendaBackend, JobRepository, JobParameters } from '../src/index.js';
+import type { AgendaBackend, JobRepository, JobParameters, JobLogger, JobLogEntry, JobLogQuery, JobLogQueryResult } from '../src/index.js';
 
 /**
  * Minimal mock repository that satisfies the interface without real storage.
@@ -479,5 +479,268 @@ describe('Job Unit Tests', () => {
 			const job = new Job(agenda, { name: 'demo', type: 'normal' });
 			expect(job.disable()).toBe(job);
 		});
+	});
+});
+
+/**
+ * Mock JobLogger for testing logging configuration and logJobEvent behavior.
+ */
+class MockJobLogger implements JobLogger {
+	entries: Omit<JobLogEntry, '_id'>[] = [];
+	logSpy = vi.fn(async (entry: Omit<JobLogEntry, '_id'>) => {
+		this.entries.push(entry);
+	});
+	getLogsSpy = vi.fn(async (query?: JobLogQuery): Promise<JobLogQueryResult> => {
+		let filtered = [...this.entries];
+		if (query?.jobName) {
+			filtered = filtered.filter(e => e.jobName === query.jobName);
+		}
+		return { entries: filtered as JobLogEntry[], total: filtered.length };
+	});
+	clearLogsSpy = vi.fn(async (query?: JobLogQuery): Promise<number> => {
+		if (!query) {
+			const count = this.entries.length;
+			this.entries = [];
+			return count;
+		}
+		const before = this.entries.length;
+		if (query.jobName) {
+			this.entries = this.entries.filter(e => e.jobName !== query.jobName);
+		}
+		return before - this.entries.length;
+	});
+
+	async log(entry: Omit<JobLogEntry, '_id'>): Promise<void> {
+		return this.logSpy(entry);
+	}
+	async getLogs(query?: JobLogQuery): Promise<JobLogQueryResult> {
+		return this.getLogsSpy(query);
+	}
+	async clearLogs(query?: JobLogQuery): Promise<number> {
+		return this.clearLogsSpy(query);
+	}
+}
+
+/**
+ * Mock backend that provides a JobLogger
+ */
+class MockBackendWithLogger implements AgendaBackend {
+	readonly name = 'MockBackendWithLogger';
+	readonly repository = new MockJobRepository();
+	readonly logger: JobLogger;
+
+	constructor(logger: JobLogger) {
+		this.logger = logger;
+	}
+
+	async connect(): Promise<void> {}
+	async disconnect(): Promise<void> {}
+}
+
+describe('Logging Configuration', () => {
+	it('should not have a jobLogger when logging is omitted', async () => {
+		const backend = new MockBackend();
+		const agenda = new Agenda({ backend });
+		await agenda.ready;
+		expect(agenda.jobLogger).toBeUndefined();
+		expect(agenda.hasJobLogger()).toBe(false);
+	});
+
+	it('should not have a jobLogger when logging is false', async () => {
+		const backend = new MockBackend();
+		const agenda = new Agenda({ backend, logging: false });
+		await agenda.ready;
+		expect(agenda.jobLogger).toBeUndefined();
+		expect(agenda.hasJobLogger()).toBe(false);
+	});
+
+	it('should use backend logger when logging is true', async () => {
+		const mockLogger = new MockJobLogger();
+		const backend = new MockBackendWithLogger(mockLogger);
+		const agenda = new Agenda({ backend, logging: true });
+		await agenda.ready;
+		expect(agenda.jobLogger).toBe(mockLogger);
+		expect(agenda.hasJobLogger()).toBe(true);
+		expect(agenda.loggingDefault).toBe(true);
+	});
+
+	it('should use custom JobLogger instance when passed directly', async () => {
+		const mockLogger = new MockJobLogger();
+		const backend = new MockBackend();
+		const agenda = new Agenda({ backend, logging: mockLogger });
+		await agenda.ready;
+		expect(agenda.jobLogger).toBe(mockLogger);
+		expect(agenda.hasJobLogger()).toBe(true);
+		expect(agenda.loggingDefault).toBe(true);
+	});
+
+	it('should use backend logger with { default: false }', async () => {
+		const mockLogger = new MockJobLogger();
+		const backend = new MockBackendWithLogger(mockLogger);
+		const agenda = new Agenda({ backend, logging: { default: false } });
+		await agenda.ready;
+		expect(agenda.jobLogger).toBe(mockLogger);
+		expect(agenda.loggingDefault).toBe(false);
+	});
+
+	it('should use custom logger from { logger: JobLogger }', async () => {
+		const mockLogger = new MockJobLogger();
+		const backend = new MockBackend();
+		const agenda = new Agenda({ backend, logging: { logger: mockLogger } });
+		await agenda.ready;
+		expect(agenda.jobLogger).toBe(mockLogger);
+		expect(agenda.loggingDefault).toBe(true);
+	});
+
+	it('should use custom logger with { logger, default: false }', async () => {
+		const mockLogger = new MockJobLogger();
+		const backend = new MockBackend();
+		const agenda = new Agenda({ backend, logging: { logger: mockLogger, default: false } });
+		await agenda.ready;
+		expect(agenda.jobLogger).toBe(mockLogger);
+		expect(agenda.loggingDefault).toBe(false);
+	});
+});
+
+describe('logJobEvent', () => {
+	let mockLogger: MockJobLogger;
+	let agenda: Agenda;
+
+	beforeEach(async () => {
+		mockLogger = new MockJobLogger();
+		const backend = new MockBackendWithLogger(mockLogger);
+		agenda = new Agenda({ backend, logging: true });
+		await agenda.ready;
+	});
+
+	it('should log an event when logging is enabled', async () => {
+		agenda.define('my-job', async () => {});
+		agenda.logJobEvent({
+			level: 'info',
+			event: 'start',
+			jobName: 'my-job',
+			jobId: 'abc',
+			message: 'Job started'
+		});
+
+		// logJobEvent is fire-and-forget, wait for promise
+		await vi.waitFor(() => expect(mockLogger.logSpy).toHaveBeenCalled());
+
+		const call = mockLogger.logSpy.mock.calls[0][0];
+		expect(call.level).toBe('info');
+		expect(call.event).toBe('start');
+		expect(call.jobName).toBe('my-job');
+		expect(call.jobId).toBe('abc');
+		expect(call.message).toBe('Job started');
+		expect(call.timestamp).toBeInstanceOf(Date);
+	});
+
+	it('should not log when no jobLogger is configured', () => {
+		const backendNoLogger = new MockBackend();
+		const agendaNoLogger = new Agenda({ backend: backendNoLogger });
+
+		// Should not throw
+		agendaNoLogger.logJobEvent({
+			level: 'info',
+			event: 'start',
+			jobName: 'test',
+			message: 'test'
+		});
+	});
+
+	it('should respect per-definition logging: true override with loggingDefault: false', async () => {
+		const backend = new MockBackendWithLogger(mockLogger);
+		agenda = new Agenda({ backend, logging: { default: false } });
+		await agenda.ready;
+
+		agenda.define('logged-job', async () => {}, { logging: true });
+		agenda.define('unlogged-job', async () => {});
+
+		agenda.logJobEvent({
+			level: 'info', event: 'start', jobName: 'logged-job', message: 'started'
+		});
+		agenda.logJobEvent({
+			level: 'info', event: 'start', jobName: 'unlogged-job', message: 'started'
+		});
+
+		await vi.waitFor(() => expect(mockLogger.logSpy).toHaveBeenCalled());
+		// Small delay to ensure any async calls settle
+		await new Promise(r => setTimeout(r, 50));
+
+		expect(mockLogger.logSpy).toHaveBeenCalledTimes(1);
+		expect(mockLogger.logSpy.mock.calls[0][0].jobName).toBe('logged-job');
+	});
+
+	it('should respect per-definition logging: false override with loggingDefault: true', async () => {
+		agenda.define('logged-job', async () => {});
+		agenda.define('silenced-job', async () => {}, { logging: false });
+
+		agenda.logJobEvent({
+			level: 'info', event: 'start', jobName: 'logged-job', message: 'started'
+		});
+		agenda.logJobEvent({
+			level: 'info', event: 'start', jobName: 'silenced-job', message: 'started'
+		});
+
+		await vi.waitFor(() => expect(mockLogger.logSpy).toHaveBeenCalled());
+		await new Promise(r => setTimeout(r, 50));
+
+		expect(mockLogger.logSpy).toHaveBeenCalledTimes(1);
+		expect(mockLogger.logSpy.mock.calls[0][0].jobName).toBe('logged-job');
+	});
+
+	it('should include agendaName in log entries', async () => {
+		const backend = new MockBackendWithLogger(mockLogger);
+		agenda = new Agenda({ backend, logging: true });
+		await agenda.ready;
+		agenda.name('my-worker');
+		agenda.define('my-job', async () => {});
+
+		agenda.logJobEvent({
+			level: 'info', event: 'start', jobName: 'my-job', message: 'started'
+		});
+
+		await vi.waitFor(() => expect(mockLogger.logSpy).toHaveBeenCalled());
+		expect(mockLogger.logSpy.mock.calls[0][0].agendaName).toBe('my-worker');
+	});
+});
+
+describe('getLogs and clearLogs', () => {
+	let mockLogger: MockJobLogger;
+	let agenda: Agenda;
+
+	beforeEach(async () => {
+		mockLogger = new MockJobLogger();
+		const backend = new MockBackendWithLogger(mockLogger);
+		agenda = new Agenda({ backend, logging: true });
+		await agenda.ready;
+	});
+
+	it('getLogs delegates to the jobLogger', async () => {
+		const query = { jobName: 'test' };
+		await agenda.getLogs(query);
+		expect(mockLogger.getLogsSpy).toHaveBeenCalledWith(query);
+	});
+
+	it('getLogs returns empty when no logger is configured', async () => {
+		const agendaNoLogger = new Agenda({ backend: new MockBackend() });
+		await agendaNoLogger.ready;
+
+		const result = await agendaNoLogger.getLogs({ jobName: 'test' });
+		expect(result).toEqual({ entries: [], total: 0 });
+	});
+
+	it('clearLogs delegates to the jobLogger', async () => {
+		const query = { jobName: 'test' };
+		await agenda.clearLogs(query);
+		expect(mockLogger.clearLogsSpy).toHaveBeenCalledWith(query);
+	});
+
+	it('clearLogs returns 0 when no logger is configured', async () => {
+		const agendaNoLogger = new Agenda({ backend: new MockBackend() });
+		await agendaNoLogger.ready;
+
+		const result = await agendaNoLogger.clearLogs();
+		expect(result).toBe(0);
 	});
 });

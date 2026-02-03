@@ -17,12 +17,12 @@ import type { AgendaStatus } from './types/AgendaStatus.js';
 import type { JobsQueryOptions, JobsResult, JobsOverview } from './types/JobQuery.js';
 import type { RemoveJobsOptions } from './types/JobRepository.js';
 import type { DrainOptions, DrainResult } from './types/DrainOptions.js';
+import type { JobLogger, JobLogEntry, JobLogQuery, JobLogQueryResult } from './types/JobLogger.js';
 import { Job, JobWithId } from './Job.js';
 import { JobPriority, parsePriority } from './utils/priority.js';
 import { JobProcessor } from './JobProcessor.js';
 import { calculateProcessEvery } from './utils/processEvery.js';
 import { getCallerFilePath } from './utils/stack.js';
-
 const log = debug('agenda');
 
 const DefaultOptions = {
@@ -68,6 +68,49 @@ export interface AgendaOptions {
 	 * e.g., MongoDB storage + Redis notifications
 	 */
 	notificationChannel?: NotificationChannel;
+	/**
+	 * Enable persistent job event logging (stored in the backend's database).
+	 *
+	 * Disabled by default. When enabled, all job lifecycle events (start, success,
+	 * fail, complete, retry, etc.) are persisted and can be queried via
+	 * `agenda.getLogs()` or viewed in agendash.
+	 *
+	 * Options:
+	 * - `true` — use the backend's built-in logger, all jobs are logged
+	 * - `false` / omitted — no logging (default)
+	 * - `JobLogger` — use a custom logger instance, all jobs are logged
+	 * - `{ logger?: JobLogger, default?: boolean }` — fine-grained control:
+	 *   - `logger`: custom `JobLogger` (omit to use backend's built-in logger)
+	 *   - `default`: whether job definitions are logged by default (`true` = all logged,
+	 *     `false` = only jobs with `logging: true` in their definition are logged).
+	 *     Defaults to `true`.
+	 *
+	 * Per-job definitions can override the default via `define('job', fn, { logging: false })`.
+	 *
+	 * @example
+	 * ```typescript
+	 * // Enable — log all jobs using backend's logger
+	 * const agenda = new Agenda({ backend, logging: true });
+	 *
+	 * // Enable — opt-in per job (logger configured, but off by default)
+	 * const agenda = new Agenda({ backend, logging: { default: false } });
+	 * agenda.define('important', handler, { logging: true });  // logged
+	 * agenda.define('noisy', handler);                         // NOT logged
+	 *
+	 * // Enable — custom logger (e.g., log to Postgres while using Mongo for storage)
+	 * const agenda = new Agenda({ backend, logging: myPostgresJobLogger });
+	 *
+	 * // Enable — custom logger + opt-in per job
+	 * const agenda = new Agenda({
+	 *   backend,
+	 *   logging: { logger: myPostgresJobLogger, default: false }
+	 * });
+	 *
+	 * // Query logs
+	 * const { entries } = await agenda.getLogs({ jobName: 'myJob', limit: 100 });
+	 * ```
+	 */
+	logging?: boolean | JobLogger | { logger?: JobLogger; default?: boolean };
 }
 
 /**
@@ -123,6 +166,20 @@ export class Agenda extends EventEmitter {
 	private notificationChannel?: NotificationChannel;
 
 	private stateSubscriptionUnsubscribe?: () => void;
+
+	/**
+	 * The persistent job logger for storing job lifecycle events in the database.
+	 * Disabled by default. Enable via `logging: true` (uses backend's built-in logger)
+	 * or by passing a custom `JobLogger` implementation.
+	 */
+	public jobLogger?: JobLogger;
+
+	/**
+	 * Default logging behavior for job definitions that don't explicitly set `logging`.
+	 * When `true` (default when logging is enabled), all jobs are logged.
+	 * When `false`, only jobs with `logging: true` in their definition are logged.
+	 */
+	public loggingDefault: boolean;
 
 	// Lifecycle events
 	on(event: 'ready', listener: () => void): this;
@@ -231,6 +288,25 @@ export class Agenda extends EventEmitter {
 
 		this.forkedWorker = config.forkedWorker;
 		this.forkHelper = config.forkHelper;
+
+		// Initialize persistent job logger: disabled by default
+		if (config.logging === true) {
+			// Use backend's built-in logger, all jobs logged
+			this.jobLogger = config.backend.logger;
+			this.loggingDefault = true;
+		} else if (config.logging && typeof config.logging === 'object' && 'log' in config.logging) {
+			// Passed a JobLogger instance directly — all jobs logged
+			this.jobLogger = config.logging as JobLogger;
+			this.loggingDefault = true;
+		} else if (config.logging && typeof config.logging === 'object') {
+			// Options object: { logger?, default? }
+			const opts = config.logging as { logger?: JobLogger; default?: boolean };
+			this.jobLogger = opts.logger ?? config.backend.logger;
+			this.loggingDefault = opts.default ?? true;
+		} else {
+			// Logging disabled (false / omitted)
+			this.loggingDefault = true;
+		}
 
 		// Store backend and get repository
 		this.backend = config.backend;
@@ -401,6 +477,61 @@ export class Agenda extends EventEmitter {
 	 */
 	hasNotificationChannel(): boolean {
 		return !!this.notificationChannel;
+	}
+
+	/**
+	 * Check if persistent job logging is enabled
+	 */
+	hasJobLogger(): boolean {
+		return !!this.jobLogger;
+	}
+
+	/**
+	 * Log a job lifecycle event to the persistent job logger (fire-and-forget).
+	 * Does nothing if no job logger is configured or if logging is disabled
+	 * for the job definition (respects per-definition `logging` and the global `loggingDefault`).
+	 * @internal
+	 */
+	logJobEvent(entry: Omit<JobLogEntry, '_id' | 'timestamp' | 'agendaName'>): void {
+		if (!this.jobLogger) return;
+
+		// Per-definition logging overrides the global default.
+		// If definition.logging is undefined, fall back to loggingDefault.
+		const definition = this.definitions[entry.jobName];
+		const enabled = definition?.logging ?? this.loggingDefault;
+		if (!enabled) return;
+
+		this.jobLogger
+			.log({
+				...entry,
+				timestamp: new Date(),
+				agendaName: this.attrs.name || undefined
+			})
+			.catch(err => {
+				log('failed to write job log entry: %O', err);
+			});
+	}
+
+	/**
+	 * Query persistent job logs.
+	 * Returns empty result if no job logger is configured.
+	 */
+	async getLogs(query?: JobLogQuery): Promise<JobLogQueryResult> {
+		if (!this.jobLogger) {
+			return { entries: [], total: 0 };
+		}
+		return this.jobLogger.getLogs(query);
+	}
+
+	/**
+	 * Clear persistent job logs matching the query.
+	 * Returns 0 if no job logger is configured.
+	 */
+	async clearLogs(query?: JobLogQuery): Promise<number> {
+		if (!this.jobLogger) {
+			return 0;
+		}
+		return this.jobLogger.clearLogs(query);
 	}
 
 	/**
@@ -584,7 +715,7 @@ export class Agenda extends EventEmitter {
 		name: string,
 		processor: (agendaJob: Job<DATA>, done: (error?: Error) => void) => void,
 		options?: Partial<
-			Pick<JobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency' | 'backoff' | 'removeOnComplete'>
+			Pick<JobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency' | 'backoff' | 'removeOnComplete' | 'logging'>
 		> & {
 			priority?: JobPriority;
 		}
@@ -594,7 +725,7 @@ export class Agenda extends EventEmitter {
 		name: string,
 		processor: (agendaJob: Job<DATA>) => Promise<void>,
 		options?: Partial<
-			Pick<JobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency' | 'backoff' | 'removeOnComplete'>
+			Pick<JobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency' | 'backoff' | 'removeOnComplete' | 'logging'>
 		> & {
 			priority?: JobPriority;
 		}
@@ -603,7 +734,7 @@ export class Agenda extends EventEmitter {
 		name: string,
 		processor: ((job: Job) => Promise<void>) | ((job: Job, done: (err?: Error) => void) => void),
 		options?: Partial<
-			Pick<JobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency' | 'backoff' | 'removeOnComplete'>
+			Pick<JobDefinition, 'lockLimit' | 'lockLifetime' | 'concurrency' | 'backoff' | 'removeOnComplete' | 'logging'>
 		> & {
 			priority?: JobPriority;
 		}
@@ -622,7 +753,8 @@ export class Agenda extends EventEmitter {
 			priority: parsePriority(options?.priority),
 			lockLifetime: options?.lockLifetime || this.attrs.defaultLockLifetime,
 			backoff: options?.backoff,
-			removeOnComplete: options?.removeOnComplete ?? this.attrs.removeOnComplete
+			removeOnComplete: options?.removeOnComplete ?? this.attrs.removeOnComplete,
+			logging: options?.logging
 		};
 		log('job [%s] defined with following options: \n%O', name, this.definitions[name]);
 	}
@@ -959,6 +1091,7 @@ export class Agenda extends EventEmitter {
 			this.attrs.processEvery,
 			this.notificationChannel
 		);
+
 	}
 
 	/**
@@ -1101,6 +1234,8 @@ export * from './types/AgendaStatus.js';
 export * from './types/DrainOptions.js';
 
 export * from './notifications/index.js';
+
+export * from './types/JobLogger.js';
 
 export {
 	applyAllDateConstraints,

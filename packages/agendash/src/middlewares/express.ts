@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import type { Agenda } from 'agenda';
 import { AgendashController } from '../AgendashController.js';
 import { cspHeader } from '../csp.js';
-import type { ApiQueryParams, CreateJobRequest, DeleteRequest, RequeueRequest, PauseRequest, ResumeRequest } from '../types.js';
+import type { ApiQueryParams, CreateJobRequest, DeleteRequest, RequeueRequest, PauseRequest, ResumeRequest, LogsQueryParams } from '../types.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -121,6 +121,28 @@ export function createExpressMiddleware(agenda: Agenda, options: ExpressMiddlewa
 		try {
 			const fullDetails = req.query.fullDetails === 'true';
 			const result = await controller.getStats(fullDetails);
+			res.json(result);
+		} catch (error) {
+			res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+		}
+	});
+
+	// Logs endpoint
+	router.get('/api/logs', async (req, res) => {
+		try {
+			const query = req.query as Record<string, string | undefined>;
+			const params: LogsQueryParams = {
+				jobId: query.jobId,
+				jobName: query.jobName,
+				level: query.level,
+				event: query.event,
+				from: query.from,
+				to: query.to,
+				limit: query.limit ? parseInt(query.limit, 10) : 50,
+				offset: query.offset ? parseInt(query.offset, 10) : 0,
+				sort: (query.sort as 'asc' | 'desc') || 'desc'
+			};
+			const result = await controller.getLogs(params);
 			res.json(result);
 		} catch (error) {
 			res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });

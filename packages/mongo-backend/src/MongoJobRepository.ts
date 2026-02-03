@@ -78,6 +78,7 @@ type MongoJobDocument = Omit<JobParameters, '_id'> & { _id?: ObjectId };
 export class MongoJobRepository implements JobRepository {
 	collection!: Collection<MongoJobDocument>;
 	private mongoClient?: MongoClient;
+	private _db?: Db;
 	private ownsConnection: boolean = false;
 
 	constructor(private connectOptions: MongoJobRepositoryConfig) {
@@ -501,8 +502,19 @@ export class MongoJobRepository implements JobRepository {
 		return computeJobObj(result);
 	}
 
+	/**
+	 * Get the underlying MongoDB Db instance (for use by job logger).
+	 */
+	getDb(): Db {
+		if (!this._db) {
+			throw new Error('Not connected');
+		}
+		return this._db;
+	}
+
 	async connect(): Promise<void> {
 		const db = await this.createConnection();
+		this._db = db;
 		log('successful connection to MongoDB', db.options);
 
 		const collection = this.connectOptions.db?.collection || 'agendaJobs';

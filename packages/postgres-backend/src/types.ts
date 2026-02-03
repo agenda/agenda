@@ -31,6 +31,9 @@ export interface PostgresBackendConfig {
 
 	/** Disable LISTEN/NOTIFY notification channel (default: false) */
 	disableNotifications?: boolean;
+
+	/** Table name for log entries (default: 'agenda_logs'). */
+	logTableName?: string;
 }
 
 /**
