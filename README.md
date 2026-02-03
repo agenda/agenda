@@ -13,7 +13,7 @@
 ## What's New in v6
 
 - **ESM-only** - Modern ES modules (Node.js 18+)
-- **Pluggable backend system** - New `IAgendaBackend` interface for storage and notifications
+- **Pluggable backend system** - New `AgendaBackend` interface for storage and notifications
 - **Real-time notifications** - Optional notification channels for instant job processing
 - **MongoDB 6 driver** - Updated to latest MongoDB driver
 - **Monorepo** - Now includes `agenda`, `agendash`, and `agenda-rest` packages
@@ -198,9 +198,9 @@ Possible agenda config options:
 ```ts
 {
 	// Required: Backend for storage (and optionally notifications)
-	backend: IAgendaBackend;
+	backend: AgendaBackend;
 	// Optional: Override notification channel from backend
-	notificationChannel?: INotificationChannel;
+	notificationChannel?: NotificationChannel;
 	// Agenda instance name (used in lastModifiedBy field)
 	name?: string;
 	// Job processing options
@@ -319,7 +319,7 @@ const agenda = new Agenda({
 
 **Custom backend:**
 
-You can implement a custom backend by implementing the `IAgendaBackend` interface. See [Custom Database Driver](docs/custom-database-driver.md) for details.
+You can implement a custom backend by implementing the `AgendaBackend` interface. See [Custom Database Driver](docs/custom-database-driver.md) for details.
 
 ```js
 const agenda = new Agenda({ backend: myCustomBackend });
@@ -379,10 +379,10 @@ const agenda = new Agenda({
 
 **Implementing a custom notification channel:**
 
-Extend `BaseNotificationChannel` or implement `INotificationChannel`:
+Extend `BaseNotificationChannel` or implement `NotificationChannel`:
 
 ```ts
-import { BaseNotificationChannel, IJobNotification } from 'agenda';
+import { BaseNotificationChannel, JobNotification } from 'agenda';
 
 class RedisNotificationChannel extends BaseNotificationChannel {
 	async connect(): Promise<void> {
@@ -395,7 +395,7 @@ class RedisNotificationChannel extends BaseNotificationChannel {
 		this.setState('disconnected');
 	}
 
-	async publish(notification: IJobNotification): Promise<void> {
+	async publish(notification: JobNotification): Promise<void> {
 		// Publish to Redis channel
 	}
 }
@@ -559,7 +559,6 @@ the following:
 - `priority`: `(lowest|low|normal|high|highest|number)` specifies the priority
   of the job. Higher priority jobs will run first. See the priority mapping
   below
-- `shouldSaveResult`: `boolean` flag that specifies whether the result of the job should also be stored in the database. Defaults to false
 - `backoff`: `BackoffStrategy` a function that determines retry delay on failure. See [Automatic Retry with Backoff](#automatic-retry-with-backoff) for details
 - `removeOnComplete`: `boolean` automatically remove the job from the database after successful completion (one-time jobs only). Overrides the global `removeOnComplete` setting. See [Auto-Cleanup of Completed Jobs](#auto-cleanup-of-completed-jobs) for details
 
@@ -1387,17 +1386,6 @@ the above priority table.
 job.priority('low');
 await job.save();
 ```
-
-### setShouldSaveResult(setShouldSaveResult)
-
-Specifies whether the result of the job should also be stored in the database. Defaults to false.
-
-```js
-job.setShouldSaveResult(true);
-await job.save();
-```
-
-The data returned by the job will be available on the `result` attribute after it succeeded and got retrieved again from the database, e.g. via `agenda.jobs(...)` or through the [success job event](#agenda-events)).
 
 ### unique(properties, [options])
 

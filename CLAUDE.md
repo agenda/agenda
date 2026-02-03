@@ -73,9 +73,9 @@ MongoBackend (packages/mongo-backend)     # Separate package for MongoDB
 
 ### Key Patterns
 
-**Pluggable Backend System**: Agenda uses a backend interface (`IAgendaBackend`) that provides:
-- Storage (required): via `IJobRepository`
-- Notifications (optional): via `INotificationChannel`
+**Pluggable Backend System**: Agenda uses a backend interface (`AgendaBackend`) that provides:
+- Storage (required): via `JobRepository`
+- Notifications (optional): via `NotificationChannel`
 
 All backends are separate packages:
 - MongoDB: `@agendajs/mongo-backend` - Storage with polling-based job processing (or real-time via Change Streams)
@@ -230,10 +230,10 @@ const agenda = new Agenda({
 
 ### Implementing Custom Backends/Channels
 
-For distributed setups, implement `IAgendaBackend` and optionally `INotificationChannel`:
+For distributed setups, implement `AgendaBackend` and optionally `NotificationChannel`:
 
 ```typescript
-import { IAgendaBackend, BaseNotificationChannel, IJobNotification } from 'agenda';
+import { AgendaBackend, BaseNotificationChannel, JobNotification } from 'agenda';
 
 class RedisNotificationChannel extends BaseNotificationChannel {
   async connect(): Promise<void> {
@@ -246,7 +246,7 @@ class RedisNotificationChannel extends BaseNotificationChannel {
     this.setState('disconnected');
   }
 
-  async publish(notification: IJobNotification): Promise<void> {
+  async publish(notification: JobNotification): Promise<void> {
     // Publish to Redis channel
     await this.redis.publish(this.config.channelName, JSON.stringify(notification));
   }
@@ -302,10 +302,10 @@ const channel = new MongoChangeStreamNotificationChannel({
 
 ### Key Types
 
-- `IAgendaBackend` - Interface for backend implementations (storage + optional notifications)
-- `IJobRepository` - Interface for storage operations
-- `INotificationChannel` - Interface for notification channel implementations
-- `IJobNotification` - Payload sent when a job is saved (jobId, jobName, nextRunAt, priority)
+- `AgendaBackend` - Interface for backend implementations (storage + optional notifications)
+- `JobRepository` - Interface for storage operations
+- `NotificationChannel` - Interface for notification channel implementations
+- `JobNotification` - Payload sent when a job is saved (jobId, jobName, nextRunAt, priority)
 - `BaseNotificationChannel` - Abstract base class with state management and reconnection logic
 - `InMemoryNotificationChannel` - In-memory implementation for testing/single-process
 - `MongoChangeStreamNotificationChannel` - MongoDB Change Streams for native real-time notifications (from `@agendajs/mongo-backend`)

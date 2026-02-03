@@ -1,6 +1,6 @@
 # Custom Backend Driver
 
-Agenda v6 introduces a pluggable backend system (`IAgendaBackend`), allowing you to use any database and optionally provide real-time notifications.
+Agenda v6 introduces a pluggable backend system (`AgendaBackend`), allowing you to use any database and optionally provide real-time notifications.
 
 ## Official Backend Packages
 
@@ -53,8 +53,8 @@ If you need a different database (SQLite, MySQL, etc.), continue reading to lear
 ## Architecture
 
 A backend provides:
-- **Storage** (required): Via `IJobRepository` interface
-- **Notifications** (optional): Via `INotificationChannel` interface
+- **Storage** (required): Via `JobRepository` interface
+- **Notifications** (optional): Via `NotificationChannel` interface
 
 ### Backend Capabilities
 
@@ -148,14 +148,14 @@ await agenda.now('myJob'); // Triggers instant processing via change stream
 
 ## Custom Backend
 
-To use a different database, implement the `IAgendaBackend` interface:
+To use a different database, implement the `AgendaBackend` interface:
 
 ```typescript
-import { Agenda, IAgendaBackend, IJobRepository, INotificationChannel } from 'agenda';
+import { Agenda, AgendaBackend, JobRepository, NotificationChannel } from 'agenda';
 
-class PostgresBackend implements IAgendaBackend {
-  readonly repository: IJobRepository;
-  readonly notificationChannel?: INotificationChannel;
+class PostgresBackend implements AgendaBackend {
+  readonly repository: JobRepository;
+  readonly notificationChannel?: NotificationChannel;
 
   constructor(config: { connectionString: string }) {
     this.repository = new PostgresRepository(config);
@@ -177,22 +177,22 @@ const agenda = new Agenda({
 });
 ```
 
-## IAgendaBackend Interface
+## AgendaBackend Interface
 
 ```typescript
-interface IAgendaBackend {
+interface AgendaBackend {
   /**
    * The job repository for storage operations.
    * Required - every backend must provide storage.
    */
-  readonly repository: IJobRepository;
+  readonly repository: JobRepository;
 
   /**
    * Optional notification channel for real-time job notifications.
    * If provided, Agenda will use this for immediate job processing.
    * If not provided, Agenda falls back to periodic polling.
    */
-  readonly notificationChannel?: INotificationChannel;
+  readonly notificationChannel?: NotificationChannel;
 
   /**
    * Connect to the backend.
@@ -208,12 +208,12 @@ interface IAgendaBackend {
 }
 ```
 
-## IJobRepository Interface
+## JobRepository Interface
 
-The `IJobRepository` interface defines all database operations required by Agenda:
+The `JobRepository` interface defines all database operations required by Agenda:
 
 ```typescript
-interface IJobRepository {
+interface JobRepository {
   /**
    * Connect to the database
    */
@@ -222,12 +222,12 @@ interface IJobRepository {
   /**
    * Query jobs with filtering, pagination, and state computation
    */
-  queryJobs(options?: IJobsQueryOptions): Promise<IJobsResult>;
+  queryJobs(options?: JobsQueryOptions): Promise<JobsResult>;
 
   /**
    * Get overview statistics for all job types
    */
-  getJobsOverview(): Promise<IJobsOverview[]>;
+  getJobsOverview(): Promise<JobsOverview[]>;
 
   /**
    * Get all distinct job names
@@ -237,7 +237,7 @@ interface IJobRepository {
   /**
    * Get a single job by ID
    */
-  getJobById(id: string): Promise<IJobParameters | null>;
+  getJobById(id: string): Promise<JobParameters | null>;
 
   /**
    * Get count of jobs ready to run (nextRunAt < now)
@@ -248,28 +248,28 @@ interface IJobRepository {
    * Remove jobs matching the given options
    * @returns Number of jobs removed
    */
-  removeJobs(options: IRemoveJobsOptions): Promise<number>;
+  removeJobs(options: RemoveJobsOptions): Promise<number>;
 
   /**
    * Save a job (insert or update)
    */
-  saveJob<DATA = unknown>(job: IJobParameters<DATA>): Promise<IJobParameters<DATA>>;
+  saveJob<DATA = unknown>(job: JobParameters<DATA>): Promise<JobParameters<DATA>>;
 
   /**
    * Update job state fields (lockedAt, lastRunAt, progress, etc.)
    */
-  saveJobState(job: IJobParameters): Promise<void>;
+  saveJobState(job: JobParameters): Promise<void>;
 
   /**
    * Attempt to lock a job for processing
    * @returns The locked job data, or undefined if lock failed
    */
-  lockJob(job: IJobParameters): Promise<IJobParameters | undefined>;
+  lockJob(job: JobParameters): Promise<JobParameters | undefined>;
 
   /**
    * Unlock a single job
    */
-  unlockJob(job: IJobParameters): Promise<void>;
+  unlockJob(job: JobParameters): Promise<void>;
 
   /**
    * Unlock multiple jobs by ID
@@ -284,28 +284,28 @@ interface IJobRepository {
     nextScanAt: Date,
     lockDeadline: Date,
     now?: Date
-  ): Promise<IJobParameters | undefined>;
+  ): Promise<JobParameters | undefined>;
 }
 ```
 
-## INotificationChannel Interface
+## NotificationChannel Interface
 
 For real-time job notifications:
 
 ```typescript
-interface INotificationChannel {
+interface NotificationChannel {
   readonly state: NotificationChannelState;
   connect(): Promise<void>;
   disconnect(): Promise<void>;
   subscribe(handler: NotificationHandler): () => void;
-  publish(notification: IJobNotification): Promise<void>;
+  publish(notification: JobNotification): Promise<void>;
   on(event: 'stateChange' | 'error', listener: Function): this;
   off(event: 'stateChange' | 'error', listener: Function): this;
 }
 
 type NotificationChannelState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'error';
 
-interface IJobNotification {
+interface JobNotification {
   jobId: JobId;
   jobName: string;
   nextRunAt: Date | null;
@@ -329,12 +329,12 @@ import { toJobId } from 'agenda';
 const id = toJobId('my-job-id');
 ```
 
-### IRemoveJobsOptions
+### RemoveJobsOptions
 
 Options for removing jobs:
 
 ```typescript
-interface IRemoveJobsOptions {
+interface RemoveJobsOptions {
   /** Remove job by ID */
   id?: JobId | string;
   /** Remove jobs by IDs */
@@ -350,12 +350,12 @@ interface IRemoveJobsOptions {
 }
 ```
 
-### IJobsQueryOptions
+### JobsQueryOptions
 
 Options for querying jobs:
 
 ```typescript
-interface IJobsQueryOptions {
+interface JobsQueryOptions {
   /** Filter by job name */
   name?: string;
   /** Filter by job names (multiple) */
@@ -373,7 +373,7 @@ interface IJobsQueryOptions {
   /** Include disabled jobs (default: true) */
   includeDisabled?: boolean;
   /** Sort order */
-  sort?: IJobsSort;
+  sort?: JobsSort;
   /** Number of jobs to skip (pagination) */
   skip?: number;
   /** Maximum number of jobs to return */
@@ -405,7 +405,7 @@ When implementing a custom backend:
 
 4. **Upserts**: The `saveJob()` method must handle both inserts (no `_id`) and updates (has `_id`), as well as `unique` constraints and `type: 'single'` jobs.
 
-5. **Notifications**: If your database supports real-time notifications (like PostgreSQL LISTEN/NOTIFY), implement `INotificationChannel` and provide it via `notificationChannel`.
+5. **Notifications**: If your database supports real-time notifications (like PostgreSQL LISTEN/NOTIFY), implement `NotificationChannel` and provide it via `notificationChannel`.
 
 ## Example: SQLite Backend
 
@@ -413,13 +413,13 @@ Here's an example structure for implementing a SQLite backend:
 
 ```typescript
 import {
-  IAgendaBackend,
-  IJobRepository,
+  AgendaBackend,
+  JobRepository,
   BaseNotificationChannel,
-  IJobNotification
+  JobNotification
 } from 'agenda';
 
-class SQLiteRepository implements IJobRepository {
+class SQLiteRepository implements JobRepository {
   // Implement all repository methods using better-sqlite3 or similar...
 }
 
@@ -434,14 +434,14 @@ class SQLiteNotificationChannel extends BaseNotificationChannel {
     this.setState('disconnected');
   }
 
-  async publish(notification: IJobNotification): Promise<void> {
+  async publish(notification: JobNotification): Promise<void> {
     // Publish notification to other processes
   }
 }
 
-class SQLiteBackend implements IAgendaBackend {
-  readonly repository: IJobRepository;
-  readonly notificationChannel?: INotificationChannel;
+class SQLiteBackend implements AgendaBackend {
+  readonly repository: JobRepository;
+  readonly notificationChannel?: NotificationChannel;
 
   constructor(config: { path: string }) {
     this.repository = new SQLiteRepository(config);
