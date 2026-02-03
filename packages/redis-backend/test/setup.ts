@@ -2,19 +2,83 @@
  * Test setup for Redis backend tests
  *
  * This file is automatically loaded by vitest before running tests.
- * It automatically starts a Docker container if no Redis connection is available.
+ * It automatically starts a Docker or Podman container if no Redis connection is available.
  */
 
-import { exec } from 'node:child_process';
-import { promisify } from 'node:util';
 import Redis from 'ioredis';
-
-const execAsync = promisify(exec);
+import { containerRuntime } from '../../agenda/src/utils/container-runtime';
 
 const DEFAULT_TEST_URL = 'redis://localhost:6379';
+const COMPOSE_CWD = new URL('.', import.meta.url).pathname.replace('/test/', '');
+
 let containerStartedByUs = false;
 
-async function isRedisReady(url: string): Promise<boolean> {
+export async function setup() {
+	const testUrl = process.env.REDIS_TEST_URL || DEFAULT_TEST_URL;
+
+	if (await _isRedisReady(testUrl)) {
+		console.log('\n✓ Connected to Redis test server\n');
+		process.env.REDIS_TEST_URL = testUrl;
+		return;
+	}
+
+	console.log('\n⚠️  Redis not available, attempting to start container...');
+
+	const { runtime, compose } = await containerRuntime.detect();
+
+	if (!runtime) {
+		throw new Error(
+			'Redis is not available and no container runtime (Docker or Podman) is installed.\n' +
+				'Please either:\n' +
+				'  1. Install Docker or Podman\n' +
+				'  2. Set REDIS_TEST_URL to an existing Redis server'
+		);
+	}
+
+	if (!compose) {
+		const suggestion = runtime === 'docker'
+			? 'the Docker Compose plugin (usually included with Docker Desktop)'
+			: 'podman compose (or install Docker as an alternative)';
+		throw new Error(
+			`${runtime} is installed but compose is not available.\n` +
+				`Please install ${suggestion} or set REDIS_TEST_URL to an existing Redis server`
+		);
+	}
+
+	if (!(await _startContainer())) {
+		throw new Error('Failed to start Redis container.\nPlease check your container runtime is working.');
+	}
+
+	console.log('⏳ Waiting for Redis to be ready...');
+	if (await _waitForRedis(testUrl)) {
+		console.log('✓ Redis is ready\n');
+		process.env.REDIS_TEST_URL = testUrl;
+		return;
+	}
+
+	throw new Error(
+		'Redis container started but failed to become ready in time.\n' +
+			'Check container logs with: docker/podman compose logs'
+	);
+}
+
+export async function teardown() {
+	if (!containerStartedByUs) {
+		return;
+	}
+
+	const compose = await containerRuntime.getCompose();
+
+	if (!compose) {
+		return;
+	}
+
+	console.log('\n🐳 Stopping Redis container...');
+	await containerRuntime.stopWithCompose(COMPOSE_CWD);
+	console.log('✓ Redis container stopped\n');
+}
+
+async function _isRedisReady(url: string): Promise<boolean> {
 	const redis = new Redis(url, { connectTimeout: 2000, lazyConnect: true });
 	try {
 		await redis.connect();
@@ -27,34 +91,29 @@ async function isRedisReady(url: string): Promise<boolean> {
 	}
 }
 
-async function isDockerAvailable(): Promise<boolean> {
-	try {
-		await execAsync('docker --version');
-		return true;
-	} catch {
+async function _startContainer(): Promise<boolean> {
+	const { runtime, compose } = await containerRuntime.detect();
+
+	if (!runtime || !compose) {
 		return false;
 	}
-}
 
-async function startDockerContainer(): Promise<boolean> {
-	console.log('🐳 Starting Redis Docker container...');
+	console.log(`🐳 Starting Redis container with ${runtime}...`);
+
 	try {
-		// Start container with docker compose
-		await execAsync('docker compose up -d --wait', {
-			cwd: new URL('.', import.meta.url).pathname.replace('/test/', '')
-		});
+		await containerRuntime.startWithCompose(COMPOSE_CWD);
 		containerStartedByUs = true;
 		console.log('✓ Redis container started');
 		return true;
 	} catch (error) {
-		console.error('Failed to start Docker container:', (error as Error).message);
+		console.error('Failed to start container:', (error as Error).message);
 		return false;
 	}
 }
 
-async function waitForRedis(url: string, maxAttempts = 30): Promise<boolean> {
+async function _waitForRedis(url: string, maxAttempts = 30): Promise<boolean> {
 	for (let i = 0; i < maxAttempts; i++) {
-		if (await isRedisReady(url)) {
+		if (await _isRedisReady(url)) {
 			return true;
 		}
 		await new Promise(resolve => setTimeout(resolve, 1000));
@@ -62,59 +121,3 @@ async function waitForRedis(url: string, maxAttempts = 30): Promise<boolean> {
 	return false;
 }
 
-export async function setup() {
-	const testUrl = process.env.REDIS_TEST_URL || DEFAULT_TEST_URL;
-
-	// First, check if Redis is already available
-	if (await isRedisReady(testUrl)) {
-		console.log('\n✓ Connected to Redis test server\n');
-		process.env.REDIS_TEST_URL = testUrl;
-		return;
-	}
-
-	// Redis not available - try to start Docker container
-	console.log('\n⚠️  Redis not available, attempting to start Docker container...');
-
-	if (!(await isDockerAvailable())) {
-		throw new Error(
-			'Redis is not available and Docker is not installed.\n' +
-				'Please either:\n' +
-				'  1. Install Docker and run: pnpm docker:up\n' +
-				'  2. Set REDIS_TEST_URL to an existing Redis server'
-		);
-	}
-
-	if (!(await startDockerContainer())) {
-		throw new Error(
-			'Failed to start Redis Docker container.\n' +
-				'Please check Docker is running and try: pnpm docker:up'
-		);
-	}
-
-	console.log('⏳ Waiting for Redis to be ready...');
-	if (await waitForRedis(testUrl)) {
-		console.log('✓ Redis is ready\n');
-		process.env.REDIS_TEST_URL = testUrl;
-		return;
-	}
-
-	throw new Error(
-		'Redis container started but failed to become ready in time.\n' +
-			'Check container logs with: pnpm docker:logs'
-	);
-}
-
-export async function teardown() {
-	// Stop the container if we started it
-	if (containerStartedByUs) {
-		console.log('\n🐳 Stopping Redis Docker container...');
-		try {
-			await execAsync('docker compose down', {
-				cwd: new URL('.', import.meta.url).pathname.replace('/test/', '')
-			});
-			console.log('✓ Redis container stopped\n');
-		} catch (error) {
-			console.error('Failed to stop container:', (error as Error).message);
-		}
-	}
-}
