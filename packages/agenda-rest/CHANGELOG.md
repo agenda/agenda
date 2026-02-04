@@ -1,5 +1,11 @@
 # agenda-rest
 
+## 6.0.3
+
+### Patch Changes
+
+- Security: Fix CVE-2026-25128 (fast-xml-parser RangeError DoS) via pnpm override to ^5.3.4
+
 ## 6.0.2
 
 ### Patch Changes
