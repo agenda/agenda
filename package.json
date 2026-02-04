@@ -15,6 +15,11 @@
     "changeset": "changeset",
     "docs:build": "typedoc"
   },
+  "pnpm": {
+    "overrides": {
+      "fast-xml-parser": "^5.3.4"
+    }
+  },
   "devDependencies": {
     "@changesets/cli": "^2.27.12",
     "typedoc": "^0.28.0",
