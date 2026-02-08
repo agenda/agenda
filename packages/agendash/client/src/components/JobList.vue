@@ -250,6 +250,9 @@ function getSortIcon(column: string): string {
 						<span v-if="job.failed" class="pill-own bg-danger pill-without-icon">
 							<span>Failed</span>
 						</span>
+						<span v-if="job.job.failCount" class="pill-own bg-danger pill-without-icon" :title="job.job.failReason">
+							<span>{{ job.job.failCount }} {{ job.job.failCount === 1 ? 'error' : 'errors' }}</span>
+						</span>
 						<span v-if="job.running" class="pill-own bg-warning pill-without-icon">
 							<span>Running</span>
 						</span>
@@ -425,6 +428,9 @@ function getSortIcon(column: string): string {
 								</span>
 								<span v-if="job.failed" class="pill-own me-2 bg-danger pill-without-icon pill-own-card">
 									<span class="pill-own-card-info">Failed</span>
+								</span>
+								<span v-if="job.job.failCount" class="pill-own me-2 bg-danger pill-without-icon pill-own-card" :title="job.job.failReason">
+									<span class="pill-own-card-info">{{ job.job.failCount }} {{ job.job.failCount === 1 ? 'error' : 'errors' }}</span>
 								</span>
 								<span
 									v-if="job.running"

@@ -6,6 +6,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Agenda, Job, toJobId } from '../src/index.js';
 import type { AgendaBackend, JobRepository, JobParameters, JobLogger, JobLogEntry, JobLogQuery, JobLogQueryResult } from '../src/index.js';
+import { computeJobState } from '../src/types/JobQuery.js';
 
 /**
  * Minimal mock repository that satisfies the interface without real storage.
@@ -742,5 +743,113 @@ describe('getLogs and clearLogs', () => {
 
 		const result = await agendaNoLogger.clearLogs();
 		expect(result).toBe(0);
+	});
+});
+
+describe('computeJobState', () => {
+	const now = new Date('2026-02-08T12:00:00Z');
+
+	function makeJob(overrides: Partial<JobParameters> = {}): JobParameters {
+		return {
+			name: 'test-job',
+			priority: 0,
+			nextRunAt: null,
+			type: 'normal',
+			data: {},
+			...overrides
+		};
+	}
+
+	it('should return "running" when lockedAt is set', () => {
+		const job = makeJob({ lockedAt: new Date('2026-02-08T11:59:00Z') });
+		expect(computeJobState(job, now)).toBe('running');
+	});
+
+	it('should return "running" even if also failed', () => {
+		const job = makeJob({
+			lockedAt: new Date('2026-02-08T11:59:00Z'),
+			failedAt: new Date('2026-02-08T11:50:00Z')
+		});
+		expect(computeJobState(job, now)).toBe('running');
+	});
+
+	it('should return "failed" when failedAt is set and no lastFinishedAt', () => {
+		const job = makeJob({ failedAt: new Date('2026-02-08T11:00:00Z') });
+		expect(computeJobState(job, now)).toBe('failed');
+	});
+
+	it('should return "failed" when failedAt is after lastFinishedAt', () => {
+		const job = makeJob({
+			failedAt: new Date('2026-02-08T11:30:00Z'),
+			lastFinishedAt: new Date('2026-02-08T11:00:00Z')
+		});
+		expect(computeJobState(job, now)).toBe('failed');
+	});
+
+	it('should return "failed" when failedAt equals lastFinishedAt (retry exhaustion)', () => {
+		const sameTime = new Date('2026-02-08T11:00:00Z');
+		const job = makeJob({
+			failedAt: sameTime,
+			lastFinishedAt: sameTime,
+			failCount: 4
+		});
+		expect(computeJobState(job, now)).toBe('failed');
+	});
+
+	it('should return "completed" when lastFinishedAt is after failedAt', () => {
+		const job = makeJob({
+			lastFinishedAt: new Date('2026-02-08T11:30:00Z'),
+			failedAt: new Date('2026-02-08T11:00:00Z')
+		});
+		expect(computeJobState(job, now)).toBe('completed');
+	});
+
+	it('should return "completed" when lastFinishedAt is set and no failedAt', () => {
+		const job = makeJob({
+			lastFinishedAt: new Date('2026-02-08T11:00:00Z')
+		});
+		expect(computeJobState(job, now)).toBe('completed');
+	});
+
+	it('should return "repeating" when repeatInterval is set and not failed', () => {
+		const job = makeJob({
+			repeatInterval: '5 minutes',
+			nextRunAt: new Date('2026-02-08T12:05:00Z')
+		});
+		expect(computeJobState(job, now)).toBe('repeating');
+	});
+
+	it('should return "failed" over "repeating" when job has failed', () => {
+		const job = makeJob({
+			repeatInterval: '5 minutes',
+			failedAt: new Date('2026-02-08T11:00:00Z')
+		});
+		expect(computeJobState(job, now)).toBe('failed');
+	});
+
+	it('should return "scheduled" when nextRunAt is in the future', () => {
+		const job = makeJob({
+			nextRunAt: new Date('2026-02-08T13:00:00Z')
+		});
+		expect(computeJobState(job, now)).toBe('scheduled');
+	});
+
+	it('should return "queued" when nextRunAt is now', () => {
+		const job = makeJob({
+			nextRunAt: new Date('2026-02-08T12:00:00Z')
+		});
+		expect(computeJobState(job, now)).toBe('queued');
+	});
+
+	it('should return "queued" when nextRunAt is in the past', () => {
+		const job = makeJob({
+			nextRunAt: new Date('2026-02-08T11:00:00Z')
+		});
+		expect(computeJobState(job, now)).toBe('queued');
+	});
+
+	it('should return "completed" for a job with no dates set', () => {
+		const job = makeJob();
+		expect(computeJobState(job, now)).toBe('completed');
 	});
 });
