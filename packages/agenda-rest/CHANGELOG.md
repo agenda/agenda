@@ -1,5 +1,18 @@
 # agenda-rest
 
+## 6.1.0
+
+### Minor Changes
+
+- 045fe5e: CVE-2026-25128 by overriding fast-xml-parser to ^5.3.4 in root package.json
+
+### Patch Changes
+
+- Updated dependencies [fb05ddd]
+- Updated dependencies [045fe5e]
+  - agenda@6.2.1
+  - @agendajs/mongo-backend@3.1.0
+
 ## 6.0.3
 
 ### Patch Changes
