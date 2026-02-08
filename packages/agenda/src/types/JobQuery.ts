@@ -91,8 +91,8 @@ export function computeJobState(job: JobParameters, now: Date = new Date()): Job
 		return 'running';
 	}
 
-	// Failed: has failed and failure is more recent than completion
-	if (failedAt && (!lastFinishedAt || failedAt > lastFinishedAt)) {
+	// Failed: has failed and failure is at least as recent as completion
+	if (failedAt && (!lastFinishedAt || failedAt >= lastFinishedAt)) {
 		return 'failed';
 	}
 
@@ -111,8 +111,8 @@ export function computeJobState(job: JobParameters, now: Date = new Date()): Job
 		return 'queued';
 	}
 
-	// Completed: has finished and either no failure or completion is more recent
-	if (lastFinishedAt && (!failedAt || lastFinishedAt >= failedAt)) {
+	// Completed: has finished and either no failure or completion is strictly more recent
+	if (lastFinishedAt && (!failedAt || lastFinishedAt > failedAt)) {
 		return 'completed';
 	}
 
