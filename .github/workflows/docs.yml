@@ -4,6 +4,11 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/agenda/package.json'
 
 permissions:
   contents: read
@@ -20,6 +25,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
