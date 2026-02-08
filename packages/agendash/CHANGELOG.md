@@ -1,5 +1,11 @@
 # agendash
 
+## 8.0.1
+
+### Patch Changes
+
+- Security: Fix CVE-2026-25128 (fast-xml-parser RangeError DoS) via pnpm override to ^5.3.4
+
 ## 8.0.0
 
 ### Patch Changes
