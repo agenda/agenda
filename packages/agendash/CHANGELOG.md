@@ -1,5 +1,17 @@
 # agendash
 
+## 8.1.0
+
+### Minor Changes
+
+- 045fe5e: CVE-2026-25128 by overriding fast-xml-parser to ^5.3.4 in root package.json
+
+### Patch Changes
+
+- fb05ddd: fix failed jobs
+- Updated dependencies [fb05ddd]
+  - agenda@6.2.1
+
 ## 8.0.1
 
 ### Patch Changes

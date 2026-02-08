@@ -1,5 +1,11 @@
 # agenda
 
+## 6.2.1
+
+### Patch Changes
+
+- fb05ddd: fix failed jobs
+
 ## 6.2.0
 
 ### Minor Changes
