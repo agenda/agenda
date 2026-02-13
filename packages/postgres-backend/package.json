@@ -1,6 +1,6 @@
 {
   "name": "@agendajs/postgres-backend",
-  "version": "3.0.2",
+  "version": "3.0.3",
   "description": "PostgreSQL backend for Agenda job scheduler with LISTEN/NOTIFY support",
   "type": "module",
   "main": "dist/index.js",

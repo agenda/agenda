@@ -1,5 +1,13 @@
 # @agendajs/redis-backend
 
+## 3.0.3
+
+### Patch Changes
+
+- f9437cc: Fix outdated documentation: rename `jobs()` to `queryJobs()`, update sort values to use `'asc'`/`'desc'` strings, fix sandboxed worker example to use pluggable backend API, correct MongoDB backend package name in comparison table, and rewrite connection recovery section to be backend-agnostic.
+- Updated dependencies [f9437cc]
+  - agenda@6.2.3
+
 ## 3.0.2
 
 ### Patch Changes

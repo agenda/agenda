@@ -1,6 +1,6 @@
 {
   "name": "agenda-rest",
-  "version": "6.1.1",
+  "version": "6.1.2",
   "description": "REST API for Agenda job scheduling",
   "type": "module",
   "main": "dist/index.js",
