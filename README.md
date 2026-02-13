@@ -114,7 +114,7 @@ const agenda = new Agenda({
 //   backend: new MongoBackend({ address: mongoConnectionString, collection: 'jobCollectionName' })
 // });
 
-// or pass in an existing mongodb-native Db instance
+// or pass in an existing MongoDB Db instance
 // const agenda = new Agenda({
 //   backend: new MongoBackend({ mongo: myMongoDb })
 // });
@@ -1231,44 +1231,60 @@ console.log('Job successfully saved');
 
 ## Managing Jobs
 
-### jobs(mongodb-native query, mongodb-native sort, mongodb-native limit, mongodb-native skip)
+### queryJobs(options)
 
-Lets you query (then sort, limit and skip the result) all of the jobs in the agenda job's database. These are full [mongodb-native](https://github.com/mongodb/node-mongodb-native) `find`, `sort`, `limit` and `skip` commands. See mongodb-native's documentation for details.
+Returns jobs matching the given query options. Accepts a `JobsQueryOptions` object with the following fields:
+
+- `name` — Filter by job name
+- `names` — Filter by multiple job names
+- `state` — Filter by computed state (`'running'`, `'scheduled'`, `'queued'`, `'completed'`, `'failed'`, `'repeating'`, `'paused'`)
+- `id` / `ids` — Filter by job ID(s)
+- `search` — Text search in job name
+- `data` — Filter by job data (exact or partial match)
+- `sort` — Sort options (e.g. `{ nextRunAt: 'asc', priority: 'desc' }`)
+- `limit` — Maximum number of jobs to return
+- `skip` — Number of jobs to skip (for pagination)
 
 ```js
-const jobs = await agenda.jobs({ name: 'printAnalyticsReport' }, { data: -1 }, 3, 1);
+const { jobs, total } = await agenda.queryJobs({ name: 'printAnalyticsReport', limit: 3, skip: 1 });
 // Work with jobs (see below)
 ```
 
-### cancel(mongodb-native query)
+### cancel(options)
 
-Cancels any jobs matching the passed mongodb-native query, and removes them from the database. Returns a Promise resolving to the number of cancelled jobs, or rejecting on error.
+Cancels any jobs matching the passed query options, and removes them from the database. Returns a Promise resolving to the number of cancelled jobs, or rejecting on error.
+
+Options:
+- `id` / `ids` — Match by job ID(s)
+- `name` / `names` — Match by job name(s)
+- `notNames` — Exclude jobs matching these names
+- `data` — Match by job data
 
 ```js
 const numRemoved = await agenda.cancel({ name: 'printAnalyticsReport' });
 ```
 
-This functionality can also be achieved by first retrieving all the jobs from the database using `agenda.jobs()`, looping through the resulting array and calling `job.remove()` on each. It is however preferable to use `agenda.cancel()` for this use case, as this ensures the operation is atomic.
+This functionality can also be achieved by first retrieving all the jobs from the database using `agenda.queryJobs()`, looping through the resulting array and calling `job.remove()` on each. It is however preferable to use `agenda.cancel()` for this use case, as this ensures the operation is atomic.
 
-### disable(mongodb-native query)
+### disable(options)
 
-Disables any jobs matching the passed mongodb-native query, preventing any matching jobs from being run by the Job Processor.
+Disables any jobs matching the passed query options, preventing any matching jobs from being run by the Job Processor. Accepts the same options as `cancel()`.
 
 ```js
 const numDisabled = await agenda.disable({ name: 'pollExternalService' });
 ```
 
-Similar to `agenda.cancel()`, this functionality can be acheived with a combination of `agenda.jobs()` and `job.disable()`
+Similar to `agenda.cancel()`, this functionality can be achieved with a combination of `agenda.queryJobs()` and `job.disable()`
 
-### enable(mongodb-native query)
+### enable(options)
 
-Enables any jobs matching the passed mongodb-native query, allowing any matching jobs to be run by the Job Processor.
+Enables any jobs matching the passed query options, allowing any matching jobs to be run by the Job Processor. Accepts the same options as `cancel()`.
 
 ```js
 const numEnabled = await agenda.enable({ name: 'pollExternalService' });
 ```
 
-Similar to `agenda.cancel()`, this functionality can be acheived with a combination of `agenda.jobs()` and `job.enable()`
+Similar to `agenda.cancel()`, this functionality can be achieved with a combination of `agenda.queryJobs()` and `job.enable()`
 
 ### purge()
 
@@ -1718,7 +1734,7 @@ Agenda v6 supports multiple storage backends. Choose based on your infrastructur
 
 | Backend | Package | Best For |
 |---------|---------|----------|
-| **MongoDB** | Built-in (`agenda`) | Default choice, excellent for most use cases. Strong consistency, flexible queries. |
+| **MongoDB** | `@agendajs/mongo-backend` | Default choice, excellent for most use cases. Strong consistency, flexible queries. |
 | **PostgreSQL** | `@agendajs/postgres-backend` | Teams already using PostgreSQL. LISTEN/NOTIFY provides real-time notifications without additional infrastructure. |
 | **Redis** | `@agendajs/redis-backend` | High-throughput scenarios. Fast Pub/Sub notifications. Configure persistence for durability. |
 
@@ -1835,16 +1851,11 @@ function removeJobWorker(id) {
 }
 ```
 
-### Recovering lost Mongo connections ("auto_reconnect")
+### Recovering lost database connections
 
-Agenda is configured by default to automatically reconnect indefinitely, emitting an [error event](#agenda-events)
-when no connection is available on each [process tick](#processeveryinterval), allowing you to restore the Mongo
-instance without having to restart the application.
+Agenda emits an [error event](#agenda-events) when no database connection is available on each [process tick](#processeveryinterval), allowing you to handle connection issues without restarting the application.
 
-However, if you are using an [existing Mongo client](#mongomongoclientinstance)
-you'll need to configure the `reconnectTries` and `reconnectInterval` [connection settings](http://mongodb.github.io/node-mongodb-native/3.0/reference/connecting/connection-settings/)
-manually, otherwise you'll find that Agenda will throw an error with the message "MongoDB connection is not recoverable,
-application restart required" if the connection cannot be recovered within 30 seconds.
+If you are using a notification channel, it includes built-in reconnection logic with configurable retry attempts and exponential backoff. See the [Notification Channel](#notification-channel-real-time-job-processing) section for details.
 
 # Example Project Structure
 
@@ -2045,7 +2056,7 @@ process.on('message', message => {
 	const agenda = new Agenda({
 		name: `subworker-${name}`,
 		forkedWorker: true,
-		mongo: mongooseConnection.db as any
+		backend: new MongoBackend({ mongo: mongooseConnection.db })
 	});
 	// wait for db connection
 	await agenda.ready;

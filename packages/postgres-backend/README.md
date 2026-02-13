@@ -82,8 +82,8 @@ const backend = new PostgresBackend({
 
   // Sort order for job queries
   sort: {
-    nextRunAt: 1,  // 1 for ASC, -1 for DESC
-    priority: -1
+    nextRunAt: 'asc',
+    priority: 'desc'
   }
 });
 ```
