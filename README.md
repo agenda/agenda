@@ -114,7 +114,7 @@ const agenda = new Agenda({
 //   backend: new MongoBackend({ address: mongoConnectionString, collection: 'jobCollectionName' })
 // });
 
-// or pass in an existing mongodb-native Db instance
+// or pass in an existing MongoDB Db instance
 // const agenda = new Agenda({
 //   backend: new MongoBackend({ mongo: myMongoDb })
 // });
@@ -1231,44 +1231,60 @@ console.log('Job successfully saved');
 
 ## Managing Jobs
 
-### jobs(mongodb-native query, mongodb-native sort, mongodb-native limit, mongodb-native skip)
+### jobs(query)
 
-Lets you query (then sort, limit and skip the result) all of the jobs in the agenda job's database. These are full [mongodb-native](https://github.com/mongodb/node-mongodb-native) `find`, `sort`, `limit` and `skip` commands. See mongodb-native's documentation for details.
+Returns jobs matching the given query options. Accepts a `JobsQueryOptions` object with the following fields:
+
+- `name` — Filter by job name
+- `names` — Filter by multiple job names
+- `state` — Filter by computed state (`'running'`, `'scheduled'`, `'queued'`, `'completed'`, `'failed'`, `'repeating'`, `'paused'`)
+- `id` / `ids` — Filter by job ID(s)
+- `search` — Text search in job name
+- `data` — Filter by job data (exact or partial match)
+- `sort` — Sort options (e.g. `{ nextRunAt: 1, priority: -1 }`)
+- `limit` — Maximum number of jobs to return
+- `skip` — Number of jobs to skip (for pagination)
 
 ```js
-const jobs = await agenda.jobs({ name: 'printAnalyticsReport' }, { data: -1 }, 3, 1);
+const { jobs, total } = await agenda.queryJobs({ name: 'printAnalyticsReport', limit: 3, skip: 1 });
 // Work with jobs (see below)
 ```
 
-### cancel(mongodb-native query)
+### cancel(options)
 
-Cancels any jobs matching the passed mongodb-native query, and removes them from the database. Returns a Promise resolving to the number of cancelled jobs, or rejecting on error.
+Cancels any jobs matching the passed query options, and removes them from the database. Returns a Promise resolving to the number of cancelled jobs, or rejecting on error.
+
+Options:
+- `id` / `ids` — Match by job ID(s)
+- `name` / `names` — Match by job name(s)
+- `notNames` — Exclude jobs matching these names
+- `data` — Match by job data
 
 ```js
 const numRemoved = await agenda.cancel({ name: 'printAnalyticsReport' });
 ```
 
-This functionality can also be achieved by first retrieving all the jobs from the database using `agenda.jobs()`, looping through the resulting array and calling `job.remove()` on each. It is however preferable to use `agenda.cancel()` for this use case, as this ensures the operation is atomic.
+This functionality can also be achieved by first retrieving all the jobs from the database using `agenda.queryJobs()`, looping through the resulting array and calling `job.remove()` on each. It is however preferable to use `agenda.cancel()` for this use case, as this ensures the operation is atomic.
 
-### disable(mongodb-native query)
+### disable(options)
 
-Disables any jobs matching the passed mongodb-native query, preventing any matching jobs from being run by the Job Processor.
+Disables any jobs matching the passed query options, preventing any matching jobs from being run by the Job Processor. Accepts the same options as `cancel()`.
 
 ```js
 const numDisabled = await agenda.disable({ name: 'pollExternalService' });
 ```
 
-Similar to `agenda.cancel()`, this functionality can be acheived with a combination of `agenda.jobs()` and `job.disable()`
+Similar to `agenda.cancel()`, this functionality can be achieved with a combination of `agenda.queryJobs()` and `job.disable()`
 
-### enable(mongodb-native query)
+### enable(options)
 
-Enables any jobs matching the passed mongodb-native query, allowing any matching jobs to be run by the Job Processor.
+Enables any jobs matching the passed query options, allowing any matching jobs to be run by the Job Processor. Accepts the same options as `cancel()`.
 
 ```js
 const numEnabled = await agenda.enable({ name: 'pollExternalService' });
 ```
 
-Similar to `agenda.cancel()`, this functionality can be acheived with a combination of `agenda.jobs()` and `job.enable()`
+Similar to `agenda.cancel()`, this functionality can be achieved with a combination of `agenda.queryJobs()` and `job.enable()`
 
 ### purge()
 
