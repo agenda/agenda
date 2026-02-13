@@ -1231,7 +1231,7 @@ console.log('Job successfully saved');
 
 ## Managing Jobs
 
-### jobs(query)
+### queryJobs(options)
 
 Returns jobs matching the given query options. Accepts a `JobsQueryOptions` object with the following fields:
 
@@ -1241,7 +1241,7 @@ Returns jobs matching the given query options. Accepts a `JobsQueryOptions` obje
 - `id` / `ids` — Filter by job ID(s)
 - `search` — Text search in job name
 - `data` — Filter by job data (exact or partial match)
-- `sort` — Sort options (e.g. `{ nextRunAt: 1, priority: -1 }`)
+- `sort` — Sort options (e.g. `{ nextRunAt: 'asc', priority: 'desc' }`)
 - `limit` — Maximum number of jobs to return
 - `skip` — Number of jobs to skip (for pagination)
 
@@ -1734,7 +1734,7 @@ Agenda v6 supports multiple storage backends. Choose based on your infrastructur
 
 | Backend | Package | Best For |
 |---------|---------|----------|
-| **MongoDB** | Built-in (`agenda`) | Default choice, excellent for most use cases. Strong consistency, flexible queries. |
+| **MongoDB** | `@agendajs/mongo-backend` | Default choice, excellent for most use cases. Strong consistency, flexible queries. |
 | **PostgreSQL** | `@agendajs/postgres-backend` | Teams already using PostgreSQL. LISTEN/NOTIFY provides real-time notifications without additional infrastructure. |
 | **Redis** | `@agendajs/redis-backend` | High-throughput scenarios. Fast Pub/Sub notifications. Configure persistence for durability. |
 
@@ -1851,16 +1851,11 @@ function removeJobWorker(id) {
 }
 ```
 
-### Recovering lost Mongo connections ("auto_reconnect")
+### Recovering lost database connections
 
-Agenda is configured by default to automatically reconnect indefinitely, emitting an [error event](#agenda-events)
-when no connection is available on each [process tick](#processeveryinterval), allowing you to restore the Mongo
-instance without having to restart the application.
+Agenda emits an [error event](#agenda-events) when no database connection is available on each [process tick](#processeveryinterval), allowing you to handle connection issues without restarting the application.
 
-However, if you are using an [existing Mongo client](#mongomongoclientinstance)
-you'll need to configure the `reconnectTries` and `reconnectInterval` [connection settings](http://mongodb.github.io/node-mongodb-native/3.0/reference/connecting/connection-settings/)
-manually, otherwise you'll find that Agenda will throw an error with the message "MongoDB connection is not recoverable,
-application restart required" if the connection cannot be recovered within 30 seconds.
+If you are using a notification channel, it includes built-in reconnection logic with configurable retry attempts and exponential backoff. See the [Notification Channel](#notification-channel-real-time-job-processing) section for details.
 
 # Example Project Structure
 
@@ -2061,7 +2056,7 @@ process.on('message', message => {
 	const agenda = new Agenda({
 		name: `subworker-${name}`,
 		forkedWorker: true,
-		mongo: mongooseConnection.db as any
+		backend: new MongoBackend({ mongo: mongooseConnection.db })
 	});
 	// wait for db connection
 	await agenda.ready;
