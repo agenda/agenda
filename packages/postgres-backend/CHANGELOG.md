@@ -1,5 +1,16 @@
 # @agendajs/postgres-backend
 
+## 3.0.2
+
+### Patch Changes
+
+- 75bb2ba: Add "default" export condition to all packages to support CommonJS require()
+
+  The exports map only specified the "import" condition, which prevented CommonJS projects from using require() to load these packages. Node.js require() matches "require" or "default" conditions, not "import". With require(esm) now stable in Node.js 20.19+, 22.12+, and 24+, adding a "default" condition allows CJS projects to consume these ESM packages directly.
+
+- Updated dependencies [75bb2ba]
+  - agenda@6.2.2
+
 ## 3.0.1
 
 ### Patch Changes
