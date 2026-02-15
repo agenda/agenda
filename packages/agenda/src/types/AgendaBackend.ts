@@ -32,7 +32,7 @@ export interface AgendaBackend {
 	 * If provided, Agenda will use this for immediate job processing.
 	 * If not provided, Agenda falls back to periodic polling.
 	 */
-	readonly notificationChannel?: NotificationChannel;
+	readonly notificationChannel?: NotificationChannel | undefined;
 
 	/**
 	 * Job logger for persistent job event logging.
@@ -40,7 +40,7 @@ export interface AgendaBackend {
 	 * The logger is lightweight and only initializes its storage on first use.
 	 * Agenda activates this logger when the user enables logging via `logging: true`.
 	 */
-	readonly logger?: JobLogger;
+	readonly logger?: JobLogger | undefined;
 
 	/**
 	 * Whether the backend owns its database connection.
@@ -50,7 +50,7 @@ export interface AgendaBackend {
 	 * Used by agenda.stop() to determine whether to close the connection.
 	 * Defaults to true if not implemented.
 	 */
-	readonly ownsConnection?: boolean;
+	readonly ownsConnection?: boolean | undefined;
 
 	/**
 	 * Connect to the backend.
