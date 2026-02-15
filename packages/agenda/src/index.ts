@@ -275,6 +275,10 @@ export class Agenda extends EventEmitter {
 	constructor(config: AgendaOptions, cb?: (error?: Error) => void) {
 		super();
 
+		// Prevent unhandled 'error' events from crashing the process.
+		// Users can still attach their own 'error' listener to handle errors.
+		this.on('error', () => {});
+
 		this.attrs = {
 			name: config.name || '',
 			processEvery: calculateProcessEvery(config.processEvery) || DefaultOptions.processEvery,
