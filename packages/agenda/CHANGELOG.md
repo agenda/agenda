@@ -1,5 +1,13 @@
 # agenda
 
+## 6.2.3
+
+### Patch Changes
+
+- d365969: Support TypeScript's `exactOptionalPropertyTypes` by adding explicit `| undefined` to optional properties in the `AgendaBackend` interface.
+- f9437cc: Fix outdated documentation: rename `jobs()` to `queryJobs()`, update sort values to use `'asc'`/`'desc'` strings, fix sandboxed worker example to use pluggable backend API, correct MongoDB backend package name in comparison table, and rewrite connection recovery section to be backend-agnostic.
+- 38530b6: Prevent unhandled 'error' events from crashing the process by registering a default no-op listener in the Agenda constructor.
+
 ## 6.2.2
 
 ### Patch Changes

@@ -1,5 +1,18 @@
 # @agendajs/mongo-backend
 
+## 3.2.0
+
+### Minor Changes
+
+- be3acda: Move `mongodb` from `dependencies` to `peerDependencies` (`^6.0.0 || ^7.0.0`) to support MongoDB Node.js driver v7. This fixes the `BSONVersionError: Unsupported BSON version` error when users have `mongodb@^7.0.0` in their project.
+
+### Patch Changes
+
+- Updated dependencies [d365969]
+- Updated dependencies [f9437cc]
+- Updated dependencies [38530b6]
+  - agenda@6.2.3
+
 ## 3.1.1
 
 ### Patch Changes

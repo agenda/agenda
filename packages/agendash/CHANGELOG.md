@@ -1,5 +1,14 @@
 # agendash
 
+## 8.1.2
+
+### Patch Changes
+
+- Updated dependencies [d365969]
+- Updated dependencies [f9437cc]
+- Updated dependencies [38530b6]
+  - agenda@6.2.3
+
 ## 8.1.1
 
 ### Patch Changes
