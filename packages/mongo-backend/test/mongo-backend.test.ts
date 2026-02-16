@@ -191,8 +191,8 @@ describe('MongoBackend', () => {
 	});
 
 	describe('MongoDB-specific features', () => {
-		it('should support object queries for job data', async () => {
-			const jobData = { nested: { key: 'value' }, array: [1, 2, 3] };
+		it('should support partial matching on job data', async () => {
+			const jobData = { nested: { key: 'value' }, array: [1, 2, 3], extra: 'field' };
 
 			await backend.repository.saveJob({
 				name: 'data-test',
@@ -202,13 +202,30 @@ describe('MongoBackend', () => {
 				data: jobData
 			}, undefined);
 
-			// MongoDB requires exact match on data field
+			// Partial match: query with a subset of the data fields
 			const result = await backend.repository.queryJobs({
-				data: jobData
+				data: { nested: { key: 'value' } }
 			});
 
 			expect(result.total).toBe(1);
 			expect(result.jobs[0].data).toEqual(jobData);
+		});
+
+		it('should support partial matching with top-level data fields', async () => {
+			await backend.repository.saveJob({
+				name: 'partial-test',
+				priority: 0,
+				nextRunAt: new Date(),
+				type: 'normal',
+				data: { searchField: 'searchValue', anotherField: 'anotherValue' }
+			}, undefined);
+
+			const result = await backend.repository.queryJobs({
+				data: { searchField: 'searchValue' }
+			});
+
+			expect(result.total).toBe(1);
+			expect(result.jobs[0].data).toEqual({ searchField: 'searchValue', anotherField: 'anotherValue' });
 		});
 
 		it('should handle concurrent job locking with findOneAndUpdate', async () => {

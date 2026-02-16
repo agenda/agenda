@@ -38,6 +38,28 @@ function escapeRegex(str: string): string {
 	return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/**
+ * Flatten a data filter object into MongoDB dot-notation keys.
+ * This enables partial matching on the data subdocument.
+ *
+ * Example:
+ *   { searchField: "value", nested: { key: "v" } }
+ * becomes:
+ *   { "data.searchField": "value", "data.nested.key": "v" }
+ */
+function flattenDataFilter(data: Record<string, unknown>, prefix = 'data'): Record<string, unknown> {
+	const result: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(data)) {
+		const fullKey = `${prefix}.${key}`;
+		if (value !== null && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
+			Object.assign(result, flattenDataFilter(value as Record<string, unknown>, fullKey));
+		} else {
+			result[fullKey] = value;
+		}
+	}
+	return result;
+}
+
 function computeJobObj<DATA = unknown>(job: WithId<MongoJobDocument>): JobParameters<DATA> & { _id: JobId } {
 	return {
 		_id: toJobId(job._id!.toHexString()),
@@ -193,7 +215,11 @@ export class MongoJobRepository implements JobRepository {
 		}
 
 		if (data !== undefined) {
-			query.data = data as JobParameters['data'];
+			if (data !== null && typeof data === 'object' && !Array.isArray(data)) {
+				Object.assign(query, flattenDataFilter(data as Record<string, unknown>));
+			} else {
+				query.data = data as JobParameters['data'];
+			}
 		}
 
 		if (!includeDisabled) {
@@ -313,7 +339,11 @@ export class MongoJobRepository implements JobRepository {
 		}
 
 		if (options.data !== undefined) {
-			query.data = options.data as JobParameters['data'];
+			if (options.data !== null && typeof options.data === 'object' && !Array.isArray(options.data)) {
+				Object.assign(query, flattenDataFilter(options.data as Record<string, unknown>));
+			} else {
+				query.data = options.data as JobParameters['data'];
+			}
 		}
 
 		// If no criteria provided, don't delete anything
@@ -363,7 +393,11 @@ export class MongoJobRepository implements JobRepository {
 		}
 
 		if (options.data !== undefined) {
-			query.data = options.data as JobParameters['data'];
+			if (options.data !== null && typeof options.data === 'object' && !Array.isArray(options.data)) {
+				Object.assign(query, flattenDataFilter(options.data as Record<string, unknown>));
+			} else {
+				query.data = options.data as JobParameters['data'];
+			}
 		}
 
 		// If no criteria provided, return null to indicate no operation

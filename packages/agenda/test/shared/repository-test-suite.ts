@@ -262,6 +262,21 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 				expect(withDisabled.total).toBe(4);
 				expect(withoutDisabled.total).toBe(3);
 			});
+
+			it('should support partial matching on job data', async () => {
+				await repo.saveJob({
+					name: 'data-partial-test',
+					priority: 0,
+					nextRunAt: new Date(Date.now() + 60000),
+					type: 'normal',
+					data: { searchField: 'searchValue', anotherField: 'anotherValue' }
+				}, undefined);
+
+				const result = await repo.queryJobs({ data: { searchField: 'searchValue' } });
+				expect(result.total).toBe(1);
+				expect(result.jobs[0].name).toBe('data-partial-test');
+				expect(result.jobs[0].data).toEqual({ searchField: 'searchValue', anotherField: 'anotherValue' });
+			});
 		});
 
 		describe('removeJobs', () => {
