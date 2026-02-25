@@ -1,5 +1,11 @@
 # agendash
 
+## 8.2.0
+
+### Minor Changes
+
+- c0fb87e: Add retry action to rerun existing failed jobs without creating a new job
+
 ## 8.1.2
 
 ### Patch Changes

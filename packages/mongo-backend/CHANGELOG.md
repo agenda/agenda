@@ -1,5 +1,11 @@
 # @agendajs/mongo-backend
 
+## 4.0.0
+
+### Major Changes
+
+- 57174c5: Fix queryJobs to support partial matching on data subdocuments using dot-notation filters
+
 ## 3.2.0
 
 ### Minor Changes
