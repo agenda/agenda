@@ -16,10 +16,12 @@ const emit = defineEmits<{
 	'show-job-detail': [job: FrontendJob];
 	'confirm-delete': [job: FrontendJob];
 	'confirm-requeue': [job: FrontendJob];
+	'confirm-retry': [job: FrontendJob];
 	'confirm-pause': [job: FrontendJob];
 	'confirm-resume': [job: FrontendJob];
 	'confirm-delete-multi': [jobIds: string[]];
 	'confirm-requeue-multi': [jobIds: string[]];
+	'confirm-retry-multi': [jobIds: string[]];
 	'confirm-pause-multi': [jobIds: string[]];
 	'confirm-resume-multi': [jobIds: string[]];
 	'page-next': [];
@@ -99,6 +101,17 @@ function sendRequeue() {
 	emit('confirm-requeue-multi', [...selectedIds.value]);
 }
 
+const retryEligibleIds = computed(() =>
+	selectedIds.value.filter((id) => {
+		const job = props.jobs.find((j) => j.job._id === id);
+		return job && job.failed && !job.job.nextRunAt;
+	})
+);
+
+function sendRetry() {
+	emit('confirm-retry-multi', [...retryEligibleIds.value]);
+}
+
 function sendDelete() {
 	emit('confirm-delete-multi', [...selectedIds.value]);
 }
@@ -125,10 +138,18 @@ function getSortIcon(column: string): string {
 			<button
 				:disabled="!selectedIds.length"
 				class="btn btn-primary"
-				title="Requeue list of selected jobs"
+				title="Requeue list of selected jobs (creates new jobs)"
 				@click="sendRequeue"
 			>
 				Multiple Requeue
+			</button>
+			<button
+				:disabled="!retryEligibleIds.length"
+				class="btn btn-outline-primary"
+				title="Retry list of selected failed jobs (reruns existing jobs)"
+				@click="sendRetry"
+			>
+				Multiple Retry
 			</button>
 			<button
 				:disabled="!selectedIds.length"
@@ -299,9 +320,16 @@ function getSortIcon(column: string): string {
 					<td class="job-actions">
 						<span
 							class="action-btn text-primary"
-							title="Requeue"
+							title="Requeue (create new job)"
 							@click="$emit('confirm-requeue', job)"
 							>&#x21BB;</span
+						>
+						<span
+							v-if="job.failed && !job.job.nextRunAt"
+							class="action-btn text-info"
+							title="Retry (rerun existing job)"
+							@click="$emit('confirm-retry', job)"
+							>&#x21BA;</span
 						>
 						<span
 							v-if="job.paused"
@@ -374,9 +402,16 @@ function getSortIcon(column: string): string {
 								</div>
 								<span
 									class="action-btn text-primary material-icons-size me-1"
-									title="Requeue"
+									title="Requeue (create new job)"
 									@click="$emit('confirm-requeue', job)"
 									>&#x21BB;</span
+								>
+								<span
+									v-if="job.failed && !job.job.nextRunAt"
+									class="action-btn text-info material-icons-size me-1"
+									title="Retry (rerun existing job)"
+									@click="$emit('confirm-retry', job)"
+									>&#x21BA;</span
 								>
 								<span
 									v-if="job.paused"

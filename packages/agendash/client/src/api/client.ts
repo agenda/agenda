@@ -5,6 +5,7 @@ import type {
 	CreateJobResponse,
 	DeleteResponse,
 	RequeueResponse,
+	RetryResponse,
 	PauseResponse,
 	ResumeResponse,
 	AgendaStats,
@@ -48,6 +49,13 @@ export async function getJobs(params: ApiQueryParams = {}): Promise<ApiResponse>
 
 export async function requeueJobs(jobIds: string[]): Promise<RequeueResponse> {
 	return fetchJson<RequeueResponse>(`${BASE_URL}/jobs/requeue`, {
+		method: 'POST',
+		body: JSON.stringify({ jobIds })
+	});
+}
+
+export async function retryJobs(jobIds: string[]): Promise<RetryResponse> {
+	return fetchJson<RetryResponse>(`${BASE_URL}/jobs/retry`, {
 		method: 'POST',
 		body: JSON.stringify({ jobIds })
 	});

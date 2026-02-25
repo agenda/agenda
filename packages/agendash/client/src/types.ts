@@ -79,6 +79,13 @@ export interface RequeueResponse {
 }
 
 /**
+ * Response from retry operation
+ */
+export interface RetryResponse {
+	retriedCount: number;
+}
+
+/**
  * Response from delete operation
  */
 export interface DeleteResponse {

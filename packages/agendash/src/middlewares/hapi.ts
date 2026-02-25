@@ -4,7 +4,7 @@ import type { Agenda } from 'agenda';
 import type { Server, Plugin, Request, ResponseToolkit } from '@hapi/hapi';
 import { AgendashController } from '../AgendashController.js';
 import { cspHeader } from '../csp.js';
-import type { ApiQueryParams, CreateJobRequest, DeleteRequest, RequeueRequest, PauseRequest, ResumeRequest } from '../types.js';
+import type { ApiQueryParams, CreateJobRequest, DeleteRequest, RequeueRequest, RetryRequest, PauseRequest, ResumeRequest } from '../types.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -110,6 +110,24 @@ export function createHapiPlugin(agenda: Agenda): Plugin<AgendashHapiOptions> {
 					try {
 						const { jobIds } = request.payload as RequeueRequest;
 						return await controller.requeueJobs(jobIds);
+					} catch (error) {
+						return h
+							.response({ error: error instanceof Error ? error.message : 'Unknown error' })
+							.code(404);
+					}
+				},
+				options: {
+					auth: authConfig
+				}
+			});
+
+			server.route({
+				method: 'POST',
+				path: '/api/jobs/retry',
+				handler: async (request: Request, h: ResponseToolkit) => {
+					try {
+						const { jobIds } = request.payload as RetryRequest;
+						return await controller.retryJobs(jobIds);
 					} catch (error) {
 						return h
 							.response({ error: error instanceof Error ? error.message : 'Unknown error' })

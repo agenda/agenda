@@ -185,6 +185,9 @@ async function startDevServer() {
 	// Schedule a job that updates its progress
 	await agenda.now('progress-job');
 
+	// Schedule a failing job so it shows up as failed (for testing retry)
+	await agenda.now('failing-job', { reason: 'test failure' });
+
 	// Schedule a job far in the future (1 year from now)
 	const oneYearFromNow = new Date();
 	oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);

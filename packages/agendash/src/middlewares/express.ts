@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import type { Agenda } from 'agenda';
 import { AgendashController } from '../AgendashController.js';
 import { cspHeader } from '../csp.js';
-import type { ApiQueryParams, CreateJobRequest, DeleteRequest, RequeueRequest, PauseRequest, ResumeRequest, LogsQueryParams } from '../types.js';
+import type { ApiQueryParams, CreateJobRequest, DeleteRequest, RequeueRequest, RetryRequest, PauseRequest, ResumeRequest, LogsQueryParams } from '../types.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -71,6 +71,16 @@ export function createExpressMiddleware(agenda: Agenda, options: ExpressMiddlewa
 		try {
 			const { jobIds } = req.body as RequeueRequest;
 			const result = await controller.requeueJobs(jobIds);
+			res.json(result);
+		} catch (error) {
+			res.status(404).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+		}
+	});
+
+	router.post('/api/jobs/retry', async (req, res) => {
+		try {
+			const { jobIds } = req.body as RetryRequest;
+			const result = await controller.retryJobs(jobIds);
 			res.json(result);
 		} catch (error) {
 			res.status(404).json({ error: error instanceof Error ? error.message : 'Unknown error' });

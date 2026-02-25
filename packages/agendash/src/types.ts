@@ -95,6 +95,20 @@ export interface RequeueResponse {
 }
 
 /**
+ * Options for retrying jobs
+ */
+export interface RetryRequest {
+	jobIds: string[];
+}
+
+/**
+ * Response from retry operation
+ */
+export interface RetryResponse {
+	retriedCount: number;
+}
+
+/**
  * Options for deleting jobs
  */
 export interface DeleteRequest {
@@ -204,6 +218,7 @@ export interface LogsResponse {
 export interface AgendashController {
 	getJobs(params: ApiQueryParams): Promise<ApiResponse>;
 	requeueJobs(ids: string[]): Promise<RequeueResponse>;
+	retryJobs(ids: string[]): Promise<RetryResponse>;
 	deleteJobs(ids: string[]): Promise<DeleteResponse>;
 	createJob(options: CreateJobRequest): Promise<CreateJobResponse>;
 	pauseJobs(ids: string[]): Promise<PauseResponse>;

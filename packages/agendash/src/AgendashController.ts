@@ -7,6 +7,7 @@ import type {
 	CreateJobResponse,
 	DeleteResponse,
 	RequeueResponse,
+	RetryResponse,
 	PauseResponse,
 	ResumeResponse,
 	FrontendJob,
@@ -144,6 +145,31 @@ export class AgendashController implements IAgendashController {
 		}
 
 		return { requeuedCount };
+	}
+
+	/**
+	 * Retry jobs by setting their nextRunAt to now (reuses existing job)
+	 */
+	async retryJobs(ids: string[]): Promise<RetryResponse> {
+		if (!ids || ids.length === 0) {
+			return { retriedCount: 0 };
+		}
+
+		const { jobs } = await this.agenda.queryJobs({ ids });
+		let retriedCount = 0;
+
+		for (const job of jobs) {
+			job.nextRunAt = new Date();
+			job.lockedAt = undefined;
+			job.failedAt = undefined;
+			job.failReason = undefined;
+			job.failCount = undefined;
+
+			await this.agenda.db.saveJob(job, { lastModifiedBy: 'agendash' });
+			retriedCount++;
+		}
+
+		return { retriedCount };
 	}
 
 	/**

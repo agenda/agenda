@@ -100,6 +100,18 @@ export function useJobs() {
 		}
 	}
 
+	async function retryJobs(jobIds: string[]) {
+		try {
+			await api.retryJobs(jobIds);
+			success('Jobs retried successfully');
+			await fetchJobs();
+		} catch (err) {
+			// eslint-disable-next-line no-console
+			console.error('Failed to retry jobs:', err);
+			error('Failed to retry jobs');
+		}
+	}
+
 	async function deleteJobs(jobIds: string[]) {
 		try {
 			await api.deleteJobs(jobIds);
@@ -276,6 +288,7 @@ export function useJobs() {
 		realTimeConnected,
 		fetchJobs,
 		requeueJobs,
+		retryJobs,
 		deleteJobs,
 		pauseJobs,
 		resumeJobs,

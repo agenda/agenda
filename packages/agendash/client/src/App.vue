@@ -25,6 +25,7 @@ const {
 	realTimeConnected,
 	fetchJobs,
 	requeueJobs,
+	retryJobs,
 	deleteJobs,
 	pauseJobs,
 	resumeJobs,
@@ -49,10 +50,12 @@ const showJobDetail = ref(false);
 const showNewJob = ref(false);
 const showConfirmDelete = ref(false);
 const showConfirmRequeue = ref(false);
+const showConfirmRetry = ref(false);
 const showConfirmPause = ref(false);
 const showConfirmResume = ref(false);
 const showConfirmDeleteMulti = ref(false);
 const showConfirmRequeueMulti = ref(false);
+const showConfirmRetryMulti = ref(false);
 const showConfirmPauseMulti = ref(false);
 const showConfirmResumeMulti = ref(false);
 
@@ -118,6 +121,11 @@ function handleConfirmRequeue(job: FrontendJob) {
 	showConfirmRequeue.value = true;
 }
 
+function handleConfirmRetry(job: FrontendJob) {
+	selectedJob.value = job;
+	showConfirmRetry.value = true;
+}
+
 function handleConfirmDeleteMulti(jobIds: string[]) {
 	selectedJobIds.value = jobIds;
 	showConfirmDeleteMulti.value = true;
@@ -126,6 +134,11 @@ function handleConfirmDeleteMulti(jobIds: string[]) {
 function handleConfirmRequeueMulti(jobIds: string[]) {
 	selectedJobIds.value = jobIds;
 	showConfirmRequeueMulti.value = true;
+}
+
+function handleConfirmRetryMulti(jobIds: string[]) {
+	selectedJobIds.value = jobIds;
+	showConfirmRetryMulti.value = true;
 }
 
 function handleConfirmPause(job: FrontendJob) {
@@ -172,6 +185,18 @@ async function handleRequeue() {
 	showConfirmRequeue.value = false;
 }
 
+async function handleRetry() {
+	if (selectedJob.value) {
+		actionLoading.value = true;
+		try {
+			await retryJobs([selectedJob.value.job._id]);
+		} finally {
+			actionLoading.value = false;
+		}
+	}
+	showConfirmRetry.value = false;
+}
+
 async function handleDeleteMulti() {
 	actionLoading.value = true;
 	try {
@@ -191,6 +216,17 @@ async function handleRequeueMulti() {
 		actionLoading.value = false;
 	}
 	showConfirmRequeueMulti.value = false;
+	selectedJobIds.value = [];
+}
+
+async function handleRetryMulti() {
+	actionLoading.value = true;
+	try {
+		await retryJobs(selectedJobIds.value);
+	} finally {
+		actionLoading.value = false;
+	}
+	showConfirmRetryMulti.value = false;
 	selectedJobIds.value = [];
 }
 
@@ -405,10 +441,12 @@ onUnmounted(() => {
 						@show-job-detail="handleShowJobDetail"
 						@confirm-delete="handleConfirmDelete"
 						@confirm-requeue="handleConfirmRequeue"
+						@confirm-retry="handleConfirmRetry"
 						@confirm-pause="handleConfirmPause"
 						@confirm-resume="handleConfirmResume"
 						@confirm-delete-multi="handleConfirmDeleteMulti"
 						@confirm-requeue-multi="handleConfirmRequeueMulti"
+						@confirm-retry-multi="handleConfirmRetryMulti"
 						@confirm-pause-multi="handleConfirmPauseMulti"
 						@confirm-resume-multi="handleConfirmResumeMulti"
 						@page-next="nextPage"
@@ -470,6 +508,25 @@ onUnmounted(() => {
 				</div>
 			</div>
 
+			<div v-if="showConfirmRetry && selectedJob" class="modal-overlay" @click.self="!actionLoading && (showConfirmRetry = false)">
+				<div class="modal-container" style="width: 400px">
+					<ConfirmDialog
+						title="Retry Job"
+						:message="`Retry job '${selectedJob.job.name}'? This will rerun the existing job immediately.`"
+						:details="[
+							{ label: 'ID', value: selectedJob.job._id, type: 'code' },
+							{ label: 'Name', value: selectedJob.job.name },
+							{ label: 'Data', value: formatJobData(selectedJob.job.data), type: 'json' }
+						]"
+						confirm-text="Retry"
+						confirm-class="btn-info"
+						:loading="actionLoading"
+						@confirm="handleRetry"
+						@cancel="showConfirmRetry = false"
+					/>
+				</div>
+			</div>
+
 			<div v-if="showConfirmDeleteMulti" class="modal-overlay" @click.self="!actionLoading && (showConfirmDeleteMulti = false)">
 				<div class="modal-container" style="width: 400px">
 					<ConfirmDialog
@@ -494,6 +551,20 @@ onUnmounted(() => {
 						:loading="actionLoading"
 						@confirm="handleRequeueMulti"
 						@cancel="showConfirmRequeueMulti = false"
+					/>
+				</div>
+			</div>
+
+			<div v-if="showConfirmRetryMulti" class="modal-overlay" @click.self="!actionLoading && (showConfirmRetryMulti = false)">
+				<div class="modal-container" style="width: 400px">
+					<ConfirmDialog
+						title="Retry Multiple Jobs"
+						:message="`Retry ${selectedJobIds.length} selected jobs? This will rerun existing jobs immediately.`"
+						confirm-text="Retry All"
+						confirm-class="btn-info"
+						:loading="actionLoading"
+						@confirm="handleRetryMulti"
+						@cancel="showConfirmRetryMulti = false"
 					/>
 				</div>
 			</div>

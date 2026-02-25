@@ -4,7 +4,7 @@ import type { Agenda } from 'agenda';
 import type { FastifyInstance, FastifyPluginCallback, FastifyRequest, FastifyReply } from 'fastify';
 import { AgendashController } from '../AgendashController.js';
 import { cspHeader } from '../csp.js';
-import type { ApiQueryParams, CreateJobRequest, DeleteRequest, RequeueRequest, PauseRequest, ResumeRequest } from '../types.js';
+import type { ApiQueryParams, CreateJobRequest, DeleteRequest, RequeueRequest, RetryRequest, PauseRequest, ResumeRequest } from '../types.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -80,6 +80,21 @@ export function createFastifyPlugin(agenda: Agenda): FastifyPluginCallback {
 				try {
 					const { jobIds } = request.body;
 					const result = await controller.requeueJobs(jobIds);
+					return reply.send(result);
+				} catch (error) {
+					return reply
+						.status(404)
+						.send({ error: error instanceof Error ? error.message : 'Unknown error' });
+				}
+			}
+		);
+
+		instance.post<{ Body: RetryRequest }>(
+			'/api/jobs/retry',
+			async (request: FastifyRequest<{ Body: RetryRequest }>, reply: FastifyReply) => {
+				try {
+					const { jobIds } = request.body;
+					const result = await controller.retryJobs(jobIds);
 					return reply.send(result);
 				} catch (error) {
 					return reply
