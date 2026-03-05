@@ -2,7 +2,7 @@
   "name": "agenda-monorepo",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@9.15.4",
+  "packageManager": "pnpm@10.30.3",
   "engines": {
     "node": ">=18.0.0"
   },
@@ -16,6 +16,10 @@
     "docs:build": "typedoc"
   },
   "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "mongodb-memory-server"
+    ],
     "overrides": {
       "fast-xml-parser": "^5.3.4"
     }
