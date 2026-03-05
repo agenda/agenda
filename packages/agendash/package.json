@@ -1,6 +1,6 @@
 {
   "name": "agendash",
-  "version": "8.2.0",
+  "version": "8.2.1",
   "description": "Dashboard for Agenda job scheduler",
   "type": "module",
   "main": "dist/index.js",
@@ -57,15 +57,33 @@
     "@hapi/inert": "^7.0.0"
   },
   "peerDependenciesMeta": {
-    "express": { "optional": true },
-    "koa": { "optional": true },
-    "koa-router": { "optional": true },
-    "koa-static": { "optional": true },
-    "koa-bodyparser": { "optional": true },
-    "fastify": { "optional": true },
-    "@fastify/static": { "optional": true },
-    "@hapi/hapi": { "optional": true },
-    "@hapi/inert": { "optional": true }
+    "express": {
+      "optional": true
+    },
+    "koa": {
+      "optional": true
+    },
+    "koa-router": {
+      "optional": true
+    },
+    "koa-static": {
+      "optional": true
+    },
+    "koa-bodyparser": {
+      "optional": true
+    },
+    "fastify": {
+      "optional": true
+    },
+    "@fastify/static": {
+      "optional": true
+    },
+    "@hapi/hapi": {
+      "optional": true
+    },
+    "@hapi/inert": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@agendajs/mongo-backend": "workspace:*",

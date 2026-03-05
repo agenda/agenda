@@ -1,5 +1,11 @@
 # agendash
 
+## 8.2.1
+
+### Patch Changes
+
+- 1fe985c: Convert framework optionalDependencies (Express, Koa, Fastify, Hapi) to optional peerDependencies so consumers only resolve the framework they already use. Added Koa 3.x support.
+
 ## 8.2.0
 
 ### Minor Changes
