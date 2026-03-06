@@ -38,7 +38,7 @@ export interface RedisJobData {
 	priority: string;
 	nextRunAt: string | null;
 	type: 'normal' | 'single';
-	lockedAt: string | null;
+	lockedAtMs: string | null;
 	lastFinishedAt: string | null;
 	failedAt: string | null;
 	failCount: string | null;

@@ -95,7 +95,9 @@ export class RedisJobRepository implements JobRepository {
 			nextRunAt: data.nextRunAt && data.nextRunAt !== 'null' ? new Date(data.nextRunAt) : null,
 			type: data.type as 'normal' | 'single',
 			lockedAt:
-				data.lockedAt && data.lockedAt !== 'null' ? new Date(data.lockedAt) : undefined,
+				data.lockedAtMs && data.lockedAtMs !== 'null'
+					? new Date(parseInt(data.lockedAtMs, 10))
+					: undefined,
 			lastFinishedAt:
 				data.lastFinishedAt && data.lastFinishedAt !== 'null'
 					? new Date(data.lastFinishedAt)
@@ -150,7 +152,7 @@ export class RedisJobRepository implements JobRepository {
 			priority: String(job.priority ?? 0),
 			nextRunAt: job.nextRunAt?.toISOString() || 'null',
 			type: job.type || 'normal',
-			lockedAt: job.lockedAt?.toISOString() || 'null',
+			lockedAtMs: job.lockedAt ? String(job.lockedAt.getTime()) : 'null',
 			lastFinishedAt: job.lastFinishedAt?.toISOString() || 'null',
 			failedAt: job.failedAt?.toISOString() || 'null',
 			failCount: job.failCount !== undefined ? String(job.failCount) : 'null',
@@ -526,7 +528,7 @@ export class RedisJobRepository implements JobRepository {
 		// Only unlock jobs which are not currently processed (nextRunAt is not null)
 		const nextRunAt = await this.redis.hget(this.key(`job:${jobId}`), 'nextRunAt');
 		if (nextRunAt && nextRunAt !== 'null') {
-			await this.redis.hset(this.key(`job:${jobId}`), 'lockedAt', 'null');
+			await this.redis.hset(this.key(`job:${jobId}`), 'lockedAtMs', 'null');
 		}
 	}
 
@@ -535,7 +537,7 @@ export class RedisJobRepository implements JobRepository {
 
 		for (const jobId of jobIds) {
 			const id = jobId.toString();
-			await this.redis.hset(this.key(`job:${id}`), 'lockedAt', 'null');
+			await this.redis.hset(this.key(`job:${id}`), 'lockedAtMs', 'null');
 		}
 	}
 
@@ -559,7 +561,7 @@ export class RedisJobRepository implements JobRepository {
 			}
 
 			// Check conditions
-			if (jobData.lockedAt !== 'null') {
+			if (jobData.lockedAtMs && jobData.lockedAtMs !== 'null') {
 				await this.redis.unwatch();
 				return undefined;
 			}
@@ -582,7 +584,7 @@ export class RedisJobRepository implements JobRepository {
 			// Lock the job atomically
 			const result = await this.redis
 				.multi()
-				.hset(this.key(`job:${jobId}`), 'lockedAt', now.toISOString())
+				.hset(this.key(`job:${jobId}`), 'lockedAtMs', String(now.getTime()))
 				.hset(this.key(`job:${jobId}`), 'lastModifiedBy', options?.lastModifiedBy ?? 'null')
 				.hset(this.key(`job:${jobId}`), 'updatedAt', now.toISOString())
 				.exec();
@@ -660,15 +662,14 @@ export class RedisJobRepository implements JobRepository {
 
 				-- Check if disabled
 				if data.disabled ~= 'true' then
-					local lockedAt = data.lockedAt
-					local nextRunAt = data.nextRunAt
 					local lockedAtMs = data.lockedAtMs
+					local nextRunAt = data.nextRunAt
 
 					-- Check if job is ready to run
 					local isUnlockedAndReady = false
 					local isStale = false
 
-					if lockedAt == 'null' or lockedAt == nil then
+					if not lockedAtMs or lockedAtMs == 'null' then
 						-- Job is unlocked
 						if nextRunAt and nextRunAt ~= 'null' then
 							-- We compare scores since they're based on nextRunAt
@@ -677,20 +678,18 @@ export class RedisJobRepository implements JobRepository {
 							end
 						end
 					else
-						-- Job is locked - check if stale using lockedAtMs field
-						if lockedAtMs and lockedAtMs ~= 'null' then
-							local lockedAtTime = tonumber(lockedAtMs)
-							if lockedAtTime and lockedAtTime <= lockDeadline then
-								isStale = true
-							end
+						-- Job is locked - check if stale
+						local lockedAtTime = tonumber(lockedAtMs)
+						if lockedAtTime and lockedAtTime <= lockDeadline then
+							isStale = true
 						end
 					end
 
 					if isUnlockedAndReady or isStale then
-						-- Lock the job atomically, also store lockedAtMs for efficient stale checks
+						-- Lock the job atomically
 						local lockTimeMs = redis.call('TIME')
 						local lockTimestamp = (lockTimeMs[1] * 1000) + math.floor(lockTimeMs[2] / 1000)
-						redis.call('HSET', jobKey, 'lockedAt', lockTime, 'lockedAtMs', tostring(lockTimestamp), 'lastModifiedBy', lastModifiedBy, 'updatedAt', lockTime)
+						redis.call('HSET', jobKey, 'lockedAtMs', tostring(lockTimestamp), 'lastModifiedBy', lastModifiedBy, 'updatedAt', lockTime)
 						return candidate.id
 					end
 				end
@@ -757,7 +756,7 @@ export class RedisJobRepository implements JobRepository {
 
 		// Update state fields
 		const updates: Record<string, string> = {
-			lockedAt: job.lockedAt?.toISOString() || 'null',
+			lockedAtMs: job.lockedAt ? String(job.lockedAt.getTime()) : 'null',
 			nextRunAt: job.nextRunAt?.toISOString() || 'null',
 			lastRunAt: job.lastRunAt?.toISOString() || 'null',
 			progress: job.progress !== undefined ? String(job.progress) : 'null',

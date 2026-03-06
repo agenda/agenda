@@ -889,6 +889,36 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 					const result = await agenda.queryJobs({ id: jobId });
 					expect(result.jobs[0].progress).toBe(50);
 				});
+
+				it('should prevent long-running job from being re-locked after touch', async () => {
+					const lockLifetime = 500; // 500ms lock lifetime
+					let startCount = 0;
+
+					agenda.define(
+						'touch-relock-test',
+						async (job: Job) => {
+							startCount++;
+							// Run for 3x the lockLifetime, touching every 100ms
+							const iterations = Math.ceil((lockLifetime * 3) / 100);
+							for (let i = 0; i < iterations; i++) {
+								await delay(100);
+								await job.touch();
+							}
+						},
+						{ lockLifetime }
+					);
+
+					agenda.processEvery(200);
+					await agenda.start();
+					await agenda.now('touch-relock-test');
+
+					// Wait for 3x lockLifetime + buffer for the job to finish
+					await delay(lockLifetime * 3 + 500);
+					await agenda.stop();
+
+					// The job should have started exactly once — touch() keeps the lock alive
+					expect(startCount).toBe(1);
+				});
 			});
 
 			describe('fail', () => {
@@ -1497,7 +1527,14 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 					expect(agendaWithChannel.hasNotificationChannel()).toBe(true);
 				});
 
-				it('should accept notification channel via notifyVia method', async () => {
+				it('should accept notification channel via notifyVia method', async ({ skip }) => {
+					// Skip if backend already provides a notification channel,
+					// since Agenda picks it up automatically
+					if (backend.notificationChannel) {
+						skip();
+						return;
+					}
+
 					agendaWithChannel = new Agenda({ backend });
 					expect(agendaWithChannel.hasNotificationChannel()).toBe(false);
 
@@ -1560,6 +1597,112 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				});
 			});
 		}
+
+		// Backend-provided notification channel tests
+		// Runs automatically when the backend provides a built-in notification channel
+		// (e.g., PostgresBackend with LISTEN/NOTIFY, RedisBackend with Pub/Sub)
+		describe('backend notification channel integration', () => {
+			let agendaWithNotify: Agenda;
+
+			afterEach(async () => {
+				if (agendaWithNotify) {
+					await agendaWithNotify.stop();
+					agendaWithNotify = undefined!;
+				}
+				await config.clearJobs(backend);
+			});
+
+			it('should automatically use the backend notification channel', async ({ skip }) => {
+				if (!backend.notificationChannel) {
+					skip();
+					return;
+				}
+
+				agendaWithNotify = new Agenda({ backend });
+				await agendaWithNotify.ready;
+
+				expect(agendaWithNotify.hasNotificationChannel()).toBe(true);
+			});
+
+			it('should process job immediately via backend notification channel with long processEvery', async ({ skip }) => {
+				if (!backend.notificationChannel) {
+					skip();
+					return;
+				}
+
+				// Simulate a real-world setup: 5 minute polling interval
+				// The notification channel should bypass the interval entirely
+				agendaWithNotify = new Agenda({
+					backend,
+					processEvery: 5 * 60 * 1000 // 5 minutes
+				});
+				await agendaWithNotify.ready;
+
+				let jobRan = false;
+				agendaWithNotify.define('notify-test-job', async () => {
+					jobRan = true;
+				});
+
+				await agendaWithNotify.start();
+
+				// Wait for the initial process() scan to complete so the processor is idle
+				await delay(200);
+
+				// Now schedule a job — the notification channel should trigger immediate pickup
+				const successPromise = waitForEvent(agendaWithNotify, 'success:notify-test-job', 5000);
+				await agendaWithNotify.now('notify-test-job');
+				await successPromise;
+
+				expect(jobRan).toBe(true);
+			});
+
+			it('should process job scheduled from a separate agenda instance via notification', async ({ skip }) => {
+				if (!backend.notificationChannel) {
+					skip();
+					return;
+				}
+
+				// Simulates the publisher/worker pattern with separate backends
+				// (as in a real multi-process deployment)
+				const publisherBackend = await config.createBackend();
+
+				const worker = new Agenda({
+					backend,
+					processEvery: 5 * 60 * 1000 // 5 minutes
+				});
+				await worker.ready;
+
+				let jobRan = false;
+				worker.define('cross-instance-job', async () => {
+					jobRan = true;
+				});
+
+				await worker.start();
+
+				// Wait for initial scan
+				await delay(200);
+
+				// Separate publisher instance — only schedules jobs, does NOT process them.
+				// This mirrors a common pattern: API server schedules, worker processes.
+				// The publisher does NOT define the job, so it won't try to lock/run it.
+				const publisher = new Agenda({ backend: publisherBackend });
+				await publisher.ready;
+
+				// Start publisher to connect its notification channel
+				await publisher.start();
+
+				// Schedule from the publisher — worker should pick it up via notification
+				const successPromise = waitForEvent(worker, 'success:cross-instance-job', 5000);
+				await publisher.now('cross-instance-job');
+				await successPromise;
+
+				expect(jobRan).toBe(true);
+
+				await publisher.stop();
+				await config.cleanupBackend(publisherBackend);
+				agendaWithNotify = worker; // let afterEach clean up
+			});
+		});
 
 		// Fork mode tests - skip if configured to skip or if forkHelper is not provided
 		if (!config.skip?.forkMode && config.forkHelper) {
