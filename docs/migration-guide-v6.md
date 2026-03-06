@@ -159,8 +159,46 @@ sort: { nextRunAt: 'asc', priority: 'desc' }
 ```
 
 This applies to all backend configurations and query sort options.
+### 6. `agenda.define()` Parameter Reorder
 
-### 6. Removed Features
+The `define()` method signature has changed — the processor function and options arguments have been swapped:
+
+**Before (v4/v5):**
+```javascript
+agenda.define('my-job', { concurrency: 1 }, async (job) => {
+  // job handler
+});
+```
+
+**After (v6):**
+```javascript
+agenda.define('my-job', async (job) => {
+  // job handler
+}, { concurrency: 1 });
+```
+
+### 7. `agenda.jobs()` Replaced by `agenda.queryJobs()`
+
+The `agenda.jobs()` method has been removed. Use `agenda.queryJobs()` instead.
+
+**Before (v4/v5):**
+```javascript
+// MongoDB-style query parameters
+const jobs = await agenda.jobs({ name: 'my-job' }, { nextRunAt: -1 }, 10, 0);
+```
+
+**After (v6):**
+```javascript
+// Structured options object
+const { jobs, total } = await agenda.queryJobs({
+  name: 'my-job',
+  sort: 'desc',
+  limit: 10,
+  skip: 0
+});
+```
+
+### 8. Removed Features
 
 The following features from agenda.js v4 are **not supported** in v6:
 
@@ -169,12 +207,12 @@ The following features from agenda.js v4 are **not supported** in v6:
 | `shouldSaveResult` | Removed | Store results manually in job data |
 | `_collection` internal access | Removed | Use `agenda.db` (JobRepository) |
 
-### 7. Node.js Version Requirement
+### 9. Node.js Version Requirement
 
 **Before (v5):** Node.js 14+
 **After (v6):** Node.js 18+
 
-### 8. MongoDB Driver Version
+### 10. MongoDB Driver Version
 
 If using MongoDB, the driver was upgraded from v4 to v6. This may require updates if you're using MongoDB connection options that changed between driver versions.
 
