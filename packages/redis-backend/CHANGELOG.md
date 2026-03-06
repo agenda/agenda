@@ -1,5 +1,11 @@
 # @agendajs/redis-backend
 
+## 3.0.4
+
+### Patch Changes
+
+- 479f93c: fix: touch() now correctly refreshes the lock in Redis, preventing long-running jobs from being re-picked up after lockLifetime elapses
+
 ## 3.0.3
 
 ### Patch Changes
