@@ -287,6 +287,9 @@ function getSortIcon(column: string): string {
 								aria-valuemax="100"
 							></div>
 						</div>
+						<div v-if="job.failed && job.job.failReason" class="fail-reason-text mt-1">
+							{{ job.job.failReason }}
+						</div>
 					</td>
 					<td class="job-name" @click="toggleSelection(job)">{{ job.job.name }}</td>
 					<td
@@ -473,6 +476,9 @@ function getSortIcon(column: string): string {
 								>
 									<span class="pill-own-card-info">Running</span>
 								</span>
+							</div>
+							<div v-if="job.failed && job.job.failReason" class="fail-reason-text fail-reason-card w-100 px-3 mb-2">
+								{{ job.job.failReason }}
 							</div>
 							<div v-if="job.running && job.job.progress != null" class="w-100 px-3 mb-2">
 								<div class="progress" style="height: 6px;">

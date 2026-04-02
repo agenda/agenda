@@ -613,6 +613,21 @@ main {
 	padding: 4px 10px;
 }
 
+/* Fail reason */
+.fail-reason-text {
+	font-size: 0.75rem;
+	color: var(--danger-color);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 320px;
+}
+
+.fail-reason-card {
+	text-align: center;
+	max-width: 100%;
+}
+
 /* Card responsive styles */
 .card-responsive-name {
 	font-weight: 600;
