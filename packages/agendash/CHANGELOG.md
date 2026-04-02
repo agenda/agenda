@@ -1,5 +1,13 @@
 # agendash
 
+## 8.2.2
+
+### Patch Changes
+
+- 8335748: Show job fail reason directly in the job list table instead of only in tooltips and raw data. Replace the mobile card view with a single responsive table for consistent UI across all screen sizes. Improve the job detail dialog to display fail reasons in a scrollable block and show failure info even after retries.
+- Updated dependencies [c386cd6]
+  - agenda@6.2.4
+
 ## 8.2.1
 
 ### Patch Changes

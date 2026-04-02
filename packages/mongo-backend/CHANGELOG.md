@@ -1,5 +1,13 @@
 # @agendajs/mongo-backend
 
+## 4.0.1
+
+### Patch Changes
+
+- c386cd6: Add `cancelAll()` method to remove all jobs unconditionally. Also fix Redis backend ignoring `data` filter when combined with `name` in `cancel()`.
+- Updated dependencies [c386cd6]
+  - agenda@6.2.4
+
 ## 4.0.0
 
 ### Major Changes

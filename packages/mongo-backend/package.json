@@ -1,6 +1,6 @@
 {
   "name": "@agendajs/mongo-backend",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "MongoDB backend for Agenda job scheduler",
   "type": "module",
   "main": "dist/index.js",

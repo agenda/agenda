@@ -1,5 +1,11 @@
 # agenda
 
+## 6.2.4
+
+### Patch Changes
+
+- c386cd6: Add `cancelAll()` method to remove all jobs unconditionally. Also fix Redis backend ignoring `data` filter when combined with `name` in `cancel()`.
+
 ## 6.2.3
 
 ### Patch Changes
