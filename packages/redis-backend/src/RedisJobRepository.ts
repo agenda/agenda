@@ -516,6 +516,25 @@ export class RedisJobRepository implements JobRepository {
 		return modified;
 	}
 
+	async purgeAllJobs(): Promise<number> {
+		const allIds = await this.redis.smembers(this.key('jobs:all'));
+		if (allIds.length === 0) {
+			return 0;
+		}
+
+		let removed = 0;
+		for (const jobId of allIds) {
+			const jobData = await this.redis.hgetall(this.key(`job:${jobId}`));
+			if (!jobData || Object.keys(jobData).length === 0) continue;
+
+			const job = this.hashToJob(jobData);
+			await this.deleteJob(jobId, job.name, job.type);
+			removed++;
+		}
+
+		return removed;
+	}
+
 	private async deleteJob(id: string, name: string, type: string): Promise<void> {
 		const pipeline = this.redis.pipeline();
 

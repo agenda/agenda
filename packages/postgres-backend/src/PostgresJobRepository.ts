@@ -464,6 +464,11 @@ export class PostgresJobRepository implements JobRepository {
 		return result.rowCount || 0;
 	}
 
+	async purgeAllJobs(): Promise<number> {
+		const result = await this.pool.query(`DELETE FROM "${this.tableName}"`);
+		return result.rowCount || 0;
+	}
+
 	async unlockJob(job: JobParameters): Promise<void> {
 		if (!job._id) return;
 

@@ -641,6 +641,28 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 			});
 		});
 
+		describe('cancelAll()', () => {
+			it('should remove all jobs from the database', async () => {
+				await agenda.now('cancelAll-test-1');
+				await agenda.now('cancelAll-test-2');
+				await agenda.now('cancelAll-test-3');
+
+				const before = await agenda.queryJobs({});
+				expect(before.total).toBe(3);
+
+				const removed = await agenda.cancelAll();
+				expect(removed).toBe(3);
+
+				const after = await agenda.queryJobs({});
+				expect(after.total).toBe(0);
+			});
+
+			it('should return 0 when no jobs exist', async () => {
+				const removed = await agenda.cancelAll();
+				expect(removed).toBe(0);
+			});
+		});
+
 		describe('unique constraint', () => {
 			it('should modify one job when unique matches', async () => {
 				const job1 = await agenda

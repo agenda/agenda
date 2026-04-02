@@ -57,6 +57,9 @@ class MockJobRepository implements JobRepository {
 	async enableJobs() {
 		return 0;
 	}
+	async purgeAllJobs() {
+		return 0;
+	}
 }
 
 /**

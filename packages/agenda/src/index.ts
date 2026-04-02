@@ -697,13 +697,31 @@ export class Agenda extends EventEmitter {
 	}
 
 	/**
-	 * Removes all jobs from queue
+	 * Removes all orphaned jobs (jobs whose names are not currently defined).
 	 * @note: Only use after defining your jobs
 	 */
 	async purge(): Promise<number> {
 		const definedNames = Object.keys(this.definitions);
 		log('Agenda.purge(%o)', definedNames);
 		return this.cancel({ notNames: definedNames });
+	}
+
+	/**
+	 * Removes ALL jobs from the database unconditionally.
+	 * Use with caution — this cannot be undone.
+	 * @returns Number of jobs removed
+	 */
+	async cancelAll(): Promise<number> {
+		log('Agenda.cancelAll()');
+		await this.ready;
+		try {
+			const removed = await this.db.purgeAllJobs();
+			log('%s jobs cancelled', removed);
+			return removed;
+		} catch (error) {
+			log('error trying to cancel all jobs from database');
+			throw error;
+		}
 	}
 
 	/**

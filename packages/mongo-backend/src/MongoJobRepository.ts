@@ -428,6 +428,11 @@ export class MongoJobRepository implements JobRepository {
 		return result.modifiedCount;
 	}
 
+	async purgeAllJobs(): Promise<number> {
+		const result = await this.collection.deleteMany({});
+		return result.deletedCount;
+	}
+
 	async unlockJob(job: JobParameters): Promise<void> {
 		if (!job._id) return;
 		// only unlock jobs which are not currently processed (nextRunAt is not null)

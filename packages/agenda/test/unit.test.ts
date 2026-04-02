@@ -38,6 +38,9 @@ class MockJobRepository implements JobRepository {
 	async enableJobs() {
 		return 0;
 	}
+	async purgeAllJobs() {
+		return 0;
+	}
 	async saveJob<DATA = unknown>(job: JobParameters<DATA>): Promise<JobParameters<DATA>> {
 		return { ...job, _id: job._id || toJobId('mock-id') };
 	}

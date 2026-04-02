@@ -122,4 +122,10 @@ export interface JobRepository {
 	 * @returns Number of jobs enabled
 	 */
 	enableJobs(options: RemoveJobsOptions): Promise<number>;
+
+	/**
+	 * Remove ALL jobs from the database unconditionally.
+	 * @returns Number of jobs removed
+	 */
+	purgeAllJobs(): Promise<number>;
 }
