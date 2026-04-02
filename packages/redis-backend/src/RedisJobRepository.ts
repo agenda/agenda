@@ -392,18 +392,19 @@ export class RedisJobRepository implements JobRepository {
 			const excludeIds = new Set(await this.redis.sunion(...excludeSets));
 			jobIds = allIds.filter((id: string) => !excludeIds.has(id));
 		} else if (options.data !== undefined) {
-			// Need to scan all jobs for data match
-			const allIds = await this.redis.smembers(this.key('jobs:all'));
-			const searchDataStr = JSON.stringify(options.data);
-			for (const jobId of allIds) {
-				const jobData = await this.redis.hget(this.key(`job:${jobId}`), 'data');
-				if (jobData && jobData.includes(searchDataStr.slice(1, -1))) {
-					jobIds.push(jobId);
-				}
-			}
+			// No name/id filter — scan all jobs for data match
+			jobIds = await this.filterJobIdsByData(
+				await this.redis.smembers(this.key('jobs:all')),
+				options.data
+			);
 		} else {
 			// No criteria - don't delete anything
 			return 0;
+		}
+
+		// Apply data filter as a secondary filter when combined with name/id filters
+		if (options.data !== undefined && (options.name || options.names || options.notNames || options.id || options.ids)) {
+			jobIds = await this.filterJobIdsByData(jobIds, options.data);
 		}
 
 		if (jobIds.length === 0) {
@@ -424,43 +425,57 @@ export class RedisJobRepository implements JobRepository {
 	}
 
 	/**
+	 * Filter job IDs by matching against their stored data field.
+	 * Uses a substring match on the JSON-serialized data.
+	 */
+	private async filterJobIdsByData(jobIds: string[], dataFilter: unknown): Promise<string[]> {
+		const searchDataStr = JSON.stringify(dataFilter);
+		const matching: string[] = [];
+		for (const jobId of jobIds) {
+			const jobData = await this.redis.hget(this.key(`job:${jobId}`), 'data');
+			if (jobData && jobData.includes(searchDataStr.slice(1, -1))) {
+				matching.push(jobId);
+			}
+		}
+		return matching;
+	}
+
+	/**
 	 * Get job IDs matching the given options
 	 */
 	private async getJobIdsFromOptions(options: RemoveJobsOptions): Promise<string[]> {
+		let jobIds: string[] = [];
+
 		if (options.id) {
-			return [options.id.toString()];
-		}
-		if (options.ids && options.ids.length > 0) {
-			return options.ids.map((id: JobId | string) => id.toString());
-		}
-		if (options.name) {
-			return this.redis.smembers(this.key(`jobs:by_name:${options.name}`));
-		}
-		if (options.names && options.names.length > 0) {
+			jobIds = [options.id.toString()];
+		} else if (options.ids && options.ids.length > 0) {
+			jobIds = options.ids.map((id: JobId | string) => id.toString());
+		} else if (options.name) {
+			jobIds = await this.redis.smembers(this.key(`jobs:by_name:${options.name}`));
+		} else if (options.names && options.names.length > 0) {
 			const sets = options.names.map((n: string) => this.key(`jobs:by_name:${n}`));
-			return this.redis.sunion(...sets);
-		}
-		if (options.notNames && options.notNames.length > 0) {
+			jobIds = await this.redis.sunion(...sets);
+		} else if (options.notNames && options.notNames.length > 0) {
 			const allIds = await this.redis.smembers(this.key('jobs:all'));
 			const excludeSets = options.notNames.map((n: string) => this.key(`jobs:by_name:${n}`));
 			const excludeIds = new Set(await this.redis.sunion(...excludeSets));
-			return allIds.filter((id: string) => !excludeIds.has(id));
+			jobIds = allIds.filter((id: string) => !excludeIds.has(id));
+		} else if (options.data !== undefined) {
+			// No name/id filter — scan all jobs for data match
+			return this.filterJobIdsByData(
+				await this.redis.smembers(this.key('jobs:all')),
+				options.data
+			);
+		} else {
+			return [];
 		}
+
+		// Apply data filter as a secondary filter when combined with name/id filters
 		if (options.data !== undefined) {
-			// Need to scan all jobs for data match
-			const allIds = await this.redis.smembers(this.key('jobs:all'));
-			const searchDataStr = JSON.stringify(options.data);
-			const matchingIds: string[] = [];
-			for (const jobId of allIds) {
-				const jobData = await this.redis.hget(this.key(`job:${jobId}`), 'data');
-				if (jobData && jobData.includes(searchDataStr.slice(1, -1))) {
-					matchingIds.push(jobId);
-				}
-			}
-			return matchingIds;
+			jobIds = await this.filterJobIdsByData(jobIds, options.data);
 		}
-		// No criteria - return empty array
-		return [];
+
+		return jobIds;
 	}
 
 	async disableJobs(options: RemoveJobsOptions): Promise<number> {

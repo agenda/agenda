@@ -243,6 +243,33 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				expect(result.jobs.length).toBe(1);
 				expect(result.jobs[0].name).toBe('keep-test');
 			});
+
+			it('should cancel only jobs matching both name and data filter', async () => {
+				await agenda.now('cancel-data-test', { userId: 1 });
+				await agenda.now('cancel-data-test', { userId: 2 });
+				await agenda.now('cancel-data-test', { userId: 3 });
+
+				const cancelled = await agenda.cancel({ name: 'cancel-data-test', data: { userId: 2 } });
+				expect(cancelled).toBe(1);
+
+				const result = await agenda.queryJobs({ name: 'cancel-data-test' });
+				expect(result.jobs.length).toBe(2);
+				const remaining = result.jobs.map(j => (j.data as { userId: number }).userId).sort();
+				expect(remaining).toEqual([1, 3]);
+			});
+
+			it('should cancel jobs matching data filter with nested objects', async () => {
+				await agenda.now('cancel-nested-test', { org: { id: 'abc' }, type: 'sync' });
+				await agenda.now('cancel-nested-test', { org: { id: 'def' }, type: 'sync' });
+				await agenda.now('cancel-nested-test', { org: { id: 'abc' }, type: 'backup' });
+
+				const cancelled = await agenda.cancel({ name: 'cancel-nested-test', data: { org: { id: 'abc' } } });
+				expect(cancelled).toBe(2);
+
+				const result = await agenda.queryJobs({ name: 'cancel-nested-test' });
+				expect(result.jobs.length).toBe(1);
+				expect((result.jobs[0].data as { org: { id: string } }).org.id).toBe('def');
+			});
 		});
 
 		describe('job disable/enable', () => {
