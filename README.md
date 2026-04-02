@@ -1252,19 +1252,30 @@ const { jobs, total } = await agenda.queryJobs({ name: 'printAnalyticsReport', l
 
 ### cancel(options)
 
-Cancels any jobs matching the passed query options, and removes them from the database. Returns a Promise resolving to the number of cancelled jobs, or rejecting on error.
+Cancels any jobs matching the passed query options, and removes them from the database. Returns a Promise resolving to the number of cancelled jobs, or rejecting on error. At least one filter option must be provided — passing an empty object `cancel({})` is a safe no-op and removes nothing.
 
 Options:
 - `id` / `ids` — Match by job ID(s)
 - `name` / `names` — Match by job name(s)
 - `notNames` — Exclude jobs matching these names
-- `data` — Match by job data
+- `data` — Match by job data (can be combined with `name` to narrow the filter)
 
 ```js
 const numRemoved = await agenda.cancel({ name: 'printAnalyticsReport' });
+
+// Cancel only jobs with specific data
+const numRemoved = await agenda.cancel({ name: 'sendEmail', data: { userId: 123 } });
 ```
 
 This functionality can also be achieved by first retrieving all the jobs from the database using `agenda.queryJobs()`, looping through the resulting array and calling `job.remove()` on each. It is however preferable to use `agenda.cancel()` for this use case, as this ensures the operation is atomic.
+
+### cancelAll()
+
+Removes **all** jobs from the database unconditionally. Use with caution — this cannot be undone. Returns a Promise resolving to the number of removed jobs.
+
+```js
+const numRemoved = await agenda.cancelAll();
+```
 
 ### disable(options)
 
@@ -1288,9 +1299,9 @@ Similar to `agenda.cancel()`, this functionality can be achieved with a combinat
 
 ### purge()
 
-Removes all jobs in the database without defined behaviors. Useful if you change a definition name and want to remove old jobs. Returns a Promise resolving to the number of removed jobs, or rejecting on error.
+Removes all **orphaned** jobs — jobs whose names do not match any currently defined job. Useful if you rename a job definition and want to clean up old entries. Returns a Promise resolving to the number of removed jobs, or rejecting on error.
 
-_IMPORTANT:_ Do not run this before you finish defining all of your jobs. If you do, you will nuke your database of jobs.
+_IMPORTANT:_ Do not run this before you finish defining all of your jobs, otherwise jobs without a definition will be removed.
 
 ```js
 const numRemoved = await agenda.purge();

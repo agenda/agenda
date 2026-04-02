@@ -252,8 +252,12 @@ await agenda.every('0 * * * *', 'my-job'); // Cron syntax
 ### Job Control
 
 ```javascript
-// Cancel jobs (removes from database)
+// Cancel jobs matching a filter (removes from database)
 await agenda.cancel({ name: 'my-job' });
+await agenda.cancel({ name: 'my-job', data: { userId: 123 } });
+
+// Cancel ALL jobs unconditionally
+await agenda.cancelAll();
 
 // Disable/enable jobs globally (by query)
 await agenda.disable({ name: 'my-job' });  // Disable all jobs matching query
