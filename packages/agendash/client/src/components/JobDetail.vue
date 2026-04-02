@@ -151,7 +151,7 @@ const rawJob = computed(() => {
 					<pre class="json-editor">{{ formattedData }}</pre>
 				</div>
 
-				<div v-if="job.failed" class="alert alert-danger mb-0">
+				<div v-if="job.failed || job.job.failCount" class="alert alert-danger mb-0">
 					<div class="row">
 						<div class="col-6">
 							<small class="d-block">Fail Count</small>
@@ -162,9 +162,11 @@ const rawJob = computed(() => {
 							<strong>{{ formatDateTime(job.job.failedAt) }}</strong>
 						</div>
 					</div>
-					<hr class="my-2" />
-					<small class="d-block">Reason</small>
-					<code>{{ job.job.failReason }}</code>
+					<div v-if="job.job.failReason">
+						<hr class="my-2" />
+						<small class="d-block">Reason</small>
+						<pre class="fail-reason-detail mb-0">{{ job.job.failReason }}</pre>
+					</div>
 				</div>
 			</div>
 
@@ -218,5 +220,18 @@ const rawJob = computed(() => {
 
 .json-editor-large {
 	max-height: 400px;
+}
+
+.fail-reason-detail {
+	background: rgba(220, 53, 69, 0.05);
+	border: 1px solid rgba(220, 53, 69, 0.15);
+	border-radius: 6px;
+	padding: 8px 12px;
+	font-size: 0.85rem;
+	white-space: pre-wrap;
+	word-wrap: break-word;
+	max-height: 200px;
+	overflow-y: auto;
+	color: #721c24;
 }
 </style>

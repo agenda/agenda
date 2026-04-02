@@ -623,29 +623,10 @@ main {
 	max-width: 320px;
 }
 
-.fail-reason-card {
-	text-align: center;
-	max-width: 100%;
-}
-
-/* Card responsive styles */
-.card-responsive-name {
-	font-weight: 600;
-	font-size: 1rem;
-	color: var(--text-color);
-}
-
-.card-responsive-status-title {
-	font-size: 0.75rem;
-	color: var(--text-muted);
-	text-transform: uppercase;
-	letter-spacing: 0.5px;
-	margin-bottom: 4px;
-}
-
-.card-responsive-checkbox {
-	width: 20px;
-	height: 20px;
+/* Table responsive wrapper */
+.table-responsive {
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
 }
 
 /* Hide scrollbars but keep functionality */

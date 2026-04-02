@@ -177,8 +177,9 @@ function getSortIcon(column: string): string {
 			</button>
 		</div>
 
-		<!-- Desktop Table View -->
-		<table class="table table-striped d-none d-xl-table">
+		<!-- Job Table -->
+		<div class="table-responsive">
+		<table class="table table-striped">
 			<thead class="table-dark">
 				<tr>
 					<th scope="col" @click="toggleAll">
@@ -364,201 +365,25 @@ function getSortIcon(column: string): string {
 				</tr>
 			</tbody>
 		</table>
-
-		<!-- Mobile Card View -->
-		<div class="d-xl-none">
-			<div v-if="loading" class="col-12 my-5 ms-auto text-center">
-				<div class="text-center my-5 py-5">
-					<div class="spinner-border" role="status">
-						<span class="visually-hidden">Loading...</span>
-					</div>
-					<div>
-						<span>Loading Jobs...</span>
-					</div>
-				</div>
-			</div>
-			<div v-else-if="jobs.length === 0" class="text-center py-5 text-muted">
-				<div class="mb-2" style="font-size: 2rem;">&#128269;</div>
-				<div v-if="filterDisplay">
-					<strong>No jobs found</strong> for filter "{{ filterDisplay }}"
-				</div>
-				<div v-else>
-					<strong>No jobs found</strong>
-				</div>
-				<small class="d-block mt-2">Try adjusting your filter criteria</small>
-			</div>
-			<div v-else class="row">
-				<div v-for="job in sortedJobs" :key="job.job._id" class="col col-xs-6 order-1 p-1">
-					<div class="card bg-light">
-						<div class="card-header card-responsive-title-container">
-							<div class="card-responsive-name" @click="toggleSelection(job)">
-								{{ job.job.name }}
-							</div>
-							<div class="d-flex align-items-center">
-								<div class="card-responsive-status-title me-2">
-									<input
-										type="checkbox"
-										class="card-responsive-checkbox"
-										:checked="isSelected(job)"
-										@change="toggleSelection(job)"
-									/>
-								</div>
-								<span
-									class="action-btn text-primary material-icons-size me-1"
-									title="Requeue (create new job)"
-									@click="$emit('confirm-requeue', job)"
-									>&#x21BB;</span
-								>
-								<span
-									v-if="job.failed && !job.job.nextRunAt"
-									class="action-btn text-info material-icons-size me-1"
-									title="Retry (rerun existing job)"
-									@click="$emit('confirm-retry', job)"
-									>&#x21BA;</span
-								>
-								<span
-									v-if="job.paused"
-									class="action-btn text-success material-icons-size me-1"
-									title="Resume job"
-									@click="$emit('confirm-resume', job)"
-									>&#x25B6;</span
-								>
-								<span
-									v-else
-									class="action-btn text-secondary material-icons-size me-1"
-									title="Pause job"
-									@click="$emit('confirm-pause', job)"
-									>&#x23F8;</span
-								>
-								<span
-									class="action-btn text-success material-icons-size me-1"
-									title="Job Data"
-									@click="$emit('show-job-detail', job)"
-									>&#x1F441;</span
-								>
-								<span
-									class="action-btn text-danger material-icons-size"
-									title="Delete permanently"
-									@click="$emit('confirm-delete', job)"
-									>&#x1F5D1;</span
-								>
-							</div>
-						</div>
-						<div class="card-body">
-							<div class="d-flex justify-content-center mb-2 flex-wrap">
-								<span v-if="job.paused" class="pill-own me-2 bg-secondary pill-without-icon pill-own-card">
-									<span class="pill-own-card-info">Paused</span>
-								</span>
-								<span v-if="job.repeating" class="pill-own me-2 bg-info pill-own-card">
-									<span class="pill-own-card-info">{{ job.job.repeatInterval }}</span>
-								</span>
-								<span v-if="job.scheduled" class="pill-own me-2 bg-info pill-without-icon pill-own-card">
-									<span class="pill-own-card-info">Scheduled</span>
-								</span>
-								<span
-									v-if="job.completed"
-									class="pill-own me-2 bg-success pill-without-icon pill-own-card"
-								>
-									<span class="pill-own-card-info">Completed</span>
-								</span>
-								<span v-if="job.queued" class="pill-own me-2 bg-primary pill-without-icon pill-own-card">
-									<span class="pill-own-card-info">Queued</span>
-								</span>
-								<span v-if="job.failed" class="pill-own me-2 bg-danger pill-without-icon pill-own-card">
-									<span class="pill-own-card-info">Failed</span>
-								</span>
-								<span v-if="job.job.failCount" class="pill-own me-2 bg-danger pill-without-icon pill-own-card" :title="job.job.failReason">
-									<span class="pill-own-card-info">{{ job.job.failCount }} {{ job.job.failCount === 1 ? 'error' : 'errors' }}</span>
-								</span>
-								<span
-									v-if="job.running"
-									class="pill-own me-2 bg-warning pill-without-icon pill-own-card"
-								>
-									<span class="pill-own-card-info">Running</span>
-								</span>
-							</div>
-							<div v-if="job.failed && job.job.failReason" class="fail-reason-text fail-reason-card w-100 px-3 mb-2">
-								{{ job.job.failReason }}
-							</div>
-							<div v-if="job.running && job.job.progress != null" class="w-100 px-3 mb-2">
-								<div class="progress" style="height: 6px;">
-									<div
-										class="progress-bar progress-bar-striped progress-bar-animated"
-										role="progressbar"
-										:style="{ width: job.job.progress + '%' }"
-										:aria-valuenow="job.job.progress"
-										aria-valuemin="0"
-										aria-valuemax="100"
-									></div>
-								</div>
-								<small class="text-muted d-block text-center mt-1">{{ job.job.progress }}%</small>
-							</div>
-							<div class="row">
-								<div class="col col-md-6 text-center">
-									<div class="card-responsive-status-title">Last run started</div>
-									<div class="mb-3" :title="formatTitle(job.job.lastRunAt)">
-										{{ formatRelative(job.job.lastRunAt) || '-' }}
-									</div>
-									<div class="card-responsive-status-title">Last finished</div>
-									<div :title="formatTitle(job.job.lastFinishedAt)">
-										{{ formatRelative(job.job.lastFinishedAt) || '-' }}
-									</div>
-								</div>
-								<div class="col col-md-6 text-center">
-									<div class="card-responsive-status-title">Next run starts</div>
-									<div class="mb-3" :title="formatTitle(job.job.nextRunAt)">
-										{{ formatRelative(job.job.nextRunAt) || '-' }}
-									</div>
-									<div class="card-responsive-status-title">Locked</div>
-									<div :title="formatTitle(job.job.lockedAt)">
-										{{ formatRelative(job.job.lockedAt) || '-' }}
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-
-			<!-- Pagination -->
-			<div class="row mt-3">
-				<div class="col d-flex justify-content-center">
-					<nav aria-label="Page navigation">
-						<ul class="pagination">
-							<li class="page-item" :class="{ disabled: pageNumber === 1 }">
-								<a class="page-link" href="#" @click.prevent="$emit('page-prev')">Previous</a>
-							</li>
-							<li class="page-item" :class="{ disabled: pageNumber >= totalPages }">
-								<a class="page-link" href="#" @click.prevent="$emit('page-next')">Next</a>
-							</li>
-						</ul>
-					</nav>
-				</div>
-			</div>
-			<div class="row">
-				<div class="col d-flex justify-content-center">Page: {{ pageNumber }} / {{ totalPages }}</div>
-			</div>
 		</div>
 
-		<!-- Desktop Pagination -->
-		<div class="d-none d-xl-block">
-			<div class="row mt-3">
-				<div class="col d-flex justify-content-center">
-					<nav aria-label="Page navigation">
-						<ul class="pagination">
-							<li class="page-item" :class="{ disabled: pageNumber === 1 }">
-								<a class="page-link" href="#" @click.prevent="$emit('page-prev')">Previous</a>
-							</li>
-							<li class="page-item" :class="{ disabled: pageNumber >= totalPages }">
-								<a class="page-link" href="#" @click.prevent="$emit('page-next')">Next</a>
-							</li>
-						</ul>
-					</nav>
-				</div>
+		<!-- Pagination -->
+		<div class="row mt-3">
+			<div class="col d-flex justify-content-center">
+				<nav aria-label="Page navigation">
+					<ul class="pagination">
+						<li class="page-item" :class="{ disabled: pageNumber === 1 }">
+							<a class="page-link" href="#" @click.prevent="$emit('page-prev')">Previous</a>
+						</li>
+						<li class="page-item" :class="{ disabled: pageNumber >= totalPages }">
+							<a class="page-link" href="#" @click.prevent="$emit('page-next')">Next</a>
+						</li>
+					</ul>
+				</nav>
 			</div>
-			<div class="row">
-				<div class="col d-flex justify-content-center">Page: {{ pageNumber }} / {{ totalPages }}</div>
-			</div>
+		</div>
+		<div class="row">
+			<div class="col d-flex justify-content-center">Page: {{ pageNumber }} / {{ totalPages }}</div>
 		</div>
 	</div>
 </template>
