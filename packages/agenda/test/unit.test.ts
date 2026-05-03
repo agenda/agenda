@@ -428,9 +428,18 @@ describe('Job Unit Tests', () => {
 	});
 
 	describe('fail', () => {
-		it('sets failReason from Error', () => {
+		it('sets failReason from Error stack', () => {
 			const job = new Job(agenda, { name: 'demo', type: 'normal' });
 			job.fail(new Error('Test error'));
+			expect(job.attrs.failReason).toContain('Error: Test error');
+			expect(job.attrs.failReason).toContain('at ');
+		});
+
+		it('falls back to Error message when stack is unavailable', () => {
+			const job = new Job(agenda, { name: 'demo', type: 'normal' });
+			const error = new Error('Test error');
+			error.stack = undefined;
+			job.fail(error);
 			expect(job.attrs.failReason).toBe('Test error');
 		});
 

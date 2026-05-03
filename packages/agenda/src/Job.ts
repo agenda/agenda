@@ -332,7 +332,7 @@ export class Job<DATA = unknown | void> {
 	 * @param reason
 	 */
 	fail(reason: Error | string): this {
-		this.attrs.failReason = reason instanceof Error ? reason.message : reason;
+		this.attrs.failReason = reason instanceof Error ? reason.stack || reason.message : reason;
 		this.attrs.failCount = (this.attrs.failCount || 0) + 1;
 		const now = new Date();
 		this.attrs.failedAt = now;
