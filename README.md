@@ -23,7 +23,7 @@
 
 - Complete rewrite in TypeScript (fully typed!)
 - **Pluggable backend** - MongoDB by default, implement your own (see [Custom Backend Driver](docs/custom-database-driver.md))
-- **Real-time notifications** - Use Redis, PostgreSQL LISTEN/NOTIFY, or custom pub/sub
+- **Real-time notifications** - Use Redis, PostgreSQL LISTEN/NOTIFY, MongoDB Change Streams (Native) or custom pub/sub
 - MongoDB 6 driver support
 - `touch()` with optional progress parameter (0-100)
 - `getRunningStats()` for monitoring
@@ -283,6 +283,7 @@ const agenda = new Agenda({
 		collection: 'myJobs'
 	})
 });
+// MongoBackend provides both storage AND real-time notifications via MongoDB Change Streams (Native)
 ```
 
 **Using PostgresBackend:**
@@ -358,6 +359,12 @@ const agenda = new Agenda({ backend: new MongoBackend({ mongo: db }) })
 ```
 
 The `InMemoryNotificationChannel` is useful for testing and single-process deployments. For multi-process or distributed deployments, you can implement custom notification channels using Redis pub/sub, PostgreSQL LISTEN/NOTIFY, or other messaging systems.
+
+**Using the MongoDB Change Streams (Native):**
+
+If your MongoDB deployment is a replica set (even a single-node replica set works), you can use MongoChangeStreamNotificationChannel for native real-time notifications without any external dependencies:
+
+Please refer [this](https://github.com/agenda/agenda/blob/main/packages/mongo-backend/README.md#option-1-mongodb-change-streams-native) for more details , you can find more about Mongo backend in  [this](https://github.com/agenda/agenda/blob/main/packages/mongo-backend/README.md) file
 
 **Unified backend with notifications:**
 
@@ -1758,6 +1765,7 @@ Each backend provides different capabilities for storage and real-time notificat
 | Backend | Storage | Notifications | Notes |
 |---------|:-------:|:-------------:|-------|
 | **MongoDB** (`MongoBackend`) | ✅ | ❌ | Storage only. Use with external notification channel for real-time. |
+| **MongoDB Change Streams** (`MongoChangeStreamNotificationChannel`) | ❌ | ✅ | Notification only. Requires MongoDB replica set. |
 | **PostgreSQL** (`PostgresBackend`) | ✅ | ✅ | Full backend. Uses LISTEN/NOTIFY for notifications. |
 | **Redis** (`RedisBackend`) | ✅ | ✅ | Full backend. Uses Pub/Sub for notifications. |
 | **InMemoryNotificationChannel** | ❌ | ✅ | Notifications only. For single-process/testing. |
