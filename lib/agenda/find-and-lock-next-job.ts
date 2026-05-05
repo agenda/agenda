@@ -28,6 +28,7 @@ export const findAndLockNextJob = async function (
       {
         name: jobName,
         disabled: { $ne: true },
+        lastFinishedAt: null,
       },
       {
         $or: [
