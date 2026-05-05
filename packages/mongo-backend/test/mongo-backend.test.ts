@@ -1,5 +1,5 @@
 import { expect, describe, it, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
-import { Db, MongoClient } from 'mongodb';
+import { Db, MongoClient, ObjectId } from 'mongodb';
 import { randomUUID } from 'crypto';
 import { InMemoryNotificationChannel } from 'agenda';
 import { MongoBackend, MongoJobRepository, MongoJobLogger } from '../src/index.js';
@@ -226,6 +226,120 @@ describe('MongoBackend', () => {
 
 			expect(result.total).toBe(1);
 			expect(result.jobs[0].data).toEqual({ searchField: 'searchValue', anotherField: 'anotherValue' });
+		});
+
+		it('should support ObjectId values when filtering job data', async () => {
+			const userId = new ObjectId();
+
+			await backend.repository.saveJob({
+				name: 'objectid-data-test',
+				priority: 0,
+				nextRunAt: new Date(),
+				type: 'normal',
+				data: {
+					userId,
+					extra: 'field'
+				}
+			}, undefined);
+
+			const result = await backend.repository.queryJobs({
+				data: {
+					userId
+				}
+			});
+
+			expect(result.total).toBe(1);
+			expect(result.jobs[0].data).toEqual({
+				userId,
+				extra: 'field'
+			});
+
+			const removed = await backend.repository.removeJobs({
+				name: 'objectid-data-test',
+				data: {
+					userId
+				}
+			});
+
+			expect(removed).toBe(1);
+
+			const afterRemove = await backend.repository.queryJobs({
+				name: 'objectid-data-test'
+			});
+
+			expect(afterRemove.total).toBe(0);
+		});
+
+		it('should support array values when filtering job data', async () => {
+			const tags = ['first', 'second'];
+
+			await backend.repository.saveJob({
+				name: 'array-data-test',
+				priority: 0,
+				nextRunAt: new Date(),
+				type: 'normal',
+				data: {
+					tags,
+					extra: 'field'
+				}
+			}, undefined);
+
+			const result = await backend.repository.queryJobs({
+				data: {
+					tags
+				}
+			});
+
+			expect(result.total).toBe(1);
+			expect(result.jobs[0].data).toEqual({
+				tags,
+				extra: 'field'
+			});
+
+			const removed = await backend.repository.removeJobs({
+				name: 'array-data-test',
+				data: {
+					tags
+				}
+			});
+
+			expect(removed).toBe(1);
+		});
+
+		it('should support Date values when filtering job data', async () => {
+			const scheduledAt = new Date('2026-05-05T12:36:42.952Z');
+
+			await backend.repository.saveJob({
+				name: 'date-data-test',
+				priority: 0,
+				nextRunAt: new Date(),
+				type: 'normal',
+				data: {
+					scheduledAt,
+					extra: 'field'
+				}
+			}, undefined);
+
+			const result = await backend.repository.queryJobs({
+				data: {
+					scheduledAt
+				}
+			});
+
+			expect(result.total).toBe(1);
+			expect(result.jobs[0].data).toEqual({
+				scheduledAt,
+				extra: 'field'
+			});
+
+			const removed = await backend.repository.removeJobs({
+				name: 'date-data-test',
+				data: {
+					scheduledAt
+				}
+			});
+
+			expect(removed).toBe(1);
 		});
 
 		it('should handle concurrent job locking with findOneAndUpdate', async () => {
