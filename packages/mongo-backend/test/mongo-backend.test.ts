@@ -270,6 +270,78 @@ describe('MongoBackend', () => {
 			expect(afterRemove.total).toBe(0);
 		});
 
+		it('should support array values when filtering job data', async () => {
+			const tags = ['first', 'second'];
+
+			await backend.repository.saveJob({
+				name: 'array-data-test',
+				priority: 0,
+				nextRunAt: new Date(),
+				type: 'normal',
+				data: {
+					tags,
+					extra: 'field'
+				}
+			}, undefined);
+
+			const result = await backend.repository.queryJobs({
+				data: {
+					tags
+				}
+			});
+
+			expect(result.total).toBe(1);
+			expect(result.jobs[0].data).toEqual({
+				tags,
+				extra: 'field'
+			});
+
+			const removed = await backend.repository.removeJobs({
+				name: 'array-data-test',
+				data: {
+					tags
+				}
+			});
+
+			expect(removed).toBe(1);
+		});
+
+		it('should support Date values when filtering job data', async () => {
+			const scheduledAt = new Date('2026-05-05T12:36:42.952Z');
+
+			await backend.repository.saveJob({
+				name: 'date-data-test',
+				priority: 0,
+				nextRunAt: new Date(),
+				type: 'normal',
+				data: {
+					scheduledAt,
+					extra: 'field'
+				}
+			}, undefined);
+
+			const result = await backend.repository.queryJobs({
+				data: {
+					scheduledAt
+				}
+			});
+
+			expect(result.total).toBe(1);
+			expect(result.jobs[0].data).toEqual({
+				scheduledAt,
+				extra: 'field'
+			});
+
+			const removed = await backend.repository.removeJobs({
+				name: 'date-data-test',
+				data: {
+					scheduledAt
+				}
+			});
+
+			expect(removed).toBe(1);
+		});
+
 		it('should handle concurrent job locking with findOneAndUpdate', async () => {
 			await Promise.all([
 				backend.repository.saveJob({
