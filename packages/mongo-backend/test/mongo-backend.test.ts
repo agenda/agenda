@@ -1,5 +1,5 @@
 import { expect, describe, it, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
-import { Db, MongoClient } from 'mongodb';
+import { Db, MongoClient, ObjectId } from 'mongodb';
 import { randomUUID } from 'crypto';
 import { InMemoryNotificationChannel } from 'agenda';
 import { MongoBackend, MongoJobRepository, MongoJobLogger } from '../src/index.js';
@@ -226,6 +226,48 @@ describe('MongoBackend', () => {
 
 			expect(result.total).toBe(1);
 			expect(result.jobs[0].data).toEqual({ searchField: 'searchValue', anotherField: 'anotherValue' });
+		});
+
+		it('should support ObjectId values when filtering job data', async () => {
+			const userId = new ObjectId();
+
+			await backend.repository.saveJob({
+				name: 'objectid-data-test',
+				priority: 0,
+				nextRunAt: new Date(),
+				type: 'normal',
+				data: {
+					userId,
+					extra: 'field'
+				}
+			}, undefined);
+
+			const result = await backend.repository.queryJobs({
+				data: {
+					userId
+				}
+			});
+
+			expect(result.total).toBe(1);
+			expect(result.jobs[0].data).toEqual({
+				userId,
+				extra: 'field'
+			});
+
+			const removed = await backend.repository.removeJobs({
+				name: 'objectid-data-test',
+				data: {
+					userId
+				}
+			});
+
+			expect(removed).toBe(1);
+
+			const afterRemove = await backend.repository.queryJobs({
+				name: 'objectid-data-test'
+			});
+
+			expect(afterRemove.total).toBe(0);
 		});
 
 		it('should handle concurrent job locking with findOneAndUpdate', async () => {

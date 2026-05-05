@@ -39,6 +39,18 @@ function escapeRegex(str: string): string {
 }
 
 /**
+ * Check if a value is a plain object (not an array, date, or other non-plain type)
+ */
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+	if (value === null || typeof value !== 'object') {
+		return false;
+	}
+
+	const prototype = Object.getPrototypeOf(value);
+	return prototype === Object.prototype || prototype === null;
+}
+
+/**
  * Flatten a data filter object into MongoDB dot-notation keys.
  * This enables partial matching on the data subdocument.
  *
@@ -51,8 +63,8 @@ function flattenDataFilter(data: Record<string, unknown>, prefix = 'data'): Reco
 	const result: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(data)) {
 		const fullKey = `${prefix}.${key}`;
-		if (value !== null && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
-			Object.assign(result, flattenDataFilter(value as Record<string, unknown>, fullKey));
+		if (isPlainObject(value)) {
+			Object.assign(result, flattenDataFilter(value, fullKey));
 		} else {
 			result[fullKey] = value;
 		}
