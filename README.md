@@ -1697,6 +1697,24 @@ agenda.on('fail:send email', (err, job) => {
 });
 ```
 
+If you need richer error context, such as stack traces or structured metadata,
+capture it from the `fail` event and persist it outside Agenda:
+
+```js
+agenda.on('fail', async (err, job) => {
+	await saveJobError({
+		jobId: job.attrs._id,
+		jobName: job.attrs.name,
+		failedAt: job.attrs.failedAt,
+		message: err.message,
+		stack: err.stack
+	});
+});
+```
+
+`job.attrs.failReason` is stored with the job and is intended to stay small.
+Use external logging, monitoring, or your own error store for larger payloads.
+
 - `retry` - called when a job is scheduled for automatic retry (requires backoff strategy)
 - `retry:job name` - called when a specific job is scheduled for retry
 
