@@ -53,21 +53,21 @@
     "url": "https://github.com/agenda/agenda/issues"
   },
   "dependencies": {
-    "cron-parser": "^5.0.0",
+    "cron-parser": "^5.5.0",
     "date.js": "~0.3.3",
-    "debug": "^4.4.0",
+    "debug": "^4.4.3",
     "human-interval": "~2.0.1",
-    "luxon": "^3.2.1"
+    "luxon": "^3.7.2"
   },
   "devDependencies": {
-    "@types/debug": "^4.1.12",
-    "@types/human-interval": "^1.0.0",
-    "@types/luxon": "^3.4.0",
-    "@types/node": "^22.0.0",
-    "@vitest/coverage-v8": "^3.1.0",
-    "sinon": "^19.0.0",
+    "@types/debug": "^4.1.13",
+    "@types/human-interval": "^1.0.2",
+    "@types/luxon": "^3.7.1",
+    "@types/node": "^22.19.18",
+    "@vitest/coverage-v8": "^3.2.4",
+    "sinon": "^19.0.5",
     "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
-    "vitest": "^3.1.0"
+    "vitest": "^3.2.4"
   }
 }
