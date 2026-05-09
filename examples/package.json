@@ -4,13 +4,13 @@
   "type": "module",
   "description": "Working examples for Agenda job scheduler",
   "dependencies": {
-    "agenda": "workspace:*",
     "@agendajs/mongo-backend": "workspace:*",
     "@agendajs/postgres-backend": "workspace:*",
-    "@agendajs/redis-backend": "workspace:*"
+    "@agendajs/redis-backend": "workspace:*",
+    "agenda": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
+    "@types/node": "^22.19.18",
     "tsx": "^4.21.0"
   }
 }

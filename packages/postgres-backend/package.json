@@ -54,19 +54,19 @@
     "url": "https://github.com/agenda/agenda/issues"
   },
   "dependencies": {
-    "debug": "^4.4.0",
-    "pg": "^8.13.0"
+    "debug": "^4.4.3",
+    "pg": "^8.20.0"
   },
   "peerDependencies": {
     "agenda": "workspace:*"
   },
   "devDependencies": {
-    "@types/debug": "^4.1.12",
-    "@types/node": "^22.0.0",
-    "@types/pg": "^8.11.0",
-    "@vitest/coverage-v8": "^3.1.0",
+    "@types/debug": "^4.1.13",
+    "@types/node": "^22.19.18",
+    "@types/pg": "^8.20.0",
+    "@vitest/coverage-v8": "^3.2.4",
     "agenda": "workspace:*",
     "tsx": "^4.21.0",
-    "vitest": "^3.1.0"
+    "vitest": "^3.2.4"
   }
 }

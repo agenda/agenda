@@ -25,14 +25,14 @@
     }
   },
   "devDependencies": {
-    "@changesets/cli": "^2.27.12",
-    "typedoc": "^0.28.0",
-    "@eslint/js": "^9.18.0",
-    "eslint": "^9.18.0",
-    "eslint-config-prettier": "^10.0.1",
-    "globals": "^15.14.0",
-    "prettier": "^3.4.2",
-    "typescript": "^5.7.3",
-    "typescript-eslint": "^8.21.0"
+    "@changesets/cli": "^2.31.0",
+    "@eslint/js": "^9.39.4",
+    "eslint": "^9.39.4",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^15.15.0",
+    "prettier": "^3.8.3",
+    "typedoc": "^0.28.19",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.59.2"
   }
 }

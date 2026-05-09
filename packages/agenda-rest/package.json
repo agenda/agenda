@@ -46,21 +46,21 @@
   "dependencies": {
     "@agendajs/mongo-backend": "workspace:*",
     "agenda": "workspace:*",
-    "koa": "^2.15.0",
-    "koa-bodyparser": "^4.4.0",
-    "koa-router": "^13.0.0",
-    "commander": "^12.0.0"
+    "commander": "^12.1.0",
+    "koa": "^2.16.4",
+    "koa-bodyparser": "^4.4.1",
+    "koa-router": "^13.1.1"
   },
   "devDependencies": {
     "@types/koa": "^2.15.0",
-    "@types/koa-bodyparser": "^4.3.12",
-    "@types/koa-router": "^7.4.8",
-    "@types/node": "^22.0.0",
-    "mongodb": "^6.12.0",
-    "mongodb-memory-server": "^10.0.0",
-    "supertest": "^7.0.0",
-    "@types/supertest": "^6.0.2",
-    "vitest": "^3.1.0"
+    "@types/koa-bodyparser": "^4.3.13",
+    "@types/koa-router": "^7.4.9",
+    "@types/node": "^22.19.18",
+    "@types/supertest": "^6.0.3",
+    "mongodb": "^6.21.0",
+    "mongodb-memory-server": "^10.4.3",
+    "supertest": "^7.2.2",
+    "vitest": "^3.2.4"
   },
   "private": true
 }
