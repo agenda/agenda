@@ -255,7 +255,7 @@ export class PostgresJobRepository implements JobRepository {
 		}
 
 		if (data !== undefined) {
-			conditions.push(`data @> $${paramIndex++}::jsonb`);
+			conditions.push(`data @> $${paramIndex}::jsonb`);
 			params.push(JSON.stringify(data));
 		}
 
@@ -379,7 +379,7 @@ export class PostgresJobRepository implements JobRepository {
 		}
 
 		if (options.data !== undefined) {
-			conditions.push(`data @> $${paramIndex++}::jsonb`);
+			conditions.push(`data @> $${paramIndex}::jsonb`);
 			params.push(JSON.stringify(options.data));
 		}
 
@@ -424,7 +424,7 @@ export class PostgresJobRepository implements JobRepository {
 		}
 
 		if (options.data !== undefined) {
-			conditions.push(`data @> $${paramIndex++}::jsonb`);
+			conditions.push(`data @> $${paramIndex}::jsonb`);
 			params.push(JSON.stringify(options.data));
 		}
 

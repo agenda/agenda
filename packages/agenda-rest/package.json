@@ -55,12 +55,12 @@
     "@types/koa": "^2.15.0",
     "@types/koa-bodyparser": "^4.3.13",
     "@types/koa-router": "^7.4.9",
-    "@types/node": "^22.19.18",
+    "@types/node": "^25.6.2",
     "@types/supertest": "^6.0.3",
     "mongodb": "^6.21.0",
-    "mongodb-memory-server": "^10.4.3",
+    "mongodb-memory-server": "^11.1.0",
     "supertest": "^7.2.2",
-    "vitest": "^3.2.4"
+    "vitest": "^4.1.5"
   },
   "private": true
 }

@@ -238,7 +238,7 @@ export class PostgresJobLogger implements JobLogger {
 			params.push(query.from);
 		}
 		if (query.to) {
-			conditions.push(`timestamp <= $${paramIndex++}`);
+			conditions.push(`timestamp <= $${paramIndex}`);
 			params.push(query.to);
 		}
 
