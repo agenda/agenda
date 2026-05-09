@@ -1,5 +1,11 @@
 # agenda
 
+## 6.2.5
+
+### Patch Changes
+
+- 4a3db25: Document how to capture richer error context with fail event listeners.
+
 ## 6.2.4
 
 ### Patch Changes

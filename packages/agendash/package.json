@@ -1,6 +1,6 @@
 {
   "name": "agendash",
-  "version": "8.2.2",
+  "version": "8.2.3",
   "description": "Dashboard for Agenda job scheduler",
   "type": "module",
   "main": "dist/index.js",

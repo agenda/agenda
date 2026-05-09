@@ -1,5 +1,13 @@
 # @agendajs/mongo-backend
 
+## 4.0.2
+
+### Patch Changes
+
+- 96d4069: fix mongo data filtering for ObjectId values
+- Updated dependencies [4a3db25]
+  - agenda@6.2.5
+
 ## 4.0.1
 
 ### Patch Changes
