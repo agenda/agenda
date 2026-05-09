@@ -1,5 +1,15 @@
 # agenda-rest
 
+## 6.1.5
+
+### Patch Changes
+
+- b5994e9: docs: add agenda-rest README
+- Updated dependencies [96d4069]
+- Updated dependencies [4a3db25]
+  - @agendajs/mongo-backend@4.0.2
+  - agenda@6.2.5
+
 ## 6.1.4
 
 ### Patch Changes
