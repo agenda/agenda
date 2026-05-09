@@ -313,6 +313,20 @@ agenda.on('start:send email', (job) => { /* ... */ });
 agenda.on('fail:send email', (err, job) => { /* ... */ });
 ```
 
+Use `fail` listeners to capture richer error context, such as stack traces,
+without storing large payloads in `job.attrs.failReason`:
+
+```javascript
+agenda.on('fail', async (err, job) => {
+	await saveJobError({
+		jobId: job.attrs._id,
+		jobName: job.attrs.name,
+		message: err.message,
+		stack: err.stack
+	});
+});
+```
+
 ## Custom Backend
 
 For databases other than MongoDB, PostgreSQL, or Redis, implement `AgendaBackend`:
