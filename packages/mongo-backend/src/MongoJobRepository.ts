@@ -295,62 +295,119 @@ export class MongoJobRepository implements JobRepository {
 		const now = new Date();
 		const names = await this.getDistinctJobNames();
 
+    // conditions based on computeJobState() logic
     const overviews = await this.collection.aggregate([
-      {
-          $project: {
-              name: 1,
-              disabled: 1,
-              // Replicate agenda's state flags using boolean checks
-              isFailed: { $cond: [{ $ifNull: ["$failedAt", false] }, true, false] },
-              isRunning: { $cond: [{ $ifNull: ["$lastRunAt", false] }, { $cond: [{ $gt: ["$lastRunAt", "$lastFinishedAt"] }, true, false] }, false] },
-              isCompleted: { $cond: [{ $ifNull: ["$lastFinishedAt", false] }, { $cond: [{ $gt: ["$lastFinishedAt", "$lastRunAt"] }, true, false] }, false] },
-              isScheduled: { $cond: [{ $ifNull: ["$nextRunAt", false] }, { $cond: [{ $gte: ["$nextRunAt", now] }, true, false] }, false] },
-              isQueued: { $cond: [{ $ifNull: ["$nextRunAt", false] }, { $cond: [{ $lt: ["$nextRunAt", now] }, true, false] }, false] },
-              isRepeating: { $cond: [{ $and: [{ $ifNull: ["$repeatInterval", false] }, { $ne: ["$repeatInterval", ""] }] }, true, false] }
-          }
-      },
-      {
-          $group: {
-              _id: "$name",
-              total: { $sum: 1 },
-              // Compute states cleanly matching agenda's priority rules
-              running: {
-                  $sum: { $cond: [{ $and: ["$isRunning", { $not: ["$isFailed"] }] }, 1, 0] }
-              },
-              scheduled: {
-                  $sum: { $cond: [{ $and: ["$isScheduled", { $not: ["$isRunning"] }, { $not: ["$isFailed"] }] }, 1, 0] }
-              },
-              queued: {
-                  $sum: { $cond: [{ $and: ["$isQueued", { $not: ["$isRunning"] }, { $not: ["$isFailed"] }] }, 1, 0] }
-              },
-              completed: {
-                  $sum: { $cond: ["$isCompleted", 1, 0] }
-              },
-              failed: {
-                  $sum: { $cond: ["$isFailed", 1, 0] }
-              },
-              repeating: {
-                  $sum: { $cond: ["$isRepeating", 1, 0] }
-              },
-              paused: {
-                  $sum: { $cond: [{ $eq: ["$disabled", true] }, 1, 0] }
-              }
-          }
-      },
-      {
-          $project: {
-              _id: 0,
-              name: "$_id",
-              total: 1,
-              running: 1,
-              scheduled: 1,
-              queued: 1,
-              completed: 1,
-              failed: 1,
-              repeating: 1,
-              paused: 1
-          }
-      }
+        {
+            $project: {
+                name: 1,
+                disabled: 1,
+                isRunning: { $cond: [{ $ifNull: ["$lockedAt", false] }, true, false] },
+                isFailed: {
+                    $cond: [
+                        { $ifNull: ["$failedAt", false] },
+                        {
+                            $cond: [
+                                { $ifNull: ["$lastFinishedAt", false] },
+                                // FIX: Changed $gt to $gte to perfectly match the JS function's '>=' boundary
+                                { $cond: [{ $gte: ["$failedAt", "$lastFinishedAt"] }, true, false] }, 
+                                true
+                            ]
+                        },
+                        false
+                    ]
+                },
+                isRepeating: {
+                    $cond: [
+                        {
+                            $and: [
+                                { $ifNull: ["$repeatInterval", false] },
+                                { $ne: ["$repeatInterval", ""] },
+                                { $ne: ["$repeatInterval", false] }
+                            ]
+                        },
+                        true,
+                        false
+                    ]
+                },
+                isScheduled: {
+                    $cond: [
+                        { $ifNull: ["$nextRunAt", false] },
+                        { $cond: [{ $gt: ["$nextRunAt", now] }, true, false] },
+                        false
+                    ]
+                },
+                isQueued: {
+                    $cond: [
+                        { $ifNull: ["$nextRunAt", false] },
+                        { $cond: [{ $lte: ["$nextRunAt", now] }, true, false] },
+                        false
+                    ]
+                },
+                isCompleted: {
+                    $cond: [
+                        { $ifNull: ["$lastFinishedAt", false] },
+                        {
+                            $cond: [
+                                { $ifNull: ["$failedAt", false] },
+                                { $cond: [{ $gt: ["$lastFinishedAt", "$failedAt"] }, true, false] },
+                                true
+                            ]
+                        },
+                        false
+                    ]
+                }
+            }
+        },
+        {
+            $group: {
+                _id: "$name",
+                total: { $sum: 1 },
+                // Priority 1: Running
+                running: { $sum: { $cond: ["$isRunning", 1, 0] } },
+                // Priority 2: Failed (if not running)
+                failed: { $sum: { $cond: [{ $and: ["$isFailed", { $not: ["$isRunning"] }] }, 1, 0] } },
+                // Priority 3: Repeating (if not running and not failed)
+                repeating: { $sum: { $cond: [{ $and: ["$isRepeating", { $not: ["$isRunning"] }, { $not: ["$isFailed"] }] }, 1, 0] } },
+                // Priority 4: Scheduled (if not running, failed, or repeating)
+                scheduled: { $sum: { $cond: [{ $and: ["$isScheduled", { $not: ["$isRunning"] }, { $not: ["$isFailed"] }, { $not: ["$isRepeating"] }] }, 1, 0] } },
+                // Priority 5: Queued (if not running, failed, repeating, or scheduled)
+                queued: { $sum: { $cond: [{ $and: ["$isQueued", { $not: ["$isRunning"] }, { $not: ["$isFailed"] }, { $not: ["$isRepeating"] }, { $not: ["$isScheduled"] }] }, 1, 0] } },
+                // Priority 6: Completed (if it matches criteria or hits the final catch-all fallback)
+                completed: {
+                    $sum: {
+                        $cond: [
+                            {
+                                $or: [
+                                    "$isRunning",
+                                    "$isFailed",
+                                    "$isRepeating",
+                                    "$isScheduled",
+                                    "$isQueued"
+                                ]
+                            },
+                            0, // Already consumed by a higher priority state
+                            1  // Default/Completed fallback match
+                        ]
+                    }
+                },
+                // Independent count: tracks total disabled states globally
+                paused: { $sum: { $cond: [{ $eq: ["$disabled", true] }, 1, 0] } }
+            }
+        },
+        {
+            $project: {
+                _id: 0,
+                name: "$_id",
+                total: 1,
+                running: 1,
+                scheduled: 1,
+                queued: 1,
+                completed: 1,
+                failed: 1,
+                repeating: 1,
+                paused: 1
+            }
+        }
     ]).toArray();
 
 		return overviews;
