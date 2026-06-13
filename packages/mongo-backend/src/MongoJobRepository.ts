@@ -51,6 +51,37 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 /**
+ * MongoDB query operators that evaluate arbitrary server-side code or expressions.
+ * They have no legitimate use in a uniqueness key and turn a caller-controlled
+ * `unique` object into a NoSQL-injection vector (server-side JS execution, denial
+ * of service, blind matching), so they are rejected before the query is built.
+ */
+const BANNED_UNIQUE_OPERATORS = new Set(['$where', '$function', '$accumulator', '$expr']);
+
+/**
+ * Recursively reject dangerous operators in a caller-supplied `unique` query.
+ * Ordinary field equality and comparison operators are left untouched, preserving
+ * the documented `unique()` query-filter contract.
+ */
+export function assertSafeUniqueQuery(value: unknown): void {
+	if (Array.isArray(value)) {
+		for (const item of value) {
+			assertSafeUniqueQuery(item);
+		}
+		return;
+	}
+	if (!isPlainObject(value)) {
+		return;
+	}
+	for (const [key, child] of Object.entries(value)) {
+		if (BANNED_UNIQUE_OPERATORS.has(key)) {
+			throw new Error(`Unsafe operator "${key}" is not allowed in a unique() constraint`);
+		}
+		assertSafeUniqueQuery(child);
+	}
+}
+
+/**
  * Flatten a data filter object into MongoDB dot-notation keys.
  * This enables partial matching on the data subdocument.
  *
@@ -741,6 +772,9 @@ export class MongoJobRepository implements JobRepository {
 			}
 
 			if (unique) {
+				// Reject server-side-eval operators before the query is built (NoSQL injection).
+				assertSafeUniqueQuery(unique);
+
 				// Upsert based on the 'unique' query object
 				const query: Filter<MongoJobDocument> = { ...unique } as Filter<MongoJobDocument>;
 				query.name = props.name;
