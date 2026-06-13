@@ -693,6 +693,14 @@ export class Job<DATA = unknown | void> {
 
 			this.attrs.lastFinishedAt = new Date();
 
+			// Reset the failure counter on success so a later failure starts a
+			// fresh retry/backoff sequence instead of inheriting the old count.
+			// This matters for recurring jobs that recover between runs.
+			// 0 round-trips back to `undefined` via computeJobObj on reload.
+			if (this.attrs.failCount) {
+				this.attrs.failCount = 0;
+			}
+
 			this.agenda.emit('success', this);
 			this.agenda.emit(`success:${this.attrs.name}`, this);
 			log('[%s:%s] has succeeded', this.attrs.name, this.attrs._id);
