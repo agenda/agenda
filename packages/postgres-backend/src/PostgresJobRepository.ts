@@ -771,7 +771,15 @@ export class PostgresJobRepository implements JobRepository {
 							nextRunAt = now;
 							debounceStartedAt = null; // Reset for next cycle
 						} else {
+							// Schedule for delay ms from now, but never past the maxWait deadline
+							// so the job still runs within maxWait if saves stop.
 							nextRunAt = new Date(now.getTime() + debounce.delay);
+							if (debounce.maxWait) {
+								const deadline = existingDebounceStartedAt.getTime() + debounce.maxWait;
+								if (nextRunAt.getTime() > deadline) {
+									nextRunAt = new Date(deadline);
+								}
+							}
 							debounceStartedAt = existingDebounceStartedAt;
 							log('trailing debounce: rescheduling to %s', nextRunAt.toISOString());
 						}

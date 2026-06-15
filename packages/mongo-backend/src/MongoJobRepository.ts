@@ -791,8 +791,15 @@ export class MongoJobRepository implements JobRepository {
 							// Reset debounceStartedAt for the next cycle
 							(propsWithModifier as Partial<MongoJobDocument>).debounceStartedAt = undefined;
 						} else {
-							// Normal debounce: schedule for delay ms from now
+							// Normal debounce: schedule for delay ms from now, but never past the
+							// maxWait deadline so the job still runs within maxWait if saves stop.
 							newNextRunAt = new Date(now.getTime() + debounce.delay);
+							if (debounce.maxWait) {
+								const deadline = debounceStartedAt.getTime() + debounce.maxWait;
+								if (newNextRunAt.getTime() > deadline) {
+									newNextRunAt = new Date(deadline);
+								}
+							}
 							(propsWithModifier as Partial<MongoJobDocument>).debounceStartedAt = debounceStartedAt;
 							log('trailing debounce: rescheduling to %s', newNextRunAt.toISOString());
 						}

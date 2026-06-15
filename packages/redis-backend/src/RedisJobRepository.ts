@@ -1010,7 +1010,15 @@ export class RedisJobRepository implements JobRepository {
 								nextRunAt = nowIso;
 								debounceStartedAt = 'null'; // Reset for next cycle
 							} else {
+								// Schedule for delay ms from now, but never past the maxWait deadline
+								// so the job still runs within maxWait if saves stop.
 								const newNextRunAt = new Date(now.getTime() + debounce.delay);
+								if (debounce.maxWait) {
+									const deadline = existingDebounceStartedAt.getTime() + debounce.maxWait;
+									if (newNextRunAt.getTime() > deadline) {
+										newNextRunAt.setTime(deadline);
+									}
+								}
 								nextRunAt = newNextRunAt.toISOString();
 								debounceStartedAt = existingDebounceStartedAt.toISOString();
 								log('trailing debounce: rescheduling to %s', nextRunAt);
