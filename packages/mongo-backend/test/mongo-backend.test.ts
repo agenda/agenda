@@ -342,6 +342,34 @@ describe('MongoBackend', () => {
 			expect(removed).toBe(1);
 		});
 
+		it('should round-trip date constraints (startDate, endDate, skipDays)', async () => {
+			const startDate = new Date('2026-01-01T00:00:00Z');
+			const endDate = new Date('2026-12-31T00:00:00Z');
+			const skipDays = [0, 6];
+
+			const saved = await backend.repository.saveJob({
+				name: 'constraints-test',
+				priority: 0,
+				nextRunAt: new Date(),
+				type: 'normal',
+				data: {},
+				repeatInterval: '1 day',
+				startDate,
+				endDate,
+				skipDays
+			}, undefined);
+
+			const byId = await backend.repository.getJobById(saved._id!.toString());
+			expect(byId?.startDate?.getTime()).toBe(startDate.getTime());
+			expect(byId?.endDate?.getTime()).toBe(endDate.getTime());
+			expect(byId?.skipDays).toEqual(skipDays);
+
+			const result = await backend.repository.queryJobs({ name: 'constraints-test' });
+			expect(result.jobs[0].startDate?.getTime()).toBe(startDate.getTime());
+			expect(result.jobs[0].endDate?.getTime()).toBe(endDate.getTime());
+			expect(result.jobs[0].skipDays).toEqual(skipDays);
+		});
+
 		it('should handle concurrent job locking with findOneAndUpdate', async () => {
 			await Promise.all([
 				backend.repository.saveJob({
