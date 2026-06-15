@@ -676,7 +676,7 @@ export class PostgresJobRepository implements JobRepository {
 					name, priority, next_run_at, type, repeat_timezone,
 					repeat_interval, data, repeat_at, disabled, fork, last_modified_by
 				 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-				 ON CONFLICT ((name)) WHERE type = 'single'
+				 ON CONFLICT (name) WHERE type = 'single'
 				 DO UPDATE SET
 					priority = EXCLUDED.priority,
 					next_run_at = ${shouldProtectNextRunAt
