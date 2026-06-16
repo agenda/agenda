@@ -7,6 +7,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Agenda, Job, toJobId } from '../src/index.js';
 import type { AgendaBackend, JobRepository, JobParameters, JobLogger, JobLogEntry, JobLogQuery, JobLogQueryResult } from '../src/index.js';
 import { computeJobState } from '../src/types/JobQuery.js';
+import { computeFromInterval } from '../src/utils/nextRunAt.js';
 
 /**
  * Minimal mock repository that satisfies the interface without real storage.
@@ -425,6 +426,27 @@ describe('Job Unit Tests', () => {
 		});
 
 		// Note: skipImmediate is tested in the repeatEvery describe block
+	});
+
+	describe('computeFromInterval cron guard', () => {
+		// Regression: when the stored nextRunAt is further in the future than the
+		// next cron tick after lastRunAt, the guard must NOT skip that tick.
+		it('does not skip a cron occurrence when nextRunAt is ahead of the next tick', () => {
+			const lastRunAt = new Date('2024-01-23T20:12:59.083Z');
+			const attrs = {
+				name: 'demo',
+				repeatInterval: '*/13 * * * *', // every 13 minutes
+				repeatTimezone: 'UTC',
+				lastRunAt,
+				// stored nextRunAt is ~1h40m ahead, well past the next tick (20:13)
+				nextRunAt: new Date('2024-01-23T21:52:49.522Z')
+			} as unknown as JobParameters;
+
+			const next = computeFromInterval(attrs);
+			expect(next).not.toBeNull();
+			// the next 13-minute tick after lastRunAt is 20:13:00, not 20:26:00
+			expect(next!.toISOString()).toBe('2024-01-23T20:13:00.000Z');
+		});
 	});
 
 	describe('fail', () => {
