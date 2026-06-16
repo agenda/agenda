@@ -25,6 +25,9 @@ export function getCreateTableSQL(tableName: string): string {
 			fork BOOLEAN DEFAULT FALSE,
 			last_modified_by VARCHAR(255),
 			debounce_started_at TIMESTAMPTZ,
+			start_date TIMESTAMPTZ,
+			end_date TIMESTAMPTZ,
+			skip_days INTEGER[],
 			created_at TIMESTAMPTZ DEFAULT NOW(),
 			updated_at TIMESTAMPTZ DEFAULT NOW()
 		);
