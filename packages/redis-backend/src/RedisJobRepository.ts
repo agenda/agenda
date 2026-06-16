@@ -133,6 +133,13 @@ export class RedisJobRepository implements JobRepository {
 			debounceStartedAt:
 				data.debounceStartedAt && data.debounceStartedAt !== 'null'
 					? new Date(data.debounceStartedAt)
+					: undefined,
+			startDate:
+				data.startDate && data.startDate !== 'null' ? new Date(data.startDate) : undefined,
+			endDate: data.endDate && data.endDate !== 'null' ? new Date(data.endDate) : undefined,
+			skipDays:
+				data.skipDays && data.skipDays !== 'null'
+					? (JSON.parse(data.skipDays) as number[])
 					: undefined
 		};
 	}
@@ -167,6 +174,9 @@ export class RedisJobRepository implements JobRepository {
 			fork: String(job.fork ?? false),
 			lastModifiedBy: lastModifiedBy ?? 'null',
 			debounceStartedAt: job.debounceStartedAt?.toISOString() || 'null',
+			startDate: job.startDate?.toISOString() || 'null',
+			endDate: job.endDate?.toISOString() || 'null',
+			skipDays: job.skipDays ? JSON.stringify(job.skipDays) : 'null',
 			createdAt: now,
 			updatedAt: now
 		};

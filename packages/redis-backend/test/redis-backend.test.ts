@@ -273,6 +273,29 @@ describe('RedisBackend', () => {
 			const members = await redis.smembers(`${TEST_KEY_PREFIX}jobs:by_name:set-test`);
 			expect(members.length).toBe(1);
 		});
+
+		it('should round-trip date constraints (startDate, endDate, skipDays)', async () => {
+			const startDate = new Date('2026-01-01T00:00:00.000Z');
+			const endDate = new Date('2026-12-31T00:00:00.000Z');
+			const skipDays = [0, 6];
+
+			const saved = await backend.repository.saveJob({
+				name: 'constraints-test',
+				priority: 0,
+				nextRunAt: new Date(),
+				type: 'normal',
+				data: {},
+				repeatInterval: '1 day',
+				startDate,
+				endDate,
+				skipDays
+			});
+
+			const byId = await backend.repository.getJobById(saved._id!.toString());
+			expect(byId?.startDate?.getTime()).toBe(startDate.getTime());
+			expect(byId?.endDate?.getTime()).toBe(endDate.getTime());
+			expect(byId?.skipDays).toEqual(skipDays);
+		});
 	});
 });
 
