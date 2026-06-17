@@ -760,10 +760,18 @@ export class PostgresJobRepository implements JobRepository {
 					const timeSinceStart = now.getTime() - existingDebounceStartedAt.getTime();
 
 					if (debounce.strategy === 'leading') {
-						// Leading: keep original nextRunAt, just update data
-						log('leading debounce: keeping original nextRunAt, updating data only');
-						nextRunAt = existingRow.next_run_at;
-						debounceStartedAt = existingDebounceStartedAt;
+						// Leading: while still within the debounce window, ignore the call
+						// (keep the original nextRunAt). Once the window has elapsed, start a
+						// fresh leading edge so the job fires again.
+						if (timeSinceStart >= debounce.delay) {
+							log('leading debounce: window elapsed, starting fresh leading edge');
+							nextRunAt = now;
+							debounceStartedAt = now;
+						} else {
+							log('leading debounce: within window, keeping original nextRunAt, updating data only');
+							nextRunAt = existingRow.next_run_at;
+							debounceStartedAt = existingDebounceStartedAt;
+						}
 					} else {
 						// Trailing (default): push nextRunAt forward
 						if (debounce.maxWait && timeSinceStart >= debounce.maxWait) {

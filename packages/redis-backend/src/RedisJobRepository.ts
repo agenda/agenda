@@ -999,10 +999,18 @@ export class RedisJobRepository implements JobRepository {
 						const timeSinceStart = now.getTime() - existingDebounceStartedAt.getTime();
 
 						if (debounce.strategy === 'leading') {
-							// Leading: keep original nextRunAt, just update data
-							log('leading debounce: keeping original nextRunAt, updating data only');
-							nextRunAt = jobData.nextRunAt || 'null';
-							debounceStartedAt = existingDebounceStartedAt.toISOString();
+							// Leading: while still within the debounce window, ignore the call
+							// (keep the original nextRunAt). Once the window has elapsed, start a
+							// fresh leading edge so the job fires again.
+							if (timeSinceStart >= debounce.delay) {
+								log('leading debounce: window elapsed, starting fresh leading edge');
+								nextRunAt = nowIso;
+								debounceStartedAt = now.toISOString();
+							} else {
+								log('leading debounce: within window, keeping original nextRunAt, updating data only');
+								nextRunAt = jobData.nextRunAt || 'null';
+								debounceStartedAt = existingDebounceStartedAt.toISOString();
+							}
 						} else {
 							// Trailing (default): push nextRunAt forward
 							if (debounce.maxWait && timeSinceStart >= debounce.maxWait) {
