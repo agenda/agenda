@@ -1954,6 +1954,13 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 					const jobDataFinished = await backend.repository.getJobById(job.attrs._id!);
 					expect(jobDataFinished?.lastFinishedAt).toBeDefined();
 					expect(jobDataFinished?.failReason).not.toBeUndefined();
+					// failReason must be the real error message string, not a serialized
+					// Error object. JSON.stringify(error) yields "{}", which would be
+					// persisted as an empty object (losing the message and violating the
+					// `failReason: string` type). The fork helper sends `err.message`.
+					expect(typeof jobDataFinished?.failReason).toBe('string');
+					expect((jobDataFinished?.failReason as string).length).toBeGreaterThan(0);
+					expect(jobDataFinished?.failReason).not.toBe('{}');
 					expect(jobDataFinished?.failCount).toBe(1);
 
 					await agendaFork.stop();
