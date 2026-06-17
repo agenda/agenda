@@ -674,8 +674,9 @@ export class PostgresJobRepository implements JobRepository {
 			const result = await this.pool.query<PostgresJobRow>(
 				`INSERT INTO "${this.tableName}" (
 					name, priority, next_run_at, type, repeat_timezone,
-					repeat_interval, data, repeat_at, disabled, fork, last_modified_by
-				 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+					repeat_interval, data, repeat_at, disabled, fork, last_modified_by,
+					fail_reason, fail_count, failed_at
+				 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 				 ON CONFLICT ((name)) WHERE type = 'single'
 				 DO UPDATE SET
 					priority = EXCLUDED.priority,
@@ -701,7 +702,10 @@ export class PostgresJobRepository implements JobRepository {
 					props.repeatAt || null,
 					props.disabled || false,
 					props.fork || false,
-					options?.lastModifiedBy || null
+					options?.lastModifiedBy || null,
+					props.failReason ?? null,
+					props.failCount ?? null,
+					props.failedAt || null
 				]
 			);
 
@@ -830,8 +834,9 @@ export class PostgresJobRepository implements JobRepository {
 				const result = await this.pool.query<PostgresJobRow>(
 					`INSERT INTO "${this.tableName}" (
 						name, priority, next_run_at, type, repeat_timezone,
-						repeat_interval, data, repeat_at, disabled, fork, last_modified_by, debounce_started_at
-					 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+						repeat_interval, data, repeat_at, disabled, fork, last_modified_by, debounce_started_at,
+						fail_reason, fail_count, failed_at
+					 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 					 RETURNING *`,
 					[
 						props.name,
@@ -845,7 +850,10 @@ export class PostgresJobRepository implements JobRepository {
 						props.disabled || false,
 						props.fork || false,
 						options?.lastModifiedBy || null,
-						debounceStartedAt
+						debounceStartedAt,
+						props.failReason ?? null,
+						props.failCount ?? null,
+						props.failedAt || null
 					]
 				);
 
@@ -858,8 +866,9 @@ export class PostgresJobRepository implements JobRepository {
 		const result = await this.pool.query<PostgresJobRow>(
 			`INSERT INTO "${this.tableName}" (
 				name, priority, next_run_at, type, repeat_timezone,
-				repeat_interval, data, repeat_at, disabled, fork, last_modified_by
-			 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+				repeat_interval, data, repeat_at, disabled, fork, last_modified_by,
+				fail_reason, fail_count, failed_at
+			 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 			 RETURNING *`,
 			[
 				props.name,
@@ -872,7 +881,10 @@ export class PostgresJobRepository implements JobRepository {
 				props.repeatAt || null,
 				props.disabled || false,
 				props.fork || false,
-				options?.lastModifiedBy || null
+				options?.lastModifiedBy || null,
+				props.failReason ?? null,
+				props.failCount ?? null,
+				props.failedAt || null
 			]
 		);
 
