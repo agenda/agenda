@@ -326,10 +326,11 @@ export class PostgresJobRepository implements JobRepository {
 
 				for (const row of result.rows) {
 					const job = this.rowToJob(row);
-					const state = computeJobState(job, now);
-					overview[state as keyof typeof overview]++;
 					if (job.disabled === true) {
 						overview.paused++;
+					} else {
+						const state = computeJobState(job, now);
+						overview[state as keyof typeof overview]++;
 					}
 				}
 
