@@ -460,7 +460,11 @@ export class Job<DATA = unknown | void> {
 			throw new Error(`job ${this.attrs.name} got canceled already: ${this.canceled}!`);
 		}
 		this.attrs.lockedAt = new Date();
-		this.attrs.progress = progress;
+		// Only update progress when a value is supplied; bare touch() (keep-alive)
+		// must not wipe a previously reported progress value.
+		if (progress !== undefined) {
+			this.attrs.progress = progress;
+		}
 
 		await this.agenda.db.saveJobState(this.attrs, {
 			lastModifiedBy: this.agenda.attrs.name || undefined

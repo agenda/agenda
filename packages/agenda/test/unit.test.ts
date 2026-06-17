@@ -177,6 +177,21 @@ describe('Agenda Unit Tests', () => {
 		});
 	});
 
+	describe('touch', () => {
+		it('preserves progress when touch() is called without an argument', async () => {
+			agenda.define('touch-job', async () => {});
+			const job = agenda.create('touch-job', {});
+			job.attrs._id = toJobId('touch-id');
+
+			await job.touch(50);
+			expect(job.attrs.progress).toBe(50);
+
+			// touch() with no arg (keep-alive) must not wipe progress
+			await job.touch();
+			expect(job.attrs.progress).toBe(50);
+		});
+	});
+
 	describe('job creation with create()', () => {
 		it('creates a job instance', () => {
 			agenda.define('test job', () => {});
