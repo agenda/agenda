@@ -1,4 +1,4 @@
-import { expect, describe, it, beforeAll, afterAll, beforeEach, afterEach, assert } from 'vitest';
+import { expect, describe, it, beforeAll, afterAll, beforeEach, afterEach, assert, vi } from 'vitest';
 import { Db, DbOptions, MongoClient, ObjectId } from 'mongodb';
 import { randomUUID } from 'crypto';
 import { InMemoryNotificationChannel } from 'agenda';
@@ -536,6 +536,52 @@ describe('MongoBackend', () => {
 			expect(next.startDate).toEqual(startDate);
 			expect(next.endDate).toEqual(endDate);
 			expect(next.skipDays).toEqual(skipDays);
+		});
+	});
+
+	describe('queryJobs pagination', () => {
+		it('should push skip/limit to the database when no state filter is set', async () => {
+			const total = 200;
+			const docs = Array.from({ length: total }, (_, i) => ({
+				name: 'pagination-test',
+				priority: 0,
+				nextRunAt: new Date(),
+				type: 'normal',
+				data: { i }
+			}));
+			await db.collection(TEST_COLLECTION).insertMany(docs as any);
+
+			// Wrap find() on the repository's own collection to capture how many
+			// documents the returned cursor materializes via toArray().
+			const collection = (backend.repository as any).collection as ReturnType<Db['collection']>;
+			const originalFind = collection.find.bind(collection);
+			let materialized = -1;
+			const findSpy = vi
+				.spyOn(collection, 'find')
+				.mockImplementation((...args: any[]) => {
+					const cursor = (originalFind as any)(...args);
+					const originalToArray = cursor.toArray.bind(cursor);
+					cursor.toArray = async () => {
+						const result = await originalToArray();
+						materialized = result.length;
+						return result;
+					};
+					return cursor;
+				});
+
+			try {
+				const result = await backend.repository.queryJobs({
+					name: 'pagination-test',
+					limit: 10
+				});
+
+				expect(result.jobs).toHaveLength(10);
+				expect(result.total).toBe(total);
+				// The cursor must only materialize the page, not the whole collection.
+				expect(materialized).toBe(10);
+			} finally {
+				findSpy.mockRestore();
+			}
 		});
 	});
 
