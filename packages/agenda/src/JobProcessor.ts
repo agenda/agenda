@@ -516,6 +516,11 @@ export class JobProcessor {
 
 						this.lockedJobs.splice(lockedJobIndex, 1);
 						this.updateStatus(job.attrs.name, 'locked', -1);
+						// Release the database lock as well. Otherwise a job that was
+						// locked via the expired-lock recovery path while its nextRunAt
+						// is still in the future gets re-locked on every scan and never
+						// reaches its run time.
+						this.agenda.db.unlockJob(job.attrs);
 					} else {
 						log.extend('jobProcessing')(
 							'[%s:%s] nextRunAt is in the future, calling setTimeout(%d)',
