@@ -20,6 +20,35 @@ import type { RedisBackendConfig, RedisJobData } from './types.js';
 const log = debug('agenda:redis:repository');
 
 /**
+ * Recursively check whether `stored` contains every key/value of `filter`.
+ *
+ * Mirrors the containment semantics of the Mongo (dot-notation) and Postgres
+ * (jsonb `@>`) backends: plain objects are matched key-by-key (allowing extra
+ * keys in `stored`), and leaf values must be strictly equal. This avoids the
+ * false positives/negatives of the previous JSON-substring approach (e.g.
+ * `{ x: 1 }` no longer matches stored `{ x: 11 }`, and `{ b: 2, a: 1 }` matches
+ * stored `{ a: 1, b: 2 }` regardless of key order).
+ */
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function matchesContainment(stored: unknown, filter: unknown): boolean {
+	if (isPlainObject(filter)) {
+		if (!isPlainObject(stored)) return false;
+		for (const key of Object.keys(filter)) {
+			if (!matchesContainment(stored[key], filter[key])) return false;
+		}
+		return true;
+	}
+	if (Array.isArray(filter)) {
+		if (!Array.isArray(stored) || stored.length !== filter.length) return false;
+		return filter.every((value, index) => matchesContainment(stored[index], value));
+	}
+	return stored === filter;
+}
+
+/**
  * Redis implementation of JobRepository
  *
  * Data structure:
@@ -240,9 +269,7 @@ export class RedisJobRepository implements JobRepository {
 			if (!includeDisabled && job.disabled) continue;
 			if (search && !job.name.toLowerCase().includes(search.toLowerCase())) continue;
 			if (data !== undefined) {
-				const jobDataStr = JSON.stringify(job.data);
-				const searchDataStr = JSON.stringify(data);
-				if (!jobDataStr.includes(searchDataStr.slice(1, -1))) continue;
+				if (!matchesContainment(job.data, data)) continue;
 			}
 
 			const jobState = computeJobState(job, now);
@@ -426,14 +453,22 @@ export class RedisJobRepository implements JobRepository {
 
 	/**
 	 * Filter job IDs by matching against their stored data field.
-	 * Uses a substring match on the JSON-serialized data.
+	 * Uses recursive value containment (matching Mongo/Postgres semantics)
+	 * rather than a JSON-substring match, which avoids false positives such as
+	 * `{ id: 1 }` matching stored `{ id: 11 }`.
 	 */
 	private async filterJobIdsByData(jobIds: string[], dataFilter: unknown): Promise<string[]> {
-		const searchDataStr = JSON.stringify(dataFilter);
 		const matching: string[] = [];
 		for (const jobId of jobIds) {
 			const jobData = await this.redis.hget(this.key(`job:${jobId}`), 'data');
-			if (jobData && jobData.includes(searchDataStr.slice(1, -1))) {
+			if (jobData === null || jobData === undefined) continue;
+			let stored: unknown;
+			try {
+				stored = JSON.parse(jobData || '{}');
+			} catch {
+				continue;
+			}
+			if (matchesContainment(stored, dataFilter)) {
 				matching.push(jobId);
 			}
 		}
