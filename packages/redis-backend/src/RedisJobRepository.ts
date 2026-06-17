@@ -180,9 +180,15 @@ export class RedisJobRepository implements JobRepository {
 		if (!nextRunAt) {
 			return Number.MAX_SAFE_INTEGER; // Jobs without nextRunAt go to the end
 		}
-		// Combine timestamp with priority as decimal part
-		// Higher priority = lower decimal = comes first when sorting ascending
-		const priorityPart = (100 - Math.min(Math.max(priority, 0), 99)) / 1000;
+		// Combine timestamp with priority as decimal part.
+		// Map the signed priority into a fractional tiebreak in (0, 1) so that a
+		// higher priority yields a strictly smaller part (comes first when sorting
+		// ascending) while keeping adjacent priorities distinct. Agenda's named
+		// priorities are negative (lowest=-20, low=-10, normal=0, high=10, highest=20),
+		// so clamping to [0, 99] (the previous behaviour) collapsed every
+		// non-positive priority to the same tiebreak and broke ordering.
+		const clampedPriority = Math.min(Math.max(priority, -1000), 1000);
+		const priorityPart = (1000 - clampedPriority) / 2001;
 		return nextRunAt.getTime() + priorityPart;
 	}
 
