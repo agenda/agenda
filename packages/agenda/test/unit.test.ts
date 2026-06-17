@@ -260,6 +260,28 @@ describe('Job Unit Tests', () => {
 			const job = new Job(agenda, { name: 'demo', type: 'normal' });
 			expect(job.unique({})).toBe(job);
 		});
+
+		it('preserves a previously-set debounce config when called without opts', () => {
+			const job = new Job(agenda, { name: 'demo', type: 'normal' })
+				.debounce(2000)
+				.unique({ 'data.x': 1 });
+
+			expect(job.attrs.unique).toEqual({ 'data.x': 1 });
+			expect(job.attrs.uniqueOpts?.debounce).toEqual({
+				delay: 2000,
+				maxWait: undefined,
+				strategy: 'trailing'
+			});
+		});
+
+		it('supports unique(opts) followed by debounce()', () => {
+			const job = new Job(agenda, { name: 'demo', type: 'normal' })
+				.unique({ 'data.x': 1 }, { insertOnly: true })
+				.debounce(2000);
+
+			expect(job.attrs.uniqueOpts?.insertOnly).toBe(true);
+			expect(job.attrs.uniqueOpts?.debounce?.delay).toBe(2000);
+		});
 	});
 
 	describe('repeatEvery', () => {
