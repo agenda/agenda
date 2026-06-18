@@ -2054,13 +2054,13 @@ Performance tuning is backend-specific. See the documentation for your backend:
 # Sandboxed Worker - use child processes
 
 It's possible to start jobs in a child process, this helps for example for long running processes
-to seperate them from the main thread. For example if one process consumes too much memory and gets killed,
+to separate them from the main thread. For example if one process consumes too much memory and gets killed,
 it will not affect any others.
 To use this feature, several steps are required.
 1.) create a childWorker helper.
-The subrocess has a complete seperate context, so there are no database connections or anything else that can be shared.
+The subprocess has a complete separate context, so there are no database connections or anything else that can be shared.
 Therefore you have to ensure that all required connections and initializations are done here too. Furthermore
-you also have to load the correct job definition so that agenda nows what code it must execute. Therefore 3 parameters
+you also have to load the correct job definition so that agenda knows what code it must execute. Therefore 3 parameters
 are passed to the childWorker: name, jobId and path to the job definition.
 
 Example file can look like this:
@@ -2142,8 +2142,8 @@ process.on('message', message => {
 ```
 
 Ensure to only define job definitions during this step, otherwise you create some
-overhead (e.g. if you create new jobs inside the defintion files). That's why I call
-the defintion file with agenda and a second paramter that is set to true. If this
+overhead (e.g. if you create new jobs inside the definition files). That's why I call
+the definition file with agenda and a second parameter that is set to true. If this
 parameter is true, I do not initialize any jobs (create jobs etc..)
 
 2.) to use this, you have to enable it on a job. Set forkMode to true:
