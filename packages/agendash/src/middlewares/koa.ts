@@ -1,10 +1,18 @@
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { Agenda } from 'agenda';
 import type { Middleware, Context, Next } from 'koa';
 import { AgendashController } from '../AgendashController.js';
 import { cspHeader } from '../csp.js';
-import type { ApiQueryParams, CreateJobRequest, DeleteRequest, RequeueRequest, RetryRequest, PauseRequest, ResumeRequest } from '../types.js';
+import type {
+	ApiQueryParams,
+	CreateJobRequest,
+	DeleteRequest,
+	RequeueRequest,
+	RetryRequest,
+	PauseRequest,
+	ResumeRequest
+} from '../types.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -55,7 +63,7 @@ export async function createKoaMiddlewareAsync(agenda: Agenda): Promise<Middlewa
 	const [{ default: koaStatic }, { default: bodyParser }, { default: Router }] = await Promise.all([
 		import('koa-static'),
 		import('koa-bodyparser'),
-		import('koa-router')
+		import('@koa/router')
 	]);
 
 	// Static files (deferred to run after routes)
@@ -67,7 +75,7 @@ export async function createKoaMiddlewareAsync(agenda: Agenda): Promise<Middlewa
 	// API routes
 	const router = new Router();
 
-	router.get('/api', async (ctx) => {
+	router.get('/api', async ctx => {
 		const query = ctx.query as Record<string, string | undefined>;
 		try {
 			const params: ApiQueryParams = {
@@ -86,7 +94,7 @@ export async function createKoaMiddlewareAsync(agenda: Agenda): Promise<Middlewa
 		}
 	});
 
-	router.post('/api/jobs/requeue', async (ctx) => {
+	router.post('/api/jobs/requeue', async ctx => {
 		try {
 			const { jobIds } = ctx.request.body as RequeueRequest;
 			ctx.body = await controller.requeueJobs(jobIds);
@@ -96,7 +104,7 @@ export async function createKoaMiddlewareAsync(agenda: Agenda): Promise<Middlewa
 		}
 	});
 
-	router.post('/api/jobs/retry', async (ctx) => {
+	router.post('/api/jobs/retry', async ctx => {
 		try {
 			const { jobIds } = ctx.request.body as RetryRequest;
 			ctx.body = await controller.retryJobs(jobIds);
@@ -106,7 +114,7 @@ export async function createKoaMiddlewareAsync(agenda: Agenda): Promise<Middlewa
 		}
 	});
 
-	router.post('/api/jobs/delete', async (ctx) => {
+	router.post('/api/jobs/delete', async ctx => {
 		try {
 			const { jobIds } = ctx.request.body as DeleteRequest;
 			ctx.body = await controller.deleteJobs(jobIds);
@@ -116,7 +124,7 @@ export async function createKoaMiddlewareAsync(agenda: Agenda): Promise<Middlewa
 		}
 	});
 
-	router.post('/api/jobs/create', async (ctx) => {
+	router.post('/api/jobs/create', async ctx => {
 		try {
 			const options = ctx.request.body as CreateJobRequest;
 			ctx.body = await controller.createJob(options);
@@ -126,7 +134,7 @@ export async function createKoaMiddlewareAsync(agenda: Agenda): Promise<Middlewa
 		}
 	});
 
-	router.post('/api/jobs/pause', async (ctx) => {
+	router.post('/api/jobs/pause', async ctx => {
 		try {
 			const { jobIds } = ctx.request.body as PauseRequest;
 			ctx.body = await controller.pauseJobs(jobIds);
@@ -136,7 +144,7 @@ export async function createKoaMiddlewareAsync(agenda: Agenda): Promise<Middlewa
 		}
 	});
 
-	router.post('/api/jobs/resume', async (ctx) => {
+	router.post('/api/jobs/resume', async ctx => {
 		try {
 			const { jobIds } = ctx.request.body as ResumeRequest;
 			ctx.body = await controller.resumeJobs(jobIds);
@@ -146,7 +154,7 @@ export async function createKoaMiddlewareAsync(agenda: Agenda): Promise<Middlewa
 		}
 	});
 
-	router.get('/api/stats', async (ctx) => {
+	router.get('/api/stats', async ctx => {
 		try {
 			const fullDetails = ctx.query.fullDetails === 'true';
 			ctx.body = await controller.getStats(fullDetails);
@@ -157,11 +165,14 @@ export async function createKoaMiddlewareAsync(agenda: Agenda): Promise<Middlewa
 	});
 
 	// SSE endpoint for real-time job state notifications
-	router.get('/api/events', async (ctx) => {
+	router.get('/api/events', async ctx => {
 		// Check if state notifications are available
 		if (!controller.hasStateNotifications()) {
 			ctx.status = 501;
-			ctx.body = { error: 'State notifications not available. Configure a notification channel that supports state subscriptions.' };
+			ctx.body = {
+				error:
+					'State notifications not available. Configure a notification channel that supports state subscriptions.'
+			};
 			return;
 		}
 
@@ -172,7 +183,7 @@ export async function createKoaMiddlewareAsync(agenda: Agenda): Promise<Middlewa
 		ctx.set('X-Accel-Buffering', 'no'); // Disable nginx buffering
 
 		// Use a passthrough stream for SSE
-		const { PassThrough } = await import('stream');
+		const { PassThrough } = await import('node:stream');
 		const stream = new PassThrough();
 		ctx.body = stream;
 
@@ -180,7 +191,7 @@ export async function createKoaMiddlewareAsync(agenda: Agenda): Promise<Middlewa
 		stream.write('event: connected\ndata: {"connected":true}\n\n');
 
 		// Subscribe to state notifications
-		const unsubscribe = controller.createStateStream((notification) => {
+		const unsubscribe = controller.createStateStream(notification => {
 			stream.write(`data: ${JSON.stringify(notification)}\n\n`);
 		});
 
