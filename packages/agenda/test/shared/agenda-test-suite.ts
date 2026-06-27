@@ -414,7 +414,7 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				expect(lockedDuringProcessing).toBe(true);
 			});
 
-			it('should clear locks on stop', async () => {
+			it('should preserve locks for running jobs on stop', async () => {
 				agenda.define('clear-lock-test', async () => {
 					await new Promise(resolve => setTimeout(resolve, 5000));
 				});
@@ -425,7 +425,45 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				await agenda.stop();
 
 				const result = await agenda.queryJobs({ name: 'clear-lock-test' });
-				expect(result.jobs[0].lockedAt).toBeFalsy();
+				expect(result.jobs[0].lockedAt).toBeTruthy();
+			});
+
+			it('should clear locks for queued jobs on stop', async () => {
+				agenda.define(
+					'queued-lock-test',
+					async () => {
+						await delay(5000);
+					},
+					{ concurrency: 1 }
+				);
+
+				await agenda.start();
+				await Promise.all([agenda.now('queued-lock-test'), agenda.now('queued-lock-test')]);
+
+				let lockedJobs = 0;
+				let runningJobs = 0;
+				const deadline = Date.now() + 5000;
+
+				do {
+					const stats = await agenda.getRunningStats();
+					lockedJobs = stats.lockedJobs as number;
+					runningJobs = stats.runningJobs as number;
+
+					if (lockedJobs >= 2 && runningJobs === 1) {
+						break;
+					}
+
+					await delay(25);
+				} while (Date.now() < deadline);
+
+				expect(lockedJobs).toBeGreaterThanOrEqual(2);
+				expect(runningJobs).toBe(1);
+
+				await agenda.stop();
+
+				const result = await agenda.queryJobs({ name: 'queued-lock-test' });
+				const lockedAfterStop = result.jobs.filter(job => job.lockedAt).length;
+				expect(lockedAfterStop).toBe(1);
 			});
 		});
 
