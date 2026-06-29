@@ -1,5 +1,5 @@
-import { expect, describe, it, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
-import { Db, MongoClient, ObjectId } from 'mongodb';
+import { expect, describe, it, beforeAll, afterAll, beforeEach, afterEach, assert } from 'vitest';
+import { Db, DbOptions, MongoClient, ObjectId } from 'mongodb';
 import { randomUUID } from 'crypto';
 import { InMemoryNotificationChannel } from 'agenda';
 import { MongoBackend, MongoJobRepository, MongoJobLogger } from '../src/index.js';
@@ -15,7 +15,7 @@ import { fullAgendaTestSuite, jobLoggerTestSuite } from 'agenda/testing';
 const TEST_COLLECTION = 'agendaJobs';
 
 // Helper to create a fresh database connection (used by MongoDB-specific tests)
-async function createTestDb(): Promise<{ db: Db; client: MongoClient; disconnect: () => Promise<void> }> {
+async function createTestDb(options?: DbOptions): Promise<{ db: Db; client: MongoClient; disconnect: () => Promise<void> }> {
 	const baseUri = process.env.MONGO_URI;
 	if (!baseUri) {
 		throw new Error('MONGO_URI not set. Ensure global setup is configured.');
@@ -30,7 +30,7 @@ async function createTestDb(): Promise<{ db: Db; client: MongoClient; disconnect
 	const uri = url.toString();
 
 	const client = await MongoClient.connect(uri);
-	const db = client.db(dbName);
+	const db = client.db(dbName, options);
 
 	return {
 		db,
@@ -379,6 +379,45 @@ describe('MongoBackend', () => {
 			const collectionNames = collections.map(c => c.name);
 			expect(collectionNames).toContain(TEST_COLLECTION);
 		});
+
+    it('should explicitly set optional properties to null and avoid relying on the "ignoreUndefined" flag', async () => {
+      const {
+        db: dbWithIgnoreUndefined,
+        disconnect: disconnectDbWithIgnoreUndefined
+      } = await createTestDb({ ignoreUndefined: true });
+
+      backend = new MongoBackend({
+        mongo: dbWithIgnoreUndefined,
+        collection: TEST_COLLECTION
+      });
+
+      await backend.connect();
+      await backend.repository.saveJob({
+        name: 'concurrent-test',
+        priority: 0,
+        nextRunAt: new Date(Date.now() - 1000),
+        type: 'normal',
+        data: { id: 1, ignoredField: undefined }
+      }, undefined);
+
+      const job = await dbWithIgnoreUndefined.collection(TEST_COLLECTION).findOne();
+
+      assert(job !== null, 'Job should exist in the collection');
+      expect(job.lockedAt).toBeNull();
+      expect(job.lastFinishedAt).toBeNull();
+      expect(job.failedAt).toBeNull();
+      expect(job.failCount).toBeNull();
+      expect(job.failReason).toBeNull();
+      expect(job.repeatTimezone).toBeNull();
+      expect(job.lastRunAt).toBeNull();
+      expect(job.repeatInterval).toBeNull();
+      expect(job.repeatAt).toBeNull();
+      expect(job.disabled).toBeNull();
+      expect(job.progress).toBeNull();
+      expect(job.data.ignoredField).toBeUndefined();
+
+      await disconnectDbWithIgnoreUndefined();
+    });
 	});
 
 	describe('ensureIndex option', () => {

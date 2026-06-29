@@ -2,6 +2,13 @@ import type { Db, MongoClientOptions } from 'mongodb';
 import type { SortDirection } from 'agenda';
 
 /**
+ * Adds `null` to optional properties while leaving required properties unchanged.
+ */
+export type OptionalKeysToNullable<T extends object> = {
+	[K in keyof T]: object extends Pick<T, K> ? T[K] | null : T[K];
+};
+
+/**
  * Configuration options for MongoBackend
  */
 
