@@ -465,6 +465,103 @@ export function agendaTestSuite(config: AgendaTestConfig): void {
 				const lockedAfterStop = result.jobs.filter(job => job.lockedAt).length;
 				expect(lockedAfterStop).toBe(1);
 			});
+
+			it('should clear locks for scheduled jobs waiting in the local queue on stop', async () => {
+				agenda.processEvery(1000);
+				agenda.define('scheduled-queued-lock-test', async () => {
+					await delay(5000);
+				});
+
+				await agenda.schedule(new Date(Date.now() + 300), 'scheduled-queued-lock-test');
+				await agenda.start();
+
+				let lockedJobs = 0;
+				let runningJobs = 0;
+				const deadline = Date.now() + 5000;
+
+				do {
+					const stats = await agenda.getRunningStats();
+					lockedJobs = stats.lockedJobs as number;
+					runningJobs = stats.runningJobs as number;
+
+					if (lockedJobs === 1 && runningJobs === 0) {
+						break;
+					}
+
+					await delay(25);
+				} while (Date.now() < deadline);
+
+				expect(lockedJobs).toBe(1);
+				expect(runningJobs).toBe(0);
+
+				await agenda.stop();
+
+				const result = await agenda.queryJobs({ name: 'scheduled-queued-lock-test' });
+				expect(result.jobs[0].lockedAt).toBeFalsy();
+			});
+
+			it('should preserve locks for running scheduled jobs on stop', async () => {
+				agenda.define('scheduled-running-lock-test', async () => {
+					await delay(5000);
+				});
+
+				await agenda.start();
+				const startPromise = waitForEvent(agenda, 'start:scheduled-running-lock-test');
+				await agenda.schedule(new Date(Date.now() + 25), 'scheduled-running-lock-test');
+				await startPromise;
+
+				await agenda.stop();
+
+				const result = await agenda.queryJobs({ name: 'scheduled-running-lock-test' });
+				expect(result.jobs[0].lockedAt).toBeTruthy();
+			});
+
+			it('should preserve locks for running repeat jobs on stop', async () => {
+				agenda.define('repeat-running-lock-test', async () => {
+					await delay(5000);
+				});
+
+				const startPromise = waitForEvent(agenda, 'start:repeat-running-lock-test');
+				await agenda.every('1 second', 'repeat-running-lock-test');
+				await agenda.start();
+				await startPromise;
+
+				await agenda.stop();
+
+				const result = await agenda.queryJobs({ name: 'repeat-running-lock-test' });
+				expect(result.jobs[0].repeatInterval).toBe('1 second');
+				expect(result.jobs[0].lockedAt).toBeTruthy();
+			});
+
+			it('should preserve locks for running retry jobs on stop', async () => {
+				let attempts = 0;
+
+				agenda.define(
+					'retry-running-lock-test',
+					async () => {
+						attempts++;
+						if (attempts === 1) {
+							throw new Error('first attempt fails');
+						}
+						await delay(5000);
+					},
+					{
+						backoff: () => 50
+					}
+				);
+
+				const retryStartPromise = waitForEvents(agenda, 'start:retry-running-lock-test', 2);
+				await agenda.start();
+				await agenda.now('retry-running-lock-test');
+				await retryStartPromise;
+
+				await agenda.stop();
+
+				const result = await agenda.queryJobs({ name: 'retry-running-lock-test' });
+				expect(attempts).toBe(2);
+				expect(result.jobs[0].failCount).toBe(1);
+				expect(result.jobs[0].lockedAt).toBeTruthy();
+			});
 		});
 
 		describe('concurrency', () => {
