@@ -95,7 +95,10 @@ function computeJobObj<DATA = unknown>(job: WithId<MongoJobDocument>): JobParame
 		uniqueOpts: job.uniqueOpts ?? undefined,
 		lastModifiedBy: job.lastModifiedBy ?? undefined,
 		fork: job.fork ?? undefined,
-		debounceStartedAt: job.debounceStartedAt ?? undefined
+		debounceStartedAt: job.debounceStartedAt ?? undefined,
+		startDate: job.startDate ?? undefined,
+		endDate: job.endDate ?? undefined,
+		skipDays: job.skipDays ?? undefined
 	};
 }
 
