@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import { InMemoryNotificationChannel } from 'agenda';
 import { MongoBackend, MongoJobRepository, MongoJobLogger } from '../src/index.js';
 import { fullAgendaTestSuite, jobLoggerTestSuite } from 'agenda/testing';
+import { testMongoClientOptions } from './helpers/testMongoClientOptions.js';
 
 /**
  * MongoDB backend tests.
@@ -29,7 +30,7 @@ async function createTestDb(options?: DbOptions): Promise<{ db: Db; client: Mong
 	url.pathname = `/${dbName}`;
 	const uri = url.toString();
 
-	const client = await MongoClient.connect(uri);
+	const client = await MongoClient.connect(uri, testMongoClientOptions);
 	const db = client.db(dbName, options);
 
 	return {
@@ -63,7 +64,7 @@ beforeAll(async () => {
 	url.pathname = `/${dbName}`;
 	sharedDbUri = url.toString();
 
-	const client = await MongoClient.connect(sharedDbUri);
+	const client = await MongoClient.connect(sharedDbUri, testMongoClientOptions);
 	sharedDb = client.db(dbName);
 	disconnectShared = async () => {
 		await sharedDb.dropDatabase();

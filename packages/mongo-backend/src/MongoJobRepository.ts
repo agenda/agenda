@@ -313,7 +313,12 @@ export class MongoJobRepository implements JobRepository {
 	 * Get all distinct job names
 	 */
 	async getDistinctJobNames(): Promise<string[]> {
-		return this.collection.distinct('name');
+		// Uses $group instead of the distinct command, which is not part of
+		// the MongoDB Stable API and fails with apiStrict: true
+		const results = await this.collection
+			.aggregate<{ _id: string }>([{ $group: { _id: '$name' } }])
+			.toArray();
+		return results.map(result => result._id);
 	}
 
 	async getQueueSize(): Promise<number> {

@@ -5,6 +5,7 @@ import { randomUUID } from 'crypto';
 import type { JobNotification, NotificationChannelState } from 'agenda';
 import { toJobId } from 'agenda';
 import { MongoChangeStreamNotificationChannel } from '../src/index.js';
+import { testMongoClientOptions } from './helpers/testMongoClientOptions.js';
 
 /**
  * Interface for accessing private/protected properties in tests.
@@ -40,7 +41,7 @@ async function createTestDb(): Promise<{ db: Db; client: MongoClient; disconnect
 	url.pathname = `/${dbName}`;
 	const uri = url.toString();
 
-	const client = await MongoClient.connect(uri);
+	const client = await MongoClient.connect(uri, testMongoClientOptions);
 	const db = client.db(dbName);
 
 	return {
@@ -264,7 +265,7 @@ describe('MongoChangeStreamNotificationChannel change stream tests', () => {
 		url.pathname = `/${dbName}`;
 		const uri = url.toString();
 
-		client = await MongoClient.connect(uri);
+		client = await MongoClient.connect(uri, testMongoClientOptions);
 		db = client.db(dbName);
 	});
 
