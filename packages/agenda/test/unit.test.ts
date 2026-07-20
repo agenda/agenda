@@ -7,6 +7,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Agenda, Job, toJobId } from '../src/index.js';
 import type { AgendaBackend, JobRepository, JobParameters, JobLogger, JobLogEntry, JobLogQuery, JobLogQueryResult } from '../src/index.js';
 import { computeJobState } from '../src/types/JobQuery.js';
+import { computeFromRepeatAt } from '../src/utils/nextRunAt.js';
 
 /**
  * Minimal mock repository that satisfies the interface without real storage.
@@ -425,6 +426,42 @@ describe('Job Unit Tests', () => {
 		});
 
 		// Note: skipImmediate is tested in the repeatEvery describe block
+	});
+
+	describe('computeFromRepeatAt timezone', () => {
+		const attrsFor = (repeatTimezone?: string): JobParameters<unknown> =>
+			({
+				name: 'demo',
+				type: 'normal',
+				repeatAt: '3:30pm',
+				// Past lastRunAt so the "tomorrow at" branch is not taken and the
+				// parsed repeatAt time-of-day is used directly.
+				lastRunAt: new Date('2000-01-01T00:00:00Z'),
+				...(repeatTimezone ? { repeatTimezone } : {})
+			} as JobParameters<unknown>);
+
+		it('resolves repeatAt in the configured repeatTimezone', () => {
+			const tokyo = computeFromRepeatAt(attrsFor('Asia/Tokyo'));
+			const newYork = computeFromRepeatAt(attrsFor('America/New_York'));
+
+			expect(tokyo).toBeTruthy();
+			expect(newYork).toBeTruthy();
+
+			// 3:30pm in Tokyo and 3:30pm in New York are different instants. The
+			// offset between the two zones is ~13-14h depending on DST; assert the
+			// gap is at least 12h so the timezone is clearly honored (and not
+			// collapsing to the same instant as before the fix).
+			const diffMs = Math.abs(newYork!.getTime() - tokyo!.getTime());
+			expect(diffMs).toBeGreaterThan(12 * 60 * 60 * 1000);
+		});
+
+		it('leaves behavior unchanged when repeatTimezone is unset', () => {
+			const withoutTz = computeFromRepeatAt(attrsFor());
+			// Without a timezone the result matches a plain local parse of the time.
+			const expected = new Date();
+			expected.setHours(15, 30, 0, 0);
+			expect(Math.abs(withoutTz!.getTime() - expected.getTime())).toBeLessThan(2000);
+		});
 	});
 
 	describe('fail', () => {

@@ -120,6 +120,16 @@ export function computeFromRepeatAt(attrs: JobParameters<unknown>): Date | null 
 		nextRunAt = date(repeatAt);
 	}
 
+	// `date.js` resolves `repeatAt` against the server's local timezone only. When a
+	// `repeatTimezone` is configured, reinterpret the parsed wall-clock time as if it
+	// occurred in that zone so the job fires at the intended local time regardless of
+	// where the process runs (mirrors the `tz` option used by the cron interval path).
+	if (attrs.repeatTimezone) {
+		nextRunAt = DateTime.fromJSDate(nextRunAt)
+			.setZone(attrs.repeatTimezone, { keepLocalTime: true })
+			.toJSDate();
+	}
+
 	// Apply date constraints (startDate, endDate, skipDays)
 	if (attrs.startDate || attrs.endDate || attrs.skipDays) {
 		const constrainedDate = applyAllDateConstraints(nextRunAt, {
