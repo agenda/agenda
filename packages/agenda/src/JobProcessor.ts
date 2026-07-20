@@ -133,10 +133,11 @@ export class JobProcessor {
 			this.notificationUnsubscribe = undefined;
 		}
 
-		// Return both locked and running jobs so they can all be unlocked
-		// Running jobs are also "locked" in the database (they have lockedAt set),
-		// they just moved from lockedJobs to runningJobs when processing started
-		return [...this.lockedJobs, ...this.runningJobs];
+		const runningJobIds = new Set(this.runningJobs.map(job => job.attrs._id.toString()));
+
+		// Only unlock jobs that are held locally but have not started running.
+		// Running jobs keep their database locks until they complete or the lock expires.
+		return this.lockedJobs.filter(job => !runningJobIds.has(job.attrs._id.toString()));
 	}
 
 	/**
