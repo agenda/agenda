@@ -54,6 +54,9 @@ const UNIQUE_QUERYABLE_COLUMNS = new Set<string>([
 	'fork',
 	'last_modified_by',
 	'debounce_started_at',
+	'start_date',
+	'end_date',
+	'skip_days',
 	'created_at',
 	'updated_at'
 ]);
