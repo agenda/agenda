@@ -35,12 +35,7 @@ export { MongoJobRepository } from './MongoJobRepository.js';
 export { MongoJobLogger } from './MongoJobLogger.js';
 export { MongoChangeStreamNotificationChannel } from './MongoChangeStreamNotificationChannel.js';
 
-export type {
-	MongoBackendConfig,
-	MongoJobRepositoryConfig,
-	MongoDbConfig,
-	OptionalKeysToNullable,
-} from './types.js';
+export type { MongoBackendConfig, MongoJobRepositoryConfig, MongoDbConfig } from './types.js';
 export type { MongoChangeStreamNotificationChannelConfig } from './MongoChangeStreamNotificationChannel.js';
 
 // Re-export mongodb types that users might need
