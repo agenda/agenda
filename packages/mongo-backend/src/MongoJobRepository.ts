@@ -26,7 +26,7 @@ import type {
 	SortDirection
 } from 'agenda';
 import { toJobId, computeJobState } from 'agenda';
-import type { MongoJobRepositoryConfig } from './types.js';
+import type { MongoJobRepositoryConfig, OptionalKeysToNullable } from './types.js';
 import { hasMongoProtocol } from './hasMongoProtocol.js';
 
 const log = debug('agenda:mongo:repository');
@@ -80,22 +80,22 @@ function computeJobObj<DATA = unknown>(job: WithId<MongoJobDocument>): JobParame
 		nextRunAt: job.nextRunAt,
 		type: job.type,
 		data: job.data as DATA,
-		lockedAt: job.lockedAt,
-		lastFinishedAt: job.lastFinishedAt,
-		failedAt: job.failedAt || undefined,
-		failCount: job.failCount || undefined,
-		failReason: job.failReason || undefined,
-		repeatTimezone: job.repeatTimezone,
-		lastRunAt: job.lastRunAt,
-		repeatInterval: job.repeatInterval,
-		repeatAt: job.repeatAt,
-		disabled: job.disabled,
-		progress: job.progress,
-		unique: job.unique,
-		uniqueOpts: job.uniqueOpts,
-		lastModifiedBy: job.lastModifiedBy,
-		fork: job.fork,
-		debounceStartedAt: job.debounceStartedAt
+		lockedAt: job.lockedAt ?? undefined,
+		lastFinishedAt: job.lastFinishedAt ?? undefined,
+		failedAt: job.failedAt ?? undefined,
+		failCount: job.failCount ?? undefined,
+		failReason: job.failReason ?? undefined,
+		repeatTimezone: job.repeatTimezone ?? undefined,
+		lastRunAt: job.lastRunAt ?? undefined,
+		repeatInterval: job.repeatInterval ?? undefined,
+		repeatAt: job.repeatAt ?? undefined,
+		disabled: job.disabled ?? undefined,
+		progress: job.progress ?? undefined,
+		unique: job.unique ?? undefined,
+		uniqueOpts: job.uniqueOpts ?? undefined,
+		lastModifiedBy: job.lastModifiedBy ?? undefined,
+		fork: job.fork ?? undefined,
+		debounceStartedAt: job.debounceStartedAt ?? undefined
 	};
 }
 
@@ -103,7 +103,7 @@ function computeJobObj<DATA = unknown>(job: WithId<MongoJobDocument>): JobParame
  * Internal MongoDB document type with ObjectId for _id
  * This is what's actually stored in MongoDB, separate from the public JobParameters interface
  */
-type MongoJobDocument = Omit<JobParameters, '_id'> & { _id?: ObjectId };
+type MongoJobDocument = Omit<OptionalKeysToNullable<JobParameters>, '_id'> & { _id?: ObjectId };
 
 /**
  * @class
@@ -483,7 +483,10 @@ export class MongoJobRepository implements JobRepository {
 
 		// Update / options for the MongoDB query
 		const update: UpdateFilter<MongoJobDocument> = {
-			$set: { lockedAt: new Date(), lastModifiedBy: options?.lastModifiedBy }
+			$set: {
+        lockedAt: new Date(),
+        lastModifiedBy: options?.lastModifiedBy ?? null
+      }
 		};
 		const findOptions: FindOneAndUpdateOptions = {
 			returnDocument: 'after',
@@ -529,7 +532,10 @@ export class MongoJobRepository implements JobRepository {
 		 * Query used to set a job as locked
 		 */
 		const JOB_PROCESS_SET_QUERY: UpdateFilter<MongoJobDocument> = {
-			$set: { lockedAt: lockTime, lastModifiedBy: options?.lastModifiedBy }
+			$set: {
+        lockedAt: lockTime,
+        lastModifiedBy: options?.lastModifiedBy ?? null
+      }
 		};
 
 		/**
@@ -634,15 +640,15 @@ export class MongoJobRepository implements JobRepository {
 		}
 		const id = new ObjectId(job._id.toString());
 		const $set = {
-			lockedAt: (job.lockedAt && new Date(job.lockedAt)) || undefined,
-			nextRunAt: (job.nextRunAt && new Date(job.nextRunAt)) || undefined,
-			lastRunAt: (job.lastRunAt && new Date(job.lastRunAt)) || undefined,
-			progress: job.progress,
-			failReason: job.failReason,
-			failCount: job.failCount,
-			failedAt: job.failedAt && new Date(job.failedAt),
-			lastFinishedAt: (job.lastFinishedAt && new Date(job.lastFinishedAt)) || undefined,
-			lastModifiedBy: options?.lastModifiedBy
+			lockedAt: job.lockedAt ?? null,
+			nextRunAt: job.nextRunAt ?? null,
+			lastRunAt: job.lastRunAt ?? null,
+			progress: job.progress ?? null,
+			failReason: job.failReason ?? null,
+			failCount: job.failCount ?? null,
+			failedAt: job.failedAt ?? null,
+			lastFinishedAt: job.lastFinishedAt ?? null,
+			lastModifiedBy: options?.lastModifiedBy ?? null
 		};
 
 		log('[job %s] save job state: \n%O', job._id, $set);
@@ -676,10 +682,26 @@ export class MongoJobRepository implements JobRepository {
 			// Extract the ID and unique fields (not persisted directly)
 			const { _id, unique, uniqueOpts, ...props } = job;
 
-			// Add lastModifiedBy
+			// Add lastModifiedBy and make all undefined properties to null for MongoDB storage
 			const propsWithModifier = {
 				...props,
-				lastModifiedBy: options?.lastModifiedBy
+        lockedAt: props.lockedAt ?? null,
+        lastFinishedAt: props.lastFinishedAt ?? null,
+        failedAt: props.failedAt ?? null,
+        failCount: props.failCount ?? null,
+        failReason: props.failReason ?? null,
+        repeatTimezone: props.repeatTimezone ?? null,
+        lastRunAt: props.lastRunAt ?? null,
+        repeatInterval: props.repeatInterval ?? null,
+        repeatAt: props.repeatAt ?? null,
+        disabled: props.disabled ?? null,
+        progress: props.progress ?? null,
+        debounceStartedAt: props.debounceStartedAt ?? null,
+        fork: props.fork ?? null,
+        startDate: props.startDate ?? null,
+        endDate: props.endDate ?? null,
+        skipDays: props.skipDays ?? null,
+				lastModifiedBy: options?.lastModifiedBy ?? null
 			};
 
 			log('[job %s] set job props: \n%O', _id, propsWithModifier);
@@ -789,7 +811,7 @@ export class MongoJobRepository implements JobRepository {
 							log('maxWait exceeded (%dms >= %dms), forcing immediate execution', timeSinceStart, debounce.maxWait);
 							newNextRunAt = now;
 							// Reset debounceStartedAt for the next cycle
-							(propsWithModifier as Partial<MongoJobDocument>).debounceStartedAt = undefined;
+							(propsWithModifier as Partial<MongoJobDocument>).debounceStartedAt = null;
 						} else {
 							// Normal debounce: schedule for delay ms from now
 							newNextRunAt = new Date(now.getTime() + debounce.delay);
