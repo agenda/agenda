@@ -484,9 +484,9 @@ export class MongoJobRepository implements JobRepository {
 		// Update / options for the MongoDB query
 		const update: UpdateFilter<MongoJobDocument> = {
 			$set: {
-        lockedAt: new Date(),
-        lastModifiedBy: options?.lastModifiedBy ?? null
-      }
+				lockedAt: new Date(),
+				lastModifiedBy: options?.lastModifiedBy ?? null
+			}
 		};
 		const findOptions: FindOneAndUpdateOptions = {
 			returnDocument: 'after',
@@ -533,9 +533,9 @@ export class MongoJobRepository implements JobRepository {
 		 */
 		const JOB_PROCESS_SET_QUERY: UpdateFilter<MongoJobDocument> = {
 			$set: {
-        lockedAt: lockTime,
-        lastModifiedBy: options?.lastModifiedBy ?? null
-      }
+				lockedAt: lockTime,
+				lastModifiedBy: options?.lastModifiedBy ?? null
+			}
 		};
 
 		/**
@@ -640,14 +640,14 @@ export class MongoJobRepository implements JobRepository {
 		}
 		const id = new ObjectId(job._id.toString());
 		const $set = {
-			lockedAt: job.lockedAt ?? null,
-			nextRunAt: job.nextRunAt ?? null,
-			lastRunAt: job.lastRunAt ?? null,
+			lockedAt: job.lockedAt ? new Date(job.lockedAt) : null,
+			nextRunAt: job.nextRunAt ? new Date(job.nextRunAt) : null,
+			lastRunAt: job.lastRunAt ? new Date(job.lastRunAt) : null,
 			progress: job.progress ?? null,
 			failReason: job.failReason ?? null,
 			failCount: job.failCount ?? null,
-			failedAt: job.failedAt ?? null,
-			lastFinishedAt: job.lastFinishedAt ?? null,
+			failedAt: job.failedAt ? new Date(job.failedAt) : null,
+			lastFinishedAt: job.lastFinishedAt ? new Date(job.lastFinishedAt) : null,
 			lastModifiedBy: options?.lastModifiedBy ?? null
 		};
 
@@ -685,22 +685,22 @@ export class MongoJobRepository implements JobRepository {
 			// Add lastModifiedBy and make all undefined properties to null for MongoDB storage
 			const propsWithModifier = {
 				...props,
-        lockedAt: props.lockedAt ?? null,
-        lastFinishedAt: props.lastFinishedAt ?? null,
-        failedAt: props.failedAt ?? null,
-        failCount: props.failCount ?? null,
-        failReason: props.failReason ?? null,
-        repeatTimezone: props.repeatTimezone ?? null,
-        lastRunAt: props.lastRunAt ?? null,
-        repeatInterval: props.repeatInterval ?? null,
-        repeatAt: props.repeatAt ?? null,
-        disabled: props.disabled ?? null,
-        progress: props.progress ?? null,
-        debounceStartedAt: props.debounceStartedAt ?? null,
-        fork: props.fork ?? null,
-        startDate: props.startDate ?? null,
-        endDate: props.endDate ?? null,
-        skipDays: props.skipDays ?? null,
+				lockedAt: props.lockedAt ?? null,
+				lastFinishedAt: props.lastFinishedAt ?? null,
+				failedAt: props.failedAt ?? null,
+				failCount: props.failCount ?? null,
+				failReason: props.failReason ?? null,
+				repeatTimezone: props.repeatTimezone ?? null,
+				lastRunAt: props.lastRunAt ?? null,
+				repeatInterval: props.repeatInterval ?? null,
+				repeatAt: props.repeatAt ?? null,
+				disabled: props.disabled ?? null,
+				progress: props.progress ?? null,
+				debounceStartedAt: props.debounceStartedAt ?? null,
+				fork: props.fork ?? null,
+				startDate: props.startDate ?? null,
+				endDate: props.endDate ?? null,
+				skipDays: props.skipDays ?? null,
 				lastModifiedBy: options?.lastModifiedBy ?? null
 			};
 

@@ -3,6 +3,7 @@ import type { SortDirection } from 'agenda';
 
 /**
  * Adds `null` to optional properties while leaving required properties unchanged.
+ * @internal
  */
 export type OptionalKeysToNullable<T extends object> = {
 	[K in keyof T]: object extends Pick<T, K> ? T[K] | null : T[K];

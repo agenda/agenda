@@ -380,44 +380,118 @@ describe('MongoBackend', () => {
 			expect(collectionNames).toContain(TEST_COLLECTION);
 		});
 
-    it('should explicitly set optional properties to null and avoid relying on the "ignoreUndefined" flag', async () => {
-      const {
-        db: dbWithIgnoreUndefined,
-        disconnect: disconnectDbWithIgnoreUndefined
-      } = await createTestDb({ ignoreUndefined: true });
+		it('should explicitly set optional properties to null and avoid relying on the "ignoreUndefined" flag', async () => {
+			const {
+				db: dbWithIgnoreUndefined,
+				disconnect: disconnectDbWithIgnoreUndefined
+			} = await createTestDb({ ignoreUndefined: true });
 
-      backend = new MongoBackend({
-        mongo: dbWithIgnoreUndefined,
-        collection: TEST_COLLECTION
-      });
+			backend = new MongoBackend({
+				mongo: dbWithIgnoreUndefined,
+				collection: TEST_COLLECTION
+			});
 
-      await backend.connect();
-      await backend.repository.saveJob({
-        name: 'concurrent-test',
-        priority: 0,
-        nextRunAt: new Date(Date.now() - 1000),
-        type: 'normal',
-        data: { id: 1, ignoredField: undefined }
-      }, undefined);
+			await backend.connect();
+			await backend.repository.saveJob({
+				name: 'concurrent-test',
+				priority: 0,
+				nextRunAt: new Date(Date.now() - 1000),
+				type: 'normal',
+				data: { id: 1, ignoredField: undefined }
+			}, undefined);
 
-      const job = await dbWithIgnoreUndefined.collection(TEST_COLLECTION).findOne();
+			const job = await dbWithIgnoreUndefined.collection(TEST_COLLECTION).findOne();
 
-      assert(job !== null, 'Job should exist in the collection');
-      expect(job.lockedAt).toBeNull();
-      expect(job.lastFinishedAt).toBeNull();
-      expect(job.failedAt).toBeNull();
-      expect(job.failCount).toBeNull();
-      expect(job.failReason).toBeNull();
-      expect(job.repeatTimezone).toBeNull();
-      expect(job.lastRunAt).toBeNull();
-      expect(job.repeatInterval).toBeNull();
-      expect(job.repeatAt).toBeNull();
-      expect(job.disabled).toBeNull();
-      expect(job.progress).toBeNull();
-      expect(job.data.ignoredField).toBeUndefined();
+			assert(job !== null, 'Job should exist in the collection');
+			expect(job.lockedAt).toBeNull();
+			expect(job.lastFinishedAt).toBeNull();
+			expect(job.failedAt).toBeNull();
+			expect(job.failCount).toBeNull();
+			expect(job.failReason).toBeNull();
+			expect(job.repeatTimezone).toBeNull();
+			expect(job.lastRunAt).toBeNull();
+			expect(job.repeatInterval).toBeNull();
+			expect(job.repeatAt).toBeNull();
+			expect(job.disabled).toBeNull();
+			expect(job.progress).toBeNull();
+			expect(job.data.ignoredField).toBeUndefined();
 
-      await disconnectDbWithIgnoreUndefined();
-    });
+			await disconnectDbWithIgnoreUndefined();
+		});
+
+		it('should clear nextRunAt via saveJobState so completed one-time jobs are not re-run (#1710)', async () => {
+			const {
+				db: dbWithIgnoreUndefined,
+				disconnect: disconnectDbWithIgnoreUndefined
+			} = await createTestDb({ ignoreUndefined: true });
+
+			backend = new MongoBackend({
+				mongo: dbWithIgnoreUndefined,
+				collection: TEST_COLLECTION
+			});
+
+			await backend.connect();
+			const saved = await backend.repository.saveJob({
+				name: 'one-time-job',
+				priority: 0,
+				nextRunAt: new Date(Date.now() - 1000),
+				type: 'normal',
+				data: {}
+			}, undefined);
+
+			// Simulate what the job processor does on completion of a one-time job:
+			// computeNextRunAt() sets nextRunAt to null, then saveJobState persists it
+			await backend.repository.saveJobState({
+				...saved,
+				lockedAt: undefined,
+				nextRunAt: null,
+				lastRunAt: new Date(),
+				lastFinishedAt: new Date()
+			}, undefined);
+
+			const doc = await dbWithIgnoreUndefined.collection(TEST_COLLECTION).findOne({ name: 'one-time-job' });
+			assert(doc !== null, 'Job should exist in the collection');
+			expect(doc.nextRunAt).toBeNull();
+			expect(doc.lockedAt).toBeNull();
+			expect(doc.lastRunAt).toBeInstanceOf(Date);
+			expect(doc.lastFinishedAt).toBeInstanceOf(Date);
+
+			// The completed job must no longer match the runnable-job query
+			const now = new Date();
+			const next = await backend.repository.getNextJobToRun(
+				'one-time-job',
+				new Date(now.getTime() + 5000),
+				new Date(now.getTime() - 600000),
+				now,
+				undefined
+			);
+			expect(next).toBeUndefined();
+
+			await disconnectDbWithIgnoreUndefined();
+		});
+
+		it('should coerce date-like values to Date in saveJobState', async () => {
+			const saved = await backend.repository.saveJob({
+				name: 'date-coercion-test',
+				priority: 0,
+				nextRunAt: new Date(Date.now() - 1000),
+				type: 'normal',
+				data: {}
+			}, undefined);
+
+			// Untyped (plain JS) callers may pass ISO strings for date fields;
+			// saveJobState must coerce them so MongoDB stores real dates
+			await backend.repository.saveJobState({
+				...saved,
+				nextRunAt: new Date().toISOString() as unknown as Date,
+				lastRunAt: new Date().toISOString() as unknown as Date
+			}, undefined);
+
+			const doc = await db.collection(TEST_COLLECTION).findOne({ name: 'date-coercion-test' });
+			assert(doc !== null, 'Job should exist in the collection');
+			expect(doc.nextRunAt).toBeInstanceOf(Date);
+			expect(doc.lastRunAt).toBeInstanceOf(Date);
+		});
 	});
 
 	describe('ensureIndex option', () => {
