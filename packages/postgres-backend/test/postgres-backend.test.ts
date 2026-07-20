@@ -235,6 +235,78 @@ describe('PostgresBackend', () => {
 			expect(indexNames.some(n => n.includes('find_and_lock'))).toBe(true);
 			expect(indexNames.some(n => n.includes('single_job'))).toBe(true);
 		});
+
+		it('should preserve startDate, endDate and skipDays when loading jobs from the database', async () => {
+			const startDate = new Date('2026-01-01T00:00:00Z');
+			const endDate = new Date('2026-12-31T23:59:59Z');
+			const skipDays = [0, 6];
+
+			const saved = await backend.repository.saveJob({
+				name: 'date-constraint-test',
+				priority: 0,
+				nextRunAt: new Date(Date.now() - 1000),
+				type: 'normal',
+				repeatInterval: '1 day',
+				startDate,
+				endDate,
+				skipDays,
+				data: {}
+			}, undefined);
+
+			expect(saved.startDate).toEqual(startDate);
+			expect(saved.endDate).toEqual(endDate);
+			expect(saved.skipDays).toEqual(skipDays);
+
+			// Read back through every load path — the constraints must survive
+			const byId = await backend.repository.getJobById(saved._id!.toString());
+			expect(byId?.startDate).toEqual(startDate);
+			expect(byId?.endDate).toEqual(endDate);
+			expect(byId?.skipDays).toEqual(skipDays);
+
+			const { jobs } = await backend.repository.queryJobs({ name: 'date-constraint-test' });
+			expect(jobs).toHaveLength(1);
+			expect(jobs[0].startDate).toEqual(startDate);
+			expect(jobs[0].endDate).toEqual(endDate);
+			expect(jobs[0].skipDays).toEqual(skipDays);
+
+			const now = new Date();
+			const next = await backend.repository.getNextJobToRun(
+				'date-constraint-test',
+				new Date(now.getTime() + 5000),
+				new Date(now.getTime() - 600000),
+				now,
+				undefined
+			);
+			expect(next?.startDate).toEqual(startDate);
+			expect(next?.endDate).toEqual(endDate);
+			expect(next?.skipDays).toEqual(skipDays);
+		});
+
+		it('should add date constraint columns to pre-existing tables via migration', async () => {
+			// Simulate an existing installation created before the columns existed
+			await pool.query(`ALTER TABLE "${TEST_TABLE_NAME}" DROP COLUMN IF EXISTS start_date`);
+			await pool.query(`ALTER TABLE "${TEST_TABLE_NAME}" DROP COLUMN IF EXISTS end_date`);
+			await pool.query(`ALTER TABLE "${TEST_TABLE_NAME}" DROP COLUMN IF EXISTS skip_days`);
+
+			// Reconnect - initializeSchema should add the missing columns
+			const migratedBackend = new PostgresBackend({
+				connectionString: getConnectionString(),
+				tableName: TEST_TABLE_NAME,
+				channelName: TEST_CHANNEL_NAME
+			});
+			await migratedBackend.connect();
+
+			const result = await pool.query(
+				`SELECT column_name FROM information_schema.columns WHERE table_name = $1`,
+				[TEST_TABLE_NAME]
+			);
+			const columns = result.rows.map(r => r.column_name);
+			expect(columns).toContain('start_date');
+			expect(columns).toContain('end_date');
+			expect(columns).toContain('skip_days');
+
+			await migratedBackend.disconnect();
+		});
 	});
 });
 
