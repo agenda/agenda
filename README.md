@@ -2142,8 +2142,8 @@ process.on('message', message => {
 ```
 
 Ensure to only define job definitions during this step, otherwise you create some
-overhead (e.g. if you create new jobs inside the defintion files). That's why I call
-the defintion file with agenda and a second paramter that is set to true. If this
+overhead (e.g. if you create new jobs inside the definition files). That's why I call
+the definition file with agenda and a second parameter that is set to true. If this
 parameter is true, I do not initialize any jobs (create jobs etc..)
 
 2.) to use this, you have to enable it on a job. Set forkMode to true:
