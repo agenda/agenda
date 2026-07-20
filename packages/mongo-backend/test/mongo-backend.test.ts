@@ -492,6 +492,50 @@ describe('MongoBackend', () => {
 			expect(doc.nextRunAt).toBeInstanceOf(Date);
 			expect(doc.lastRunAt).toBeInstanceOf(Date);
 		});
+
+		it('should preserve startDate, endDate and skipDays when loading jobs from the database', async () => {
+			const startDate = new Date('2026-01-01T00:00:00Z');
+			const endDate = new Date('2026-12-31T23:59:59Z');
+			const skipDays = [0, 6];
+
+			const saved = await backend.repository.saveJob({
+				name: 'date-constraint-test',
+				priority: 0,
+				nextRunAt: new Date(Date.now() - 1000),
+				type: 'normal',
+				repeatInterval: '1 day',
+				startDate,
+				endDate,
+				skipDays,
+				data: {}
+			}, undefined);
+
+			// Read back through every load path — the constraints must survive
+			const byId = await backend.repository.getJobById(saved._id!.toString());
+			assert(byId !== null, 'Job should be found by id');
+			expect(byId.startDate).toEqual(startDate);
+			expect(byId.endDate).toEqual(endDate);
+			expect(byId.skipDays).toEqual(skipDays);
+
+			const { jobs } = await backend.repository.queryJobs({ name: 'date-constraint-test' });
+			expect(jobs).toHaveLength(1);
+			expect(jobs[0].startDate).toEqual(startDate);
+			expect(jobs[0].endDate).toEqual(endDate);
+			expect(jobs[0].skipDays).toEqual(skipDays);
+
+			const now = new Date();
+			const next = await backend.repository.getNextJobToRun(
+				'date-constraint-test',
+				new Date(now.getTime() + 5000),
+				new Date(now.getTime() - 600000),
+				now,
+				undefined
+			);
+			assert(next !== undefined, 'Job should be returned by getNextJobToRun');
+			expect(next.startDate).toEqual(startDate);
+			expect(next.endDate).toEqual(endDate);
+			expect(next.skipDays).toEqual(skipDays);
+		});
 	});
 
 	describe('ensureIndex option', () => {
