@@ -696,7 +696,8 @@ export class Job<DATA = unknown | void> {
 			// Reset the failure counter on success so a later failure starts a
 			// fresh retry/backoff sequence instead of inheriting the old count.
 			// This matters for recurring jobs that recover between runs.
-			// 0 round-trips back to `undefined` via computeJobObj on reload.
+			// All consumers coerce falsy failCount (attempt: failCount || 1), so
+			// a persisted 0 behaves identically to an absent value.
 			if (this.attrs.failCount) {
 				this.attrs.failCount = 0;
 			}
