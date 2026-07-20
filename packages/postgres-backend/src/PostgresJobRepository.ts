@@ -28,6 +28,41 @@ import {
 const log = debug('agenda:postgres:repository');
 
 /**
+ * Columns that may be referenced directly (i.e. not via a `data.` JSON path) in a
+ * `unique` constraint. SQL identifiers cannot be passed as bound parameters, so a
+ * caller-supplied key is validated against this allowlist before it is ever placed
+ * into a query string. This prevents SQL injection via the keys of the `unique`
+ * object (the values are always parameterized).
+ */
+const UNIQUE_QUERYABLE_COLUMNS = new Set<string>([
+	'id',
+	'name',
+	'priority',
+	'next_run_at',
+	'type',
+	'locked_at',
+	'last_finished_at',
+	'failed_at',
+	'fail_count',
+	'fail_reason',
+	'repeat_timezone',
+	'last_run_at',
+	'repeat_interval',
+	'data',
+	'repeat_at',
+	'disabled',
+	'progress',
+	'fork',
+	'last_modified_by',
+	'debounce_started_at',
+	'start_date',
+	'end_date',
+	'skip_days',
+	'created_at',
+	'updated_at'
+]);
+
+/**
  * PostgreSQL implementation of JobRepository
  */
 export class PostgresJobRepository implements JobRepository {
@@ -745,14 +780,20 @@ export class PostgresJobRepository implements JobRepository {
 
 			for (const [key, value] of Object.entries(unique)) {
 				if (key.startsWith('data.')) {
-					// Handle data sub-paths like 'data.userId'
+					// Handle data sub-paths like 'data.userId'. The JSON path is a value,
+					// so it is bound as a parameter rather than interpolated into the SQL.
 					const dataPath = key.substring(5);
-					conditions.push(`data->>'${dataPath}' = $${paramIndex++}`);
-					params.push(String(value));
+					conditions.push(`data->>$${paramIndex++} = $${paramIndex++}`);
+					params.push(dataPath, String(value));
 				} else {
-					// Direct column (snake_case conversion)
+					// Direct column (snake_case conversion). The column name is an SQL
+					// identifier and cannot be parameterized, so it is validated against a
+					// fixed allowlist to prevent SQL injection via the unique key.
 					const columnName = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-					conditions.push(`${columnName} = $${paramIndex++}`);
+					if (!UNIQUE_QUERYABLE_COLUMNS.has(columnName)) {
+						throw new Error(`Invalid unique constraint field: "${key}"`);
+					}
+					conditions.push(`"${columnName}" = $${paramIndex++}`);
 					params.push(value);
 				}
 			}
