@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { Agenda, Job, toJobId } from '../src/index.js';
+import { Agenda, Job, toJobId, InMemoryNotificationChannel } from '../src/index.js';
 import type { AgendaBackend, JobRepository, JobParameters, JobLogger, JobLogEntry, JobLogQuery, JobLogQueryResult } from '../src/index.js';
 import { computeJobState } from '../src/types/JobQuery.js';
 
@@ -854,5 +854,40 @@ describe('computeJobState', () => {
 	it('should return "completed" for a job with no dates set', () => {
 		const job = makeJob();
 		expect(computeJobState(job, now)).toBe('completed');
+	});
+});
+
+describe('start() concurrency', () => {
+	/** Backend whose connect resolves after a short delay, opening a race window. */
+	class DeferredBackend extends MockBackend {
+		async connect(): Promise<void> {
+			await new Promise(resolve => setTimeout(resolve, 30));
+		}
+	}
+
+	/** In-memory channel that counts how many times connect() was invoked. */
+	class CountingChannel extends InMemoryNotificationChannel {
+		public connectCount = 0;
+
+		async connect(): Promise<void> {
+			this.connectCount += 1;
+			await super.connect();
+		}
+	}
+
+	it('two concurrent start() calls create exactly one processor and connect once', async () => {
+		const channel = new CountingChannel();
+		const agenda = new Agenda({ backend: new DeferredBackend(), notificationChannel: channel });
+
+		await Promise.all([agenda.start(), agenda.start()]);
+
+		// Only one channel connect and one live processor despite two concurrent starts
+		expect(channel.connectCount).toBe(1);
+		expect(agenda.isActiveJobProcessor()).toBe(true);
+
+		// After stop, everything is torn down (the single processor, no leaks)
+		await agenda.stop();
+		expect(agenda.isActiveJobProcessor()).toBe(false);
+		expect(channel.state).toBe('disconnected');
 	});
 });
