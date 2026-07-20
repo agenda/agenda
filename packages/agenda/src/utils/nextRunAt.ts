@@ -21,7 +21,6 @@ export function isValidHumanInterval(value: unknown): value is string {
  * Internal method that computes the interval
  */
 export const computeFromInterval = (attrs: JobParameters<unknown>): Date | null => {
-	const previousNextRunAt = attrs.nextRunAt || new Date();
 	log('[%s:%s] computing next run via interval [%s]', attrs.name, attrs._id, attrs.repeatInterval);
 
 	const lastRun = dateForTimezone(attrs.lastRunAt || new Date(), attrs.repeatTimezone);
@@ -38,11 +37,9 @@ export const computeFromInterval = (attrs: JobParameters<unknown>): Date | null 
 		try {
 			let cronTime = CronExpressionParser.parse(attrs.repeatInterval, cronOptions);
 			let nextDate = cronTime.next().toDate();
-			if (
-				nextDate.valueOf() === lastRun.valueOf() ||
-				nextDate.valueOf() <= previousNextRunAt.valueOf()
-			) {
-				// Handle cronTime giving back the same date for the next run time
+			if (nextDate.valueOf() <= lastRun.valueOf()) {
+				// cron-parser returned the same (or earlier) instant as lastRun, so nudge past it.
+				// Comparing against the stored nextRunAt instead would skip a valid occurrence.
 				cronOptions.currentDate = new Date(lastRun.valueOf() + 1000);
 				cronTime = CronExpressionParser.parse(attrs.repeatInterval, cronOptions);
 				nextDate = cronTime.next().toDate();
