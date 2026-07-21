@@ -48,7 +48,7 @@ try {
 } catch (err) {
 	console.error('err', err);
 	if (process.send) {
-		process.send(JSON.stringify(err));
+		process.send(err instanceof Error ? err.message : JSON.stringify(err));
 	}
 	process.exit(1);
 }
