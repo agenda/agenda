@@ -549,16 +549,20 @@ describe('MongoBackend', () => {
 				type: 'normal',
 				data: { i }
 			}));
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- raw docs for insertMany
 			await db.collection(TEST_COLLECTION).insertMany(docs as any);
 
 			// Wrap find() on the repository's own collection to capture how many
 			// documents the returned cursor materializes via toArray().
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- access internal collection
 			const collection = (backend.repository as any).collection as ReturnType<Db['collection']>;
 			const originalFind = collection.find.bind(collection);
 			let materialized = -1;
 			const findSpy = vi
 				.spyOn(collection, 'find')
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any -- pass-through spy
 				.mockImplementation((...args: any[]) => {
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- pass-through spy
 					const cursor = (originalFind as any)(...args);
 					const originalToArray = cursor.toArray.bind(cursor);
 					cursor.toArray = async () => {
