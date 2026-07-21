@@ -91,6 +91,14 @@ export class JobProcessor {
 
 	private processInterval?: ReturnType<typeof setInterval>;
 
+	/**
+	 * Timers armed for jobs whose nextRunAt is in the near future. Tracked so
+	 * stop()/drain() can clear them - an uncleared timer keeps the event loop
+	 * alive and can re-arm itself for recurring jobs, preventing process exit
+	 * (see #1786).
+	 */
+	private nextRunTimers = new Set<ReturnType<typeof setTimeout>>();
+
 	private notificationChannel?: NotificationChannel;
 
 	private notificationUnsubscribe?: () => void;
@@ -117,6 +125,17 @@ export class JobProcessor {
 		}
 	}
 
+	/**
+	 * Clear all armed near-future job timers so nothing keeps the event loop
+	 * alive (or restarts processing) after the processor is stopped/drained.
+	 */
+	private clearNextRunTimers(): void {
+		for (const timer of this.nextRunTimers) {
+			clearTimeout(timer);
+		}
+		this.nextRunTimers.clear();
+	}
+
 	stop(): JobWithId[] {
 		log.extend('stop')('stop job processor', this.isRunning);
 		this.isRunning = false;
@@ -125,6 +144,8 @@ export class JobProcessor {
 			clearInterval(this.processInterval);
 			this.processInterval = undefined;
 		}
+
+		this.clearNextRunTimers();
 
 		// Unsubscribe from notifications
 		if (this.notificationUnsubscribe) {
@@ -158,6 +179,8 @@ export class JobProcessor {
 			clearInterval(this.processInterval);
 			this.processInterval = undefined;
 		}
+
+		this.clearNextRunTimers();
 
 		// Unsubscribe from notifications to stop receiving new job notifications
 		if (this.notificationUnsubscribe) {
@@ -531,15 +554,23 @@ export class JobProcessor {
 						// re add to queue (puts it at the right position in the queue)
 						this.jobQueue.insert(job);
 						// ensure every job gets a timer to run at the near future time (but also ensure this time is set only once)
-						if (!job.gotTimerToExecute) {
+						// Only arm while the processor is active (processInterval is cleared
+						// by stop()/drain()), so completing jobs cannot re-arm timers during
+						// teardown.
+						if (!job.gotTimerToExecute && this.processInterval) {
 							job.gotTimerToExecute = true;
-							setTimeout(
+							const timer = setTimeout(
 								() => {
+									this.nextRunTimers.delete(timer);
 									this.jobProcessing();
 								},
 								runIn > MAX_SAFE_32BIT_INTEGER ? MAX_SAFE_32BIT_INTEGER : runIn
 							); // check if runIn is higher than unsined 32 bit int, if so, use this time to recheck,
 							// because setTimeout will run in an overflow otherwise and reprocesses immediately
+							// Track the timer so stop()/drain() can clear it, and unref it so
+							// an armed timer alone never blocks process exit (#1786).
+							timer.unref?.();
+							this.nextRunTimers.add(timer);
 						}
 					}
 				}
