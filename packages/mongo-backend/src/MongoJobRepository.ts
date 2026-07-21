@@ -272,10 +272,41 @@ export class MongoJobRepository implements JobRepository {
 			query.disabled = { $ne: true };
 		}
 
-		// Fetch jobs
-		const allJobs = await this.collection.find(query).sort(this.toMongoSort(sort)).toArray();
+		const mongoSort = this.toMongoSort(sort);
 
-		// Compute states and filter by state if specified
+		// When there is no state filter, the state is computed purely from the
+		// stored fields and cannot exclude documents, so pagination can be pushed
+		// to the database. This avoids materializing the entire matching
+		// collection into memory (which can OOM on large collections).
+		if (!state) {
+			let cursor = this.collection.find(query).sort(mongoSort);
+			if (skip > 0) {
+				cursor = cursor.skip(skip);
+			}
+			if (limit > 0) {
+				cursor = cursor.limit(limit);
+			}
+
+			const [pageJobs, total] = await Promise.all([
+				cursor.toArray(),
+				this.collection.countDocuments(query)
+			]);
+
+			const jobs: JobWithState[] = pageJobs.map(job => {
+				const jobOb = computeJobObj(job);
+				return {
+					...jobOb,
+					state: computeJobState(jobOb, now)
+				};
+			});
+
+			return { jobs, total };
+		}
+
+		// A state filter is computed in application code, so the full result set
+		// must be fetched, filtered, then paginated.
+		const allJobs = await this.collection.find(query).sort(mongoSort).toArray();
+
 		// Special handling for 'paused' state which is based on disabled field
 		let jobsWithState: JobWithState[] = allJobs
 			.map(job => {
@@ -286,7 +317,6 @@ export class MongoJobRepository implements JobRepository {
 				};
 			})
 			.filter(job => {
-				if (!state) return true;
 				if (state === 'paused') return job.disabled === true;
 				return job.state === state;
 			});
