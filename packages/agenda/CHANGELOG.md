@@ -1,5 +1,18 @@
 # agenda
 
+## 6.2.6
+
+### Patch Changes
+
+- 3369032: Reset a job's backoff retry counter after a successful run. A recurring job that exhausted its retries earlier in its lifetime kept the old `failCount`, so a later failure was treated as already out of retries and stopped retrying.
+- a072e7b: Fix recurring cron jobs skipping a valid occurrence. `computeFromInterval` compared the next cron tick against the stored `nextRunAt`, so when `nextRunAt` was further in the future than the next tick after `lastRunAt`, it bumped past and skipped the legitimate occurrence. It now only re-rolls when the tick is not strictly after `lastRunAt`.
+- d90be16: Fix `@Every` jobs registered after the agenda was already ready never being scheduled. The scheduler relied on a one-shot `ready` event that had already fired, so it now uses the `ready` promise, which stays resolved.
+- 42d17a3: Release the database lock when the processor frees a job whose `nextRunAt` is too far in the future. Previously such a job, when picked up via the expired-lock recovery path (for example a recurring job left locked by a crashed worker), was removed from the local locked list but never unlocked in the database, so it was re-locked on every scan and never reached its run time.
+- 2b6c926: Fix processing queue order. `JobProcessingQueue.insert` placed the highest-priority (or earliest `nextRunAt`) job in the slot that runs last, because the queue is read from the end. Jobs queued in the same tick now run in the correct priority order.
+- 08b1e22: Treat a numeric (or purely-numeric string) repeatInterval as milliseconds in computeFromInterval, so recurring jobs scheduled with `agenda.every(5000, 'job')` keep running on backends that persist the interval as a string.
+- 24e7591: Fix start() race where concurrent calls leaked a second JobProcessor and connected the notification channel twice
+- fd01a64: `stop()` no longer unlocks jobs that are still running, preventing duplicate concurrent execution of the same job occurrence on another instance during rolling restarts. Only jobs that are locked locally but have not started running are unlocked; running jobs keep their database lock until they complete (or `lockLifetime` expires if the process dies).
+
 ## 6.2.5
 
 ### Patch Changes
