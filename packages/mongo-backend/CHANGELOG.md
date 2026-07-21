@@ -1,5 +1,25 @@
 # @agendajs/mongo-backend
 
+## 4.0.3
+
+### Patch Changes
+
+- 4823fa7: Map `startDate`, `endDate` and `skipDays` from MongoDB documents to job objects so date constraints on repeating jobs survive a reload from the database (previously a repeating job with an `endDate` would keep running forever after its first execution)
+- c419abe: Follow-up to #1783: restore defensive `new Date()` coercion for date fields in `saveJobState` so untyped callers passing ISO strings cannot persist strings in date fields, and remove the internal `OptionalKeysToNullable` helper type from the public exports
+- cb27747: Push skip/limit to the database in queryJobs when no state filter is requested, instead of loading the entire matching collection into memory. Prevents out-of-memory on large collections (#1713, #1712).
+- 1edf8bc: Conform to the MongoDB Stable API: replace the `distinct` command in `getDistinctJobNames()` with a `$group` aggregation, so the backend works with clients configured with `apiStrict: true`
+- ea7c773: Reject server-side-evaluation operators (`$where`, `$function`, `$expr`, `$accumulator`) in `unique()` constraints. They have no use in a uniqueness key and could allow query injection when the key is built from untrusted input. Ordinary equality and comparison constraints are unchanged.
+- 3708f9a: Extended the saved Job type to have explicit null values instead of undefined and stopped relying on the MongoDb driver "ignoreUndefined" flag to set them
+- Updated dependencies [3369032]
+- Updated dependencies [a072e7b]
+- Updated dependencies [d90be16]
+- Updated dependencies [42d17a3]
+- Updated dependencies [2b6c926]
+- Updated dependencies [08b1e22]
+- Updated dependencies [24e7591]
+- Updated dependencies [fd01a64]
+  - agenda@6.2.6
+
 ## 4.0.2
 
 ### Patch Changes
