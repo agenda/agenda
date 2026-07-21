@@ -33,7 +33,25 @@ export const computeFromInterval = (attrs: JobParameters<unknown>): Date | null 
 	let nextRunAt: Date | null = null;
 
 	let error;
-	if (typeof attrs.repeatInterval === 'string') {
+
+	// A numeric repeatInterval (or a string that is purely numeric) is treated as
+	// milliseconds. The public API allows `agenda.every(5000, 'job')`, and some
+	// backends persist the interval as a string (e.g. "5000"), which is neither a
+	// valid cron expression nor a human interval and would otherwise throw.
+	const numericInterval =
+		typeof attrs.repeatInterval === 'number'
+			? attrs.repeatInterval
+			: typeof attrs.repeatInterval === 'string' &&
+				  attrs.repeatInterval.trim() !== '' &&
+				  Number.isFinite(Number(attrs.repeatInterval))
+				? Number(attrs.repeatInterval)
+				: undefined;
+
+	if (numericInterval !== undefined) {
+		nextRunAt = attrs.lastRunAt
+			? new Date(lastRun.valueOf() + numericInterval)
+			: new Date(lastRun.valueOf());
+	} else if (typeof attrs.repeatInterval === 'string') {
 		try {
 			let cronTime = CronExpressionParser.parse(attrs.repeatInterval, cronOptions);
 			let nextDate = cronTime.next().toDate();
