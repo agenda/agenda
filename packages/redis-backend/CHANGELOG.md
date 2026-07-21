@@ -1,5 +1,12 @@
 # @agendajs/redis-backend
 
+## 3.0.8
+
+### Patch Changes
+
+- Updated dependencies [17a68fa]
+  - agenda@6.2.7
+
 ## 3.0.7
 
 ### Patch Changes
