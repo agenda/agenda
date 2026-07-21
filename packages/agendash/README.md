@@ -60,7 +60,6 @@ fastify.listen({ port: 3000 }, () => {
 
 ```typescript
 import Koa from 'koa';
-import Router from 'koa-router';
 import { Agenda } from 'agenda';
 import { MongoBackend } from '@agendajs/mongo-backend';
 import { createKoaMiddleware } from 'agendash';
