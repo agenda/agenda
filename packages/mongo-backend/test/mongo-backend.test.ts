@@ -1,7 +1,7 @@
 import { expect, describe, it, beforeAll, afterAll, beforeEach, afterEach, assert, vi } from 'vitest';
 import { Db, DbOptions, MongoClient, ObjectId } from 'mongodb';
 import { randomUUID } from 'crypto';
-import { InMemoryNotificationChannel } from 'agenda';
+import { Agenda, Job, InMemoryNotificationChannel } from 'agenda';
 import { MongoBackend, MongoJobRepository, MongoJobLogger } from '../src/index.js';
 import { fullAgendaTestSuite, jobLoggerTestSuite } from 'agenda/testing';
 import { testMongoClientOptions } from './helpers/testMongoClientOptions.js';
@@ -192,6 +192,39 @@ describe('MongoBackend', () => {
 	});
 
 	describe('MongoDB-specific features', () => {
+		it('should support the documented queryJobs -> new Job() rehydration pattern', async () => {
+			// Pattern documented in docs/migration-guide-v6.md (#1716): queryJobs
+			// returns plain objects; rehydrate with new Job(agenda, jobData) to
+			// modify and save like a v5 Job instance.
+			const agenda = new Agenda({ backend });
+			agenda.on('error', () => {});
+
+			await backend.repository.saveJob({
+				name: 'rehydrate-test',
+				priority: 0,
+				nextRunAt: new Date(),
+				type: 'normal',
+				data: { prop: false }
+			}, undefined);
+
+			const { jobs } = await agenda.queryJobs({ name: 'rehydrate-test', data: { prop: false } });
+			expect(jobs).toHaveLength(1);
+
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars -- strip the computed state field
+			const { state, ...jobData } = jobs[0];
+			const job = new Job(agenda, jobData);
+			(job.attrs.data as { prop: boolean }).prop = true;
+			job.schedule(new Date(Date.now() + 20 * 60 * 1000));
+			await job.save();
+
+			const doc = await db.collection(TEST_COLLECTION).findOne({ name: 'rehydrate-test' });
+			assert(doc !== null, 'Job should exist in the collection');
+			expect(doc.data).toEqual({ prop: true });
+			expect(doc.nextRunAt.getTime()).toBeGreaterThan(Date.now() + 19 * 60 * 1000);
+			// the computed state field must not leak into the stored document
+			expect(doc.state).toBeUndefined();
+		});
+
 		it('should support partial matching on job data', async () => {
 			const jobData = { nested: { key: 'value' }, array: [1, 2, 3], extra: 'field' };
 
