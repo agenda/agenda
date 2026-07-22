@@ -53,8 +53,9 @@ export function applySkipDays(
 		return date;
 	}
 
-	// Validate skip days - if all days are skipped, return null
-	if (skipDays.length >= 7) {
+	// Validate skip days - if all days are skipped, return null.
+	// Deduplicate first so a duplicate entry does not falsely reject a valid list.
+	if (new Set(skipDays).size >= 7) {
 		log('all days are marked as skip days, returning null');
 		return null;
 	}

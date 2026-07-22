@@ -95,6 +95,20 @@ describe('Date Constraints Utilities', () => {
 			expect(result).toBeNull();
 		});
 
+		it('returns original date when skipDays contains duplicates but does not cover all days', () => {
+			// 2024-01-13 is Saturday (6). Sunday (0) is duplicated, but Saturday is not skipped.
+			const saturday = new Date('2024-01-13T10:00:00Z');
+			const result = applySkipDays(saturday, [0, 0, 1, 2, 3, 4, 5]);
+			expect(result).not.toBeNull();
+			expect(result!.getTime()).toBe(saturday.getTime());
+		});
+
+		it('returns null when duplicate skipDays effectively cover all days', () => {
+			const date = new Date('2024-01-15T10:00:00Z');
+			const result = applySkipDays(date, [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6]);
+			expect(result).toBeNull();
+		});
+
 		it('skips multiple consecutive days', () => {
 			const friday = new Date('2024-01-12T10:00:00Z'); // Friday
 			// Skip Friday (5), Saturday (6), Sunday (0)
