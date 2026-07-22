@@ -145,6 +145,21 @@ export function backoffTestSuite(config: BackoffTestConfig): void {
 					expect(delay).toBeLessThanOrEqual(1500);
 				}
 			});
+
+			it('should never exceed maxDelay even with jitter', () => {
+				// maxDelay is the documented hard cap; jitter must not push past it
+				const maxDelay = 500;
+				const strategy = exponential({ delay: 100, factor: 2, maxDelay, maxRetries: 10, jitter: 0.5 });
+				for (let i = 0; i < 500; i++) {
+					for (let attempt = 1; attempt <= 10; attempt++) {
+						const delay = strategy({ attempt, error: new Error('test'), jobName: 'test', jobData: {} });
+						if (delay !== null) {
+							expect(delay).toBeGreaterThanOrEqual(0);
+							expect(delay).toBeLessThanOrEqual(maxDelay);
+						}
+					}
+				}
+			});
 		});
 
 		describe('combine strategy', () => {
