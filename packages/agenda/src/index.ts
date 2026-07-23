@@ -1143,6 +1143,11 @@ export class Agenda extends EventEmitter {
 	 *   false if connection was passed in by user).
 	 */
 	async stop(closeConnection?: boolean): Promise<void> {
+		if (this.startPromise) {
+			log('Agenda.stop called while start is in progress, waiting for start');
+			await this.startPromise;
+		}
+
 		if (!this.jobProcessor) {
 			log('Agenda.stop called, but agenda has never started!');
 			return;
@@ -1213,6 +1218,11 @@ export class Agenda extends EventEmitter {
 	async drain(
 		options?: number | (DrainOptions & { closeConnection?: boolean })
 	): Promise<DrainResult> {
+		if (this.startPromise) {
+			log('Agenda.drain called while start is in progress, waiting for start');
+			await this.startPromise;
+		}
+
 		if (!this.jobProcessor) {
 			log('Agenda.drain called, but agenda has never started!');
 			return { completed: 0, running: 0, timedOut: false, aborted: false };
