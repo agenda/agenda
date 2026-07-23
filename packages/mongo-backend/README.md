@@ -160,7 +160,7 @@ const agenda = new Agenda({
 
 ## Database Index
 
-By default, MongoBackend automatically creates the `findAndLockNextJobIndex` index on connect for optimal job query performance. The index includes:
+By default, MongoBackend automatically creates the following indexes on connect for optimal job query performance:
 
 ```javascript
 {
@@ -171,6 +171,10 @@ By default, MongoBackend automatically creates the `findAndLockNextJobIndex` ind
   "disabled": 1
 }
 ```
+
+- `nameIdx` for `getDistinctJobNames()` / `getJobsOverview()`
+- `nextRunAtIdx` for `getQueueSize()`
+- `nameTypeIdx` for `saveJob()` single-type upserts
 
 To disable automatic index creation (e.g., if you manage indexes separately):
 

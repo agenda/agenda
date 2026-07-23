@@ -671,6 +671,21 @@ export class MongoJobRepository implements JobRepository {
 					{ name: 'findAndLockNextJobIndex' }
 				);
 				log('index succesfully created', result);
+
+				// Index for getDistinctJobNames / getJobsOverview
+				await this.collection.createIndex({ name: 1 }, { name: 'nameIdx' });
+
+				// Index for getQueueSize (query on nextRunAt without name)
+				await this.collection.createIndex(
+					{ nextRunAt: 1 },
+					{ name: 'nextRunAtIdx' }
+				);
+
+				// Index for saveJob single-type upsert (query on name + type)
+				await this.collection.createIndex(
+					{ name: 1, type: 1 },
+					{ name: 'nameTypeIdx' }
+				);
 			} catch (error) {
 				log('db index creation failed', error);
 				throw error;

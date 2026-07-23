@@ -674,11 +674,14 @@ describe('MongoBackend', () => {
 			expect(jobs.total).toBe(1);
 
 			const indexes = await db.collection(testCollection).indexes();
-			// Should have _id and findAndLockNextJobIndex
-			expect(indexes.length).toBeGreaterThanOrEqual(2);
+			// Should have _id and the indexes created by MongoBackend
+			expect(indexes.length).toBeGreaterThanOrEqual(5);
 			const indexNames = indexes.map(i => i.name);
 			expect(indexNames).toContain('_id_');
 			expect(indexNames).toContain('findAndLockNextJobIndex');
+			expect(indexNames).toContain('nameIdx');
+			expect(indexNames).toContain('nextRunAtIdx');
+			expect(indexNames).toContain('nameTypeIdx');
 
 			await backendWithIndex.disconnect();
 			await db.collection(testCollection).drop();
