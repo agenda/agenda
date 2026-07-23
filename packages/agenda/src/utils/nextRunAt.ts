@@ -118,7 +118,10 @@ export function computeFromRepeatAt(attrs: JobParameters<unknown>): Date | null 
 		throw new Error('repeatAt is required');
 	}
 
-	const nextDate = date(repeatAt).valueOf();
+	// Resolve `repeatAt` from `lastRun`, not from `now`. When `lastRunAt` is in the
+	// future (e.g. a manually scheduled job), `date(repeatAt)` from the current
+	// clock can return an instant before `lastRun`, causing duplicate or missed runs.
+	const nextDate = date(repeatAt, lastRun).valueOf();
 
 	// If you do not specify offset date for below test it will fail for ms
 	const offset = Date.now();
@@ -130,9 +133,9 @@ export function computeFromRepeatAt(attrs: JobParameters<unknown>): Date | null 
 
 	let nextRunAt: Date;
 	if (nextDate === lastRun.valueOf()) {
-		nextRunAt = date('tomorrow at ' + repeatAt);
+		nextRunAt = date('tomorrow at ' + repeatAt, lastRun);
 	} else {
-		nextRunAt = date(repeatAt);
+		nextRunAt = date(repeatAt, lastRun);
 	}
 
 	// Apply date constraints (startDate, endDate, skipDays)

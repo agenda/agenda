@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { computeFromInterval } from '../src/utils/nextRunAt.js';
+import { computeFromInterval, computeFromRepeatAt } from '../src/utils/nextRunAt.js';
 import type { JobParameters } from '../src/index.js';
 
 function baseAttrs(overrides: Partial<JobParameters<unknown>>): JobParameters<unknown> {
@@ -16,6 +16,28 @@ function baseAttrs(overrides: Partial<JobParameters<unknown>>): JobParameters<un
 		...overrides
 	} as JobParameters<unknown>;
 }
+
+describe('computeFromRepeatAt', () => {
+	it('resolves repeatAt relative to lastRunAt so the next run is never in the past', () => {
+		const lastRunAt = new Date(Date.now() + 120_000);
+		const result = computeFromRepeatAt(baseAttrs({ repeatAt: 'in 1 minute', lastRunAt }));
+		expect(result).not.toBeNull();
+		expect(result!.getTime()).toBeGreaterThan(lastRunAt.getTime());
+	});
+
+	it('advances to the next occurrence when repeatAt matches lastRunAt exactly', () => {
+		const lastRunAt = new Date('2026-01-01T12:00:00.000Z');
+		const result = computeFromRepeatAt(baseAttrs({ repeatAt: '12:00pm', lastRunAt }));
+		expect(result).not.toBeNull();
+		expect(result!.getTime()).toBeGreaterThan(lastRunAt.getTime());
+	});
+
+	it('throws for an invalid repeatAt format', () => {
+		expect(() => computeFromRepeatAt(baseAttrs({ repeatAt: 'not-a-time' }))).toThrow(
+			'failed to calculate repeatAt time due to invalid format'
+		);
+	});
+});
 
 describe('computeFromInterval - numeric millisecond repeatInterval', () => {
 	it('treats a numeric repeatInterval as milliseconds', () => {
