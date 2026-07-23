@@ -1,4 +1,4 @@
 export function isValidDate(date: unknown): date is Date {
-	// An invalid date object returns NaN for getTime()
-	return date !== null && Number.isNaN(new Date(date as string).getTime()) === false;
+	// A Date instance is valid only if getTime() returns a finite number.
+	return date instanceof Date && Number.isFinite(date.getTime());
 }
