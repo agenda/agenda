@@ -14,7 +14,7 @@ const log = debug('agenda:jobProcessor');
 
 const agendaVersion = packageJson.version;
 
-const MAX_SAFE_32BIT_INTEGER = 2 ** 31; // Math.pow(2,31);
+const MAX_SAFE_32BIT_INTEGER = 2 ** 31 - 1; // Math.pow(2,31) - 1;
 
 /**
  * @class
