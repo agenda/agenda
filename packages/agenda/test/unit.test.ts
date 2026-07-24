@@ -261,6 +261,18 @@ describe('Job Unit Tests', () => {
 			const job = new Job(agenda, { name: 'demo', type: 'normal' });
 			expect(job.unique({})).toBe(job);
 		});
+
+		it('merges with previously-set uniqueOpts instead of replacing them', () => {
+			const job = new Job(agenda, { name: 'demo', type: 'normal' });
+			job.debounce(5000, { maxWait: 30000 });
+			job.unique({ 'data.id': '1' }, { insertOnly: true });
+
+			expect(job.attrs.unique).toEqual({ 'data.id': '1' });
+			expect(job.attrs.uniqueOpts).toMatchObject({
+				insertOnly: true,
+				debounce: { delay: 5000, maxWait: 30000, strategy: 'trailing' }
+			});
+		});
 	});
 
 	describe('repeatEvery', () => {

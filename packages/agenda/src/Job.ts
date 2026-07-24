@@ -238,7 +238,7 @@ export class Job<DATA = unknown | void> {
 		opts?: JobParameters['uniqueOpts']
 	): this {
 		this.attrs.unique = unique;
-		this.attrs.uniqueOpts = opts;
+		this.attrs.uniqueOpts = { ...this.attrs.uniqueOpts, ...opts };
 		return this;
 	}
 
