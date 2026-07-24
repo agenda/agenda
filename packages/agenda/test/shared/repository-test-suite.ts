@@ -703,6 +703,29 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 				expect(overviewJob).toBeDefined();
 				expect(overviewJob!.total).toBe(2);
 			});
+
+			it('should not double-count disabled jobs as paused and their computed state', async () => {
+				// A disabled job with a future nextRunAt is reported only as paused,
+				// not as both paused and scheduled (see issue #1768).
+				const saved = await repo.saveJob({
+					name: 'paused-overview-job',
+					priority: 0,
+					nextRunAt: new Date(Date.now() + 60000),
+					disabled: true,
+					type: 'normal',
+					data: {}
+				}, undefined);
+				expect(saved.disabled).toBe(true);
+
+				const overview = await repo.getJobsOverview();
+				const overviewJob = overview.find(o => o.name === 'paused-overview-job');
+				expect(overviewJob).toBeDefined();
+				expect(overviewJob!.total).toBe(1);
+				expect(overviewJob!.paused).toBe(1);
+				expect(overviewJob!.scheduled).toBe(0);
+				expect(overviewJob!.queued).toBe(0);
+				expect(overviewJob!.completed).toBe(0);
+			});
 		});
 	});
 }

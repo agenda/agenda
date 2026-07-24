@@ -352,10 +352,11 @@ export class RedisJobRepository implements JobRepository {
 					if (!jobData || Object.keys(jobData).length === 0) continue;
 
 					const job = this.hashToJob(jobData);
-					const state = computeJobState(job, now);
-					overview[state as keyof typeof overview]++;
 					if (job.disabled === true) {
 						overview.paused++;
+					} else {
+						const state = computeJobState(job, now);
+						overview[state as keyof typeof overview]++;
 					}
 				}
 

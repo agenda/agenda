@@ -356,10 +356,11 @@ export class MongoJobRepository implements JobRepository {
 				};
 
 				for (const job of jobs) {
-					const state = computeJobState(job as unknown as JobParameters, now);
-					overview[state]++;
 					if (job.disabled === true) {
 						overview.paused++;
+					} else {
+						const state = computeJobState(job as unknown as JobParameters, now);
+						overview[state]++;
 					}
 				}
 
