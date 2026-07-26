@@ -238,7 +238,9 @@ export class Job<DATA = unknown | void> {
 		opts?: JobParameters['uniqueOpts']
 	): this {
 		this.attrs.unique = unique;
-		this.attrs.uniqueOpts = opts;
+		// Don't clobber previously-set uniqueOpts (e.g. a debounce config applied via
+		// .debounce()) when unique() is called without explicit opts.
+		this.attrs.uniqueOpts = opts ?? this.attrs.uniqueOpts;
 		return this;
 	}
 
