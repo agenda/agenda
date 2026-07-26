@@ -273,6 +273,31 @@ export function debounceTestSuite(config: DebounceTestConfig): void {
 				// Should still be delayed by ~500ms from now
 				expect(secondNextRunAt).toBeGreaterThanOrEqual(Date.now() + 400);
 			});
+
+			it('should not reschedule past the maxWait deadline', async () => {
+				agenda.define('debounceMaxWait', async () => {});
+
+				const job1 = await agenda
+					.create('debounceMaxWait', { key: 'max3' })
+					.unique({ 'data.key': 'max3' })
+					.debounce(2000, { maxWait: 2000 })
+					.save();
+
+				const deadline = job1.attrs.debounceStartedAt!.getTime() + 2000;
+
+				// Save again before maxWait elapses. A plain delay would push nextRunAt
+				// to now + 2000, which is past the deadline.
+				await new Promise(resolve => setTimeout(resolve, 500));
+
+				const job2 = await agenda
+					.create('debounceMaxWait', { key: 'max3', updated: true })
+					.unique({ 'data.key': 'max3' })
+					.debounce(2000, { maxWait: 2000 })
+					.save();
+
+				expect(job2.attrs.nextRunAt!.getTime()).toBeLessThanOrEqual(deadline + 50);
+				expect(job2.attrs.nextRunAt!.getTime()).toBeGreaterThan(Date.now());
+			});
 		});
 
 		describe('debounce with different unique keys', () => {
