@@ -703,6 +703,36 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 				expect(overviewJob).toBeDefined();
 				expect(overviewJob!.total).toBe(2);
 			});
+
+			it('should not double-count disabled (paused) jobs', async () => {
+				await repo.saveJob({
+					name: 'paused-overview-job',
+					priority: 0,
+					nextRunAt: new Date(Date.now() + 60000), // future run, but disabled
+					type: 'normal',
+					data: {},
+					disabled: true
+				}, undefined);
+
+				const overview = await repo.getJobsOverview();
+				const job = overview.find(o => o.name === 'paused-overview-job');
+				expect(job).toBeDefined();
+
+				// A disabled job must be counted only as paused, never also as scheduled.
+				expect(job!.paused).toBe(1);
+				expect(job!.scheduled).toBe(0);
+
+				// Per-state buckets must sum to exactly total (no double-counting).
+				const sum =
+					job!.running +
+					job!.scheduled +
+					job!.queued +
+					job!.completed +
+					job!.failed +
+					job!.repeating +
+					job!.paused;
+				expect(sum).toBe(job!.total);
+			});
 		});
 	});
 }
