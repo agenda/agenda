@@ -320,6 +320,57 @@ describe('RedisBackend', () => {
 			expect(next?.skipDays).toEqual(skipDays);
 		});
 	});
+
+	describe('data filter containment', () => {
+		const baseJob = (data: Record<string, unknown>) => ({
+			name: 'data-filter',
+			priority: 0,
+			nextRunAt: new Date(),
+			type: 'normal' as const,
+			data
+		});
+
+		it('queryJobs must not match a numeric prefix collision', async () => {
+			await backend.repository.saveJob(baseJob({ x: 11 }));
+
+			const { jobs } = await backend.repository.queryJobs({ data: { x: 1 } });
+			expect(jobs).toHaveLength(0);
+
+			const exact = await backend.repository.queryJobs({ data: { x: 11 } });
+			expect(exact.jobs).toHaveLength(1);
+		});
+
+		it('queryJobs must not match a string prefix collision', async () => {
+			await backend.repository.saveJob(baseJob({ code: 'abcdef' }));
+
+			const { jobs } = await backend.repository.queryJobs({ data: { code: 'abc' } });
+			expect(jobs).toHaveLength(0);
+		});
+
+		it('queryJobs must match multi-key filters regardless of key order', async () => {
+			await backend.repository.saveJob(baseJob({ a: 1, b: 2 }));
+
+			const { jobs } = await backend.repository.queryJobs({ data: { b: 2, a: 1 } });
+			expect(jobs).toHaveLength(1);
+		});
+
+		it('removeJobs must not delete a job with a prefix-colliding value', async () => {
+			await backend.repository.saveJob(baseJob({ otherId: 11 }));
+
+			const removed = await backend.repository.removeJobs({ data: { otherId: 1 } });
+			expect(removed).toBe(0);
+
+			const { total } = await backend.repository.queryJobs({ data: { otherId: 11 } });
+			expect(total).toBe(1);
+		});
+
+		it('removeJobs must delete a job matched by a reordered multi-key filter', async () => {
+			await backend.repository.saveJob(baseJob({ a: 1, b: 2 }));
+
+			const removed = await backend.repository.removeJobs({ data: { b: 2, a: 1 } });
+			expect(removed).toBe(1);
+		});
+	});
 });
 
 // ============================================================================
