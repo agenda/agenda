@@ -10,7 +10,7 @@
     "agenda": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^22.19.18",
+    "@types/node": "^25.6.2",
     "tsx": "^4.21.0"
   }
 }

@@ -385,7 +385,7 @@ export class RedisJobRepository implements JobRepository {
 	}
 
 	async removeJobs(options: RemoveJobsOptions): Promise<number> {
-		let jobIds: string[] = [];
+		let jobIds: string[];
 
 		if (options.id) {
 			jobIds = [options.id.toString()];
@@ -454,7 +454,7 @@ export class RedisJobRepository implements JobRepository {
 	 * Get job IDs matching the given options
 	 */
 	private async getJobIdsFromOptions(options: RemoveJobsOptions): Promise<string[]> {
-		let jobIds: string[] = [];
+		let jobIds: string[];
 
 		if (options.id) {
 			jobIds = [options.id.toString()];

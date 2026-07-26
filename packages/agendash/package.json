@@ -96,9 +96,9 @@
     "@types/koa": "^2.15.0",
     "@types/koa-bodyparser": "^4.3.13",
     "@types/koa-static": "^4.0.4",
-    "@types/node": "^22.19.18",
+    "@types/node": "^25.6.2",
     "@types/supertest": "^6.0.3",
-    "@vitejs/plugin-vue": "^5.2.4",
+    "@vitejs/plugin-vue": "^6.0.6",
     "agenda": "workspace:*",
     "bootstrap": "^5.3.8",
     "date-fns": "^4.1.0",
@@ -108,14 +108,14 @@
     "koa-bodyparser": "^4.4.1",
     "koa-static": "^5.0.0",
     "mongodb": "^6.21.0",
-    "mongodb-memory-server": "^10.4.3",
+    "mongodb-memory-server": "^11.1.0",
     "pg": "^8.20.0",
     "supertest": "^7.2.2",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3",
-    "vite": "^6.4.2",
-    "vitest": "^3.2.4",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.11",
+    "vitest": "^4.1.5",
     "vue": "^3.5.34",
-    "vue-tsc": "^2.2.12"
+    "vue-tsc": "^3.2.8"
   }
 }
