@@ -358,3 +358,39 @@ jobLoggerTestSuite({
 		await logger.clearLogs();
 	}
 });
+
+describe('RedisJobLogger getLogs filtering', () => {
+	let logger: RedisJobLogger;
+
+	beforeEach(async () => {
+		logger = new RedisJobLogger({ redis: sharedRedis, keyPrefix: TEST_LOG_PREFIX });
+		await logger.clearLogs();
+	});
+
+	afterEach(async () => {
+		await logger.clearLogs();
+	});
+
+	it('applies jobName as an AND filter when jobId is also supplied', async () => {
+		await logger.log({
+			timestamp: new Date(),
+			level: 'info',
+			event: 'start',
+			jobId: 'shared-id',
+			jobName: 'jobA',
+			message: 'a'
+		});
+		await logger.log({
+			timestamp: new Date(),
+			level: 'info',
+			event: 'start',
+			jobId: 'shared-id',
+			jobName: 'jobB',
+			message: 'b'
+		});
+
+		const { entries } = await logger.getLogs({ jobId: 'shared-id', jobName: 'jobA' });
+		expect(entries).toHaveLength(1);
+		expect(entries[0].jobName).toBe('jobA');
+	});
+});
