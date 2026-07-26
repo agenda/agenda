@@ -76,13 +76,18 @@ export abstract class BaseNotificationChannel extends EventEmitter implements No
 			try {
 				const result = handler(notification);
 				if (result instanceof Promise) {
-					promises.push(result);
+					// Surface rejected handlers via 'error', like the synchronous throw below.
+					promises.push(
+						result.catch(error => {
+							this.emit('error', error);
+						})
+					);
 				}
 			} catch (error) {
 				this.emit('error', error);
 			}
 		}
-		await Promise.allSettled(promises);
+		await Promise.all(promises);
 	}
 
 	/**
@@ -95,13 +100,18 @@ export abstract class BaseNotificationChannel extends EventEmitter implements No
 			try {
 				const result = handler(notification);
 				if (result instanceof Promise) {
-					promises.push(result);
+					// Surface rejected handlers via 'error', like the synchronous throw below.
+					promises.push(
+						result.catch(error => {
+							this.emit('error', error);
+						})
+					);
 				}
 			} catch (error) {
 				this.emit('error', error);
 			}
 		}
-		await Promise.allSettled(promises);
+		await Promise.all(promises);
 	}
 
 	/**
