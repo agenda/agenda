@@ -228,6 +228,38 @@ describe('Job Unit Tests', () => {
 		});
 	});
 
+	describe('touch', () => {
+		it('emits progress events locally when progress is provided', async () => {
+			agenda.define('progressJob', () => {});
+			const job = agenda.create('progressJob', {});
+
+			const progressSpy = vi.fn();
+			const progressNamedSpy = vi.fn();
+			agenda.on('progress', progressSpy);
+			agenda.on('progress:progressJob', progressNamedSpy);
+
+			await job.touch(50);
+
+			expect(progressSpy).toHaveBeenCalledTimes(1);
+			expect(progressSpy).toHaveBeenCalledWith(job);
+			expect(progressNamedSpy).toHaveBeenCalledTimes(1);
+			expect(progressNamedSpy).toHaveBeenCalledWith(job);
+			expect(job.attrs.progress).toBe(50);
+		});
+
+		it('does not emit progress events when progress is omitted', async () => {
+			agenda.define('progressJob', () => {});
+			const job = agenda.create('progressJob', {});
+
+			const progressSpy = vi.fn();
+			agenda.on('progress', progressSpy);
+
+			await job.touch();
+
+			expect(progressSpy).not.toHaveBeenCalled();
+		});
+	});
+
 	describe('toJson', () => {
 		it('handles null failedAt', () => {
 			const job = new Job(agenda, {

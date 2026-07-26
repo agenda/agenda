@@ -466,8 +466,10 @@ export class Job<DATA = unknown | void> {
 			lastModifiedBy: this.agenda.attrs.name || undefined
 		});
 
-		// Publish progress state notification if progress was provided (fire-and-forget)
+		// Emit progress events locally and publish notification if progress was provided
 		if (progress !== undefined) {
+			this.agenda.emit('progress', this);
+			this.agenda.emit(`progress:${this.attrs.name}`, this);
 			this.agenda.publishJobStateNotification(this, 'progress', {
 				progress
 			});
