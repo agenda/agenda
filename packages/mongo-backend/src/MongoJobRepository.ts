@@ -858,14 +858,22 @@ export class MongoJobRepository implements JobRepository {
 						const timeSinceStart = now.getTime() - debounceStartedAt.getTime();
 
 						if (debounce.strategy === 'leading') {
-							// Leading: keep original nextRunAt, just update data
-							// Don't change nextRunAt - the job runs on its original schedule
-							log('leading debounce: keeping original nextRunAt, updating data only');
+							// Leading: while still within the debounce window, ignore the call
+							// (keep the original nextRunAt, just update data). Once the window
+							// has elapsed, start a fresh leading edge so the job fires again.
+							const windowElapsed = timeSinceStart >= debounce.delay;
+							const leadingNextRunAt = windowElapsed ? now : existingJob.nextRunAt;
+							const leadingStartedAt = windowElapsed ? now : debounceStartedAt;
+							log(
+								windowElapsed
+									? 'leading debounce: window elapsed, starting fresh leading edge'
+									: 'leading debounce: within window, keeping original nextRunAt, updating data only'
+							);
 							const leadingUpdate: UpdateFilter<MongoJobDocument> = {
 								$set: {
 									...propsWithModifier,
-									nextRunAt: existingJob.nextRunAt, // Preserve original
-									debounceStartedAt: debounceStartedAt
+									nextRunAt: leadingNextRunAt,
+									debounceStartedAt: leadingStartedAt
 								}
 							};
 							const result = await this.collection.findOneAndUpdate(query, leadingUpdate, {
