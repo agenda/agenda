@@ -26,7 +26,7 @@ import type {
 	SortDirection
 } from 'agenda';
 import { toJobId, computeJobState } from 'agenda';
-import type { MongoJobRepositoryConfig, OptionalKeysToNullable } from './types.js';
+import type { MongoDbConfig, MongoJobRepositoryConfig, OptionalKeysToNullable } from './types.js';
 import { hasMongoProtocol } from './hasMongoProtocol.js';
 
 const log = debug('agenda:mongo:repository');
@@ -101,6 +101,21 @@ function flattenDataFilter(data: Record<string, unknown>, prefix = 'data'): Reco
 		}
 	}
 	return result;
+}
+
+const RESERVED_INDEX_KEYS = new Set(['name', 'disabled', 'lockedAt', 'nextRunAt', 'priority']);
+
+function mapSortOptions(sort: MongoDbConfig['sort'], excludeKeys = new Set()): Record<string, 1 | -1> {
+	return Object.entries(sort ?? {}).reduce((acc, [key, order]) => {
+		if (excludeKeys.has(key)) {
+       return acc;
+    }
+
+		return {
+      ...acc,
+      [key]: order === 'asc' ? 1 : -1
+    };
+	}, {});
 }
 
 function computeJobObj<DATA = unknown>(job: WithId<MongoJobDocument>): JobParameters<DATA> & { _id: JobId } {
@@ -559,7 +574,7 @@ export class MongoJobRepository implements JobRepository {
 		};
 		const findOptions: FindOneAndUpdateOptions = {
 			returnDocument: 'after',
-			sort: this.connectOptions.sort
+			sort: mapSortOptions(this.connectOptions.sort)
 		};
 
 		// Lock the job in MongoDB!
@@ -612,7 +627,7 @@ export class MongoJobRepository implements JobRepository {
 		 */
 		const JOB_RETURN_QUERY: FindOneAndUpdateOptions = {
 			returnDocument: 'after',
-			sort: this.connectOptions.sort
+			sort: mapSortOptions(this.connectOptions.sort)
 		};
 
 		// Find ONE and ONLY ONE job and set the 'lockedAt' time so that job begins to be processed
@@ -659,18 +674,21 @@ export class MongoJobRepository implements JobRepository {
 		if (this.connectOptions.ensureIndex ?? true) {
 			log('attempting index creation');
 			try {
+        const sortFields = mapSortOptions(this.connectOptions.sort, RESERVED_INDEX_KEYS);
 				const result = await this.collection.createIndex(
 					{
 						name: 1,
-						...this.connectOptions.sort,
-						priority: -1,
+						disabled: 1,
 						lockedAt: 1,
 						nextRunAt: 1,
-						disabled: 1
+						priority: -1,
+						...sortFields,
 					},
-					{ name: 'findAndLockNextJobIndex' }
+					{ name: 'findAndLockNextJobIndex_v2' }
 				);
 				log('index succesfully created', result);
+
+        await this.collection.dropIndex('findAndLockNextJobIndex');
 			} catch (error) {
 				log('db index creation failed', error);
 				throw error;

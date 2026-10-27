@@ -651,7 +651,7 @@ describe('MongoBackend', () => {
 			await db.collection(testCollection).drop();
 		});
 
-		it('should create findAndLockNextJobIndex when ensureIndex is true', async () => {
+		it('should create findAndLockNextJobIndex_v2 when ensureIndex is true', async () => {
 			const testCollection = TEST_COLLECTION + '_with_index';
 			const backendWithIndex = new MongoBackend({
 				mongo: db,
@@ -674,11 +674,11 @@ describe('MongoBackend', () => {
 			expect(jobs.total).toBe(1);
 
 			const indexes = await db.collection(testCollection).indexes();
-			// Should have _id and findAndLockNextJobIndex
+			// Should have _id and findAndLockNextJobIndex_v2
 			expect(indexes.length).toBeGreaterThanOrEqual(2);
 			const indexNames = indexes.map(i => i.name);
 			expect(indexNames).toContain('_id_');
-			expect(indexNames).toContain('findAndLockNextJobIndex');
+			expect(indexNames).toContain('findAndLockNextJobIndex_v2');
 
 			await backendWithIndex.disconnect();
 			await db.collection(testCollection).drop();
