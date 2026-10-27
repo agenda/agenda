@@ -674,7 +674,7 @@ export class MongoJobRepository implements JobRepository {
 		if (this.connectOptions.ensureIndex ?? true) {
 			log('attempting index creation');
 			try {
-        const sortFields = mapSortOptions(this.connectOptions.sort, RESERVED_INDEX_KEYS);
+				const sortFields = mapSortOptions(this.connectOptions.sort, RESERVED_INDEX_KEYS);
 				const result = await this.collection.createIndex(
 					{
 						name: 1,
