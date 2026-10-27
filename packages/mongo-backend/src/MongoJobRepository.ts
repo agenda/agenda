@@ -687,8 +687,6 @@ export class MongoJobRepository implements JobRepository {
 					{ name: 'findAndLockNextJobIndex_v2' }
 				);
 				log('index succesfully created', result);
-
-        await this.collection.dropIndex('findAndLockNextJobIndex');
 			} catch (error) {
 				log('db index creation failed', error);
 				throw error;

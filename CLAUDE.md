@@ -163,11 +163,11 @@ When using MongoDB, Agenda does not create indexes by default. Recommended index
 ```javascript
 db.agendaJobs.createIndex({
   "name": 1,
-  "nextRunAt": 1,
-  "priority": -1,
+  "disabled": 1,
   "lockedAt": 1,
-  "disabled": 1
-}, { name: "findAndLockNextJobIndex" })
+  "nextRunAt": 1,
+  "priority": -1
+}, { name: "findAndLockNextJobIndex_v2" })
 ```
 
 ## Debug Logging
