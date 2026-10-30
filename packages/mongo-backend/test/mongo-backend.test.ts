@@ -1,5 +1,5 @@
 import { expect, describe, it, beforeAll, afterAll, beforeEach, afterEach, assert, vi } from 'vitest';
-import { Db, DbOptions, MongoClient, ObjectId } from 'mongodb';
+import { Db, DbOptions, Document, MongoClient, ObjectId } from 'mongodb';
 import { randomUUID } from 'crypto';
 import { Agenda, Job, InMemoryNotificationChannel } from 'agenda';
 import { MongoBackend, MongoJobRepository, MongoJobLogger } from '../src/index.js';
@@ -451,6 +451,41 @@ describe('MongoBackend', () => {
 			expect(job.data.ignoredField).toBeUndefined();
 
 			await disconnectDbWithIgnoreUndefined();
+		});
+
+		it('should keep lockedAt and lastRunAt when job.save() is called from a running job (#1810)', async () => {
+			const agenda = new Agenda({ backend, processEvery: 100 });
+			agenda.on('error', () => {});
+
+			const readJob = async (id: unknown) => {
+				const doc = await db.collection(TEST_COLLECTION).findOne({ _id: new ObjectId(String(id)) });
+				assert(doc !== null, 'Job should exist in the collection');
+				return doc;
+			};
+
+			// DB state as seen from inside the handler, around the save()
+			const seen: { before?: Document; after?: Document } = {};
+			agenda.define('save-lock-repro', async (job) => {
+				seen.before = await readJob(job.attrs._id);
+				job.attrs.data = { checkpoint: 1 };
+				await job.save();
+				seen.after = await readJob(job.attrs._id);
+			});
+
+			const completed = new Promise((resolve) => agenda.once('complete:save-lock-repro', resolve));
+			try {
+				await agenda.start();
+				await agenda.now('save-lock-repro', {});
+				await completed;
+			} finally {
+				await agenda.stop();
+			}
+
+			expect(seen.before?.lockedAt).toBeInstanceOf(Date);
+			expect(seen.before?.lastRunAt).toBeInstanceOf(Date);
+			expect(seen.after?.data).toEqual({ checkpoint: 1 });
+			expect(seen.after?.lockedAt).toEqual(seen.before?.lockedAt);
+			expect(seen.after?.lastRunAt).toEqual(seen.before?.lastRunAt);
 		});
 
 		it('should clear nextRunAt via saveJobState so completed one-time jobs are not re-run (#1710)', async () => {

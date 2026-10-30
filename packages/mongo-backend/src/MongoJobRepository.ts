@@ -784,9 +784,15 @@ export class MongoJobRepository implements JobRepository {
 			// If the job already had an ID, then update the properties of the job
 			if (_id) {
 				log('job already has _id, calling findOneAndUpdate() using _id as query');
+				// Job.save() leaves out lockedAt, lastRunAt etc., so don't null them on update
+				const $set = Object.fromEntries(
+					Object.entries(propsWithModifier).filter(
+						([key]) => key in props || key === 'lastModifiedBy'
+					)
+				);
 				const result = await this.collection.findOneAndUpdate(
 					{ _id: new ObjectId(_id.toString()), name: props.name },
-					update,
+					{ $set },
 					{ returnDocument: 'after' }
 				);
 				if (!result) {
