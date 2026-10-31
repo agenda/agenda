@@ -20,7 +20,7 @@ npm install agendash agenda @agendajs/mongo-backend
 import express from 'express';
 import { Agenda } from 'agenda';
 import { MongoBackend } from '@agendajs/mongo-backend';
-import { expressMiddleware } from 'agendash';
+import { createExpressMiddleware } from 'agendash';
 
 const app = express();
 const agenda = new Agenda({
@@ -28,7 +28,7 @@ const agenda = new Agenda({
 });
 
 // Mount agendash at /dash
-app.use('/dash', expressMiddleware(agenda));
+app.use('/dash', createExpressMiddleware(agenda));
 
 app.listen(3000, () => {
   console.log('Dashboard: http://localhost:3000/dash');
@@ -41,7 +41,7 @@ app.listen(3000, () => {
 import Fastify from 'fastify';
 import { Agenda } from 'agenda';
 import { MongoBackend } from '@agendajs/mongo-backend';
-import { fastifyPlugin } from 'agendash';
+import { createFastifyPlugin } from 'agendash';
 
 const fastify = Fastify();
 const agenda = new Agenda({
@@ -49,7 +49,7 @@ const agenda = new Agenda({
 });
 
 // Register agendash at /dash
-fastify.register(fastifyPlugin(agenda), { prefix: '/dash' });
+fastify.register(createFastifyPlugin(agenda), { prefix: '/dash' });
 
 fastify.listen({ port: 3000 }, () => {
   console.log('Dashboard: http://localhost:3000/dash');
@@ -60,10 +60,9 @@ fastify.listen({ port: 3000 }, () => {
 
 ```typescript
 import Koa from 'koa';
-import Router from 'koa-router';
 import { Agenda } from 'agenda';
 import { MongoBackend } from '@agendajs/mongo-backend';
-import { koaMiddleware } from 'agendash';
+import { createKoaMiddleware } from 'agendash';
 
 const app = new Koa();
 const agenda = new Agenda({
@@ -71,7 +70,7 @@ const agenda = new Agenda({
 });
 
 // Mount agendash at /dash
-const { router, middleware } = koaMiddleware(agenda, '/dash');
+const { router, middleware } = createKoaMiddleware(agenda, '/dash');
 app.use(middleware);
 app.use(router.routes());
 app.use(router.allowedMethods());
@@ -87,7 +86,7 @@ app.listen(3000, () => {
 import Hapi from '@hapi/hapi';
 import { Agenda } from 'agenda';
 import { MongoBackend } from '@agendajs/mongo-backend';
-import { hapiPlugin } from 'agendash';
+import { createHapiPlugin } from 'agendash';
 
 const agenda = new Agenda({
   backend: new MongoBackend({ address: 'mongodb://localhost:27017/agenda' })
@@ -96,7 +95,7 @@ const agenda = new Agenda({
 const server = Hapi.server({ port: 3000 });
 
 await server.register({
-  plugin: hapiPlugin(agenda),
+  plugin: createHapiPlugin(agenda),
   options: { basePath: '/dash' }
 });
 
