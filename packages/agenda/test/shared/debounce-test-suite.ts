@@ -209,6 +209,42 @@ export function debounceTestSuite(config: DebounceTestConfig): void {
 				// Data should be updated even though nextRunAt isn't
 				expect(job2.attrs.data).toEqual({ key: 'lead3', value: 'second' });
 			});
+
+			it('should re-fire after the debounce window has elapsed', async () => {
+				agenda.define('debounceLeadingRefire', async () => {});
+
+				// First save: leading edge fires immediately.
+				const job1 = await agenda
+					.create('debounceLeadingRefire', { key: 'lead4', value: 1 })
+					.unique({ 'data.key': 'lead4' })
+					.debounce(300, { strategy: 'leading' })
+					.save();
+
+				const firstNextRunAt = job1.attrs.nextRunAt!.getTime();
+
+				// Simulate the job having run: clear nextRunAt as the processor would.
+				// (Leading-edge jobs run on their first nextRunAt; afterwards nextRunAt is null.)
+				job1.attrs.nextRunAt = null;
+				await agenda.db.saveJobState(job1.attrs, undefined);
+
+				// Wait for the leading window to elapse.
+				await new Promise(resolve => setTimeout(resolve, 350));
+
+				// Next save after the window must start a fresh leading edge and re-fire.
+				const job2 = await agenda
+					.create('debounceLeadingRefire', { key: 'lead4', value: 2 })
+					.unique({ 'data.key': 'lead4' })
+					.debounce(300, { strategy: 'leading' })
+					.save();
+
+				expect(job2.attrs.nextRunAt).not.toBeNull();
+				expect(job2.attrs.nextRunAt).toBeDefined();
+				// Fresh leading edge ~now (not the stale first nextRunAt, not null).
+				const secondNextRunAt = job2.attrs.nextRunAt!.getTime();
+				expect(secondNextRunAt).toBeGreaterThan(firstNextRunAt);
+				expect(secondNextRunAt).toBeGreaterThanOrEqual(Date.now() - 200);
+				expect(secondNextRunAt).toBeLessThanOrEqual(Date.now() + 200);
+			});
 		});
 
 		describe('maxWait', () => {
@@ -272,6 +308,45 @@ export function debounceTestSuite(config: DebounceTestConfig): void {
 				expect(secondNextRunAt).toBeGreaterThan(firstNextRunAt);
 				// Should still be delayed by ~500ms from now
 				expect(secondNextRunAt).toBeGreaterThanOrEqual(Date.now() + 400);
+			});
+
+			it('should not reschedule past the maxWait deadline', async () => {
+				agenda.define('debounceMaxWait', async () => {});
+
+				const job1 = await agenda
+					.create('debounceMaxWait', { key: 'max3' })
+					.unique({ 'data.key': 'max3' })
+					.debounce(2000, { maxWait: 2000 })
+					.save();
+
+				const deadline = job1.attrs.debounceStartedAt!.getTime() + 2000;
+
+				// Save again before maxWait elapses. A plain delay would push nextRunAt
+				// to now + 2000, which is past the deadline.
+				await new Promise(resolve => setTimeout(resolve, 500));
+
+				const job2 = await agenda
+					.create('debounceMaxWait', { key: 'max3', updated: true })
+					.unique({ 'data.key': 'max3' })
+					.debounce(2000, { maxWait: 2000 })
+					.save();
+
+				expect(job2.attrs.nextRunAt!.getTime()).toBeLessThanOrEqual(deadline + 50);
+				expect(job2.attrs.nextRunAt!.getTime()).toBeGreaterThan(Date.now());
+			});
+
+			it('should cap the first save at maxWait when maxWait is shorter than the delay', async () => {
+				agenda.define('debounceMaxWaitFirst', async () => {});
+
+				const before = Date.now();
+				const job = await agenda
+					.create('debounceMaxWaitFirst', { key: 'max4' })
+					.unique({ 'data.key': 'max4' })
+					.debounce(5000, { maxWait: 1000 })
+					.save();
+
+				expect(job.attrs.nextRunAt!.getTime()).toBeLessThanOrEqual(Date.now() + 1000);
+				expect(job.attrs.nextRunAt!.getTime()).toBeGreaterThanOrEqual(before + 1000);
 			});
 		});
 

@@ -726,8 +726,9 @@ export class PostgresJobRepository implements JobRepository {
 				`INSERT INTO "${this.tableName}" (
 					name, priority, next_run_at, type, repeat_timezone,
 					repeat_interval, data, repeat_at, disabled, fork, last_modified_by,
-					start_date, end_date, skip_days
-				 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+					start_date, end_date, skip_days,
+					fail_reason, fail_count, failed_at
+				 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
 				 ON CONFLICT ((name)) WHERE type = 'single'
 				 DO UPDATE SET
 					priority = EXCLUDED.priority,
@@ -759,7 +760,10 @@ export class PostgresJobRepository implements JobRepository {
 					options?.lastModifiedBy || null,
 					props.startDate || null,
 					props.endDate || null,
-					props.skipDays ? JSON.stringify(props.skipDays) : null
+					props.skipDays ? JSON.stringify(props.skipDays) : null,
+					props.failReason ?? null,
+					props.failCount ?? null,
+					props.failedAt || null
 				]
 			);
 
@@ -824,10 +828,18 @@ export class PostgresJobRepository implements JobRepository {
 					const timeSinceStart = now.getTime() - existingDebounceStartedAt.getTime();
 
 					if (debounce.strategy === 'leading') {
-						// Leading: keep original nextRunAt, just update data
-						log('leading debounce: keeping original nextRunAt, updating data only');
-						nextRunAt = existingRow.next_run_at;
-						debounceStartedAt = existingDebounceStartedAt;
+						// Leading: while still within the debounce window, ignore the call
+						// (keep the original nextRunAt). Once the window has elapsed, start a
+						// fresh leading edge so the job fires again.
+						if (timeSinceStart >= debounce.delay) {
+							log('leading debounce: window elapsed, starting fresh leading edge');
+							nextRunAt = now;
+							debounceStartedAt = now;
+						} else {
+							log('leading debounce: within window, keeping original nextRunAt, updating data only');
+							nextRunAt = existingRow.next_run_at;
+							debounceStartedAt = existingDebounceStartedAt;
+						}
 					} else {
 						// Trailing (default): push nextRunAt forward
 						if (debounce.maxWait && timeSinceStart >= debounce.maxWait) {
@@ -835,7 +847,15 @@ export class PostgresJobRepository implements JobRepository {
 							nextRunAt = now;
 							debounceStartedAt = null; // Reset for next cycle
 						} else {
+							// Schedule for delay ms from now, but never past the maxWait deadline
+							// so the job still runs within maxWait if saves stop.
 							nextRunAt = new Date(now.getTime() + debounce.delay);
+							if (debounce.maxWait) {
+								const deadline = existingDebounceStartedAt.getTime() + debounce.maxWait;
+								if (nextRunAt.getTime() > deadline) {
+									nextRunAt = new Date(deadline);
+								}
+							}
 							debounceStartedAt = existingDebounceStartedAt;
 							log('trailing debounce: rescheduling to %s', nextRunAt.toISOString());
 						}
@@ -892,8 +912,8 @@ export class PostgresJobRepository implements JobRepository {
 					// Leading: execute immediately (keep nextRunAt as-is)
 					log('leading debounce: new job, executing immediately');
 				} else {
-					// Trailing: schedule after delay
-					nextRunAt = new Date(now.getTime() + debounce.delay);
+					// Trailing: schedule after delay, but never past the maxWait deadline
+					nextRunAt = new Date(now.getTime() + (debounce.maxWait ? Math.min(debounce.delay, debounce.maxWait) : debounce.delay));
 					log('trailing debounce: new job, scheduling for %s', nextRunAt.toISOString());
 				}
 
@@ -901,8 +921,9 @@ export class PostgresJobRepository implements JobRepository {
 					`INSERT INTO "${this.tableName}" (
 						name, priority, next_run_at, type, repeat_timezone,
 						repeat_interval, data, repeat_at, disabled, fork, last_modified_by, debounce_started_at,
-						start_date, end_date, skip_days
-					 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+						start_date, end_date, skip_days,
+						fail_reason, fail_count, failed_at
+					 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
 					 RETURNING *`,
 					[
 						props.name,
@@ -919,7 +940,10 @@ export class PostgresJobRepository implements JobRepository {
 						debounceStartedAt,
 						props.startDate || null,
 						props.endDate || null,
-						props.skipDays ? JSON.stringify(props.skipDays) : null
+						props.skipDays ? JSON.stringify(props.skipDays) : null,
+						props.failReason ?? null,
+						props.failCount ?? null,
+						props.failedAt || null
 					]
 				);
 
@@ -933,8 +957,9 @@ export class PostgresJobRepository implements JobRepository {
 			`INSERT INTO "${this.tableName}" (
 				name, priority, next_run_at, type, repeat_timezone,
 				repeat_interval, data, repeat_at, disabled, fork, last_modified_by,
-				start_date, end_date, skip_days
-			 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+				start_date, end_date, skip_days,
+				fail_reason, fail_count, failed_at
+			 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
 			 RETURNING *`,
 			[
 				props.name,
@@ -950,7 +975,10 @@ export class PostgresJobRepository implements JobRepository {
 				options?.lastModifiedBy || null,
 				props.startDate || null,
 				props.endDate || null,
-				props.skipDays ? JSON.stringify(props.skipDays) : null
+				props.skipDays ? JSON.stringify(props.skipDays) : null,
+				props.failReason ?? null,
+				props.failCount ?? null,
+				props.failedAt || null
 			]
 		);
 
