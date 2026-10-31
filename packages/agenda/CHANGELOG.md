@@ -1,5 +1,20 @@
 # agenda
 
+## 6.2.7
+
+### Patch Changes
+
+- 09fcbef: Clear a running job's watchdog timer as soon as the job finishes so it cannot keep the Node.js process alive during shutdown.
+- a90c4ec: Keep backoff jitter within `maxDelay`. `applyJitter` could add up to `jitter * delay` on top of the already-capped delay, so a jittered retry delay could exceed the documented `maxDelay` hard cap. The jittered result now stays within `[0, maxDelay]`; overshoots are reflected below the cap rather than clamped, so retries at the cap stay spread out.
+- 57898fa: Fix `job.touch()` wiping a job's `progress`. A bare `touch()` keep-alive call set `progress` to `undefined`, discarding a previously reported value. It now only updates `progress` when a value is passed.
+- ebf0f81: Fix isExpired()/isDead() throwing a TypeError when the job's definition is not registered in the calling process
+- 17a68fa: Clear armed near-future job timers on `stop()`/`drain()`. Previously the JobProcessor armed an untracked `setTimeout` for jobs due within the `processEvery` window; it was never cleared, kept the event loop alive after `stop()`, and for recurring jobs with an interval ≤ `processEvery` could re-arm itself indefinitely — so the process never exited. Timers are now tracked, cleared on teardown, and `unref`'d so an armed timer alone can never block process exit.
+- 63de5c2: Fix stop() and drain() called during start() from leaving a JobProcessor running.
+- 3bc8ebc: Surface notification handler errors consistently. A subscriber that threw synchronously emitted an `error` event, but one that returned a rejected promise was swallowed by `Promise.allSettled`. Rejected async handlers (for both job and state notifications) now emit `error` like synchronous throws. Errors emitted by the notification channel are now also forwarded to Agenda's `error` event, so a channel without its own `error` listener no longer throws `ERR_UNHANDLED_ERROR`.
+- 6d19660: Fix notification channel reconnect ignoring maxAttempts and never applying exponential backoff (infinite tight retry loop)
+- 6e691fc: Emit `progress` and `progress:<name>` events locally when `job.touch(progress)` is called, matching the local-emit pattern used by other job lifecycle events.
+- fc7b7c1: Fix fluent unique() discarding a previously-set debounce()/uniqueOpts when called without explicit options
+
 ## 6.2.6
 
 ### Patch Changes

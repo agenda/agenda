@@ -1,5 +1,24 @@
 # @agendajs/mongo-backend
 
+## 4.0.4
+
+### Patch Changes
+
+- 554c3ed: Cap the trailing debounce `nextRunAt` at the `maxWait` deadline. Each save rescheduled the job to `now + delay` without bounding it by `debounceStartedAt + maxWait`, so a save shortly before the deadline pushed execution past `maxWait`, breaking the documented guarantee that the job runs within `maxWait`.
+- 6fa9b56: Fix leading-strategy debounce never re-firing after its window elapsed (the debounce window was never reset once the job ran)
+- dae0702: Fix `saveJob` nulling processor-managed fields (`lockedAt`, `lastRunAt`, `failCount`, ...) on existing jobs. `job.save()` from a running job, re-calling `every()` for a `single` job, and saving a `unique()` job that matches an existing one no longer clear the lock or run history. New jobs still get explicit `null` defaults.
+- Updated dependencies [09fcbef]
+- Updated dependencies [a90c4ec]
+- Updated dependencies [57898fa]
+- Updated dependencies [ebf0f81]
+- Updated dependencies [17a68fa]
+- Updated dependencies [63de5c2]
+- Updated dependencies [3bc8ebc]
+- Updated dependencies [6d19660]
+- Updated dependencies [6e691fc]
+- Updated dependencies [fc7b7c1]
+  - agenda@6.2.7
+
 ## 4.0.3
 
 ### Patch Changes
