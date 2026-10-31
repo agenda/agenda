@@ -160,15 +160,15 @@ const agenda = new Agenda({
 
 ## Database Index
 
-By default, MongoBackend automatically creates the `findAndLockNextJobIndex` index on connect for optimal job query performance. The index includes:
+By default, MongoBackend automatically creates the `findAndLockNextJobIndex_v2` index on connect for optimal job query performance. The index includes:
 
 ```javascript
 {
   "name": 1,
-  "nextRunAt": 1,
-  "priority": -1,
+  "disabled": 1,
   "lockedAt": 1,
-  "disabled": 1
+  "nextRunAt": 1,
+  "priority": -1
 }
 ```
 
