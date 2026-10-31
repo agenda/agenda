@@ -171,6 +171,13 @@ export class RedisJobLogger implements JobLogger {
 					const events = Array.isArray(query.event) ? query.event : [query.event];
 					if (!events.includes(entry.event)) continue;
 				}
+				// Apply jobName filter as a secondary in-memory filter. When both
+				// jobId and jobName are supplied, the sorted set queried is the
+				// jobId index, so jobName must still be matched here (AND semantics,
+				// matching the Mongo/Postgres loggers).
+				if (query?.jobId && query?.jobName && entry.jobName !== query.jobName) {
+					continue;
+				}
 
 				entries.push(entry);
 			}
