@@ -317,7 +317,7 @@ export class Agenda extends EventEmitter {
 		this.db = config.backend.repository;
 
 		// Notification channel priority: explicit config > backend's channel
-		this.notificationChannel = config.notificationChannel ?? config.backend.notificationChannel;
+		this.setNotificationChannel(config.notificationChannel ?? config.backend.notificationChannel);
 
 		// Ready promise resolves when backend is connected
 		this.ready = new Promise(resolve => {
@@ -472,8 +472,23 @@ export class Agenda extends EventEmitter {
 			);
 		}
 		log('Agenda.notifyVia([NotificationChannel])');
-		this.notificationChannel = channel;
+		this.setNotificationChannel(channel);
 		return this;
+	}
+
+	/**
+	 * Forward the channel's 'error' events (handler rejections, connection errors) to
+	 * agenda's own 'error' event. Without a listener on the channel, EventEmitter would
+	 * throw ERR_UNHANDLED_ERROR; agenda always has a (no-op) 'error' listener.
+	 */
+	private readonly forwardChannelError = (error: Error): void => {
+		this.emit('error', error);
+	};
+
+	private setNotificationChannel(channel: NotificationChannel | undefined): void {
+		this.notificationChannel?.off('error', this.forwardChannelError);
+		this.notificationChannel = channel;
+		this.notificationChannel?.on('error', this.forwardChannelError);
 	}
 
 	/**
