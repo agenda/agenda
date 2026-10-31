@@ -6,7 +6,8 @@ const notification = (): JobNotification => ({
 	jobId: toJobId('1'),
 	jobName: 'test',
 	nextRunAt: null,
-	priority: 0
+	priority: 0,
+	timestamp: new Date()
 });
 
 describe('BaseNotificationChannel handler errors', () => {
