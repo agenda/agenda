@@ -55,10 +55,11 @@ export abstract class BaseNotificationChannel extends EventEmitter implements No
 	protected setState(newState: NotificationChannelState): void {
 		if (this._state !== newState) {
 			this._state = newState;
-			// Reset the reconnect budget only on a successful connection, so the
-			// maxAttempts guard and exponential backoff in scheduleReconnect() can
-			// actually progress across failed reconnect attempts.
-			if (newState === 'connected') {
+			// Reset the reconnect budget only on a successful connection or an explicit
+			// disconnect(), so the maxAttempts guard and exponential backoff in
+			// scheduleReconnect() can actually progress across failed reconnect attempts,
+			// while a later stop()/start() cycle still gets a fresh budget.
+			if (newState === 'connected' || newState === 'disconnected') {
 				this.reconnectAttempts = 0;
 			}
 			this.emit('stateChange', newState);

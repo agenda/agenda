@@ -132,4 +132,26 @@ describe('BaseNotificationChannel reconnect', () => {
 		expect(channel.connectCalls).toBe(4); // initial + 3 retries again
 		expect(channel.state).toBe('error');
 	});
+
+	it('restores the full retry budget after an explicit disconnect() once it gave up', async () => {
+		const channel = new FlakyChannel({
+			reconnect: { enabled: true, maxAttempts: 2, initialDelayMs: 100, maxDelayMs: 30000 }
+		});
+		channel.on('error', () => {});
+
+		// Exhaust the budget: initial + 2 retries
+		await expect(channel.connect()).rejects.toThrow('connect failed');
+		await vi.runAllTimersAsync();
+		expect(channel.connectCalls).toBe(3);
+		expect(channel.state).toBe('error');
+
+		// e.g. agenda.stop() + agenda.start() later on
+		await channel.disconnect();
+		expect(channel.reconnectAttemptsForTest).toBe(0);
+
+		await expect(channel.connect()).rejects.toThrow('connect failed');
+		await vi.runAllTimersAsync();
+		// full budget again: 1 manual connect + 2 retries
+		expect(channel.connectCalls).toBe(6);
+	});
 });
