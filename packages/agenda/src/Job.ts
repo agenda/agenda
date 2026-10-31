@@ -441,7 +441,12 @@ export class Job<DATA = unknown | void> {
 
 		const definition = this.agenda.definitions[this.attrs.name];
 
-		const lockDeadline = new Date(Date.now() - definition.lockLifetime);
+		// In a distributed setup the job's handler may not be registered in this
+		// process (e.g. an API/scheduler process), so `definition` can be undefined.
+		// Fall back to the agenda-wide default lock lifetime instead of dereferencing.
+		const lockLifetime = definition?.lockLifetime ?? this.agenda.attrs.defaultLockLifetime;
+
+		const lockDeadline = new Date(Date.now() - lockLifetime);
 
 		// This means a job has "expired", as in it has not been "touched" within the lockoutTime
 		// Remove from local lock
@@ -460,7 +465,11 @@ export class Job<DATA = unknown | void> {
 			throw new Error(`job ${this.attrs.name} got canceled already: ${this.canceled}!`);
 		}
 		this.attrs.lockedAt = new Date();
-		this.attrs.progress = progress;
+		// Only update progress when a value is supplied; bare touch() (keep-alive)
+		// must not wipe a previously reported progress value.
+		if (progress !== undefined) {
+			this.attrs.progress = progress;
+		}
 
 		await this.agenda.db.saveJobState(this.attrs, {
 			lastModifiedBy: this.agenda.attrs.name || undefined

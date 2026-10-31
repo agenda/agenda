@@ -175,6 +175,69 @@ describe('PostgresBackend', () => {
 		});
 	});
 
+	describe('failure fields on fresh insert', () => {
+		const failedAt = new Date('2025-01-01T00:00:00.000Z');
+
+		it('persists fail fields on a normal insert', async () => {
+			const saved = await backend.repository.saveJob({
+				name: 'fail-normal',
+				priority: 0,
+				nextRunAt: new Date(),
+				type: 'normal',
+				data: {},
+				failReason: 'boom',
+				failCount: 3,
+				failedAt
+			}, undefined);
+
+			const fetched = await backend.repository.getJobById(saved._id!);
+			expect(fetched).not.toBeNull();
+			expect(fetched!.failReason).toBe('boom');
+			expect(fetched!.failCount).toBe(3);
+			expect(fetched!.failedAt?.getTime()).toBe(failedAt.getTime());
+		});
+
+		it('persists fail fields on a single-type insert', async () => {
+			const saved = await backend.repository.saveJob({
+				name: 'fail-single',
+				priority: 0,
+				nextRunAt: new Date(),
+				type: 'single',
+				data: {},
+				failReason: 'single-boom',
+				failCount: 2,
+				failedAt
+			}, undefined);
+
+			const fetched = await backend.repository.getJobById(saved._id!);
+			expect(fetched).not.toBeNull();
+			expect(fetched!.failReason).toBe('single-boom');
+			expect(fetched!.failCount).toBe(2);
+			expect(fetched!.failedAt?.getTime()).toBe(failedAt.getTime());
+		});
+
+		it('persists fail fields on a unique (debounce) insert', async () => {
+			const saved = await backend.repository.saveJob({
+				name: 'fail-unique',
+				priority: 0,
+				nextRunAt: new Date(),
+				type: 'normal',
+				data: { entity: 'a' },
+				unique: { 'data.entity': 'a' },
+				uniqueOpts: { debounce: { delay: 1000 } },
+				failReason: 'unique-boom',
+				failCount: 1,
+				failedAt
+			}, undefined);
+
+			const fetched = await backend.repository.getJobById(saved._id!);
+			expect(fetched).not.toBeNull();
+			expect(fetched!.failReason).toBe('unique-boom');
+			expect(fetched!.failCount).toBe(1);
+			expect(fetched!.failedAt?.getTime()).toBe(failedAt.getTime());
+		});
+	});
+
 	describe('PostgreSQL-specific features', () => {
 		it('should support JSONB queries for job data', async () => {
 			await backend.repository.saveJob({
