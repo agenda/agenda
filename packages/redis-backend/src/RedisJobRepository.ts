@@ -1080,8 +1080,8 @@ export class RedisJobRepository implements JobRepository {
 					// Leading: execute immediately (keep nextRunAt as-is)
 					log('leading debounce: new job, executing immediately');
 				} else {
-					// Trailing: schedule after delay
-					nextRunAt = new Date(now.getTime() + debounce.delay);
+					// Trailing: schedule after delay, but never past the maxWait deadline
+					nextRunAt = new Date(now.getTime() + (debounce.maxWait ? Math.min(debounce.delay, debounce.maxWait) : debounce.delay));
 					log('trailing debounce: new job, scheduling for %s', nextRunAt.toISOString());
 				}
 

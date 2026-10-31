@@ -298,6 +298,20 @@ export function debounceTestSuite(config: DebounceTestConfig): void {
 				expect(job2.attrs.nextRunAt!.getTime()).toBeLessThanOrEqual(deadline + 50);
 				expect(job2.attrs.nextRunAt!.getTime()).toBeGreaterThan(Date.now());
 			});
+
+			it('should cap the first save at maxWait when maxWait is shorter than the delay', async () => {
+				agenda.define('debounceMaxWaitFirst', async () => {});
+
+				const before = Date.now();
+				const job = await agenda
+					.create('debounceMaxWaitFirst', { key: 'max4' })
+					.unique({ 'data.key': 'max4' })
+					.debounce(5000, { maxWait: 1000 })
+					.save();
+
+				expect(job.attrs.nextRunAt!.getTime()).toBeLessThanOrEqual(Date.now() + 1000);
+				expect(job.attrs.nextRunAt!.getTime()).toBeGreaterThanOrEqual(before + 1000);
+			});
 		});
 
 		describe('debounce with different unique keys', () => {

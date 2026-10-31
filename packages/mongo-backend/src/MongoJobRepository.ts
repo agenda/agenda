@@ -914,8 +914,8 @@ export class MongoJobRepository implements JobRepository {
 						log('leading debounce: new job, executing immediately');
 						(propsWithModifier as Partial<MongoJobDocument>).debounceStartedAt = now;
 					} else {
-						// Trailing: schedule after delay
-						const newNextRunAt = new Date(now.getTime() + debounce.delay);
+						// Trailing: schedule after delay, but never past the maxWait deadline
+						const newNextRunAt = new Date(now.getTime() + (debounce.maxWait ? Math.min(debounce.delay, debounce.maxWait) : debounce.delay));
 						(propsWithModifier as Partial<MongoJobDocument>).nextRunAt = newNextRunAt;
 						(propsWithModifier as Partial<MongoJobDocument>).debounceStartedAt = now;
 						log('trailing debounce: new job, scheduling for %s', newNextRunAt.toISOString());
