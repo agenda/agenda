@@ -488,6 +488,98 @@ describe('MongoBackend', () => {
 			expect(seen.after?.lastRunAt).toEqual(seen.before?.lastRunAt);
 		});
 
+		it('should keep processor-managed fields when every() re-saves an existing single job (#1810)', async () => {
+			const coll = db.collection(TEST_COLLECTION);
+			const agenda = new Agenda({ backend, processEvery: 100000 });
+			agenda.on('error', () => {});
+			agenda.define('single-preserve', async () => {});
+			await agenda.ready;
+
+			await agenda.every('1 hour', 'single-preserve');
+			const lockedAt = new Date();
+			const lastRunAt = new Date(Date.now() - 1000);
+			await coll.updateOne(
+				{ name: 'single-preserve' },
+				{ $set: { lockedAt, lastRunAt, failCount: 3, failReason: 'boom' } }
+			);
+
+			// e.g. an app restart calling every() again
+			await agenda.every('2 hours', 'single-preserve');
+
+			const docs = await coll.find({ name: 'single-preserve' }).toArray();
+			expect(docs).toHaveLength(1);
+			expect(docs[0].repeatInterval).toBe('2 hours');
+			expect(docs[0].lockedAt).toEqual(lockedAt);
+			expect(docs[0].lastRunAt).toEqual(lastRunAt);
+			expect(docs[0].failCount).toBe(3);
+			expect(docs[0].failReason).toBe('boom');
+		});
+
+		it('should keep processor-managed fields when a unique() save matches an existing job (#1810)', async () => {
+			const coll = db.collection(TEST_COLLECTION);
+			const agenda = new Agenda({ backend, processEvery: 100000 });
+			agenda.on('error', () => {});
+			agenda.define('unique-preserve', async () => {});
+			await agenda.ready;
+
+			await agenda.create('unique-preserve', { k: 1 }).unique({ 'data.k': 1 }).save();
+			const lockedAt = new Date();
+			const lastRunAt = new Date(Date.now() - 1000);
+			await coll.updateOne({ name: 'unique-preserve' }, { $set: { lockedAt, lastRunAt } });
+
+			await agenda.create('unique-preserve', { k: 1, v: 2 }).unique({ 'data.k': 1 }).save();
+
+			const docs = await coll.find({ name: 'unique-preserve' }).toArray();
+			expect(docs).toHaveLength(1);
+			expect(docs[0].data).toEqual({ k: 1, v: 2 });
+			expect(docs[0].lockedAt).toEqual(lockedAt);
+			expect(docs[0].lastRunAt).toEqual(lastRunAt);
+		});
+
+		it('should still store explicit nulls for missing fields on new single/unique jobs', async () => {
+			const coll = db.collection(TEST_COLLECTION);
+			const agenda = new Agenda({ backend, processEvery: 100000 });
+			agenda.on('error', () => {});
+			agenda.define('null-defaults', async () => {});
+			await agenda.ready;
+
+			await agenda.every('1 hour', 'null-defaults');
+			await agenda.create('null-defaults', { k: 1 }).unique({ 'data.k': 1 }).save();
+			await agenda.create('null-defaults', { k: 2 }).save();
+
+			const docs = await coll.find({ name: 'null-defaults' }).toArray();
+			expect(docs).toHaveLength(3);
+			for (const doc of docs) {
+				expect(doc).toHaveProperty('lockedAt', null);
+				expect(doc).toHaveProperty('lastRunAt', null);
+				expect(doc).toHaveProperty('failCount', null);
+			}
+		});
+
+		it('should clear a field that is explicitly passed as undefined when updating by _id', async () => {
+			const coll = db.collection(TEST_COLLECTION);
+			const agenda = new Agenda({ backend, processEvery: 100000 });
+			agenda.on('error', () => {});
+			agenda.define('explicit-clear', async () => {});
+			await agenda.ready;
+
+			const job = await agenda.create('explicit-clear', {}).save();
+			await coll.updateOne(
+				{ _id: new ObjectId(String(job.attrs._id)) },
+				{ $set: { lockedAt: new Date(), failCount: 2, failReason: 'x' } }
+			);
+
+			// Same shape agendash retryJobs() uses
+			const { jobs } = await agenda.queryJobs({ ids: [String(job.attrs._id)] });
+			const params = { ...jobs[0], lockedAt: undefined, failCount: undefined, failReason: undefined };
+			await backend.repository.saveJob(params, { lastModifiedBy: 'test' });
+
+			const doc = await coll.findOne({ _id: new ObjectId(String(job.attrs._id)) });
+			expect(doc?.lockedAt).toBeNull();
+			expect(doc?.failCount).toBeNull();
+			expect(doc?.failReason).toBeNull();
+		});
+
 		it('should clear nextRunAt via saveJobState so completed one-time jobs are not re-run (#1710)', async () => {
 			const {
 				db: dbWithIgnoreUndefined,
