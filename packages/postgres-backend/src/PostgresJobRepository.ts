@@ -726,8 +726,9 @@ export class PostgresJobRepository implements JobRepository {
 				`INSERT INTO "${this.tableName}" (
 					name, priority, next_run_at, type, repeat_timezone,
 					repeat_interval, data, repeat_at, disabled, fork, last_modified_by,
-					start_date, end_date, skip_days
-				 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+					start_date, end_date, skip_days,
+					fail_reason, fail_count, failed_at
+				 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
 				 ON CONFLICT ((name)) WHERE type = 'single'
 				 DO UPDATE SET
 					priority = EXCLUDED.priority,
@@ -759,7 +760,10 @@ export class PostgresJobRepository implements JobRepository {
 					options?.lastModifiedBy || null,
 					props.startDate || null,
 					props.endDate || null,
-					props.skipDays ? JSON.stringify(props.skipDays) : null
+					props.skipDays ? JSON.stringify(props.skipDays) : null,
+					props.failReason ?? null,
+					props.failCount ?? null,
+					props.failedAt || null
 				]
 			);
 
@@ -917,8 +921,9 @@ export class PostgresJobRepository implements JobRepository {
 					`INSERT INTO "${this.tableName}" (
 						name, priority, next_run_at, type, repeat_timezone,
 						repeat_interval, data, repeat_at, disabled, fork, last_modified_by, debounce_started_at,
-						start_date, end_date, skip_days
-					 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+						start_date, end_date, skip_days,
+						fail_reason, fail_count, failed_at
+					 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
 					 RETURNING *`,
 					[
 						props.name,
@@ -935,7 +940,10 @@ export class PostgresJobRepository implements JobRepository {
 						debounceStartedAt,
 						props.startDate || null,
 						props.endDate || null,
-						props.skipDays ? JSON.stringify(props.skipDays) : null
+						props.skipDays ? JSON.stringify(props.skipDays) : null,
+						props.failReason ?? null,
+						props.failCount ?? null,
+						props.failedAt || null
 					]
 				);
 
@@ -949,8 +957,9 @@ export class PostgresJobRepository implements JobRepository {
 			`INSERT INTO "${this.tableName}" (
 				name, priority, next_run_at, type, repeat_timezone,
 				repeat_interval, data, repeat_at, disabled, fork, last_modified_by,
-				start_date, end_date, skip_days
-			 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+				start_date, end_date, skip_days,
+				fail_reason, fail_count, failed_at
+			 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
 			 RETURNING *`,
 			[
 				props.name,
@@ -966,7 +975,10 @@ export class PostgresJobRepository implements JobRepository {
 				options?.lastModifiedBy || null,
 				props.startDate || null,
 				props.endDate || null,
-				props.skipDays ? JSON.stringify(props.skipDays) : null
+				props.skipDays ? JSON.stringify(props.skipDays) : null,
+				props.failReason ?? null,
+				props.failCount ?? null,
+				props.failedAt || null
 			]
 		);
 
