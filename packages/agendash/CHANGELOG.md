@@ -1,5 +1,21 @@
 # agendash
 
+## 8.2.5
+
+### Patch Changes
+
+- Updated dependencies [09fcbef]
+- Updated dependencies [a90c4ec]
+- Updated dependencies [57898fa]
+- Updated dependencies [ebf0f81]
+- Updated dependencies [17a68fa]
+- Updated dependencies [63de5c2]
+- Updated dependencies [3bc8ebc]
+- Updated dependencies [6d19660]
+- Updated dependencies [6e691fc]
+- Updated dependencies [fc7b7c1]
+  - agenda@6.2.7
+
 ## 8.2.4
 
 ### Patch Changes

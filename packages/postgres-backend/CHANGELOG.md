@@ -1,5 +1,25 @@
 # @agendajs/postgres-backend
 
+## 3.0.7
+
+### Patch Changes
+
+- 554c3ed: Cap the trailing debounce `nextRunAt` at the `maxWait` deadline. Each save rescheduled the job to `now + delay` without bounding it by `debounceStartedAt + maxWait`, so a save shortly before the deadline pushed execution past `maxWait`, breaking the documented guarantee that the job runs within `maxWait`.
+- 6fa9b56: Fix leading-strategy debounce never re-firing after its window elapsed (the debounce window was never reset once the job ran)
+- f75e5f4: Use column inference `ON CONFLICT (name) WHERE type = 'single'` for the single-job upsert instead of the expression form `((name))`. Both match the partial unique index on PostgreSQL, but CockroachDB rejects the expression form with a syntax error (#1731).
+- 8249685: Persist `failReason`, `failCount`, and `failedAt` when a job is inserted with failure state. Previously these columns were only written on the UPDATE path, so a brand-new job saved with failure state lost it.
+- Updated dependencies [09fcbef]
+- Updated dependencies [a90c4ec]
+- Updated dependencies [57898fa]
+- Updated dependencies [ebf0f81]
+- Updated dependencies [17a68fa]
+- Updated dependencies [63de5c2]
+- Updated dependencies [3bc8ebc]
+- Updated dependencies [6d19660]
+- Updated dependencies [6e691fc]
+- Updated dependencies [fc7b7c1]
+  - agenda@6.2.7
+
 ## 3.0.6
 
 ### Patch Changes
