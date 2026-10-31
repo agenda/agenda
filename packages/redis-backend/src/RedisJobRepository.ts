@@ -49,6 +49,15 @@ function matchesContainment(stored: unknown, filter: unknown): boolean {
 }
 
 /**
+ * Stored job data is JSON, so normalize the filter the same way before matching
+ * (Date -> ISO string, ObjectId -> hex string, undefined keys dropped), like the
+ * previous substring match and Postgres' `@>` with a JSON-serialized filter did.
+ */
+function matchesDataFilter(stored: unknown, filter: unknown): boolean {
+	return matchesContainment(stored, JSON.parse(JSON.stringify(filter)));
+}
+
+/**
  * Redis implementation of JobRepository
  *
  * Data structure:
@@ -269,7 +278,7 @@ export class RedisJobRepository implements JobRepository {
 			if (!includeDisabled && job.disabled) continue;
 			if (search && !job.name.toLowerCase().includes(search.toLowerCase())) continue;
 			if (data !== undefined) {
-				if (!matchesContainment(job.data, data)) continue;
+				if (!matchesDataFilter(job.data, data)) continue;
 			}
 
 			const jobState = computeJobState(job, now);
@@ -468,7 +477,7 @@ export class RedisJobRepository implements JobRepository {
 			} catch {
 				continue;
 			}
-			if (matchesContainment(stored, dataFilter)) {
+			if (matchesDataFilter(stored, dataFilter)) {
 				matching.push(jobId);
 			}
 		}

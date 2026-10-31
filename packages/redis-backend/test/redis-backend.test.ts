@@ -284,6 +284,17 @@ describe('RedisBackend', () => {
 			data
 		});
 
+		it('matches Date values in the filter against their stored JSON form', async () => {
+			const when = new Date('2026-01-02T03:04:05.000Z');
+			await backend.repository.saveJob(baseJob({ when, other: 1 }));
+
+			const { jobs } = await backend.repository.queryJobs({ data: { when } });
+			expect(jobs).toHaveLength(1);
+
+			const removed = await backend.repository.removeJobs({ data: { when } });
+			expect(removed).toBe(1);
+		});
+
 		it('queryJobs must not match a numeric prefix collision', async () => {
 			await backend.repository.saveJob(baseJob({ x: 11 }));
 
