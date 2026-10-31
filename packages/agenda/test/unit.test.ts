@@ -178,6 +178,21 @@ describe('Agenda Unit Tests', () => {
 		});
 	});
 
+	describe('touch', () => {
+		it('preserves progress when touch() is called without an argument', async () => {
+			agenda.define('touch-job', async () => {});
+			const job = agenda.create('touch-job', {});
+			job.attrs._id = toJobId('touch-id');
+
+			await job.touch(50);
+			expect(job.attrs.progress).toBe(50);
+
+			// touch() with no arg (keep-alive) must not wipe progress
+			await job.touch();
+			expect(job.attrs.progress).toBe(50);
+		});
+	});
+
 	describe('job creation with create()', () => {
 		it('creates a job instance', () => {
 			agenda.define('test job', () => {});
@@ -536,6 +551,25 @@ describe('Job Unit Tests', () => {
 		it('returns the job', () => {
 			const job = new Job(agenda, { name: 'demo', type: 'normal' });
 			expect(job.disable()).toBe(job);
+		});
+	});
+
+	describe('isExpired / isDead without a registered definition', () => {
+		it('does not throw when the job definition is not registered in this process', async () => {
+			// In a distributed setup, the handler for 'undefinedJob' is registered in
+			// the worker process but not here. Construct the job as the processor would
+			// (byJobProcessor=true) so it uses the in-memory definition lookup, which is
+			// undefined here. It must fall back to the default lock lifetime, not throw.
+			const job = new Job(
+				agenda,
+				{ name: 'undefinedJob', type: 'normal', lockedAt: new Date(Date.now() - 60_000) },
+				true
+			);
+
+			expect(agenda.definitions.undefinedJob).toBeUndefined();
+
+			await expect(job.isExpired()).resolves.toEqual(expect.any(Boolean));
+			await expect(job.isDead()).resolves.toEqual(expect.any(Boolean));
 		});
 	});
 });
