@@ -133,6 +133,13 @@ export class RedisJobRepository implements JobRepository {
 			debounceStartedAt:
 				data.debounceStartedAt && data.debounceStartedAt !== 'null'
 					? new Date(data.debounceStartedAt)
+					: undefined,
+			startDate:
+				data.startDate && data.startDate !== 'null' ? new Date(data.startDate) : undefined,
+			endDate: data.endDate && data.endDate !== 'null' ? new Date(data.endDate) : undefined,
+			skipDays:
+				data.skipDays && data.skipDays !== 'null'
+					? (JSON.parse(data.skipDays) as number[])
 					: undefined
 		};
 	}
@@ -167,6 +174,9 @@ export class RedisJobRepository implements JobRepository {
 			fork: String(job.fork ?? false),
 			lastModifiedBy: lastModifiedBy ?? 'null',
 			debounceStartedAt: job.debounceStartedAt?.toISOString() || 'null',
+			startDate: job.startDate?.toISOString() || 'null',
+			endDate: job.endDate?.toISOString() || 'null',
+			skipDays: job.skipDays ? JSON.stringify(job.skipDays) : 'null',
 			createdAt: now,
 			updatedAt: now
 		};
@@ -864,6 +874,9 @@ export class RedisJobRepository implements JobRepository {
 				disabled: String(props.disabled ?? false),
 				fork: String(props.fork ?? false),
 				lastModifiedBy: options?.lastModifiedBy ?? 'null',
+				startDate: props.startDate?.toISOString() || 'null',
+				endDate: props.endDate?.toISOString() || 'null',
+				skipDays: props.skipDays ? JSON.stringify(props.skipDays) : 'null',
 				updatedAt: now
 			};
 
@@ -908,6 +921,9 @@ export class RedisJobRepository implements JobRepository {
 						repeatAt: props.repeatAt ?? 'null',
 						disabled: String(props.disabled ?? false),
 						lastModifiedBy: options?.lastModifiedBy ?? 'null',
+						startDate: props.startDate?.toISOString() || 'null',
+						endDate: props.endDate?.toISOString() || 'null',
+						skipDays: props.skipDays ? JSON.stringify(props.skipDays) : 'null',
 						updatedAt: now.toISOString()
 					};
 
@@ -1036,6 +1052,9 @@ export class RedisJobRepository implements JobRepository {
 						disabled: String(props.disabled ?? false),
 						lastModifiedBy: options?.lastModifiedBy ?? 'null',
 						debounceStartedAt,
+						startDate: props.startDate?.toISOString() || 'null',
+						endDate: props.endDate?.toISOString() || 'null',
+						skipDays: props.skipDays ? JSON.stringify(props.skipDays) : 'null',
 						updatedAt: nowIso
 					};
 
