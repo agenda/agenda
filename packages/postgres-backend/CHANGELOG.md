@@ -1,5 +1,12 @@
 # @agendajs/postgres-backend
 
+## 3.0.8
+
+### Patch Changes
+
+- Updated dependencies [1f4d6a5]
+  - agenda@6.2.8
+
 ## 3.0.7
 
 ### Patch Changes
