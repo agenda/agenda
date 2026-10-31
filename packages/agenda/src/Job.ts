@@ -441,7 +441,12 @@ export class Job<DATA = unknown | void> {
 
 		const definition = this.agenda.definitions[this.attrs.name];
 
-		const lockDeadline = new Date(Date.now() - definition.lockLifetime);
+		// In a distributed setup the job's handler may not be registered in this
+		// process (e.g. an API/scheduler process), so `definition` can be undefined.
+		// Fall back to the agenda-wide default lock lifetime instead of dereferencing.
+		const lockLifetime = definition?.lockLifetime ?? this.agenda.attrs.defaultLockLifetime;
+
+		const lockDeadline = new Date(Date.now() - lockLifetime);
 
 		// This means a job has "expired", as in it has not been "touched" within the lockoutTime
 		// Remove from local lock
