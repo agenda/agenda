@@ -1026,7 +1026,15 @@ export class RedisJobRepository implements JobRepository {
 								nextRunAt = nowIso;
 								debounceStartedAt = 'null'; // Reset for next cycle
 							} else {
+								// Schedule for delay ms from now, but never past the maxWait deadline
+								// so the job still runs within maxWait if saves stop.
 								const newNextRunAt = new Date(now.getTime() + debounce.delay);
+								if (debounce.maxWait) {
+									const deadline = existingDebounceStartedAt.getTime() + debounce.maxWait;
+									if (newNextRunAt.getTime() > deadline) {
+										newNextRunAt.setTime(deadline);
+									}
+								}
 								nextRunAt = newNextRunAt.toISOString();
 								debounceStartedAt = existingDebounceStartedAt.toISOString();
 								log('trailing debounce: rescheduling to %s', nextRunAt);
@@ -1072,8 +1080,8 @@ export class RedisJobRepository implements JobRepository {
 					// Leading: execute immediately (keep nextRunAt as-is)
 					log('leading debounce: new job, executing immediately');
 				} else {
-					// Trailing: schedule after delay
-					nextRunAt = new Date(now.getTime() + debounce.delay);
+					// Trailing: schedule after delay, but never past the maxWait deadline
+					nextRunAt = new Date(now.getTime() + (debounce.maxWait ? Math.min(debounce.delay, debounce.maxWait) : debounce.delay));
 					log('trailing debounce: new job, scheduling for %s', nextRunAt.toISOString());
 				}
 
