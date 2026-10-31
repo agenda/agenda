@@ -1181,6 +1181,10 @@ export class Agenda extends EventEmitter {
 			await this.db.unlockJobs(jobIds);
 		}
 
+		// A lock query that was already in flight can still lock a job after the processor
+		// stopped; the fill releases such a job itself, wait for that before returning.
+		await this.jobProcessor.waitForPendingQueueFills();
+
 		// Unsubscribe from state notifications
 		if (this.stateSubscriptionUnsubscribe) {
 			this.stateSubscriptionUnsubscribe();
