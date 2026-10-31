@@ -1145,7 +1145,8 @@ export class Agenda extends EventEmitter {
 	async stop(closeConnection?: boolean): Promise<void> {
 		if (this.startPromise) {
 			log('Agenda.stop called while start is in progress, waiting for start');
-			await this.startPromise;
+			// start() reports its own failure to its caller; stop() must still tear down
+			await this.startPromise.catch(() => {});
 		}
 
 		if (!this.jobProcessor) {
@@ -1220,7 +1221,7 @@ export class Agenda extends EventEmitter {
 	): Promise<DrainResult> {
 		if (this.startPromise) {
 			log('Agenda.drain called while start is in progress, waiting for start');
-			await this.startPromise;
+			await this.startPromise.catch(() => {});
 		}
 
 		if (!this.jobProcessor) {

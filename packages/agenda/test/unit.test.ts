@@ -950,4 +950,22 @@ describe('teardown during start()', () => {
 			}
 		}
 	});
+	it('stop() during a failing start() resolves instead of rethrowing the start error', async () => {
+		class FailingChannel extends InMemoryNotificationChannel {
+			async connect(): Promise<void> {
+				await new Promise(resolve => setTimeout(resolve, 30));
+				throw new Error('connect failed');
+			}
+		}
+		const agenda = new Agenda({
+			backend: new MockBackend(),
+			notificationChannel: new FailingChannel()
+		});
+		const startPromise = agenda.start();
+		const stopPromise = agenda.stop();
+
+		await expect(startPromise).rejects.toThrow('connect failed');
+		await expect(stopPromise).resolves.toBeUndefined();
+		expect(agenda.isActiveJobProcessor()).toBe(false);
+	});
 });
