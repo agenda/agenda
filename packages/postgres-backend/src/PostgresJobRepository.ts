@@ -21,10 +21,46 @@ import type { PostgresBackendConfig, PostgresJobRow } from './types.js';
 import {
 	getCreateTableSQL,
 	getCreateIndexesSQL,
+	getMigrationSQL,
 	getUpdateTimestampTriggerSQL
 } from './schema.js';
 
 const log = debug('agenda:postgres:repository');
+
+/**
+ * Columns that may be referenced directly (i.e. not via a `data.` JSON path) in a
+ * `unique` constraint. SQL identifiers cannot be passed as bound parameters, so a
+ * caller-supplied key is validated against this allowlist before it is ever placed
+ * into a query string. This prevents SQL injection via the keys of the `unique`
+ * object (the values are always parameterized).
+ */
+const UNIQUE_QUERYABLE_COLUMNS = new Set<string>([
+	'id',
+	'name',
+	'priority',
+	'next_run_at',
+	'type',
+	'locked_at',
+	'last_finished_at',
+	'failed_at',
+	'fail_count',
+	'fail_reason',
+	'repeat_timezone',
+	'last_run_at',
+	'repeat_interval',
+	'data',
+	'repeat_at',
+	'disabled',
+	'progress',
+	'fork',
+	'last_modified_by',
+	'debounce_started_at',
+	'start_date',
+	'end_date',
+	'skip_days',
+	'created_at',
+	'updated_at'
+]);
 
 /**
  * PostgreSQL implementation of JobRepository
@@ -101,6 +137,12 @@ export class PostgresJobRepository implements JobRepository {
 		await client.query(getCreateTableSQL(this.tableName));
 		log('table created or already exists');
 
+		// Apply migrations for columns added after the initial schema
+		for (const sql of getMigrationSQL(this.tableName)) {
+			await client.query(sql);
+		}
+		log('migrations applied');
+
 		// Create indexes
 		for (const sql of getCreateIndexesSQL(this.tableName)) {
 			await client.query(sql);
@@ -157,7 +199,10 @@ export class PostgresJobRepository implements JobRepository {
 			progress: row.progress ?? undefined,
 			fork: row.fork ?? undefined,
 			lastModifiedBy: row.last_modified_by ?? undefined,
-			debounceStartedAt: row.debounce_started_at ?? undefined
+			debounceStartedAt: row.debounce_started_at ?? undefined,
+			startDate: row.start_date ?? undefined,
+			endDate: row.end_date ?? undefined,
+			skipDays: row.skip_days ?? undefined
 		};
 	}
 
@@ -632,7 +677,10 @@ export class PostgresJobRepository implements JobRepository {
 					 fail_reason = $12,
 					 fail_count = $13,
 					 failed_at = $14,
-					 last_modified_by = $15
+					 last_modified_by = $15,
+					 start_date = $16,
+					 end_date = $17,
+					 skip_days = $18
 				 WHERE id = $1 AND name = $2
 				 RETURNING *`,
 				[
@@ -650,7 +698,10 @@ export class PostgresJobRepository implements JobRepository {
 					props.failReason ?? null,
 					props.failCount ?? null,
 					props.failedAt || null,
-					options?.lastModifiedBy || null
+					options?.lastModifiedBy || null,
+					props.startDate || null,
+					props.endDate || null,
+					props.skipDays ? JSON.stringify(props.skipDays) : null
 				]
 			);
 
@@ -674,8 +725,9 @@ export class PostgresJobRepository implements JobRepository {
 			const result = await this.pool.query<PostgresJobRow>(
 				`INSERT INTO "${this.tableName}" (
 					name, priority, next_run_at, type, repeat_timezone,
-					repeat_interval, data, repeat_at, disabled, fork, last_modified_by
-				 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+					repeat_interval, data, repeat_at, disabled, fork, last_modified_by,
+					start_date, end_date, skip_days
+				 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 				 ON CONFLICT ((name)) WHERE type = 'single'
 				 DO UPDATE SET
 					priority = EXCLUDED.priority,
@@ -688,7 +740,10 @@ export class PostgresJobRepository implements JobRepository {
 					repeat_at = EXCLUDED.repeat_at,
 					disabled = EXCLUDED.disabled,
 					fork = EXCLUDED.fork,
-					last_modified_by = EXCLUDED.last_modified_by
+					last_modified_by = EXCLUDED.last_modified_by,
+					start_date = EXCLUDED.start_date,
+					end_date = EXCLUDED.end_date,
+					skip_days = EXCLUDED.skip_days
 				 RETURNING *`,
 				[
 					props.name,
@@ -701,7 +756,10 @@ export class PostgresJobRepository implements JobRepository {
 					props.repeatAt || null,
 					props.disabled || false,
 					props.fork || false,
-					options?.lastModifiedBy || null
+					options?.lastModifiedBy || null,
+					props.startDate || null,
+					props.endDate || null,
+					props.skipDays ? JSON.stringify(props.skipDays) : null
 				]
 			);
 
@@ -722,14 +780,20 @@ export class PostgresJobRepository implements JobRepository {
 
 			for (const [key, value] of Object.entries(unique)) {
 				if (key.startsWith('data.')) {
-					// Handle data sub-paths like 'data.userId'
+					// Handle data sub-paths like 'data.userId'. The JSON path is a value,
+					// so it is bound as a parameter rather than interpolated into the SQL.
 					const dataPath = key.substring(5);
-					conditions.push(`data->>'${dataPath}' = $${paramIndex++}`);
-					params.push(String(value));
+					conditions.push(`data->>$${paramIndex++} = $${paramIndex++}`);
+					params.push(dataPath, String(value));
 				} else {
-					// Direct column (snake_case conversion)
+					// Direct column (snake_case conversion). The column name is an SQL
+					// identifier and cannot be parameterized, so it is validated against a
+					// fixed allowlist to prevent SQL injection via the unique key.
 					const columnName = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-					conditions.push(`${columnName} = $${paramIndex++}`);
+					if (!UNIQUE_QUERYABLE_COLUMNS.has(columnName)) {
+						throw new Error(`Invalid unique constraint field: "${key}"`);
+					}
+					conditions.push(`"${columnName}" = $${paramIndex++}`);
 					params.push(value);
 				}
 			}
@@ -799,7 +863,10 @@ export class PostgresJobRepository implements JobRepository {
 						 disabled = $${paramIndex + 7},
 						 fork = $${paramIndex + 8},
 						 last_modified_by = $${paramIndex + 9},
-						 debounce_started_at = $${paramIndex + 10}
+						 debounce_started_at = $${paramIndex + 10},
+						 start_date = $${paramIndex + 11},
+						 end_date = $${paramIndex + 12},
+						 skip_days = $${paramIndex + 13}
 					 WHERE ${conditions.join(' AND ')}
 					 RETURNING *`,
 					[
@@ -814,7 +881,10 @@ export class PostgresJobRepository implements JobRepository {
 						props.disabled || false,
 						props.fork || false,
 						options?.lastModifiedBy || null,
-						debounceStartedAt
+						debounceStartedAt,
+						props.startDate || null,
+						props.endDate || null,
+						props.skipDays ? JSON.stringify(props.skipDays) : null
 					]
 				);
 
@@ -838,8 +908,9 @@ export class PostgresJobRepository implements JobRepository {
 				const result = await this.pool.query<PostgresJobRow>(
 					`INSERT INTO "${this.tableName}" (
 						name, priority, next_run_at, type, repeat_timezone,
-						repeat_interval, data, repeat_at, disabled, fork, last_modified_by, debounce_started_at
-					 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+						repeat_interval, data, repeat_at, disabled, fork, last_modified_by, debounce_started_at,
+						start_date, end_date, skip_days
+					 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 					 RETURNING *`,
 					[
 						props.name,
@@ -853,7 +924,10 @@ export class PostgresJobRepository implements JobRepository {
 						props.disabled || false,
 						props.fork || false,
 						options?.lastModifiedBy || null,
-						debounceStartedAt
+						debounceStartedAt,
+						props.startDate || null,
+						props.endDate || null,
+						props.skipDays ? JSON.stringify(props.skipDays) : null
 					]
 				);
 
@@ -866,8 +940,9 @@ export class PostgresJobRepository implements JobRepository {
 		const result = await this.pool.query<PostgresJobRow>(
 			`INSERT INTO "${this.tableName}" (
 				name, priority, next_run_at, type, repeat_timezone,
-				repeat_interval, data, repeat_at, disabled, fork, last_modified_by
-			 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+				repeat_interval, data, repeat_at, disabled, fork, last_modified_by,
+				start_date, end_date, skip_days
+			 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 			 RETURNING *`,
 			[
 				props.name,
@@ -880,7 +955,10 @@ export class PostgresJobRepository implements JobRepository {
 				props.repeatAt || null,
 				props.disabled || false,
 				props.fork || false,
-				options?.lastModifiedBy || null
+				options?.lastModifiedBy || null,
+				props.startDate || null,
+				props.endDate || null,
+				props.skipDays ? JSON.stringify(props.skipDays) : null
 			]
 		);
 

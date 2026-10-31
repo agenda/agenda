@@ -1,5 +1,20 @@
 # @agendajs/redis-backend
 
+## 3.0.7
+
+### Patch Changes
+
+- b48ebef: Persist and load `startDate`, `endDate` and `skipDays` so date constraints on repeating jobs are honored (previously these fields were silently dropped — a repeating job with an `endDate` would keep running forever). The PostgreSQL backend adds the `start_date`, `end_date` and `skip_days` columns automatically on connect for existing installations.
+- Updated dependencies [3369032]
+- Updated dependencies [a072e7b]
+- Updated dependencies [d90be16]
+- Updated dependencies [42d17a3]
+- Updated dependencies [2b6c926]
+- Updated dependencies [08b1e22]
+- Updated dependencies [24e7591]
+- Updated dependencies [fd01a64]
+  - agenda@6.2.6
+
 ## 3.0.6
 
 ### Patch Changes

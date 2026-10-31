@@ -1,5 +1,21 @@
 # agendash
 
+## 8.2.4
+
+### Patch Changes
+
+- ca44630: Correct the middleware factory names in the README examples (`createExpressMiddleware`, `createKoaMiddleware`, `createFastifyPlugin`, `createHapiPlugin` — the previously documented unprefixed names do not exist) and drop an unused `koa-router` import from the Koa example. Patch release so the corrected README reaches the npm package page.
+- b9c4768: Replace deprecated dependency `koa-router` with `@koa/router`
+- Updated dependencies [3369032]
+- Updated dependencies [a072e7b]
+- Updated dependencies [d90be16]
+- Updated dependencies [42d17a3]
+- Updated dependencies [2b6c926]
+- Updated dependencies [08b1e22]
+- Updated dependencies [24e7591]
+- Updated dependencies [fd01a64]
+  - agenda@6.2.6
+
 ## 8.2.3
 
 ### Patch Changes
