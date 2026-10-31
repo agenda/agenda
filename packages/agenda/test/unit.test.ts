@@ -1001,3 +1001,59 @@ describe('start() concurrency', () => {
 		expect(channel.state).toBe('disconnected');
 	});
 });
+
+describe('teardown during start()', () => {
+	class SlowConnectBackend extends MockBackend {
+		async connect(): Promise<void> {
+			await new Promise(resolve => setTimeout(resolve, 30));
+		}
+	}
+
+	it('stop() called during start waits for startup before tearing down', async () => {
+		const agenda = new Agenda({ backend: new SlowConnectBackend() });
+		const startPromise = agenda.start();
+		const stopPromise = agenda.stop();
+
+		try {
+			await Promise.all([startPromise, stopPromise]);
+			expect(agenda.isActiveJobProcessor()).toBe(false);
+		} finally {
+			if (agenda.isActiveJobProcessor()) {
+				await agenda.stop();
+			}
+		}
+	});
+
+	it('drain() called during start waits for startup before tearing down', async () => {
+		const agenda = new Agenda({ backend: new SlowConnectBackend() });
+		const startPromise = agenda.start();
+		const drainPromise = agenda.drain();
+
+		try {
+			await Promise.all([startPromise, drainPromise]);
+			expect(agenda.isActiveJobProcessor()).toBe(false);
+		} finally {
+			if (agenda.isActiveJobProcessor()) {
+				await agenda.stop();
+			}
+		}
+	});
+	it('stop() during a failing start() resolves instead of rethrowing the start error', async () => {
+		class FailingChannel extends InMemoryNotificationChannel {
+			async connect(): Promise<void> {
+				await new Promise(resolve => setTimeout(resolve, 30));
+				throw new Error('connect failed');
+			}
+		}
+		const agenda = new Agenda({
+			backend: new MockBackend(),
+			notificationChannel: new FailingChannel()
+		});
+		const startPromise = agenda.start();
+		const stopPromise = agenda.stop();
+
+		await expect(startPromise).rejects.toThrow('connect failed');
+		await expect(stopPromise).resolves.toBeUndefined();
+		expect(agenda.isActiveJobProcessor()).toBe(false);
+	});
+});
