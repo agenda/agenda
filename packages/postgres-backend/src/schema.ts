@@ -25,10 +25,26 @@ export function getCreateTableSQL(tableName: string): string {
 			fork BOOLEAN DEFAULT FALSE,
 			last_modified_by VARCHAR(255),
 			debounce_started_at TIMESTAMPTZ,
+			start_date TIMESTAMPTZ,
+			end_date TIMESTAMPTZ,
+			skip_days JSONB,
 			created_at TIMESTAMPTZ DEFAULT NOW(),
 			updated_at TIMESTAMPTZ DEFAULT NOW()
 		);
 	`;
+}
+
+/**
+ * Migration statements for columns added after the initial schema.
+ * Safe to run repeatedly (ADD COLUMN IF NOT EXISTS) so existing
+ * installations pick up new columns on connect.
+ */
+export function getMigrationSQL(tableName: string): string[] {
+	return [
+		`ALTER TABLE "${tableName}" ADD COLUMN IF NOT EXISTS start_date TIMESTAMPTZ`,
+		`ALTER TABLE "${tableName}" ADD COLUMN IF NOT EXISTS end_date TIMESTAMPTZ`,
+		`ALTER TABLE "${tableName}" ADD COLUMN IF NOT EXISTS skip_days JSONB`
+	];
 }
 
 export function getCreateIndexesSQL(tableName: string): string[] {
