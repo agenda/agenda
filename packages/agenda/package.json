@@ -63,11 +63,11 @@
     "@types/debug": "^4.1.13",
     "@types/human-interval": "^1.0.2",
     "@types/luxon": "^3.7.1",
-    "@types/node": "^22.19.18",
-    "@vitest/coverage-v8": "^3.2.4",
-    "sinon": "^19.0.5",
+    "@types/node": "^25.6.2",
+    "@vitest/coverage-v8": "^4.1.5",
+    "sinon": "^22.0.0",
     "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
-    "vitest": "^3.2.4"
+    "vitest": "^4.1.5"
   }
 }
