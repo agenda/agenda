@@ -577,6 +577,54 @@ export function repositoryTestSuite(config: RepositoryTestConfig): void {
 				expect(next!.data).toEqual({ priority: 'high' });
 			});
 
+			it('should respect priority ordering for negative priorities', async () => {
+				// Agenda's named priorities are negative (low=-10, lowest=-20).
+				// With equal nextRunAt, higher priority must run first:
+				// normal(0) before low(-10) before lowest(-20).
+				const sameTime = new Date(Date.now() - 60000);
+
+				await repo.saveJob({
+					name: 'neg-priority-test',
+					priority: -20,
+					nextRunAt: sameTime,
+					type: 'normal',
+					data: { priority: 'lowest' }
+				}, undefined);
+				await repo.saveJob({
+					name: 'neg-priority-test',
+					priority: -10,
+					nextRunAt: sameTime,
+					type: 'normal',
+					data: { priority: 'low' }
+				}, undefined);
+				await repo.saveJob({
+					name: 'neg-priority-test',
+					priority: 0,
+					nextRunAt: sameTime,
+					type: 'normal',
+					data: { priority: 'normal' }
+				}, undefined);
+
+				const now = new Date();
+				const nextScanAt = new Date(now.getTime() + 5000);
+				const lockDeadline = new Date(now.getTime() - 600000);
+
+				const first = await repo.getNextJobToRun('neg-priority-test', nextScanAt, lockDeadline, now, undefined);
+				expect(first).toBeDefined();
+				expect(first!.priority).toBe(0);
+				expect(first!.data).toEqual({ priority: 'normal' });
+
+				const second = await repo.getNextJobToRun('neg-priority-test', nextScanAt, lockDeadline, now, undefined);
+				expect(second).toBeDefined();
+				expect(second!.priority).toBe(-10);
+				expect(second!.data).toEqual({ priority: 'low' });
+
+				const third = await repo.getNextJobToRun('neg-priority-test', nextScanAt, lockDeadline, now, undefined);
+				expect(third).toBeDefined();
+				expect(third!.priority).toBe(-20);
+				expect(third!.data).toEqual({ priority: 'lowest' });
+			});
+
 			it('should not return disabled jobs', async () => {
 				await repo.saveJob({
 					name: 'disabled-test',
