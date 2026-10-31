@@ -240,26 +240,21 @@ export function jobProcessorTestSuite(config: JobProcessorTestConfig): void {
 
 			await agenda.start();
 
+			// Deadline loop instead of a fixed 2.5s race: the ramp-up speed depends
+			// on runner performance (the 2.5s variant flaked repeatedly in CI with
+			// ~80/90 running). The generous deadline only matters on failure; on a
+			// healthy run the loop exits as soon as the target is reached.
 			let runningJobs = 0;
-			const allJobsStarted = (async () => {
-				do {
-					runningJobs = (await agenda.getRunningStats()).runningJobs as number;
-					await delay(50);
-				} while (runningJobs < 90);
-				return 'all started';
-			})();
+			const deadline = Date.now() + 15000;
+			do {
+				runningJobs = (await agenda.getRunningStats()).runningJobs as number;
+				if (runningJobs >= 90) {
+					break;
+				}
+				await delay(50);
+			} while (Date.now() < deadline);
 
-			const result = await Promise.race([
-				allJobsStarted,
-				new Promise(resolve => {
-					setTimeout(
-						() => resolve(`not all jobs started, currently running: ${runningJobs}`),
-						2500
-					);
-				})
-			]);
-
-			expect(result).toBe('all started');
+			expect(runningJobs, `not all jobs started, currently running: ${runningJobs}`).toBeGreaterThanOrEqual(90);
 		});
 	});
 }
