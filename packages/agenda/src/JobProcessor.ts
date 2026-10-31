@@ -100,6 +100,13 @@ export class JobProcessor {
 
 	private lockedJobs: JobWithId[] = [];
 
+	/**
+	 * In-flight jobQueueFilling() calls. A fill's lock query can still be running at the
+	 * database when stop() is called; stop() waits for these so a job such a query locks
+	 * after the processor stopped is released again before stop() resolves.
+	 */
+	private pendingQueueFills = new Set<Promise<void>>();
+
 	private isJobQueueFilling = new Map<string, boolean>();
 
 	private isRunning = true;
@@ -418,7 +425,29 @@ export class JobProcessor {
 	 * @param {String} name fill a queue with specific job name
 	 * @returns {undefined}
 	 */
-	private async jobQueueFilling(name: string): Promise<void> {
+	private jobQueueFilling(name: string): Promise<void> {
+		const fill = this.fillQueue(name).finally(() => {
+			this.pendingQueueFills.delete(fill);
+		});
+		this.pendingQueueFills.add(fill);
+		return fill;
+	}
+
+	/**
+	 * Wait until no queue fill is in flight anymore (used by Agenda.stop()).
+	 */
+	async waitForPendingQueueFills(): Promise<void> {
+		while (this.pendingQueueFills.size > 0) {
+			await Promise.allSettled([...this.pendingQueueFills]);
+		}
+	}
+
+	private async fillQueue(name: string): Promise<void> {
+		if (!this.isRunning) {
+			log.extend('jobQueueFilling')('JobProcessor stopped, not filling queue for [%s]', name);
+			return;
+		}
+
 		this.isJobQueueFilling.set(name, true);
 
 		try {
@@ -447,13 +476,26 @@ export class JobProcessor {
 					);
 				}
 
+				// The processor may have been stopped while the lock query was in flight.
+				// stop() has already collected (and is unlocking) the jobs it knew about,
+				// so release this one ourselves instead of leaking its lock.
+				if (!this.isRunning) {
+					log.extend('jobQueueFilling')(
+						'JobProcessor stopped while locking [%s:%s], releasing lock',
+						name,
+						job.attrs._id
+					);
+					await this.agenda.db.unlockJob(job.attrs);
+					return;
+				}
+
 				// Before en-queing job make sure we haven't exceed our lock limits
 				if (!this.shouldLock(name)) {
 					log.extend('jobQueueFilling')(
 						'lock limit reached before job was returned. Releasing lock on [%s]',
 						name
 					);
-					this.agenda.db.unlockJob(job.attrs);
+					await this.agenda.db.unlockJob(job.attrs);
 					return;
 				}
 
