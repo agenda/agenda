@@ -91,6 +91,14 @@ export class JobProcessor {
 
 	private processInterval?: ReturnType<typeof setInterval>;
 
+	/**
+	 * Timers armed for jobs whose nextRunAt is in the near future. Tracked so
+	 * stop()/drain() can clear them - an uncleared timer keeps the event loop
+	 * alive and can re-arm itself for recurring jobs, preventing process exit
+	 * (see #1786).
+	 */
+	private nextRunTimers = new Set<ReturnType<typeof setTimeout>>();
+
 	private notificationChannel?: NotificationChannel;
 
 	private notificationUnsubscribe?: () => void;
@@ -117,6 +125,17 @@ export class JobProcessor {
 		}
 	}
 
+	/**
+	 * Clear all armed near-future job timers so nothing keeps the event loop
+	 * alive (or restarts processing) after the processor is stopped/drained.
+	 */
+	private clearNextRunTimers(): void {
+		for (const timer of this.nextRunTimers) {
+			clearTimeout(timer);
+		}
+		this.nextRunTimers.clear();
+	}
+
 	stop(): JobWithId[] {
 		log.extend('stop')('stop job processor', this.isRunning);
 		this.isRunning = false;
@@ -126,6 +145,8 @@ export class JobProcessor {
 			this.processInterval = undefined;
 		}
 
+		this.clearNextRunTimers();
+
 		// Unsubscribe from notifications
 		if (this.notificationUnsubscribe) {
 			log.extend('stop')('unsubscribing from notification channel');
@@ -133,10 +154,11 @@ export class JobProcessor {
 			this.notificationUnsubscribe = undefined;
 		}
 
-		// Return both locked and running jobs so they can all be unlocked
-		// Running jobs are also "locked" in the database (they have lockedAt set),
-		// they just moved from lockedJobs to runningJobs when processing started
-		return [...this.lockedJobs, ...this.runningJobs];
+		const runningJobIds = new Set(this.runningJobs.map(job => job.attrs._id.toString()));
+
+		// Only unlock jobs that are held locally but have not started running.
+		// Running jobs keep their database locks until they complete or the lock expires.
+		return this.lockedJobs.filter(job => !runningJobIds.has(job.attrs._id.toString()));
 	}
 
 	/**
@@ -157,6 +179,8 @@ export class JobProcessor {
 			clearInterval(this.processInterval);
 			this.processInterval = undefined;
 		}
+
+		this.clearNextRunTimers();
 
 		// Unsubscribe from notifications to stop receiving new job notifications
 		if (this.notificationUnsubscribe) {
@@ -515,6 +539,11 @@ export class JobProcessor {
 
 						this.lockedJobs.splice(lockedJobIndex, 1);
 						this.updateStatus(job.attrs.name, 'locked', -1);
+						// Release the database lock as well. Otherwise a job that was
+						// locked via the expired-lock recovery path while its nextRunAt
+						// is still in the future gets re-locked on every scan and never
+						// reaches its run time.
+						this.agenda.db.unlockJob(job.attrs);
 					} else {
 						log.extend('jobProcessing')(
 							'[%s:%s] nextRunAt is in the future, calling setTimeout(%d)',
@@ -525,15 +554,23 @@ export class JobProcessor {
 						// re add to queue (puts it at the right position in the queue)
 						this.jobQueue.insert(job);
 						// ensure every job gets a timer to run at the near future time (but also ensure this time is set only once)
-						if (!job.gotTimerToExecute) {
+						// Only arm while the processor is active (processInterval is cleared
+						// by stop()/drain()), so completing jobs cannot re-arm timers during
+						// teardown.
+						if (!job.gotTimerToExecute && this.processInterval) {
 							job.gotTimerToExecute = true;
-							setTimeout(
+							const timer = setTimeout(
 								() => {
+									this.nextRunTimers.delete(timer);
 									this.jobProcessing();
 								},
 								runIn > MAX_SAFE_32BIT_INTEGER ? MAX_SAFE_32BIT_INTEGER : runIn
 							); // check if runIn is higher than unsined 32 bit int, if so, use this time to recheck,
 							// because setTimeout will run in an overflow otherwise and reprocesses immediately
+							// Track the timer so stop()/drain() can clear it, and unref it so
+							// an armed timer alone never blocks process exit (#1786).
+							timer.unref?.();
+							this.nextRunTimers.add(timer);
 						}
 					}
 				}

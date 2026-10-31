@@ -192,11 +192,63 @@ const jobs = await agenda.jobs({ name: 'my-job' }, { nextRunAt: -1 }, 10, 0);
 // Structured options object
 const { jobs, total } = await agenda.queryJobs({
   name: 'my-job',
-  sort: 'desc',
+  sort: { nextRunAt: 'desc' },
   limit: 10,
   skip: 0
 });
 ```
+
+#### Queried jobs are plain objects, not `Job` instances
+
+This is the biggest behavioral difference: `agenda.jobs()` returned **`Job` instances**
+(data under `job.attrs`, with methods like `schedule()`, `save()`, `remove()`),
+while `agenda.queryJobs()` returns **plain data objects** (`JobWithState`). The
+fields live directly on the object (no `.attrs`), a computed `state` field is
+included, and none of the `Job` methods are available.
+
+```javascript
+const { jobs } = await agenda.queryJobs({ name: 'my-job' });
+
+jobs[0]._id;       // job id (was: job.attrs._id)
+jobs[0].data;      // job data (was: job.attrs.data)
+jobs[0].state;     // computed state: 'scheduled' | 'queued' | 'running' | ...
+jobs[0].schedule;  // undefined - plain object, not a Job instance
+```
+
+To modify a queried job the way you would have in v5, rehydrate it into a
+`Job` instance with the exported `Job` class — the same mechanism agenda uses
+internally:
+
+**Before (v4/v5):**
+```javascript
+const jobs = await agenda.jobs({ name: 'my-job', 'data.prop': false });
+
+for (const job of jobs) {
+  job.attrs.data.prop = true;
+  job.schedule('in 20 minutes');
+  await job.save();
+}
+```
+
+**After (v6):**
+```javascript
+import { Agenda, Job } from 'agenda';
+
+const { jobs } = await agenda.queryJobs({ name: 'my-job', data: { prop: false } });
+
+for (const { state, ...jobData } of jobs) {
+  // strip the computed `state` field, then rehydrate into a Job instance
+  const job = new Job(agenda, jobData);
+  job.attrs.data.prop = true;
+  job.schedule('in 20 minutes');
+  await job.save();
+}
+```
+
+Note that `job.save()` intentionally does not persist processor-managed fields
+(`lockedAt`, `lastRunAt`, `failCount`, ...) to avoid racing with a running
+processor — user code updates data and scheduling, the processor owns
+execution state.
 
 ### 8. Removed Features
 
