@@ -8,7 +8,22 @@ import type { NotificationChannel, JobNotification } from './types/NotificationC
 import type { DrainOptions, DrainResult } from './types/DrainOptions.js';
 import { Job } from './Job.js';
 import { JobProcessingQueue } from './JobProcessingQueue.js';
-const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
+const cancellableDelay = (ms: number) => {
+	let timer: ReturnType<typeof setTimeout>;
+	let resolveDelay: () => void;
+	const promise = new Promise<void>(resolve => {
+		resolveDelay = resolve;
+		timer = setTimeout(resolve, ms);
+	});
+
+	return {
+		promise,
+		cancel: () => {
+			clearTimeout(timer);
+			resolveDelay();
+		}
+	};
+};
 
 const log = debug('agenda:jobProcessor');
 
@@ -613,6 +628,7 @@ export class JobProcessor {
 			this.updateStatus(job.attrs.name, 'running', 1);
 
 			let jobIsRunning = true;
+			let cancelWatchdogDelay: (() => void) | undefined;
 			try {
 				log.extend('runOrRetry')('[%s:%s] processing job', job.attrs.name, job.attrs._id);
 
@@ -624,7 +640,10 @@ export class JobProcessor {
 						this.agenda.definitions[job.attrs.name].lockLifetime / 2
 					);
 					do {
-						await delay(timeout);
+						const watchdogDelay = cancellableDelay(timeout);
+						cancelWatchdogDelay = watchdogDelay.cancel;
+						await watchdogDelay.promise;
+						cancelWatchdogDelay = undefined;
 						// when job is not running anymore, just finish
 						if (!jobIsRunning) {
 							log.extend('runOrRetry')(
@@ -707,6 +726,7 @@ export class JobProcessor {
 				this.agenda.emit('error', error instanceof Error ? error : new Error(String(error)));
 			} finally {
 				jobIsRunning = false;
+				cancelWatchdogDelay?.();
 
 				// Remove the job from the running queue
 				let runningJobIndex = this.runningJobs.indexOf(job);

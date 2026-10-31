@@ -4,7 +4,8 @@
  * cleared it. The timer kept the event loop alive (and could re-arm itself for
  * recurring jobs), preventing the process from exiting after agenda.stop().
  */
-import { describe, it, expect } from 'vitest';
+import { once } from 'node:events';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { Agenda, toJobId } from '../src/index.js';
 import type { AgendaBackend, JobRepository, JobParameters } from '../src/index.js';
 
@@ -129,5 +130,32 @@ describe('JobProcessor near-future timer cleanup (#1786)', () => {
 		// Wait past the job's due time: the cleared timer must not fire the job
 		await delay(1200);
 		expect(ran).toBe(0);
+	});
+});
+
+describe('JobProcessor running-job watchdog cleanup (#1805)', () => {
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	it('clears the watchdog timer when a job finishes', async () => {
+		const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
+		const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout');
+		const backend = new FutureJobBackend();
+		backend.repository.runAt = new Date();
+
+		const agenda = new Agenda({ backend, processEvery: 100 });
+		agenda.on('error', () => {});
+		agenda.define('timer-leak-test', async () => {}, { lockLifetime: 600000 });
+
+		const completed = once(agenda, 'complete:timer-leak-test');
+		await agenda.start();
+		await completed;
+		await agenda.stop();
+
+		const watchdogCall = setTimeoutSpy.mock.calls.findIndex(([, timeout]) => timeout === 300000);
+		expect(watchdogCall).toBeGreaterThanOrEqual(0);
+		const watchdogTimer = setTimeoutSpy.mock.results[watchdogCall].value;
+		expect(clearTimeoutSpy).toHaveBeenCalledWith(watchdogTimer);
 	});
 });
