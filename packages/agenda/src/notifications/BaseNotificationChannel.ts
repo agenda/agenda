@@ -55,6 +55,13 @@ export abstract class BaseNotificationChannel extends EventEmitter implements No
 	protected setState(newState: NotificationChannelState): void {
 		if (this._state !== newState) {
 			this._state = newState;
+			// Reset the reconnect budget only on a successful connection or an explicit
+			// disconnect(), so the maxAttempts guard and exponential backoff in
+			// scheduleReconnect() can actually progress across failed reconnect attempts,
+			// while a later stop()/start() cycle still gets a fresh budget.
+			if (newState === 'connected' || newState === 'disconnected') {
+				this.reconnectAttempts = 0;
+			}
 			this.emit('stateChange', newState);
 		}
 	}
@@ -142,10 +149,13 @@ export abstract class BaseNotificationChannel extends EventEmitter implements No
 	}
 
 	protected clearReconnect(): void {
+		// Only clear the pending reconnect timer here. The attempt counter must NOT
+		// be reset on every connect() attempt, otherwise the maxAttempts guard never
+		// trips and backoff stays pinned at the initial delay. The counter is reset
+		// in setState() when a connection actually succeeds.
 		if (this.reconnectTimeout) {
 			clearTimeout(this.reconnectTimeout);
 			this.reconnectTimeout = undefined;
 		}
-		this.reconnectAttempts = 0;
 	}
 }
