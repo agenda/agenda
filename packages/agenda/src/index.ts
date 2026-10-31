@@ -238,6 +238,8 @@ export class Agenda extends EventEmitter {
 
 	private jobProcessor?: JobProcessor;
 
+	private startPromise?: Promise<void>;
+
 	readonly ready: Promise<void>;
 
 	isActiveJobProcessor(): boolean {
@@ -1091,29 +1093,47 @@ export class Agenda extends EventEmitter {
 			'Agenda.start called, waiting for agenda to be initialized (db connection)',
 			this.attrs.processEvery
 		);
-		await this.ready;
+
 		if (this.jobProcessor) {
 			log('Agenda.start was already called, ignoring');
 			return;
 		}
 
-		// Connect notification channel if configured
-		if (this.notificationChannel) {
-			log('Agenda.start connecting notification channel');
-			await this.notificationChannel.connect();
-
-			// Subscribe to state notifications for cross-process event propagation
-			this.stateSubscriptionUnsubscribe = this.subscribeToStateNotifications();
+		// Guard against concurrent start() calls: the awaits below (ready, channel
+		// connect) yield to the event loop, so two callers could otherwise both pass
+		// the jobProcessor guard and create duplicate JobProcessors (leaked intervals,
+		// double channel connect). Cache the in-flight promise and reuse it.
+		if (this.startPromise) {
+			log('Agenda.start already in progress, awaiting existing start');
+			return this.startPromise;
 		}
 
-		this.jobProcessor = new JobProcessor(
-			this,
-			this.attrs.maxConcurrency,
-			this.attrs.lockLimit,
-			this.attrs.processEvery,
-			this.notificationChannel
-		);
+		this.startPromise = (async () => {
+			await this.ready;
 
+			// Connect notification channel if configured
+			if (this.notificationChannel) {
+				log('Agenda.start connecting notification channel');
+				await this.notificationChannel.connect();
+
+				// Subscribe to state notifications for cross-process event propagation
+				this.stateSubscriptionUnsubscribe = this.subscribeToStateNotifications();
+			}
+
+			this.jobProcessor = new JobProcessor(
+				this,
+				this.attrs.maxConcurrency,
+				this.attrs.lockLimit,
+				this.attrs.processEvery,
+				this.notificationChannel
+			);
+		})();
+
+		try {
+			await this.startPromise;
+		} finally {
+			this.startPromise = undefined;
+		}
 	}
 
 	/**

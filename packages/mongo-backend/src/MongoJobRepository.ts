@@ -26,7 +26,7 @@ import type {
 	SortDirection
 } from 'agenda';
 import { toJobId, computeJobState } from 'agenda';
-import type { MongoJobRepositoryConfig } from './types.js';
+import type { MongoJobRepositoryConfig, OptionalKeysToNullable } from './types.js';
 import { hasMongoProtocol } from './hasMongoProtocol.js';
 
 const log = debug('agenda:mongo:repository');
@@ -48,6 +48,37 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 
 	const prototype = Object.getPrototypeOf(value);
 	return prototype === Object.prototype || prototype === null;
+}
+
+/**
+ * MongoDB query operators that evaluate arbitrary server-side code or expressions.
+ * They have no legitimate use in a uniqueness key and turn a caller-controlled
+ * `unique` object into a NoSQL-injection vector (server-side JS execution, denial
+ * of service, blind matching), so they are rejected before the query is built.
+ */
+const BANNED_UNIQUE_OPERATORS = new Set(['$where', '$function', '$accumulator', '$expr']);
+
+/**
+ * Recursively reject dangerous operators in a caller-supplied `unique` query.
+ * Ordinary field equality and comparison operators are left untouched, preserving
+ * the documented `unique()` query-filter contract.
+ */
+export function assertSafeUniqueQuery(value: unknown): void {
+	if (Array.isArray(value)) {
+		for (const item of value) {
+			assertSafeUniqueQuery(item);
+		}
+		return;
+	}
+	if (!isPlainObject(value)) {
+		return;
+	}
+	for (const [key, child] of Object.entries(value)) {
+		if (BANNED_UNIQUE_OPERATORS.has(key)) {
+			throw new Error(`Unsafe operator "${key}" is not allowed in a unique() constraint`);
+		}
+		assertSafeUniqueQuery(child);
+	}
 }
 
 /**
@@ -80,22 +111,25 @@ function computeJobObj<DATA = unknown>(job: WithId<MongoJobDocument>): JobParame
 		nextRunAt: job.nextRunAt,
 		type: job.type,
 		data: job.data as DATA,
-		lockedAt: job.lockedAt,
-		lastFinishedAt: job.lastFinishedAt,
-		failedAt: job.failedAt || undefined,
-		failCount: job.failCount || undefined,
-		failReason: job.failReason || undefined,
-		repeatTimezone: job.repeatTimezone,
-		lastRunAt: job.lastRunAt,
-		repeatInterval: job.repeatInterval,
-		repeatAt: job.repeatAt,
-		disabled: job.disabled,
-		progress: job.progress,
-		unique: job.unique,
-		uniqueOpts: job.uniqueOpts,
-		lastModifiedBy: job.lastModifiedBy,
-		fork: job.fork,
-		debounceStartedAt: job.debounceStartedAt
+		lockedAt: job.lockedAt ?? undefined,
+		lastFinishedAt: job.lastFinishedAt ?? undefined,
+		failedAt: job.failedAt ?? undefined,
+		failCount: job.failCount ?? undefined,
+		failReason: job.failReason ?? undefined,
+		repeatTimezone: job.repeatTimezone ?? undefined,
+		lastRunAt: job.lastRunAt ?? undefined,
+		repeatInterval: job.repeatInterval ?? undefined,
+		repeatAt: job.repeatAt ?? undefined,
+		disabled: job.disabled ?? undefined,
+		progress: job.progress ?? undefined,
+		unique: job.unique ?? undefined,
+		uniqueOpts: job.uniqueOpts ?? undefined,
+		lastModifiedBy: job.lastModifiedBy ?? undefined,
+		fork: job.fork ?? undefined,
+		debounceStartedAt: job.debounceStartedAt ?? undefined,
+		startDate: job.startDate ?? undefined,
+		endDate: job.endDate ?? undefined,
+		skipDays: job.skipDays ?? undefined
 	};
 }
 
@@ -103,7 +137,7 @@ function computeJobObj<DATA = unknown>(job: WithId<MongoJobDocument>): JobParame
  * Internal MongoDB document type with ObjectId for _id
  * This is what's actually stored in MongoDB, separate from the public JobParameters interface
  */
-type MongoJobDocument = Omit<JobParameters, '_id'> & { _id?: ObjectId };
+type MongoJobDocument = Omit<OptionalKeysToNullable<JobParameters>, '_id'> & { _id?: ObjectId };
 
 /**
  * @class
@@ -238,10 +272,41 @@ export class MongoJobRepository implements JobRepository {
 			query.disabled = { $ne: true };
 		}
 
-		// Fetch jobs
-		const allJobs = await this.collection.find(query).sort(this.toMongoSort(sort)).toArray();
+		const mongoSort = this.toMongoSort(sort);
 
-		// Compute states and filter by state if specified
+		// When there is no state filter, the state is computed purely from the
+		// stored fields and cannot exclude documents, so pagination can be pushed
+		// to the database. This avoids materializing the entire matching
+		// collection into memory (which can OOM on large collections).
+		if (!state) {
+			let cursor = this.collection.find(query).sort(mongoSort);
+			if (skip > 0) {
+				cursor = cursor.skip(skip);
+			}
+			if (limit > 0) {
+				cursor = cursor.limit(limit);
+			}
+
+			const [pageJobs, total] = await Promise.all([
+				cursor.toArray(),
+				this.collection.countDocuments(query)
+			]);
+
+			const jobs: JobWithState[] = pageJobs.map(job => {
+				const jobOb = computeJobObj(job);
+				return {
+					...jobOb,
+					state: computeJobState(jobOb, now)
+				};
+			});
+
+			return { jobs, total };
+		}
+
+		// A state filter is computed in application code, so the full result set
+		// must be fetched, filtered, then paginated.
+		const allJobs = await this.collection.find(query).sort(mongoSort).toArray();
+
 		// Special handling for 'paused' state which is based on disabled field
 		let jobsWithState: JobWithState[] = allJobs
 			.map(job => {
@@ -252,7 +317,6 @@ export class MongoJobRepository implements JobRepository {
 				};
 			})
 			.filter(job => {
-				if (!state) return true;
 				if (state === 'paused') return job.disabled === true;
 				return job.state === state;
 			});
@@ -310,7 +374,12 @@ export class MongoJobRepository implements JobRepository {
 	 * Get all distinct job names
 	 */
 	async getDistinctJobNames(): Promise<string[]> {
-		return this.collection.distinct('name');
+		// Uses $group instead of the distinct command, which is not part of
+		// the MongoDB Stable API and fails with apiStrict: true
+		const results = await this.collection
+			.aggregate<{ _id: string }>([{ $group: { _id: '$name' } }])
+			.toArray();
+		return results.map(result => result._id);
 	}
 
 	async getQueueSize(): Promise<number> {
@@ -483,7 +552,10 @@ export class MongoJobRepository implements JobRepository {
 
 		// Update / options for the MongoDB query
 		const update: UpdateFilter<MongoJobDocument> = {
-			$set: { lockedAt: new Date(), lastModifiedBy: options?.lastModifiedBy }
+			$set: {
+				lockedAt: new Date(),
+				lastModifiedBy: options?.lastModifiedBy ?? null
+			}
 		};
 		const findOptions: FindOneAndUpdateOptions = {
 			returnDocument: 'after',
@@ -529,7 +601,10 @@ export class MongoJobRepository implements JobRepository {
 		 * Query used to set a job as locked
 		 */
 		const JOB_PROCESS_SET_QUERY: UpdateFilter<MongoJobDocument> = {
-			$set: { lockedAt: lockTime, lastModifiedBy: options?.lastModifiedBy }
+			$set: {
+				lockedAt: lockTime,
+				lastModifiedBy: options?.lastModifiedBy ?? null
+			}
 		};
 
 		/**
@@ -634,15 +709,15 @@ export class MongoJobRepository implements JobRepository {
 		}
 		const id = new ObjectId(job._id.toString());
 		const $set = {
-			lockedAt: (job.lockedAt && new Date(job.lockedAt)) || undefined,
-			nextRunAt: (job.nextRunAt && new Date(job.nextRunAt)) || undefined,
-			lastRunAt: (job.lastRunAt && new Date(job.lastRunAt)) || undefined,
-			progress: job.progress,
-			failReason: job.failReason,
-			failCount: job.failCount,
-			failedAt: job.failedAt && new Date(job.failedAt),
-			lastFinishedAt: (job.lastFinishedAt && new Date(job.lastFinishedAt)) || undefined,
-			lastModifiedBy: options?.lastModifiedBy
+			lockedAt: job.lockedAt ? new Date(job.lockedAt) : null,
+			nextRunAt: job.nextRunAt ? new Date(job.nextRunAt) : null,
+			lastRunAt: job.lastRunAt ? new Date(job.lastRunAt) : null,
+			progress: job.progress ?? null,
+			failReason: job.failReason ?? null,
+			failCount: job.failCount ?? null,
+			failedAt: job.failedAt ? new Date(job.failedAt) : null,
+			lastFinishedAt: job.lastFinishedAt ? new Date(job.lastFinishedAt) : null,
+			lastModifiedBy: options?.lastModifiedBy ?? null
 		};
 
 		log('[job %s] save job state: \n%O', job._id, $set);
@@ -676,10 +751,26 @@ export class MongoJobRepository implements JobRepository {
 			// Extract the ID and unique fields (not persisted directly)
 			const { _id, unique, uniqueOpts, ...props } = job;
 
-			// Add lastModifiedBy
+			// Add lastModifiedBy and make all undefined properties to null for MongoDB storage
 			const propsWithModifier = {
 				...props,
-				lastModifiedBy: options?.lastModifiedBy
+				lockedAt: props.lockedAt ?? null,
+				lastFinishedAt: props.lastFinishedAt ?? null,
+				failedAt: props.failedAt ?? null,
+				failCount: props.failCount ?? null,
+				failReason: props.failReason ?? null,
+				repeatTimezone: props.repeatTimezone ?? null,
+				lastRunAt: props.lastRunAt ?? null,
+				repeatInterval: props.repeatInterval ?? null,
+				repeatAt: props.repeatAt ?? null,
+				disabled: props.disabled ?? null,
+				progress: props.progress ?? null,
+				debounceStartedAt: props.debounceStartedAt ?? null,
+				fork: props.fork ?? null,
+				startDate: props.startDate ?? null,
+				endDate: props.endDate ?? null,
+				skipDays: props.skipDays ?? null,
+				lastModifiedBy: options?.lastModifiedBy ?? null
 			};
 
 			log('[job %s] set job props: \n%O', _id, propsWithModifier);
@@ -741,6 +832,9 @@ export class MongoJobRepository implements JobRepository {
 			}
 
 			if (unique) {
+				// Reject server-side-eval operators before the query is built (NoSQL injection).
+				assertSafeUniqueQuery(unique);
+
 				// Upsert based on the 'unique' query object
 				const query: Filter<MongoJobDocument> = { ...unique } as Filter<MongoJobDocument>;
 				query.name = props.name;
@@ -789,7 +883,7 @@ export class MongoJobRepository implements JobRepository {
 							log('maxWait exceeded (%dms >= %dms), forcing immediate execution', timeSinceStart, debounce.maxWait);
 							newNextRunAt = now;
 							// Reset debounceStartedAt for the next cycle
-							(propsWithModifier as Partial<MongoJobDocument>).debounceStartedAt = undefined;
+							(propsWithModifier as Partial<MongoJobDocument>).debounceStartedAt = null;
 						} else {
 							// Normal debounce: schedule for delay ms from now, but never past the
 							// maxWait deadline so the job still runs within maxWait if saves stop.
