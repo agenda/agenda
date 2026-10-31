@@ -160,6 +160,21 @@ export function backoffTestSuite(config: BackoffTestConfig): void {
 					}
 				}
 			});
+
+			it('should keep jitter spread out once the delay hits maxDelay', () => {
+				// Clamping would put ~half of all retries at exactly maxDelay
+				const maxDelay = 1000;
+				const strategy = constant({ delay: 5000, maxDelay, maxRetries: 10, jitter: 0.5 });
+				const delays: number[] = [];
+				for (let i = 0; i < 1000; i++) {
+					const delay = strategy({ attempt: 1, error: new Error('test'), jobName: 'test', jobData: {} });
+					if (delay !== null) delays.push(delay);
+				}
+				const atCap = delays.filter(d => d === maxDelay).length;
+				expect(atCap).toBeLessThan(delays.length * 0.05);
+				expect(Math.min(...delays)).toBeGreaterThanOrEqual(500);
+				expect(Math.max(...delays)).toBeLessThanOrEqual(maxDelay);
+			});
 		});
 
 		describe('combine strategy', () => {

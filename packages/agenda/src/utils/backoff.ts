@@ -63,8 +63,14 @@ function applyJitter(delay: number, jitter: number, maxDelay: number): number {
 	if (jitter <= 0) return delay;
 	// Random value between -jitter and +jitter
 	const jitterAmount = delay * jitter * (Math.random() * 2 - 1);
-	// keep within [0, maxDelay] so maxDelay stays the documented hard cap
-	return Math.min(maxDelay, Math.max(0, Math.round(delay + jitterAmount)));
+	let jittered = delay + jitterAmount;
+	// Keep maxDelay a hard cap. Reflect overshoots back below the cap instead of
+	// clamping, so retries at the cap stay spread out rather than piling up on
+	// exactly maxDelay (which would bring back the thundering herd).
+	if (jittered > maxDelay) {
+		jittered = 2 * maxDelay - jittered;
+	}
+	return Math.min(maxDelay, Math.max(0, Math.round(jittered)));
 }
 
 /**
