@@ -862,27 +862,27 @@ export class PostgresJobRepository implements JobRepository {
 					}
 				}
 
-				// Update existing record
+				// Update only the record found above. Other rows can match the unique
+				// query, such as completed jobs that are still in the table.
 				const updateResult = await this.pool.query<PostgresJobRow>(
 					`UPDATE "${this.tableName}"
-					 SET priority = $${paramIndex},
-						 next_run_at = $${paramIndex + 1},
-						 type = $${paramIndex + 2},
-						 repeat_timezone = $${paramIndex + 3},
-						 repeat_interval = $${paramIndex + 4},
-						 data = $${paramIndex + 5},
-						 repeat_at = $${paramIndex + 6},
-						 disabled = $${paramIndex + 7},
-						 fork = $${paramIndex + 8},
-						 last_modified_by = $${paramIndex + 9},
-						 debounce_started_at = $${paramIndex + 10},
-						 start_date = $${paramIndex + 11},
-						 end_date = $${paramIndex + 12},
-						 skip_days = $${paramIndex + 13}
-					 WHERE ${conditions.join(' AND ')}
+					 SET priority = $1,
+						 next_run_at = $2,
+						 type = $3,
+						 repeat_timezone = $4,
+						 repeat_interval = $5,
+						 data = $6,
+						 repeat_at = $7,
+						 disabled = $8,
+						 fork = $9,
+						 last_modified_by = $10,
+						 debounce_started_at = $11,
+						 start_date = $12,
+						 end_date = $13,
+						 skip_days = $14
+					 WHERE id = $15
 					 RETURNING *`,
 					[
-						...params,
 						props.priority,
 						nextRunAt,
 						props.type,
@@ -896,7 +896,8 @@ export class PostgresJobRepository implements JobRepository {
 						debounceStartedAt,
 						props.startDate || null,
 						props.endDate || null,
-						props.skipDays ? JSON.stringify(props.skipDays) : null
+						props.skipDays ? JSON.stringify(props.skipDays) : null,
+						existingRow.id
 					]
 				);
 
