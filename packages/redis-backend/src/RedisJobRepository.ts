@@ -878,6 +878,87 @@ export class RedisJobRepository implements JobRepository {
 		}
 	}
 
+	/**
+	 * Lua script that creates a 'single' job unless one already exists.
+	 *
+	 * KEYS[1] = jobs:single:{name}
+	 * KEYS[2] = job:{id} hash prefix (without the id)
+	 * KEYS[3] = jobs:all set
+	 * KEYS[4] = jobs:by_name:{name} set
+	 * KEYS[5] = jobs:by_next_run_at sorted set
+	 * ARGV[1] = id for the new job
+	 * ARGV[2] = score for jobs:by_next_run_at
+	 * ARGV[3..] = job hash field/value pairs
+	 *
+	 * Returns the id of the existing single job, or ARGV[1] if it was created.
+	 */
+	private static readonly CREATE_SINGLE_JOB_SCRIPT = `
+		local existingId = redis.call('GET', KEYS[1])
+		if existingId and redis.call('EXISTS', KEYS[2] .. existingId) == 1 then
+			return existingId
+		end
+
+		local newId = ARGV[1]
+		local fields = {}
+		for i = 3, #ARGV do
+			fields[#fields + 1] = ARGV[i]
+		end
+		redis.call('HSET', KEYS[2] .. newId, unpack(fields))
+		redis.call('SADD', KEYS[3], newId)
+		redis.call('SADD', KEYS[4], newId)
+		redis.call('SET', KEYS[1], newId)
+		redis.call('ZADD', KEYS[5], ARGV[2], newId)
+		return newId
+	`;
+
+	/**
+	 * Update an existing 'single' job with new scheduling/config values.
+	 * Returns undefined if the job no longer exists.
+	 */
+	private async updateSingleJob<DATA = unknown>(
+		jobId: string,
+		props: Omit<JobParameters<DATA>, '_id' | 'unique' | 'uniqueOpts'>,
+		options: JobRepositoryOptions | undefined
+	): Promise<JobParameters<DATA> | undefined> {
+		const existingData = await this.redis.hgetall(this.key(`job:${jobId}`));
+		if (!existingData || Object.keys(existingData).length === 0) {
+			return undefined;
+		}
+
+		const now = new Date();
+		const shouldProtectNextRunAt = props.nextRunAt && props.nextRunAt <= now;
+
+		const updates: Record<string, string> = {
+			priority: String(props.priority ?? 0),
+			repeatTimezone: props.repeatTimezone ?? 'null',
+			repeatInterval: props.repeatInterval !== undefined ? String(props.repeatInterval) : 'null',
+			data: JSON.stringify(props.data ?? {}),
+			repeatAt: props.repeatAt ?? 'null',
+			disabled: String(props.disabled ?? false),
+			lastModifiedBy: options?.lastModifiedBy ?? 'null',
+			startDate: props.startDate?.toISOString() || 'null',
+			endDate: props.endDate?.toISOString() || 'null',
+			skipDays: props.skipDays ? JSON.stringify(props.skipDays) : 'null',
+			updatedAt: now.toISOString()
+		};
+
+		// Only update nextRunAt if not protecting it
+		if (!shouldProtectNextRunAt || existingData.nextRunAt === 'null') {
+			updates.nextRunAt = props.nextRunAt?.toISOString() || 'null';
+		}
+
+		await this.redis.hset(this.key(`job:${jobId}`), updates);
+
+		// Update sorted set
+		const nextRunAt = updates.nextRunAt !== undefined ? updates.nextRunAt : existingData.nextRunAt;
+		const nextRunAtDate = nextRunAt !== 'null' ? new Date(nextRunAt) : null;
+		const score = this.getJobScore(nextRunAtDate, props.priority ?? 0);
+		await this.redis.zadd(this.key('jobs:by_next_run_at'), score, jobId);
+
+		const updatedData = await this.redis.hgetall(this.key(`job:${jobId}`));
+		return this.hashToJob<DATA>(updatedData);
+	}
+
 	async saveJob<DATA = unknown>(
 		job: JobParameters<DATA>,
 		options: JobRepositoryOptions | undefined
@@ -951,61 +1032,41 @@ export class RedisJobRepository implements JobRepository {
 
 			const existingId = await this.redis.get(this.key(`jobs:single:${props.name}`));
 			if (existingId) {
-				const existingData = await this.redis.hgetall(this.key(`job:${existingId}`));
-				if (existingData && Object.keys(existingData).length > 0) {
-					// Update existing single job
-					const now = new Date();
-					const shouldProtectNextRunAt = props.nextRunAt && props.nextRunAt <= now;
-
-					const updates: Record<string, string> = {
-						priority: String(props.priority ?? 0),
-						repeatTimezone: props.repeatTimezone ?? 'null',
-						repeatInterval: props.repeatInterval !== undefined ? String(props.repeatInterval) : 'null',
-						data: JSON.stringify(props.data ?? {}),
-						repeatAt: props.repeatAt ?? 'null',
-						disabled: String(props.disabled ?? false),
-						lastModifiedBy: options?.lastModifiedBy ?? 'null',
-						startDate: props.startDate?.toISOString() || 'null',
-						endDate: props.endDate?.toISOString() || 'null',
-						skipDays: props.skipDays ? JSON.stringify(props.skipDays) : 'null',
-						updatedAt: now.toISOString()
-					};
-
-					// Only update nextRunAt if not protecting it
-					if (!shouldProtectNextRunAt || existingData.nextRunAt === 'null') {
-						updates.nextRunAt = props.nextRunAt?.toISOString() || 'null';
-					}
-
-					await this.redis.hset(this.key(`job:${existingId}`), updates);
-
-					// Update sorted set
-					const nextRunAt =
-						updates.nextRunAt !== undefined
-							? updates.nextRunAt
-							: existingData.nextRunAt;
-					const nextRunAtDate =
-						nextRunAt !== 'null' ? new Date(nextRunAt) : null;
-					const score = this.getJobScore(nextRunAtDate, props.priority ?? 0);
-					await this.redis.zadd(this.key('jobs:by_next_run_at'), score, existingId);
-
-					const updatedData = await this.redis.hgetall(this.key(`job:${existingId}`));
-					return this.hashToJob<DATA>(updatedData);
+				const updated = await this.updateSingleJob<DATA>(existingId, props, options);
+				if (updated) {
+					return updated;
 				}
 			}
 
-			// Create new single job
+			// Create new single job. Another scheduler may be saving the same single job
+			// right now, so check-and-create runs as one script: if a live single job
+			// already exists, the script returns its id and we update that one instead.
 			const newId = randomUUID();
 			const hashData = this.jobToHash(props as JobParameters<DATA>, newId, options?.lastModifiedBy);
-
-			await this.redis.hset(this.key(`job:${newId}`), hashData as unknown as Record<string, string>);
-			await this.redis.sadd(this.key('jobs:all'), newId);
-			await this.redis.sadd(this.key(`jobs:by_name:${props.name}`), newId);
-			await this.redis.set(this.key(`jobs:single:${props.name}`), newId);
-
 			const score = this.getJobScore(props.nextRunAt ?? null, props.priority ?? 0);
-			await this.redis.zadd(this.key('jobs:by_next_run_at'), score, newId);
 
-			const savedData = await this.redis.hgetall(this.key(`job:${newId}`));
+			const savedId = (await this.redis.eval(
+				RedisJobRepository.CREATE_SINGLE_JOB_SCRIPT,
+				5,
+				this.key(`jobs:single:${props.name}`),
+				this.key('job:'),
+				this.key('jobs:all'),
+				this.key(`jobs:by_name:${props.name}`),
+				this.key('jobs:by_next_run_at'),
+				newId,
+				String(score),
+				...Object.entries(hashData as unknown as Record<string, string>).flat()
+			)) as string;
+
+			if (savedId !== newId) {
+				log('single job %s was created concurrently, updating it', savedId);
+				const updated = await this.updateSingleJob<DATA>(savedId, props, options);
+				if (updated) {
+					return updated;
+				}
+			}
+
+			const savedData = await this.redis.hgetall(this.key(`job:${savedId}`));
 			return this.hashToJob<DATA>(savedData);
 		}
 
