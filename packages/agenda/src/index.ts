@@ -1256,6 +1256,17 @@ export class Agenda extends EventEmitter {
 
 		const result = await this.jobProcessor.drain(opts);
 
+		// drain() waits only for running jobs. Jobs that were prefetched (locked) but never
+		// started must be released too, otherwise they stay locked until the lock lifetime
+		// expires. Running jobs (e.g. after a drain timeout) keep their locks.
+		const unstartedJobs = this.jobProcessor.stop();
+		const unstartedIds = unstartedJobs.map(job => job.attrs._id);
+		if (unstartedIds.length > 0) {
+			log('Agenda.drain unlocking %d jobs that never started', unstartedIds.length);
+			await this.db.unlockJobs(unstartedIds);
+		}
+		await this.jobProcessor.waitForPendingQueueFills();
+
 		// Unsubscribe from state notifications
 		if (this.stateSubscriptionUnsubscribe) {
 			this.stateSubscriptionUnsubscribe();
