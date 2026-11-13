@@ -1,5 +1,15 @@
 # @agendajs/postgres-backend
 
+## 3.0.8
+
+### Patch Changes
+
+- d5ae838: Fix `getJobsOverview` double-counting disabled jobs. A disabled job was counted in both its computed state bucket and the `paused` bucket, so the per-state buckets summed to `total + (number of disabled jobs)`. Disabled jobs are now counted only as `paused`, consistent with the list view.
+- cd5e7f4: Update only the row found by `unique()` instead of every row that matches the unique query.
+- Updated dependencies [6f57ce1]
+- Updated dependencies [1f4d6a5]
+  - agenda@6.2.8
+
 ## 3.0.7
 
 ### Patch Changes
