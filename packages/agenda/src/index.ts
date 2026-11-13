@@ -1254,7 +1254,23 @@ export class Agenda extends EventEmitter {
 
 		log('Agenda.drain called, waiting for jobs to finish');
 
+		// Stop taking new work before waiting: no more fills, and jobs that were prefetched
+		// (locked) but never started are not started anymore. Release their locks right away
+		// so other workers can claim them while the running jobs finish. Releasing them only
+		// after the wait could clear a lock another worker took after ours expired, since
+		// unlockJobs() does not check the lock owner. Running jobs keep their locks.
+		const unstartedJobs = this.jobProcessor.stop();
+		const unstartedIds = unstartedJobs.map(job => job.attrs._id);
+		if (unstartedIds.length > 0) {
+			log('Agenda.drain unlocking %d jobs that never started', unstartedIds.length);
+			await this.db.unlockJobs(unstartedIds);
+		}
+
 		const result = await this.jobProcessor.drain(opts);
+
+		// A lock query that was already in flight can still lock a job after the processor
+		// stopped; the fill releases such a job itself, wait for that before disconnecting.
+		await this.jobProcessor.waitForPendingQueueFills();
 
 		// Unsubscribe from state notifications
 		if (this.stateSubscriptionUnsubscribe) {

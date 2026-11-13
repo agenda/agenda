@@ -196,7 +196,8 @@ export class JobProcessor {
 		const opts: DrainOptions =
 			typeof options === 'number' ? { timeout: options } : options ?? {};
 
-		// Stop accepting new jobs
+		// Stop accepting new jobs and stop starting queued ones; running jobs are unaffected
+		this.isRunning = false;
 		if (this.processInterval) {
 			clearInterval(this.processInterval);
 			this.processInterval = undefined;
@@ -216,14 +217,12 @@ export class JobProcessor {
 		// If no jobs are running, resolve immediately
 		if (initialRunning === 0) {
 			log.extend('drain')('no running jobs, resolving immediately');
-			this.isRunning = false;
 			return { completed: 0, running: 0, timedOut: false, aborted: false };
 		}
 
 		// Check if already aborted
 		if (opts.signal?.aborted) {
 			log.extend('drain')('signal already aborted, resolving immediately');
-			this.isRunning = false;
 			return { completed: 0, running: initialRunning, timedOut: false, aborted: true };
 		}
 
@@ -246,7 +245,6 @@ export class JobProcessor {
 
 			const finish = (result: DrainResult) => {
 				cleanup();
-				this.isRunning = false;
 				resolve(result);
 			};
 
@@ -533,6 +531,13 @@ export class JobProcessor {
 	 * @returns {undefined}
 	 */
 	private async jobProcessing(handledJobs: JobParameters['_id'][] = []) {
+		// Once stopped (stop()/drain()), queued jobs are not touched anymore: their locks were
+		// handed back to Agenda.stop()/drain() for release. A running job that completes
+		// during a drain must not start one of them.
+		if (!this.isRunning) {
+			return;
+		}
+
 		// Ensure we have jobs
 		if (this.jobQueue.length === 0) {
 			return;
