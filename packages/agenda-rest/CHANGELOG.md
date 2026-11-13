@@ -1,5 +1,15 @@
 # agenda-rest
 
+## 6.1.8
+
+### Patch Changes
+
+- Updated dependencies [6f57ce1]
+- Updated dependencies [d5ae838]
+- Updated dependencies [1f4d6a5]
+  - agenda@6.2.8
+  - @agendajs/mongo-backend@4.0.5
+
 ## 6.1.7
 
 ### Patch Changes

@@ -1,5 +1,15 @@
 # @agendajs/redis-backend
 
+## 3.0.9
+
+### Patch Changes
+
+- d5ae838: Fix `getJobsOverview` double-counting disabled jobs. A disabled job was counted in both its computed state bucket and the `paused` bucket, so the per-state buckets summed to `total + (number of disabled jobs)`. Disabled jobs are now counted only as `paused`, consistent with the list view.
+- 77d1cff: Fix duplicate `single` jobs in the Redis backend when the same job is saved concurrently. Checking for an existing single job and creating a new one were separate round trips, so several workers calling `agenda.every()` for the same name at startup each created their own copy and the job ran once per worker on every interval. The create step now runs as one Lua script that returns the existing job if another worker created it first, matching the unique index the Postgres backend uses.
+- Updated dependencies [6f57ce1]
+- Updated dependencies [1f4d6a5]
+  - agenda@6.2.8
+
 ## 3.0.8
 
 ### Patch Changes
