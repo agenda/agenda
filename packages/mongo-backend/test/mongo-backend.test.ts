@@ -1,9 +1,10 @@
-import { expect, describe, it, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
-import { Db, MongoClient, ObjectId } from 'mongodb';
+import { expect, describe, it, beforeAll, afterAll, beforeEach, afterEach, assert, vi } from 'vitest';
+import { Db, DbOptions, Document, MongoClient, ObjectId } from 'mongodb';
 import { randomUUID } from 'crypto';
-import { InMemoryNotificationChannel } from 'agenda';
+import { Agenda, Job, InMemoryNotificationChannel } from 'agenda';
 import { MongoBackend, MongoJobRepository, MongoJobLogger } from '../src/index.js';
 import { fullAgendaTestSuite, jobLoggerTestSuite } from 'agenda/testing';
+import { testMongoClientOptions } from './helpers/testMongoClientOptions.js';
 
 /**
  * MongoDB backend tests.
@@ -15,7 +16,7 @@ import { fullAgendaTestSuite, jobLoggerTestSuite } from 'agenda/testing';
 const TEST_COLLECTION = 'agendaJobs';
 
 // Helper to create a fresh database connection (used by MongoDB-specific tests)
-async function createTestDb(): Promise<{ db: Db; client: MongoClient; disconnect: () => Promise<void> }> {
+async function createTestDb(options?: DbOptions): Promise<{ db: Db; client: MongoClient; disconnect: () => Promise<void> }> {
 	const baseUri = process.env.MONGO_URI;
 	if (!baseUri) {
 		throw new Error('MONGO_URI not set. Ensure global setup is configured.');
@@ -29,8 +30,8 @@ async function createTestDb(): Promise<{ db: Db; client: MongoClient; disconnect
 	url.pathname = `/${dbName}`;
 	const uri = url.toString();
 
-	const client = await MongoClient.connect(uri);
-	const db = client.db(dbName);
+	const client = await MongoClient.connect(uri, testMongoClientOptions);
+	const db = client.db(dbName, options);
 
 	return {
 		db,
@@ -63,7 +64,7 @@ beforeAll(async () => {
 	url.pathname = `/${dbName}`;
 	sharedDbUri = url.toString();
 
-	const client = await MongoClient.connect(sharedDbUri);
+	const client = await MongoClient.connect(sharedDbUri, testMongoClientOptions);
 	sharedDb = client.db(dbName);
 	disconnectShared = async () => {
 		await sharedDb.dropDatabase();
@@ -191,6 +192,39 @@ describe('MongoBackend', () => {
 	});
 
 	describe('MongoDB-specific features', () => {
+		it('should support the documented queryJobs -> new Job() rehydration pattern', async () => {
+			// Pattern documented in docs/migration-guide-v6.md (#1716): queryJobs
+			// returns plain objects; rehydrate with new Job(agenda, jobData) to
+			// modify and save like a v5 Job instance.
+			const agenda = new Agenda({ backend });
+			agenda.on('error', () => {});
+
+			await backend.repository.saveJob({
+				name: 'rehydrate-test',
+				priority: 0,
+				nextRunAt: new Date(),
+				type: 'normal',
+				data: { prop: false }
+			}, undefined);
+
+			const { jobs } = await agenda.queryJobs({ name: 'rehydrate-test', data: { prop: false } });
+			expect(jobs).toHaveLength(1);
+
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars -- strip the computed state field
+			const { state, ...jobData } = jobs[0];
+			const job = new Job(agenda, jobData);
+			(job.attrs.data as { prop: boolean }).prop = true;
+			job.schedule(new Date(Date.now() + 20 * 60 * 1000));
+			await job.save();
+
+			const doc = await db.collection(TEST_COLLECTION).findOne({ name: 'rehydrate-test' });
+			assert(doc !== null, 'Job should exist in the collection');
+			expect(doc.data).toEqual({ prop: true });
+			expect(doc.nextRunAt.getTime()).toBeGreaterThan(Date.now() + 19 * 60 * 1000);
+			// the computed state field must not leak into the stored document
+			expect(doc.state).toBeUndefined();
+		});
+
 		it('should support partial matching on job data', async () => {
 			const jobData = { nested: { key: 'value' }, array: [1, 2, 3], extra: 'field' };
 
@@ -378,6 +412,340 @@ describe('MongoBackend', () => {
 			const collections = await db.listCollections().toArray();
 			const collectionNames = collections.map(c => c.name);
 			expect(collectionNames).toContain(TEST_COLLECTION);
+		});
+
+		it('should explicitly set optional properties to null and avoid relying on the "ignoreUndefined" flag', async () => {
+			const {
+				db: dbWithIgnoreUndefined,
+				disconnect: disconnectDbWithIgnoreUndefined
+			} = await createTestDb({ ignoreUndefined: true });
+
+			backend = new MongoBackend({
+				mongo: dbWithIgnoreUndefined,
+				collection: TEST_COLLECTION
+			});
+
+			await backend.connect();
+			await backend.repository.saveJob({
+				name: 'concurrent-test',
+				priority: 0,
+				nextRunAt: new Date(Date.now() - 1000),
+				type: 'normal',
+				data: { id: 1, ignoredField: undefined }
+			}, undefined);
+
+			const job = await dbWithIgnoreUndefined.collection(TEST_COLLECTION).findOne();
+
+			assert(job !== null, 'Job should exist in the collection');
+			expect(job.lockedAt).toBeNull();
+			expect(job.lastFinishedAt).toBeNull();
+			expect(job.failedAt).toBeNull();
+			expect(job.failCount).toBeNull();
+			expect(job.failReason).toBeNull();
+			expect(job.repeatTimezone).toBeNull();
+			expect(job.lastRunAt).toBeNull();
+			expect(job.repeatInterval).toBeNull();
+			expect(job.repeatAt).toBeNull();
+			expect(job.disabled).toBeNull();
+			expect(job.progress).toBeNull();
+			expect(job.data.ignoredField).toBeUndefined();
+
+			await disconnectDbWithIgnoreUndefined();
+		});
+
+		it('should keep lockedAt and lastRunAt when job.save() is called from a running job (#1810)', async () => {
+			const agenda = new Agenda({ backend, processEvery: 100 });
+			agenda.on('error', () => {});
+
+			const readJob = async (id: unknown) => {
+				const doc = await db.collection(TEST_COLLECTION).findOne({ _id: new ObjectId(String(id)) });
+				assert(doc !== null, 'Job should exist in the collection');
+				return doc;
+			};
+
+			// DB state as seen from inside the handler, around the save()
+			const seen: { before?: Document; after?: Document } = {};
+			agenda.define('save-lock-repro', async (job) => {
+				seen.before = await readJob(job.attrs._id);
+				job.attrs.data = { checkpoint: 1 };
+				await job.save();
+				seen.after = await readJob(job.attrs._id);
+			});
+
+			const completed = new Promise((resolve) => agenda.once('complete:save-lock-repro', resolve));
+			try {
+				await agenda.start();
+				await agenda.now('save-lock-repro', {});
+				await completed;
+			} finally {
+				await agenda.stop();
+			}
+
+			expect(seen.before?.lockedAt).toBeInstanceOf(Date);
+			expect(seen.before?.lastRunAt).toBeInstanceOf(Date);
+			expect(seen.after?.data).toEqual({ checkpoint: 1 });
+			expect(seen.after?.lockedAt).toEqual(seen.before?.lockedAt);
+			expect(seen.after?.lastRunAt).toEqual(seen.before?.lastRunAt);
+		});
+
+		it('should keep processor-managed fields when every() re-saves an existing single job (#1810)', async () => {
+			const coll = db.collection(TEST_COLLECTION);
+			const agenda = new Agenda({ backend, processEvery: 100000 });
+			agenda.on('error', () => {});
+			agenda.define('single-preserve', async () => {});
+			await agenda.ready;
+
+			await agenda.every('1 hour', 'single-preserve');
+			const lockedAt = new Date();
+			const lastRunAt = new Date(Date.now() - 1000);
+			await coll.updateOne(
+				{ name: 'single-preserve' },
+				{ $set: { lockedAt, lastRunAt, failCount: 3, failReason: 'boom' } }
+			);
+
+			// e.g. an app restart calling every() again
+			await agenda.every('2 hours', 'single-preserve');
+
+			const docs = await coll.find({ name: 'single-preserve' }).toArray();
+			expect(docs).toHaveLength(1);
+			expect(docs[0].repeatInterval).toBe('2 hours');
+			expect(docs[0].lockedAt).toEqual(lockedAt);
+			expect(docs[0].lastRunAt).toEqual(lastRunAt);
+			expect(docs[0].failCount).toBe(3);
+			expect(docs[0].failReason).toBe('boom');
+		});
+
+		it('should keep processor-managed fields when a unique() save matches an existing job (#1810)', async () => {
+			const coll = db.collection(TEST_COLLECTION);
+			const agenda = new Agenda({ backend, processEvery: 100000 });
+			agenda.on('error', () => {});
+			agenda.define('unique-preserve', async () => {});
+			await agenda.ready;
+
+			await agenda.create('unique-preserve', { k: 1 }).unique({ 'data.k': 1 }).save();
+			const lockedAt = new Date();
+			const lastRunAt = new Date(Date.now() - 1000);
+			await coll.updateOne({ name: 'unique-preserve' }, { $set: { lockedAt, lastRunAt } });
+
+			await agenda.create('unique-preserve', { k: 1, v: 2 }).unique({ 'data.k': 1 }).save();
+
+			const docs = await coll.find({ name: 'unique-preserve' }).toArray();
+			expect(docs).toHaveLength(1);
+			expect(docs[0].data).toEqual({ k: 1, v: 2 });
+			expect(docs[0].lockedAt).toEqual(lockedAt);
+			expect(docs[0].lastRunAt).toEqual(lastRunAt);
+		});
+
+		it('should still store explicit nulls for missing fields on new single/unique jobs', async () => {
+			const coll = db.collection(TEST_COLLECTION);
+			const agenda = new Agenda({ backend, processEvery: 100000 });
+			agenda.on('error', () => {});
+			agenda.define('null-defaults', async () => {});
+			await agenda.ready;
+
+			await agenda.every('1 hour', 'null-defaults');
+			await agenda.create('null-defaults', { k: 1 }).unique({ 'data.k': 1 }).save();
+			await agenda.create('null-defaults', { k: 2 }).save();
+
+			const docs = await coll.find({ name: 'null-defaults' }).toArray();
+			expect(docs).toHaveLength(3);
+			for (const doc of docs) {
+				expect(doc).toHaveProperty('lockedAt', null);
+				expect(doc).toHaveProperty('lastRunAt', null);
+				expect(doc).toHaveProperty('failCount', null);
+			}
+		});
+
+		it('should clear a field that is explicitly passed as undefined when updating by _id', async () => {
+			const coll = db.collection(TEST_COLLECTION);
+			const agenda = new Agenda({ backend, processEvery: 100000 });
+			agenda.on('error', () => {});
+			agenda.define('explicit-clear', async () => {});
+			await agenda.ready;
+
+			const job = await agenda.create('explicit-clear', {}).save();
+			await coll.updateOne(
+				{ _id: new ObjectId(String(job.attrs._id)) },
+				{ $set: { lockedAt: new Date(), failCount: 2, failReason: 'x' } }
+			);
+
+			// Same shape agendash retryJobs() uses
+			const { jobs } = await agenda.queryJobs({ ids: [String(job.attrs._id)] });
+			const params = { ...jobs[0], lockedAt: undefined, failCount: undefined, failReason: undefined };
+			await backend.repository.saveJob(params, { lastModifiedBy: 'test' });
+
+			const doc = await coll.findOne({ _id: new ObjectId(String(job.attrs._id)) });
+			expect(doc?.lockedAt).toBeNull();
+			expect(doc?.failCount).toBeNull();
+			expect(doc?.failReason).toBeNull();
+		});
+
+		it('should clear nextRunAt via saveJobState so completed one-time jobs are not re-run (#1710)', async () => {
+			const {
+				db: dbWithIgnoreUndefined,
+				disconnect: disconnectDbWithIgnoreUndefined
+			} = await createTestDb({ ignoreUndefined: true });
+
+			backend = new MongoBackend({
+				mongo: dbWithIgnoreUndefined,
+				collection: TEST_COLLECTION
+			});
+
+			await backend.connect();
+			const saved = await backend.repository.saveJob({
+				name: 'one-time-job',
+				priority: 0,
+				nextRunAt: new Date(Date.now() - 1000),
+				type: 'normal',
+				data: {}
+			}, undefined);
+
+			// Simulate what the job processor does on completion of a one-time job:
+			// computeNextRunAt() sets nextRunAt to null, then saveJobState persists it
+			await backend.repository.saveJobState({
+				...saved,
+				lockedAt: undefined,
+				nextRunAt: null,
+				lastRunAt: new Date(),
+				lastFinishedAt: new Date()
+			}, undefined);
+
+			const doc = await dbWithIgnoreUndefined.collection(TEST_COLLECTION).findOne({ name: 'one-time-job' });
+			assert(doc !== null, 'Job should exist in the collection');
+			expect(doc.nextRunAt).toBeNull();
+			expect(doc.lockedAt).toBeNull();
+			expect(doc.lastRunAt).toBeInstanceOf(Date);
+			expect(doc.lastFinishedAt).toBeInstanceOf(Date);
+
+			// The completed job must no longer match the runnable-job query
+			const now = new Date();
+			const next = await backend.repository.getNextJobToRun(
+				'one-time-job',
+				new Date(now.getTime() + 5000),
+				new Date(now.getTime() - 600000),
+				now,
+				undefined
+			);
+			expect(next).toBeUndefined();
+
+			await disconnectDbWithIgnoreUndefined();
+		});
+
+		it('should coerce date-like values to Date in saveJobState', async () => {
+			const saved = await backend.repository.saveJob({
+				name: 'date-coercion-test',
+				priority: 0,
+				nextRunAt: new Date(Date.now() - 1000),
+				type: 'normal',
+				data: {}
+			}, undefined);
+
+			// Untyped (plain JS) callers may pass ISO strings for date fields;
+			// saveJobState must coerce them so MongoDB stores real dates
+			await backend.repository.saveJobState({
+				...saved,
+				nextRunAt: new Date().toISOString() as unknown as Date,
+				lastRunAt: new Date().toISOString() as unknown as Date
+			}, undefined);
+
+			const doc = await db.collection(TEST_COLLECTION).findOne({ name: 'date-coercion-test' });
+			assert(doc !== null, 'Job should exist in the collection');
+			expect(doc.nextRunAt).toBeInstanceOf(Date);
+			expect(doc.lastRunAt).toBeInstanceOf(Date);
+		});
+
+		it('should preserve startDate, endDate and skipDays when loading jobs from the database', async () => {
+			const startDate = new Date('2026-01-01T00:00:00Z');
+			const endDate = new Date('2026-12-31T23:59:59Z');
+			const skipDays = [0, 6];
+
+			const saved = await backend.repository.saveJob({
+				name: 'date-constraint-test',
+				priority: 0,
+				nextRunAt: new Date(Date.now() - 1000),
+				type: 'normal',
+				repeatInterval: '1 day',
+				startDate,
+				endDate,
+				skipDays,
+				data: {}
+			}, undefined);
+
+			// Read back through every load path — the constraints must survive
+			const byId = await backend.repository.getJobById(saved._id!.toString());
+			assert(byId !== null, 'Job should be found by id');
+			expect(byId.startDate).toEqual(startDate);
+			expect(byId.endDate).toEqual(endDate);
+			expect(byId.skipDays).toEqual(skipDays);
+
+			const { jobs } = await backend.repository.queryJobs({ name: 'date-constraint-test' });
+			expect(jobs).toHaveLength(1);
+			expect(jobs[0].startDate).toEqual(startDate);
+			expect(jobs[0].endDate).toEqual(endDate);
+			expect(jobs[0].skipDays).toEqual(skipDays);
+
+			const now = new Date();
+			const next = await backend.repository.getNextJobToRun(
+				'date-constraint-test',
+				new Date(now.getTime() + 5000),
+				new Date(now.getTime() - 600000),
+				now,
+				undefined
+			);
+			assert(next !== undefined, 'Job should be returned by getNextJobToRun');
+			expect(next.startDate).toEqual(startDate);
+			expect(next.endDate).toEqual(endDate);
+			expect(next.skipDays).toEqual(skipDays);
+		});
+	});
+
+	describe('queryJobs pagination', () => {
+		it('should push skip/limit to the database when no state filter is set', async () => {
+			const total = 200;
+			const docs = Array.from({ length: total }, (_, i) => ({
+				name: 'pagination-test',
+				priority: 0,
+				nextRunAt: new Date(),
+				type: 'normal',
+				data: { i }
+			}));
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- raw docs for insertMany
+			await db.collection(TEST_COLLECTION).insertMany(docs as any);
+
+			// Wrap find() on the repository's own collection to capture how many
+			// documents the returned cursor materializes via toArray().
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- access internal collection
+			const collection = (backend.repository as any).collection as ReturnType<Db['collection']>;
+			const originalFind = collection.find.bind(collection);
+			let materialized = -1;
+			const findSpy = vi
+				.spyOn(collection, 'find')
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any -- pass-through spy
+				.mockImplementation((...args: any[]) => {
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- pass-through spy
+					const cursor = (originalFind as any)(...args);
+					const originalToArray = cursor.toArray.bind(cursor);
+					cursor.toArray = async () => {
+						const result = await originalToArray();
+						materialized = result.length;
+						return result;
+					};
+					return cursor;
+				});
+
+			try {
+				const result = await backend.repository.queryJobs({
+					name: 'pagination-test',
+					limit: 10
+				});
+
+				expect(result.jobs).toHaveLength(10);
+				expect(result.total).toBe(total);
+				// The cursor must only materialize the page, not the whole collection.
+				expect(materialized).toBe(10);
+			} finally {
+				findSpy.mockRestore();
+			}
 		});
 	});
 

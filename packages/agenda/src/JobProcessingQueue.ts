@@ -79,8 +79,9 @@ export class JobProcessingQueue {
 		});
 
 		if (matchIndex === -1) {
-			// put on left side of the queue
-			this._queue.unshift(job);
+			// no existing job should run before this one: it is the earliest /
+			// highest-priority entry, so it belongs at the right (processed first)
+			this._queue.push(job);
 		} else {
 			this._queue.splice(matchIndex, 0, job);
 		}

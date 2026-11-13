@@ -145,6 +145,36 @@ export function backoffTestSuite(config: BackoffTestConfig): void {
 					expect(delay).toBeLessThanOrEqual(1500);
 				}
 			});
+
+			it('should never exceed maxDelay even with jitter', () => {
+				// maxDelay is the documented hard cap; jitter must not push past it
+				const maxDelay = 500;
+				const strategy = exponential({ delay: 100, factor: 2, maxDelay, maxRetries: 10, jitter: 0.5 });
+				for (let i = 0; i < 500; i++) {
+					for (let attempt = 1; attempt <= 10; attempt++) {
+						const delay = strategy({ attempt, error: new Error('test'), jobName: 'test', jobData: {} });
+						if (delay !== null) {
+							expect(delay).toBeGreaterThanOrEqual(0);
+							expect(delay).toBeLessThanOrEqual(maxDelay);
+						}
+					}
+				}
+			});
+
+			it('should keep jitter spread out once the delay hits maxDelay', () => {
+				// Clamping would put ~half of all retries at exactly maxDelay
+				const maxDelay = 1000;
+				const strategy = constant({ delay: 5000, maxDelay, maxRetries: 10, jitter: 0.5 });
+				const delays: number[] = [];
+				for (let i = 0; i < 1000; i++) {
+					const delay = strategy({ attempt: 1, error: new Error('test'), jobName: 'test', jobData: {} });
+					if (delay !== null) delays.push(delay);
+				}
+				const atCap = delays.filter(d => d === maxDelay).length;
+				expect(atCap).toBeLessThan(delays.length * 0.05);
+				expect(Math.min(...delays)).toBeGreaterThanOrEqual(500);
+				expect(Math.max(...delays)).toBeLessThanOrEqual(maxDelay);
+			});
 		});
 
 		describe('combine strategy', () => {

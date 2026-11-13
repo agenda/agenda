@@ -53,6 +53,9 @@ export interface RedisJobData {
 	fork: string;
 	lastModifiedBy: string | null;
 	debounceStartedAt: string | null;
+	startDate: string | null;
+	endDate: string | null;
+	skipDays: string | null;
 	createdAt: string;
 	updatedAt: string;
 }

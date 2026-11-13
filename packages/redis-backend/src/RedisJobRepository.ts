@@ -20,6 +20,44 @@ import type { RedisBackendConfig, RedisJobData } from './types.js';
 const log = debug('agenda:redis:repository');
 
 /**
+ * Recursively check whether `stored` contains every key/value of `filter`.
+ *
+ * Mirrors the containment semantics of the Mongo (dot-notation) and Postgres
+ * (jsonb `@>`) backends: plain objects are matched key-by-key (allowing extra
+ * keys in `stored`), and leaf values must be strictly equal. This avoids the
+ * false positives/negatives of the previous JSON-substring approach (e.g.
+ * `{ x: 1 }` no longer matches stored `{ x: 11 }`, and `{ b: 2, a: 1 }` matches
+ * stored `{ a: 1, b: 2 }` regardless of key order).
+ */
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function matchesContainment(stored: unknown, filter: unknown): boolean {
+	if (isPlainObject(filter)) {
+		if (!isPlainObject(stored)) return false;
+		for (const key of Object.keys(filter)) {
+			if (!matchesContainment(stored[key], filter[key])) return false;
+		}
+		return true;
+	}
+	if (Array.isArray(filter)) {
+		if (!Array.isArray(stored) || stored.length !== filter.length) return false;
+		return filter.every((value, index) => matchesContainment(stored[index], value));
+	}
+	return stored === filter;
+}
+
+/**
+ * Stored job data is JSON, so normalize the filter the same way before matching
+ * (Date -> ISO string, ObjectId -> hex string, undefined keys dropped), like the
+ * previous substring match and Postgres' `@>` with a JSON-serialized filter did.
+ */
+function matchesDataFilter(stored: unknown, filter: unknown): boolean {
+	return matchesContainment(stored, JSON.parse(JSON.stringify(filter)));
+}
+
+/**
  * Redis implementation of JobRepository
  *
  * Data structure:
@@ -133,6 +171,13 @@ export class RedisJobRepository implements JobRepository {
 			debounceStartedAt:
 				data.debounceStartedAt && data.debounceStartedAt !== 'null'
 					? new Date(data.debounceStartedAt)
+					: undefined,
+			startDate:
+				data.startDate && data.startDate !== 'null' ? new Date(data.startDate) : undefined,
+			endDate: data.endDate && data.endDate !== 'null' ? new Date(data.endDate) : undefined,
+			skipDays:
+				data.skipDays && data.skipDays !== 'null'
+					? (JSON.parse(data.skipDays) as number[])
 					: undefined
 		};
 	}
@@ -167,6 +212,9 @@ export class RedisJobRepository implements JobRepository {
 			fork: String(job.fork ?? false),
 			lastModifiedBy: lastModifiedBy ?? 'null',
 			debounceStartedAt: job.debounceStartedAt?.toISOString() || 'null',
+			startDate: job.startDate?.toISOString() || 'null',
+			endDate: job.endDate?.toISOString() || 'null',
+			skipDays: job.skipDays ? JSON.stringify(job.skipDays) : 'null',
 			createdAt: now,
 			updatedAt: now
 		};
@@ -180,9 +228,15 @@ export class RedisJobRepository implements JobRepository {
 		if (!nextRunAt) {
 			return Number.MAX_SAFE_INTEGER; // Jobs without nextRunAt go to the end
 		}
-		// Combine timestamp with priority as decimal part
-		// Higher priority = lower decimal = comes first when sorting ascending
-		const priorityPart = (100 - Math.min(Math.max(priority, 0), 99)) / 1000;
+		// Combine timestamp with priority as decimal part.
+		// Map the signed priority into a fractional tiebreak in (0, 1) so that a
+		// higher priority yields a strictly smaller part (comes first when sorting
+		// ascending) while keeping adjacent priorities distinct. Agenda's named
+		// priorities are negative (lowest=-20, low=-10, normal=0, high=10, highest=20),
+		// so clamping to [0, 99] (the previous behaviour) collapsed every
+		// non-positive priority to the same tiebreak and broke ordering.
+		const clampedPriority = Math.min(Math.max(priority, -1000), 1000);
+		const priorityPart = (1000 - clampedPriority) / 2001;
 		return nextRunAt.getTime() + priorityPart;
 	}
 
@@ -240,9 +294,7 @@ export class RedisJobRepository implements JobRepository {
 			if (!includeDisabled && job.disabled) continue;
 			if (search && !job.name.toLowerCase().includes(search.toLowerCase())) continue;
 			if (data !== undefined) {
-				const jobDataStr = JSON.stringify(job.data);
-				const searchDataStr = JSON.stringify(data);
-				if (!jobDataStr.includes(searchDataStr.slice(1, -1))) continue;
+				if (!matchesDataFilter(job.data, data)) continue;
 			}
 
 			const jobState = computeJobState(job, now);
@@ -427,14 +479,22 @@ export class RedisJobRepository implements JobRepository {
 
 	/**
 	 * Filter job IDs by matching against their stored data field.
-	 * Uses a substring match on the JSON-serialized data.
+	 * Uses recursive value containment (matching Mongo/Postgres semantics)
+	 * rather than a JSON-substring match, which avoids false positives such as
+	 * `{ id: 1 }` matching stored `{ id: 11 }`.
 	 */
 	private async filterJobIdsByData(jobIds: string[], dataFilter: unknown): Promise<string[]> {
-		const searchDataStr = JSON.stringify(dataFilter);
 		const matching: string[] = [];
 		for (const jobId of jobIds) {
 			const jobData = await this.redis.hget(this.key(`job:${jobId}`), 'data');
-			if (jobData && jobData.includes(searchDataStr.slice(1, -1))) {
+			if (jobData === null || jobData === undefined) continue;
+			let stored: unknown;
+			try {
+				stored = JSON.parse(jobData || '{}');
+			} catch {
+				continue;
+			}
+			if (matchesDataFilter(stored, dataFilter)) {
 				matching.push(jobId);
 			}
 		}
@@ -819,6 +879,87 @@ export class RedisJobRepository implements JobRepository {
 		}
 	}
 
+	/**
+	 * Lua script that creates a 'single' job unless one already exists.
+	 *
+	 * KEYS[1] = jobs:single:{name}
+	 * KEYS[2] = job:{id} hash prefix (without the id)
+	 * KEYS[3] = jobs:all set
+	 * KEYS[4] = jobs:by_name:{name} set
+	 * KEYS[5] = jobs:by_next_run_at sorted set
+	 * ARGV[1] = id for the new job
+	 * ARGV[2] = score for jobs:by_next_run_at
+	 * ARGV[3..] = job hash field/value pairs
+	 *
+	 * Returns the id of the existing single job, or ARGV[1] if it was created.
+	 */
+	private static readonly CREATE_SINGLE_JOB_SCRIPT = `
+		local existingId = redis.call('GET', KEYS[1])
+		if existingId and redis.call('EXISTS', KEYS[2] .. existingId) == 1 then
+			return existingId
+		end
+
+		local newId = ARGV[1]
+		local fields = {}
+		for i = 3, #ARGV do
+			fields[#fields + 1] = ARGV[i]
+		end
+		redis.call('HSET', KEYS[2] .. newId, unpack(fields))
+		redis.call('SADD', KEYS[3], newId)
+		redis.call('SADD', KEYS[4], newId)
+		redis.call('SET', KEYS[1], newId)
+		redis.call('ZADD', KEYS[5], ARGV[2], newId)
+		return newId
+	`;
+
+	/**
+	 * Update an existing 'single' job with new scheduling/config values.
+	 * Returns undefined if the job no longer exists.
+	 */
+	private async updateSingleJob<DATA = unknown>(
+		jobId: string,
+		props: Omit<JobParameters<DATA>, '_id' | 'unique' | 'uniqueOpts'>,
+		options: JobRepositoryOptions | undefined
+	): Promise<JobParameters<DATA> | undefined> {
+		const existingData = await this.redis.hgetall(this.key(`job:${jobId}`));
+		if (!existingData || Object.keys(existingData).length === 0) {
+			return undefined;
+		}
+
+		const now = new Date();
+		const shouldProtectNextRunAt = props.nextRunAt && props.nextRunAt <= now;
+
+		const updates: Record<string, string> = {
+			priority: String(props.priority ?? 0),
+			repeatTimezone: props.repeatTimezone ?? 'null',
+			repeatInterval: props.repeatInterval !== undefined ? String(props.repeatInterval) : 'null',
+			data: JSON.stringify(props.data ?? {}),
+			repeatAt: props.repeatAt ?? 'null',
+			disabled: String(props.disabled ?? false),
+			lastModifiedBy: options?.lastModifiedBy ?? 'null',
+			startDate: props.startDate?.toISOString() || 'null',
+			endDate: props.endDate?.toISOString() || 'null',
+			skipDays: props.skipDays ? JSON.stringify(props.skipDays) : 'null',
+			updatedAt: now.toISOString()
+		};
+
+		// Only update nextRunAt if not protecting it
+		if (!shouldProtectNextRunAt || existingData.nextRunAt === 'null') {
+			updates.nextRunAt = props.nextRunAt?.toISOString() || 'null';
+		}
+
+		await this.redis.hset(this.key(`job:${jobId}`), updates);
+
+		// Update sorted set
+		const nextRunAt = updates.nextRunAt !== undefined ? updates.nextRunAt : existingData.nextRunAt;
+		const nextRunAtDate = nextRunAt !== 'null' ? new Date(nextRunAt) : null;
+		const score = this.getJobScore(nextRunAtDate, props.priority ?? 0);
+		await this.redis.zadd(this.key('jobs:by_next_run_at'), score, jobId);
+
+		const updatedData = await this.redis.hgetall(this.key(`job:${jobId}`));
+		return this.hashToJob<DATA>(updatedData);
+	}
+
 	async saveJob<DATA = unknown>(
 		job: JobParameters<DATA>,
 		options: JobRepositoryOptions | undefined
@@ -859,6 +1000,9 @@ export class RedisJobRepository implements JobRepository {
 				disabled: String(props.disabled ?? false),
 				fork: String(props.fork ?? false),
 				lastModifiedBy: options?.lastModifiedBy ?? 'null',
+				startDate: props.startDate?.toISOString() || 'null',
+				endDate: props.endDate?.toISOString() || 'null',
+				skipDays: props.skipDays ? JSON.stringify(props.skipDays) : 'null',
 				updatedAt: now
 			};
 
@@ -889,58 +1033,41 @@ export class RedisJobRepository implements JobRepository {
 
 			const existingId = await this.redis.get(this.key(`jobs:single:${props.name}`));
 			if (existingId) {
-				const existingData = await this.redis.hgetall(this.key(`job:${existingId}`));
-				if (existingData && Object.keys(existingData).length > 0) {
-					// Update existing single job
-					const now = new Date();
-					const shouldProtectNextRunAt = props.nextRunAt && props.nextRunAt <= now;
-
-					const updates: Record<string, string> = {
-						priority: String(props.priority ?? 0),
-						repeatTimezone: props.repeatTimezone ?? 'null',
-						repeatInterval: props.repeatInterval !== undefined ? String(props.repeatInterval) : 'null',
-						data: JSON.stringify(props.data ?? {}),
-						repeatAt: props.repeatAt ?? 'null',
-						disabled: String(props.disabled ?? false),
-						lastModifiedBy: options?.lastModifiedBy ?? 'null',
-						updatedAt: now.toISOString()
-					};
-
-					// Only update nextRunAt if not protecting it
-					if (!shouldProtectNextRunAt || existingData.nextRunAt === 'null') {
-						updates.nextRunAt = props.nextRunAt?.toISOString() || 'null';
-					}
-
-					await this.redis.hset(this.key(`job:${existingId}`), updates);
-
-					// Update sorted set
-					const nextRunAt =
-						updates.nextRunAt !== undefined
-							? updates.nextRunAt
-							: existingData.nextRunAt;
-					const nextRunAtDate =
-						nextRunAt !== 'null' ? new Date(nextRunAt) : null;
-					const score = this.getJobScore(nextRunAtDate, props.priority ?? 0);
-					await this.redis.zadd(this.key('jobs:by_next_run_at'), score, existingId);
-
-					const updatedData = await this.redis.hgetall(this.key(`job:${existingId}`));
-					return this.hashToJob<DATA>(updatedData);
+				const updated = await this.updateSingleJob<DATA>(existingId, props, options);
+				if (updated) {
+					return updated;
 				}
 			}
 
-			// Create new single job
+			// Create new single job. Another scheduler may be saving the same single job
+			// right now, so check-and-create runs as one script: if a live single job
+			// already exists, the script returns its id and we update that one instead.
 			const newId = randomUUID();
 			const hashData = this.jobToHash(props as JobParameters<DATA>, newId, options?.lastModifiedBy);
-
-			await this.redis.hset(this.key(`job:${newId}`), hashData as unknown as Record<string, string>);
-			await this.redis.sadd(this.key('jobs:all'), newId);
-			await this.redis.sadd(this.key(`jobs:by_name:${props.name}`), newId);
-			await this.redis.set(this.key(`jobs:single:${props.name}`), newId);
-
 			const score = this.getJobScore(props.nextRunAt ?? null, props.priority ?? 0);
-			await this.redis.zadd(this.key('jobs:by_next_run_at'), score, newId);
 
-			const savedData = await this.redis.hgetall(this.key(`job:${newId}`));
+			const savedId = (await this.redis.eval(
+				RedisJobRepository.CREATE_SINGLE_JOB_SCRIPT,
+				5,
+				this.key(`jobs:single:${props.name}`),
+				this.key('job:'),
+				this.key('jobs:all'),
+				this.key(`jobs:by_name:${props.name}`),
+				this.key('jobs:by_next_run_at'),
+				newId,
+				String(score),
+				...Object.entries(hashData as unknown as Record<string, string>).flat()
+			)) as string;
+
+			if (savedId !== newId) {
+				log('single job %s was created concurrently, updating it', savedId);
+				const updated = await this.updateSingleJob<DATA>(savedId, props, options);
+				if (updated) {
+					return updated;
+				}
+			}
+
+			const savedData = await this.redis.hgetall(this.key(`job:${savedId}`));
 			return this.hashToJob<DATA>(savedData);
 		}
 
@@ -1000,10 +1127,18 @@ export class RedisJobRepository implements JobRepository {
 						const timeSinceStart = now.getTime() - existingDebounceStartedAt.getTime();
 
 						if (debounce.strategy === 'leading') {
-							// Leading: keep original nextRunAt, just update data
-							log('leading debounce: keeping original nextRunAt, updating data only');
-							nextRunAt = jobData.nextRunAt || 'null';
-							debounceStartedAt = existingDebounceStartedAt.toISOString();
+							// Leading: while still within the debounce window, ignore the call
+							// (keep the original nextRunAt). Once the window has elapsed, start a
+							// fresh leading edge so the job fires again.
+							if (timeSinceStart >= debounce.delay) {
+								log('leading debounce: window elapsed, starting fresh leading edge');
+								nextRunAt = nowIso;
+								debounceStartedAt = now.toISOString();
+							} else {
+								log('leading debounce: within window, keeping original nextRunAt, updating data only');
+								nextRunAt = jobData.nextRunAt || 'null';
+								debounceStartedAt = existingDebounceStartedAt.toISOString();
+							}
 						} else {
 							// Trailing (default): push nextRunAt forward
 							if (debounce.maxWait && timeSinceStart >= debounce.maxWait) {
@@ -1011,7 +1146,15 @@ export class RedisJobRepository implements JobRepository {
 								nextRunAt = nowIso;
 								debounceStartedAt = 'null'; // Reset for next cycle
 							} else {
+								// Schedule for delay ms from now, but never past the maxWait deadline
+								// so the job still runs within maxWait if saves stop.
 								const newNextRunAt = new Date(now.getTime() + debounce.delay);
+								if (debounce.maxWait) {
+									const deadline = existingDebounceStartedAt.getTime() + debounce.maxWait;
+									if (newNextRunAt.getTime() > deadline) {
+										newNextRunAt.setTime(deadline);
+									}
+								}
 								nextRunAt = newNextRunAt.toISOString();
 								debounceStartedAt = existingDebounceStartedAt.toISOString();
 								log('trailing debounce: rescheduling to %s', nextRunAt);
@@ -1031,6 +1174,9 @@ export class RedisJobRepository implements JobRepository {
 						disabled: String(props.disabled ?? false),
 						lastModifiedBy: options?.lastModifiedBy ?? 'null',
 						debounceStartedAt,
+						startDate: props.startDate?.toISOString() || 'null',
+						endDate: props.endDate?.toISOString() || 'null',
+						skipDays: props.skipDays ? JSON.stringify(props.skipDays) : 'null',
 						updatedAt: nowIso
 					};
 
@@ -1054,8 +1200,8 @@ export class RedisJobRepository implements JobRepository {
 					// Leading: execute immediately (keep nextRunAt as-is)
 					log('leading debounce: new job, executing immediately');
 				} else {
-					// Trailing: schedule after delay
-					nextRunAt = new Date(now.getTime() + debounce.delay);
+					// Trailing: schedule after delay, but never past the maxWait deadline
+					nextRunAt = new Date(now.getTime() + (debounce.maxWait ? Math.min(debounce.delay, debounce.maxWait) : debounce.delay));
 					log('trailing debounce: new job, scheduling for %s', nextRunAt.toISOString());
 				}
 

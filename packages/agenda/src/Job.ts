@@ -238,7 +238,9 @@ export class Job<DATA = unknown | void> {
 		opts?: JobParameters['uniqueOpts']
 	): this {
 		this.attrs.unique = unique;
-		this.attrs.uniqueOpts = opts;
+		// Don't clobber previously-set uniqueOpts (e.g. a debounce config applied via
+		// .debounce()) when unique() is called without explicit opts.
+		this.attrs.uniqueOpts = opts ?? this.attrs.uniqueOpts;
 		return this;
 	}
 
@@ -441,7 +443,12 @@ export class Job<DATA = unknown | void> {
 
 		const definition = this.agenda.definitions[this.attrs.name];
 
-		const lockDeadline = new Date(Date.now() - definition.lockLifetime);
+		// In a distributed setup the job's handler may not be registered in this
+		// process (e.g. an API/scheduler process), so `definition` can be undefined.
+		// Fall back to the agenda-wide default lock lifetime instead of dereferencing.
+		const lockLifetime = definition?.lockLifetime ?? this.agenda.attrs.defaultLockLifetime;
+
+		const lockDeadline = new Date(Date.now() - lockLifetime);
 
 		// This means a job has "expired", as in it has not been "touched" within the lockoutTime
 		// Remove from local lock
@@ -460,14 +467,20 @@ export class Job<DATA = unknown | void> {
 			throw new Error(`job ${this.attrs.name} got canceled already: ${this.canceled}!`);
 		}
 		this.attrs.lockedAt = new Date();
-		this.attrs.progress = progress;
+		// Only update progress when a value is supplied; bare touch() (keep-alive)
+		// must not wipe a previously reported progress value.
+		if (progress !== undefined) {
+			this.attrs.progress = progress;
+		}
 
 		await this.agenda.db.saveJobState(this.attrs, {
 			lastModifiedBy: this.agenda.attrs.name || undefined
 		});
 
-		// Publish progress state notification if progress was provided (fire-and-forget)
+		// Emit progress events locally and publish notification if progress was provided
 		if (progress !== undefined) {
+			this.agenda.emit('progress', this);
+			this.agenda.emit(`progress:${this.attrs.name}`, this);
 			this.agenda.publishJobStateNotification(this, 'progress', {
 				progress
 			});
@@ -692,6 +705,15 @@ export class Job<DATA = unknown | void> {
 			}
 
 			this.attrs.lastFinishedAt = new Date();
+
+			// Reset the failure counter on success so a later failure starts a
+			// fresh retry/backoff sequence instead of inheriting the old count.
+			// This matters for recurring jobs that recover between runs.
+			// All consumers coerce falsy failCount (attempt: failCount || 1), so
+			// a persisted 0 behaves identically to an absent value.
+			if (this.attrs.failCount) {
+				this.attrs.failCount = 0;
+			}
 
 			this.agenda.emit('success', this);
 			this.agenda.emit(`success:${this.attrs.name}`, this);

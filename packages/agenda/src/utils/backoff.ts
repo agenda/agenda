@@ -54,15 +54,23 @@ export interface LinearBackoffOptions extends BackoffOptions {
 
 /**
  * Apply jitter to a delay value
- * @param delay - Base delay in milliseconds
+ * @param delay - Base delay in milliseconds (already capped to maxDelay)
  * @param jitter - Jitter factor (0-1), where 0 means no jitter and 1 means up to ±100%
- * @returns Delay with jitter applied
+ * @param maxDelay - Upper bound the jittered result must not exceed
+ * @returns Delay with jitter applied, clamped to [0, maxDelay]
  */
-function applyJitter(delay: number, jitter: number): number {
+function applyJitter(delay: number, jitter: number, maxDelay: number): number {
 	if (jitter <= 0) return delay;
 	// Random value between -jitter and +jitter
 	const jitterAmount = delay * jitter * (Math.random() * 2 - 1);
-	return Math.max(0, Math.round(delay + jitterAmount));
+	let jittered = delay + jitterAmount;
+	// Keep maxDelay a hard cap. Reflect overshoots back below the cap instead of
+	// clamping, so retries at the cap stay spread out rather than piling up on
+	// exactly maxDelay (which would bring back the thundering herd).
+	if (jittered > maxDelay) {
+		jittered = 2 * maxDelay - jittered;
+	}
+	return Math.min(maxDelay, Math.max(0, Math.round(jittered)));
 }
 
 /**
@@ -84,7 +92,7 @@ export function constant(options: BackoffOptions = {}): BackoffStrategy {
 			return null;
 		}
 		const baseDelay = Math.min(delay, maxDelay);
-		return applyJitter(baseDelay, jitter);
+		return applyJitter(baseDelay, jitter, maxDelay);
 	};
 }
 
@@ -114,7 +122,7 @@ export function linear(options: LinearBackoffOptions = {}): BackoffStrategy {
 		}
 		const baseDelay = delay + increment * (context.attempt - 1);
 		const cappedDelay = Math.min(baseDelay, maxDelay);
-		return applyJitter(cappedDelay, jitter);
+		return applyJitter(cappedDelay, jitter, maxDelay);
 	};
 }
 
@@ -143,7 +151,7 @@ export function exponential(options: ExponentialBackoffOptions = {}): BackoffStr
 		}
 		const baseDelay = delay * Math.pow(factor, context.attempt - 1);
 		const cappedDelay = Math.min(baseDelay, maxDelay);
-		return applyJitter(cappedDelay, jitter);
+		return applyJitter(cappedDelay, jitter, maxDelay);
 	};
 }
 

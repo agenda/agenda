@@ -26,7 +26,7 @@ import type {
 	SortDirection
 } from 'agenda';
 import { toJobId, computeJobState } from 'agenda';
-import type { MongoJobRepositoryConfig } from './types.js';
+import type { MongoJobRepositoryConfig, OptionalKeysToNullable } from './types.js';
 import { hasMongoProtocol } from './hasMongoProtocol.js';
 
 const log = debug('agenda:mongo:repository');
@@ -48,6 +48,37 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 
 	const prototype = Object.getPrototypeOf(value);
 	return prototype === Object.prototype || prototype === null;
+}
+
+/**
+ * MongoDB query operators that evaluate arbitrary server-side code or expressions.
+ * They have no legitimate use in a uniqueness key and turn a caller-controlled
+ * `unique` object into a NoSQL-injection vector (server-side JS execution, denial
+ * of service, blind matching), so they are rejected before the query is built.
+ */
+const BANNED_UNIQUE_OPERATORS = new Set(['$where', '$function', '$accumulator', '$expr']);
+
+/**
+ * Recursively reject dangerous operators in a caller-supplied `unique` query.
+ * Ordinary field equality and comparison operators are left untouched, preserving
+ * the documented `unique()` query-filter contract.
+ */
+export function assertSafeUniqueQuery(value: unknown): void {
+	if (Array.isArray(value)) {
+		for (const item of value) {
+			assertSafeUniqueQuery(item);
+		}
+		return;
+	}
+	if (!isPlainObject(value)) {
+		return;
+	}
+	for (const [key, child] of Object.entries(value)) {
+		if (BANNED_UNIQUE_OPERATORS.has(key)) {
+			throw new Error(`Unsafe operator "${key}" is not allowed in a unique() constraint`);
+		}
+		assertSafeUniqueQuery(child);
+	}
 }
 
 /**
@@ -80,22 +111,25 @@ function computeJobObj<DATA = unknown>(job: WithId<MongoJobDocument>): JobParame
 		nextRunAt: job.nextRunAt,
 		type: job.type,
 		data: job.data as DATA,
-		lockedAt: job.lockedAt,
-		lastFinishedAt: job.lastFinishedAt,
-		failedAt: job.failedAt || undefined,
-		failCount: job.failCount || undefined,
-		failReason: job.failReason || undefined,
-		repeatTimezone: job.repeatTimezone,
-		lastRunAt: job.lastRunAt,
-		repeatInterval: job.repeatInterval,
-		repeatAt: job.repeatAt,
-		disabled: job.disabled,
-		progress: job.progress,
-		unique: job.unique,
-		uniqueOpts: job.uniqueOpts,
-		lastModifiedBy: job.lastModifiedBy,
-		fork: job.fork,
-		debounceStartedAt: job.debounceStartedAt
+		lockedAt: job.lockedAt ?? undefined,
+		lastFinishedAt: job.lastFinishedAt ?? undefined,
+		failedAt: job.failedAt ?? undefined,
+		failCount: job.failCount ?? undefined,
+		failReason: job.failReason ?? undefined,
+		repeatTimezone: job.repeatTimezone ?? undefined,
+		lastRunAt: job.lastRunAt ?? undefined,
+		repeatInterval: job.repeatInterval ?? undefined,
+		repeatAt: job.repeatAt ?? undefined,
+		disabled: job.disabled ?? undefined,
+		progress: job.progress ?? undefined,
+		unique: job.unique ?? undefined,
+		uniqueOpts: job.uniqueOpts ?? undefined,
+		lastModifiedBy: job.lastModifiedBy ?? undefined,
+		fork: job.fork ?? undefined,
+		debounceStartedAt: job.debounceStartedAt ?? undefined,
+		startDate: job.startDate ?? undefined,
+		endDate: job.endDate ?? undefined,
+		skipDays: job.skipDays ?? undefined
 	};
 }
 
@@ -103,7 +137,57 @@ function computeJobObj<DATA = unknown>(job: WithId<MongoJobDocument>): JobParame
  * Internal MongoDB document type with ObjectId for _id
  * This is what's actually stored in MongoDB, separate from the public JobParameters interface
  */
-type MongoJobDocument = Omit<JobParameters, '_id'> & { _id?: ObjectId };
+type MongoJobDocument = Omit<OptionalKeysToNullable<JobParameters>, '_id'> & { _id?: ObjectId };
+
+/**
+ * Optional job fields that are stored as explicit `null` when absent, so that behaviour
+ * does not depend on the driver's `ignoreUndefined` flag.
+ */
+const NULLABLE_JOB_FIELDS = [
+	'lockedAt',
+	'lastFinishedAt',
+	'failedAt',
+	'failCount',
+	'failReason',
+	'repeatTimezone',
+	'lastRunAt',
+	'repeatInterval',
+	'repeatAt',
+	'disabled',
+	'progress',
+	'debounceStartedAt',
+	'fork',
+	'startDate',
+	'endDate',
+	'skipDays'
+] as const;
+
+/**
+ * Null defaults for every nullable field not present in `fields`. Used in `$setOnInsert`
+ * (and on insert) so new documents get explicit nulls, while updates to existing documents
+ * leave fields the caller did not provide untouched (e.g. lockedAt / lastRunAt, which
+ * Job.save() deliberately omits).
+ */
+function nullDefaultsFor(fields: object): Partial<MongoJobDocument> {
+	const defaults: Record<string, null> = {};
+	for (const key of NULLABLE_JOB_FIELDS) {
+		if (!(key in fields)) {
+			defaults[key] = null;
+		}
+	}
+	return defaults as Partial<MongoJobDocument>;
+}
+
+/**
+ * Upsert update: `$set` the provided fields, and only fill null defaults on insert.
+ */
+function upsertUpdate(
+	fields: Partial<MongoJobDocument>,
+	extraOnInsert: Partial<MongoJobDocument> = {}
+): UpdateFilter<MongoJobDocument> {
+	const $setOnInsert = { ...nullDefaultsFor(fields), ...extraOnInsert };
+	return Object.keys($setOnInsert).length > 0 ? { $set: fields, $setOnInsert } : { $set: fields };
+}
 
 /**
  * @class
@@ -238,10 +322,41 @@ export class MongoJobRepository implements JobRepository {
 			query.disabled = { $ne: true };
 		}
 
-		// Fetch jobs
-		const allJobs = await this.collection.find(query).sort(this.toMongoSort(sort)).toArray();
+		const mongoSort = this.toMongoSort(sort);
 
-		// Compute states and filter by state if specified
+		// When there is no state filter, the state is computed purely from the
+		// stored fields and cannot exclude documents, so pagination can be pushed
+		// to the database. This avoids materializing the entire matching
+		// collection into memory (which can OOM on large collections).
+		if (!state) {
+			let cursor = this.collection.find(query).sort(mongoSort);
+			if (skip > 0) {
+				cursor = cursor.skip(skip);
+			}
+			if (limit > 0) {
+				cursor = cursor.limit(limit);
+			}
+
+			const [pageJobs, total] = await Promise.all([
+				cursor.toArray(),
+				this.collection.countDocuments(query)
+			]);
+
+			const jobs: JobWithState[] = pageJobs.map(job => {
+				const jobOb = computeJobObj(job);
+				return {
+					...jobOb,
+					state: computeJobState(jobOb, now)
+				};
+			});
+
+			return { jobs, total };
+		}
+
+		// A state filter is computed in application code, so the full result set
+		// must be fetched, filtered, then paginated.
+		const allJobs = await this.collection.find(query).sort(mongoSort).toArray();
+
 		// Special handling for 'paused' state which is based on disabled field
 		let jobsWithState: JobWithState[] = allJobs
 			.map(job => {
@@ -252,7 +367,6 @@ export class MongoJobRepository implements JobRepository {
 				};
 			})
 			.filter(job => {
-				if (!state) return true;
 				if (state === 'paused') return job.disabled === true;
 				return job.state === state;
 			});
@@ -311,7 +425,12 @@ export class MongoJobRepository implements JobRepository {
 	 * Get all distinct job names
 	 */
 	async getDistinctJobNames(): Promise<string[]> {
-		return this.collection.distinct('name');
+		// Uses $group instead of the distinct command, which is not part of
+		// the MongoDB Stable API and fails with apiStrict: true
+		const results = await this.collection
+			.aggregate<{ _id: string }>([{ $group: { _id: '$name' } }])
+			.toArray();
+		return results.map(result => result._id);
 	}
 
 	async getQueueSize(): Promise<number> {
@@ -484,7 +603,10 @@ export class MongoJobRepository implements JobRepository {
 
 		// Update / options for the MongoDB query
 		const update: UpdateFilter<MongoJobDocument> = {
-			$set: { lockedAt: new Date(), lastModifiedBy: options?.lastModifiedBy }
+			$set: {
+				lockedAt: new Date(),
+				lastModifiedBy: options?.lastModifiedBy ?? null
+			}
 		};
 		const findOptions: FindOneAndUpdateOptions = {
 			returnDocument: 'after',
@@ -530,7 +652,10 @@ export class MongoJobRepository implements JobRepository {
 		 * Query used to set a job as locked
 		 */
 		const JOB_PROCESS_SET_QUERY: UpdateFilter<MongoJobDocument> = {
-			$set: { lockedAt: lockTime, lastModifiedBy: options?.lastModifiedBy }
+			$set: {
+				lockedAt: lockTime,
+				lastModifiedBy: options?.lastModifiedBy ?? null
+			}
 		};
 
 		/**
@@ -635,15 +760,15 @@ export class MongoJobRepository implements JobRepository {
 		}
 		const id = new ObjectId(job._id.toString());
 		const $set = {
-			lockedAt: (job.lockedAt && new Date(job.lockedAt)) || undefined,
-			nextRunAt: (job.nextRunAt && new Date(job.nextRunAt)) || undefined,
-			lastRunAt: (job.lastRunAt && new Date(job.lastRunAt)) || undefined,
-			progress: job.progress,
-			failReason: job.failReason,
-			failCount: job.failCount,
-			failedAt: job.failedAt && new Date(job.failedAt),
-			lastFinishedAt: (job.lastFinishedAt && new Date(job.lastFinishedAt)) || undefined,
-			lastModifiedBy: options?.lastModifiedBy
+			lockedAt: job.lockedAt ? new Date(job.lockedAt) : null,
+			nextRunAt: job.nextRunAt ? new Date(job.nextRunAt) : null,
+			lastRunAt: job.lastRunAt ? new Date(job.lastRunAt) : null,
+			progress: job.progress ?? null,
+			failReason: job.failReason ?? null,
+			failCount: job.failCount ?? null,
+			failedAt: job.failedAt ? new Date(job.failedAt) : null,
+			lastFinishedAt: job.lastFinishedAt ? new Date(job.lastFinishedAt) : null,
+			lastModifiedBy: options?.lastModifiedBy ?? null
 		};
 
 		log('[job %s] save job state: \n%O', job._id, $set);
@@ -677,18 +802,25 @@ export class MongoJobRepository implements JobRepository {
 			// Extract the ID and unique fields (not persisted directly)
 			const { _id, unique, uniqueOpts, ...props } = job;
 
-			// Add lastModifiedBy
+			// Fields to $set: only the keys the caller provided (explicit undefined -> null, so
+			// callers can still clear a field), plus lastModifiedBy. Missing nullable fields are
+			// only defaulted to null on insert (see nullDefaultsFor), so updating an existing
+			// job never wipes lockedAt, lastRunAt, failCount etc. that the caller left out (#1810).
 			const propsWithModifier = {
 				...props,
-				lastModifiedBy: options?.lastModifiedBy
-			};
+				lastModifiedBy: options?.lastModifiedBy ?? null
+			} as Partial<MongoJobDocument>;
+			for (const key of NULLABLE_JOB_FIELDS) {
+				if (key in props) {
+					(propsWithModifier as Record<string, unknown>)[key] = props[key] ?? null;
+				}
+			}
 
 			log('[job %s] set job props: \n%O', _id, propsWithModifier);
 
 			// Grab current time and set default query options for MongoDB
 			const now = new Date();
 			const protect: Partial<MongoJobDocument> = {};
-			let update: UpdateFilter<MongoJobDocument> = { $set: propsWithModifier };
 			log('current time stored as %s', now.toISOString());
 
 			// If the job already had an ID, then update the properties of the job
@@ -696,7 +828,7 @@ export class MongoJobRepository implements JobRepository {
 				log('job already has _id, calling findOneAndUpdate() using _id as query');
 				const result = await this.collection.findOneAndUpdate(
 					{ _id: new ObjectId(_id.toString()), name: props.name },
-					update,
+					{ $set: propsWithModifier },
 					{ returnDocument: 'after' }
 				);
 				if (!result) {
@@ -718,10 +850,8 @@ export class MongoJobRepository implements JobRepository {
 					delete (propsWithModifier as Partial<MongoJobDocument>).nextRunAt;
 				}
 
-				// If we have things to protect, set them in MongoDB using $setOnInsert
-				if (Object.keys(protect).length > 0) {
-					update.$setOnInsert = protect;
-				}
+				// Protected fields and null defaults are only applied on insert ($setOnInsert)
+				const update = upsertUpdate(propsWithModifier, protect);
 
 				// Try an upsert - ensures only one job of this name exists
 				log(`calling findOneAndUpdate(${props.name}) with job name and type of "single" as query`);
@@ -742,15 +872,15 @@ export class MongoJobRepository implements JobRepository {
 			}
 
 			if (unique) {
+				// Reject server-side-eval operators before the query is built (NoSQL injection).
+				assertSafeUniqueQuery(unique);
+
 				// Upsert based on the 'unique' query object
 				const query: Filter<MongoJobDocument> = { ...unique } as Filter<MongoJobDocument>;
 				query.name = props.name;
 
 				const debounce = uniqueOpts?.debounce;
 
-				if (uniqueOpts?.insertOnly && !debounce) {
-					update = { $setOnInsert: propsWithModifier };
-				}
 
 				// Handle debounce logic
 				if (debounce) {
@@ -765,14 +895,22 @@ export class MongoJobRepository implements JobRepository {
 						const timeSinceStart = now.getTime() - debounceStartedAt.getTime();
 
 						if (debounce.strategy === 'leading') {
-							// Leading: keep original nextRunAt, just update data
-							// Don't change nextRunAt - the job runs on its original schedule
-							log('leading debounce: keeping original nextRunAt, updating data only');
+							// Leading: while still within the debounce window, ignore the call
+							// (keep the original nextRunAt, just update data). Once the window
+							// has elapsed, start a fresh leading edge so the job fires again.
+							const windowElapsed = timeSinceStart >= debounce.delay;
+							const leadingNextRunAt = windowElapsed ? now : existingJob.nextRunAt;
+							const leadingStartedAt = windowElapsed ? now : debounceStartedAt;
+							log(
+								windowElapsed
+									? 'leading debounce: window elapsed, starting fresh leading edge'
+									: 'leading debounce: within window, keeping original nextRunAt, updating data only'
+							);
 							const leadingUpdate: UpdateFilter<MongoJobDocument> = {
 								$set: {
 									...propsWithModifier,
-									nextRunAt: existingJob.nextRunAt, // Preserve original
-									debounceStartedAt: debounceStartedAt
+									nextRunAt: leadingNextRunAt,
+									debounceStartedAt: leadingStartedAt
 								}
 							};
 							const result = await this.collection.findOneAndUpdate(query, leadingUpdate, {
@@ -790,18 +928,24 @@ export class MongoJobRepository implements JobRepository {
 							log('maxWait exceeded (%dms >= %dms), forcing immediate execution', timeSinceStart, debounce.maxWait);
 							newNextRunAt = now;
 							// Reset debounceStartedAt for the next cycle
-							(propsWithModifier as Partial<MongoJobDocument>).debounceStartedAt = undefined;
+							(propsWithModifier as Partial<MongoJobDocument>).debounceStartedAt = null;
 						} else {
-							// Normal debounce: schedule for delay ms from now
+							// Normal debounce: schedule for delay ms from now, but never past the
+							// maxWait deadline so the job still runs within maxWait if saves stop.
 							newNextRunAt = new Date(now.getTime() + debounce.delay);
+							if (debounce.maxWait) {
+								const deadline = debounceStartedAt.getTime() + debounce.maxWait;
+								if (newNextRunAt.getTime() > deadline) {
+									newNextRunAt = new Date(deadline);
+								}
+							}
 							(propsWithModifier as Partial<MongoJobDocument>).debounceStartedAt = debounceStartedAt;
 							log('trailing debounce: rescheduling to %s', newNextRunAt.toISOString());
 						}
 
 						(propsWithModifier as Partial<MongoJobDocument>).nextRunAt = newNextRunAt;
-						update = { $set: propsWithModifier };
 
-						const result = await this.collection.findOneAndUpdate(query, update, {
+						const result = await this.collection.findOneAndUpdate(query, { $set: propsWithModifier }, {
 							returnDocument: 'after'
 						});
 						assert(result, 'findOneAndUpdate should return a document');
@@ -814,13 +958,18 @@ export class MongoJobRepository implements JobRepository {
 						log('leading debounce: new job, executing immediately');
 						(propsWithModifier as Partial<MongoJobDocument>).debounceStartedAt = now;
 					} else {
-						// Trailing: schedule after delay
-						const newNextRunAt = new Date(now.getTime() + debounce.delay);
+						// Trailing: schedule after delay, but never past the maxWait deadline
+						const newNextRunAt = new Date(now.getTime() + (debounce.maxWait ? Math.min(debounce.delay, debounce.maxWait) : debounce.delay));
 						(propsWithModifier as Partial<MongoJobDocument>).nextRunAt = newNextRunAt;
 						(propsWithModifier as Partial<MongoJobDocument>).debounceStartedAt = now;
 						log('trailing debounce: new job, scheduling for %s', newNextRunAt.toISOString());
 					}
 				}
+
+				const update: UpdateFilter<MongoJobDocument> =
+					uniqueOpts?.insertOnly && !debounce
+						? { $setOnInsert: { ...nullDefaultsFor(propsWithModifier), ...propsWithModifier } }
+						: upsertUpdate(propsWithModifier);
 
 				log('calling findOneAndUpdate() with unique object as query: \n%O', query);
 				const result = await this.collection.findOneAndUpdate(query, update, {
@@ -836,10 +985,11 @@ export class MongoJobRepository implements JobRepository {
 				'using default behavior, inserting new job via insertOne() with props that were set: \n%O',
 				propsWithModifier
 			);
-			const result = await this.collection.insertOne(propsWithModifier as MongoJobDocument);
+			const newJob = { ...nullDefaultsFor(propsWithModifier), ...propsWithModifier } as MongoJobDocument;
+			const result = await this.collection.insertOne(newJob);
 			return computeJobObj({
-				_id: result.insertedId,
-				...propsWithModifier
+				...newJob,
+				_id: result.insertedId
 			});
 		} catch (error) {
 			log('saveJob() received an error, job was not updated/created');

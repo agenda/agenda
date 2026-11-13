@@ -1,5 +1,33 @@
 # agenda
 
+## 6.2.7
+
+### Patch Changes
+
+- 09fcbef: Clear a running job's watchdog timer as soon as the job finishes so it cannot keep the Node.js process alive during shutdown.
+- a90c4ec: Keep backoff jitter within `maxDelay`. `applyJitter` could add up to `jitter * delay` on top of the already-capped delay, so a jittered retry delay could exceed the documented `maxDelay` hard cap. The jittered result now stays within `[0, maxDelay]`; overshoots are reflected below the cap rather than clamped, so retries at the cap stay spread out.
+- 57898fa: Fix `job.touch()` wiping a job's `progress`. A bare `touch()` keep-alive call set `progress` to `undefined`, discarding a previously reported value. It now only updates `progress` when a value is passed.
+- ebf0f81: Fix isExpired()/isDead() throwing a TypeError when the job's definition is not registered in the calling process
+- 17a68fa: Clear armed near-future job timers on `stop()`/`drain()`. Previously the JobProcessor armed an untracked `setTimeout` for jobs due within the `processEvery` window; it was never cleared, kept the event loop alive after `stop()`, and for recurring jobs with an interval ≤ `processEvery` could re-arm itself indefinitely — so the process never exited. Timers are now tracked, cleared on teardown, and `unref`'d so an armed timer alone can never block process exit.
+- 63de5c2: Fix stop() and drain() called during start() from leaving a JobProcessor running.
+- 3bc8ebc: Surface notification handler errors consistently. A subscriber that threw synchronously emitted an `error` event, but one that returned a rejected promise was swallowed by `Promise.allSettled`. Rejected async handlers (for both job and state notifications) now emit `error` like synchronous throws. Errors emitted by the notification channel are now also forwarded to Agenda's `error` event, so a channel without its own `error` listener no longer throws `ERR_UNHANDLED_ERROR`.
+- 6d19660: Fix notification channel reconnect ignoring maxAttempts and never applying exponential backoff (infinite tight retry loop)
+- 6e691fc: Emit `progress` and `progress:<name>` events locally when `job.touch(progress)` is called, matching the local-emit pattern used by other job lifecycle events.
+- fc7b7c1: Fix fluent unique() discarding a previously-set debounce()/uniqueOpts when called without explicit options
+
+## 6.2.6
+
+### Patch Changes
+
+- 3369032: Reset a job's backoff retry counter after a successful run. A recurring job that exhausted its retries earlier in its lifetime kept the old `failCount`, so a later failure was treated as already out of retries and stopped retrying.
+- a072e7b: Fix recurring cron jobs skipping a valid occurrence. `computeFromInterval` compared the next cron tick against the stored `nextRunAt`, so when `nextRunAt` was further in the future than the next tick after `lastRunAt`, it bumped past and skipped the legitimate occurrence. It now only re-rolls when the tick is not strictly after `lastRunAt`.
+- d90be16: Fix `@Every` jobs registered after the agenda was already ready never being scheduled. The scheduler relied on a one-shot `ready` event that had already fired, so it now uses the `ready` promise, which stays resolved.
+- 42d17a3: Release the database lock when the processor frees a job whose `nextRunAt` is too far in the future. Previously such a job, when picked up via the expired-lock recovery path (for example a recurring job left locked by a crashed worker), was removed from the local locked list but never unlocked in the database, so it was re-locked on every scan and never reached its run time.
+- 2b6c926: Fix processing queue order. `JobProcessingQueue.insert` placed the highest-priority (or earliest `nextRunAt`) job in the slot that runs last, because the queue is read from the end. Jobs queued in the same tick now run in the correct priority order.
+- 08b1e22: Treat a numeric (or purely-numeric string) repeatInterval as milliseconds in computeFromInterval, so recurring jobs scheduled with `agenda.every(5000, 'job')` keep running on backends that persist the interval as a string.
+- 24e7591: Fix start() race where concurrent calls leaked a second JobProcessor and connected the notification channel twice
+- fd01a64: `stop()` no longer unlocks jobs that are still running, preventing duplicate concurrent execution of the same job occurrence on another instance during rolling restarts. Only jobs that are locked locally but have not started running are unlocked; running jobs keep their database lock until they complete (or `lockLifetime` expires if the process dies).
+
 ## 6.2.5
 
 ### Patch Changes

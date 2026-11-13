@@ -175,6 +175,138 @@ describe('PostgresBackend', () => {
 		});
 	});
 
+	describe('failure fields on fresh insert', () => {
+		const failedAt = new Date('2025-01-01T00:00:00.000Z');
+
+		it('persists fail fields on a normal insert', async () => {
+			const saved = await backend.repository.saveJob({
+				name: 'fail-normal',
+				priority: 0,
+				nextRunAt: new Date(),
+				type: 'normal',
+				data: {},
+				failReason: 'boom',
+				failCount: 3,
+				failedAt
+			}, undefined);
+
+			const fetched = await backend.repository.getJobById(saved._id!);
+			expect(fetched).not.toBeNull();
+			expect(fetched!.failReason).toBe('boom');
+			expect(fetched!.failCount).toBe(3);
+			expect(fetched!.failedAt?.getTime()).toBe(failedAt.getTime());
+		});
+
+		it('persists fail fields on a single-type insert', async () => {
+			const saved = await backend.repository.saveJob({
+				name: 'fail-single',
+				priority: 0,
+				nextRunAt: new Date(),
+				type: 'single',
+				data: {},
+				failReason: 'single-boom',
+				failCount: 2,
+				failedAt
+			}, undefined);
+
+			const fetched = await backend.repository.getJobById(saved._id!);
+			expect(fetched).not.toBeNull();
+			expect(fetched!.failReason).toBe('single-boom');
+			expect(fetched!.failCount).toBe(2);
+			expect(fetched!.failedAt?.getTime()).toBe(failedAt.getTime());
+		});
+
+		it('persists fail fields on a unique (debounce) insert', async () => {
+			const saved = await backend.repository.saveJob({
+				name: 'fail-unique',
+				priority: 0,
+				nextRunAt: new Date(),
+				type: 'normal',
+				data: { entity: 'a' },
+				unique: { 'data.entity': 'a' },
+				uniqueOpts: { debounce: { delay: 1000 } },
+				failReason: 'unique-boom',
+				failCount: 1,
+				failedAt
+			}, undefined);
+
+			const fetched = await backend.repository.getJobById(saved._id!);
+			expect(fetched).not.toBeNull();
+			expect(fetched!.failReason).toBe('unique-boom');
+			expect(fetched!.failCount).toBe(1);
+			expect(fetched!.failedAt?.getTime()).toBe(failedAt.getTime());
+		});
+	});
+
+	describe('saveJob with a unique query', () => {
+		const saveNormalJob = (accountId: string, note: string, nextRunAt: Date) =>
+			backend.repository.saveJob(
+				{
+					name: 'unique-update',
+					priority: 0,
+					nextRunAt,
+					type: 'normal',
+					data: { accountId, note }
+				},
+				undefined
+			);
+
+		it('updates only one row when several rows match', async () => {
+			const originalRunAt = new Date('2020-01-01T00:00:00.000Z');
+			const first = await saveNormalJob('a', 'first', originalRunAt);
+			const second = await saveNormalJob('a', 'second', originalRunAt);
+
+			const newRunAt = new Date('2030-01-01T00:00:00.000Z');
+			const saved = await backend.repository.saveJob(
+				{
+					name: 'unique-update',
+					priority: 0,
+					nextRunAt: newRunAt,
+					type: 'normal',
+					data: { accountId: 'a', note: 'updated' },
+					unique: { 'data.accountId': 'a' }
+				},
+				undefined
+			);
+
+			const jobs = await Promise.all([
+				backend.repository.getJobById(first._id!),
+				backend.repository.getJobById(second._id!)
+			]);
+			const noteOf = (job: (typeof jobs)[number]) => (job!.data as { note: string }).note;
+			const updated = jobs.filter(job => noteOf(job) === 'updated');
+			const untouched = jobs.filter(job => noteOf(job) !== 'updated');
+
+			expect(updated).toHaveLength(1);
+			expect(updated[0]!._id).toBe(saved._id);
+			expect(updated[0]!.nextRunAt?.getTime()).toBe(newRunAt.getTime());
+			expect(untouched).toHaveLength(1);
+			expect(untouched[0]!.nextRunAt?.getTime()).toBe(originalRunAt.getTime());
+		});
+
+		it('does not update a row with a different unique value', async () => {
+			const originalRunAt = new Date('2020-01-01T00:00:00.000Z');
+			const other = await saveNormalJob('b', 'other', originalRunAt);
+			await saveNormalJob('a', 'first', originalRunAt);
+
+			await backend.repository.saveJob(
+				{
+					name: 'unique-update',
+					priority: 0,
+					nextRunAt: new Date('2030-01-01T00:00:00.000Z'),
+					type: 'normal',
+					data: { accountId: 'a', note: 'updated' },
+					unique: { 'data.accountId': 'a' }
+				},
+				undefined
+			);
+
+			const fetched = await backend.repository.getJobById(other._id!);
+			expect((fetched!.data as { note: string }).note).toBe('other');
+			expect(fetched!.nextRunAt?.getTime()).toBe(originalRunAt.getTime());
+		});
+	});
+
 	describe('PostgreSQL-specific features', () => {
 		it('should support JSONB queries for job data', async () => {
 			await backend.repository.saveJob({
@@ -234,6 +366,78 @@ describe('PostgresBackend', () => {
 			const indexNames = result.rows.map(r => r.indexname);
 			expect(indexNames.some(n => n.includes('find_and_lock'))).toBe(true);
 			expect(indexNames.some(n => n.includes('single_job'))).toBe(true);
+		});
+
+		it('should preserve startDate, endDate and skipDays when loading jobs from the database', async () => {
+			const startDate = new Date('2026-01-01T00:00:00Z');
+			const endDate = new Date('2026-12-31T23:59:59Z');
+			const skipDays = [0, 6];
+
+			const saved = await backend.repository.saveJob({
+				name: 'date-constraint-test',
+				priority: 0,
+				nextRunAt: new Date(Date.now() - 1000),
+				type: 'normal',
+				repeatInterval: '1 day',
+				startDate,
+				endDate,
+				skipDays,
+				data: {}
+			}, undefined);
+
+			expect(saved.startDate).toEqual(startDate);
+			expect(saved.endDate).toEqual(endDate);
+			expect(saved.skipDays).toEqual(skipDays);
+
+			// Read back through every load path — the constraints must survive
+			const byId = await backend.repository.getJobById(saved._id!.toString());
+			expect(byId?.startDate).toEqual(startDate);
+			expect(byId?.endDate).toEqual(endDate);
+			expect(byId?.skipDays).toEqual(skipDays);
+
+			const { jobs } = await backend.repository.queryJobs({ name: 'date-constraint-test' });
+			expect(jobs).toHaveLength(1);
+			expect(jobs[0].startDate).toEqual(startDate);
+			expect(jobs[0].endDate).toEqual(endDate);
+			expect(jobs[0].skipDays).toEqual(skipDays);
+
+			const now = new Date();
+			const next = await backend.repository.getNextJobToRun(
+				'date-constraint-test',
+				new Date(now.getTime() + 5000),
+				new Date(now.getTime() - 600000),
+				now,
+				undefined
+			);
+			expect(next?.startDate).toEqual(startDate);
+			expect(next?.endDate).toEqual(endDate);
+			expect(next?.skipDays).toEqual(skipDays);
+		});
+
+		it('should add date constraint columns to pre-existing tables via migration', async () => {
+			// Simulate an existing installation created before the columns existed
+			await pool.query(`ALTER TABLE "${TEST_TABLE_NAME}" DROP COLUMN IF EXISTS start_date`);
+			await pool.query(`ALTER TABLE "${TEST_TABLE_NAME}" DROP COLUMN IF EXISTS end_date`);
+			await pool.query(`ALTER TABLE "${TEST_TABLE_NAME}" DROP COLUMN IF EXISTS skip_days`);
+
+			// Reconnect - initializeSchema should add the missing columns
+			const migratedBackend = new PostgresBackend({
+				connectionString: getConnectionString(),
+				tableName: TEST_TABLE_NAME,
+				channelName: TEST_CHANNEL_NAME
+			});
+			await migratedBackend.connect();
+
+			const result = await pool.query(
+				`SELECT column_name FROM information_schema.columns WHERE table_name = $1`,
+				[TEST_TABLE_NAME]
+			);
+			const columns = result.rows.map(r => r.column_name);
+			expect(columns).toContain('start_date');
+			expect(columns).toContain('end_date');
+			expect(columns).toContain('skip_days');
+
+			await migratedBackend.disconnect();
 		});
 	});
 });

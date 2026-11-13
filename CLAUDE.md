@@ -40,6 +40,10 @@ pnpm lint                        # ESLint check
 pnpm lint:fix                    # ESLint with auto-fix
 ```
 
+## TypeScript Version
+
+The repo compiles with **TypeScript 7** (the native Go port): `tsc` resolves to `typescript@7`. TS 7 no longer ships the JS compiler API, so tools built on it (typescript-eslint, typedoc, vue-tsc) are pinned to TypeScript 6 via the `readPackage` hook in `.pnpmfile.cjs`. Remove a tool from that hook once it supports TS 7 natively. Like TS 6, TS 7 defaults `types` to `[]`, so `tsconfig.base.json` lists `"types": ["node"]` explicitly.
+
 ## Architecture
 
 ### Core Components

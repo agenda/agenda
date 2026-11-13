@@ -8,7 +8,22 @@ import type { NotificationChannel, JobNotification } from './types/NotificationC
 import type { DrainOptions, DrainResult } from './types/DrainOptions.js';
 import { Job } from './Job.js';
 import { JobProcessingQueue } from './JobProcessingQueue.js';
-const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
+const cancellableDelay = (ms: number) => {
+	let timer: ReturnType<typeof setTimeout>;
+	let resolveDelay: () => void;
+	const promise = new Promise<void>(resolve => {
+		resolveDelay = resolve;
+		timer = setTimeout(resolve, ms);
+	});
+
+	return {
+		promise,
+		cancel: () => {
+			clearTimeout(timer);
+			resolveDelay();
+		}
+	};
+};
 
 const log = debug('agenda:jobProcessor');
 
@@ -85,11 +100,26 @@ export class JobProcessor {
 
 	private lockedJobs: JobWithId[] = [];
 
+	/**
+	 * In-flight jobQueueFilling() calls. A fill's lock query can still be running at the
+	 * database when stop() is called; stop() waits for these so a job such a query locks
+	 * after the processor stopped is released again before stop() resolves.
+	 */
+	private pendingQueueFills = new Set<Promise<void>>();
+
 	private isJobQueueFilling = new Map<string, boolean>();
 
 	private isRunning = true;
 
 	private processInterval?: ReturnType<typeof setInterval>;
+
+	/**
+	 * Timers armed for jobs whose nextRunAt is in the near future. Tracked so
+	 * stop()/drain() can clear them - an uncleared timer keeps the event loop
+	 * alive and can re-arm itself for recurring jobs, preventing process exit
+	 * (see #1786).
+	 */
+	private nextRunTimers = new Set<ReturnType<typeof setTimeout>>();
 
 	private notificationChannel?: NotificationChannel;
 
@@ -117,6 +147,17 @@ export class JobProcessor {
 		}
 	}
 
+	/**
+	 * Clear all armed near-future job timers so nothing keeps the event loop
+	 * alive (or restarts processing) after the processor is stopped/drained.
+	 */
+	private clearNextRunTimers(): void {
+		for (const timer of this.nextRunTimers) {
+			clearTimeout(timer);
+		}
+		this.nextRunTimers.clear();
+	}
+
 	stop(): JobWithId[] {
 		log.extend('stop')('stop job processor', this.isRunning);
 		this.isRunning = false;
@@ -126,6 +167,8 @@ export class JobProcessor {
 			this.processInterval = undefined;
 		}
 
+		this.clearNextRunTimers();
+
 		// Unsubscribe from notifications
 		if (this.notificationUnsubscribe) {
 			log.extend('stop')('unsubscribing from notification channel');
@@ -133,10 +176,11 @@ export class JobProcessor {
 			this.notificationUnsubscribe = undefined;
 		}
 
-		// Return both locked and running jobs so they can all be unlocked
-		// Running jobs are also "locked" in the database (they have lockedAt set),
-		// they just moved from lockedJobs to runningJobs when processing started
-		return [...this.lockedJobs, ...this.runningJobs];
+		const runningJobIds = new Set(this.runningJobs.map(job => job.attrs._id.toString()));
+
+		// Only unlock jobs that are held locally but have not started running.
+		// Running jobs keep their database locks until they complete or the lock expires.
+		return this.lockedJobs.filter(job => !runningJobIds.has(job.attrs._id.toString()));
 	}
 
 	/**
@@ -152,11 +196,14 @@ export class JobProcessor {
 		const opts: DrainOptions =
 			typeof options === 'number' ? { timeout: options } : options ?? {};
 
-		// Stop accepting new jobs
+		// Stop accepting new jobs and stop starting queued ones; running jobs are unaffected
+		this.isRunning = false;
 		if (this.processInterval) {
 			clearInterval(this.processInterval);
 			this.processInterval = undefined;
 		}
+
+		this.clearNextRunTimers();
 
 		// Unsubscribe from notifications to stop receiving new job notifications
 		if (this.notificationUnsubscribe) {
@@ -170,14 +217,12 @@ export class JobProcessor {
 		// If no jobs are running, resolve immediately
 		if (initialRunning === 0) {
 			log.extend('drain')('no running jobs, resolving immediately');
-			this.isRunning = false;
 			return { completed: 0, running: 0, timedOut: false, aborted: false };
 		}
 
 		// Check if already aborted
 		if (opts.signal?.aborted) {
 			log.extend('drain')('signal already aborted, resolving immediately');
-			this.isRunning = false;
 			return { completed: 0, running: initialRunning, timedOut: false, aborted: true };
 		}
 
@@ -200,7 +245,6 @@ export class JobProcessor {
 
 			const finish = (result: DrainResult) => {
 				cleanup();
-				this.isRunning = false;
 				resolve(result);
 			};
 
@@ -379,7 +423,29 @@ export class JobProcessor {
 	 * @param {String} name fill a queue with specific job name
 	 * @returns {undefined}
 	 */
-	private async jobQueueFilling(name: string): Promise<void> {
+	private jobQueueFilling(name: string): Promise<void> {
+		const fill = this.fillQueue(name).finally(() => {
+			this.pendingQueueFills.delete(fill);
+		});
+		this.pendingQueueFills.add(fill);
+		return fill;
+	}
+
+	/**
+	 * Wait until no queue fill is in flight anymore (used by Agenda.stop()).
+	 */
+	async waitForPendingQueueFills(): Promise<void> {
+		while (this.pendingQueueFills.size > 0) {
+			await Promise.allSettled([...this.pendingQueueFills]);
+		}
+	}
+
+	private async fillQueue(name: string): Promise<void> {
+		if (!this.isRunning) {
+			log.extend('jobQueueFilling')('JobProcessor stopped, not filling queue for [%s]', name);
+			return;
+		}
+
 		this.isJobQueueFilling.set(name, true);
 
 		try {
@@ -408,13 +474,26 @@ export class JobProcessor {
 					);
 				}
 
+				// The processor may have been stopped while the lock query was in flight.
+				// stop() has already collected (and is unlocking) the jobs it knew about,
+				// so release this one ourselves instead of leaking its lock.
+				if (!this.isRunning) {
+					log.extend('jobQueueFilling')(
+						'JobProcessor stopped while locking [%s:%s], releasing lock',
+						name,
+						job.attrs._id
+					);
+					await this.agenda.db.unlockJob(job.attrs);
+					return;
+				}
+
 				// Before en-queing job make sure we haven't exceed our lock limits
 				if (!this.shouldLock(name)) {
 					log.extend('jobQueueFilling')(
 						'lock limit reached before job was returned. Releasing lock on [%s]',
 						name
 					);
-					this.agenda.db.unlockJob(job.attrs);
+					await this.agenda.db.unlockJob(job.attrs);
 					return;
 				}
 
@@ -452,6 +531,13 @@ export class JobProcessor {
 	 * @returns {undefined}
 	 */
 	private async jobProcessing(handledJobs: JobParameters['_id'][] = []) {
+		// Once stopped (stop()/drain()), queued jobs are not touched anymore: their locks were
+		// handed back to Agenda.stop()/drain() for release. A running job that completes
+		// during a drain must not start one of them.
+		if (!this.isRunning) {
+			return;
+		}
+
 		// Ensure we have jobs
 		if (this.jobQueue.length === 0) {
 			return;
@@ -515,6 +601,11 @@ export class JobProcessor {
 
 						this.lockedJobs.splice(lockedJobIndex, 1);
 						this.updateStatus(job.attrs.name, 'locked', -1);
+						// Release the database lock as well. Otherwise a job that was
+						// locked via the expired-lock recovery path while its nextRunAt
+						// is still in the future gets re-locked on every scan and never
+						// reaches its run time.
+						this.agenda.db.unlockJob(job.attrs);
 					} else {
 						log.extend('jobProcessing')(
 							'[%s:%s] nextRunAt is in the future, calling setTimeout(%d)',
@@ -525,15 +616,23 @@ export class JobProcessor {
 						// re add to queue (puts it at the right position in the queue)
 						this.jobQueue.insert(job);
 						// ensure every job gets a timer to run at the near future time (but also ensure this time is set only once)
-						if (!job.gotTimerToExecute) {
+						// Only arm while the processor is active (processInterval is cleared
+						// by stop()/drain()), so completing jobs cannot re-arm timers during
+						// teardown.
+						if (!job.gotTimerToExecute && this.processInterval) {
 							job.gotTimerToExecute = true;
-							setTimeout(
+							const timer = setTimeout(
 								() => {
+									this.nextRunTimers.delete(timer);
 									this.jobProcessing();
 								},
 								runIn > MAX_SAFE_32BIT_INTEGER ? MAX_SAFE_32BIT_INTEGER : runIn
 							); // check if runIn is higher than unsined 32 bit int, if so, use this time to recheck,
 							// because setTimeout will run in an overflow otherwise and reprocesses immediately
+							// Track the timer so stop()/drain() can clear it, and unref it so
+							// an armed timer alone never blocks process exit (#1786).
+							timer.unref?.();
+							this.nextRunTimers.add(timer);
 						}
 					}
 				}
@@ -576,6 +675,7 @@ export class JobProcessor {
 			this.updateStatus(job.attrs.name, 'running', 1);
 
 			let jobIsRunning = true;
+			let cancelWatchdogDelay: (() => void) | undefined;
 			try {
 				log.extend('runOrRetry')('[%s:%s] processing job', job.attrs.name, job.attrs._id);
 
@@ -587,7 +687,10 @@ export class JobProcessor {
 						this.agenda.definitions[job.attrs.name].lockLifetime / 2
 					);
 					do {
-						await delay(timeout);
+						const watchdogDelay = cancellableDelay(timeout);
+						cancelWatchdogDelay = watchdogDelay.cancel;
+						await watchdogDelay.promise;
+						cancelWatchdogDelay = undefined;
 						// when job is not running anymore, just finish
 						if (!jobIsRunning) {
 							log.extend('runOrRetry')(
@@ -670,6 +773,7 @@ export class JobProcessor {
 				this.agenda.emit('error', error instanceof Error ? error : new Error(String(error)));
 			} finally {
 				jobIsRunning = false;
+				cancelWatchdogDelay?.();
 
 				// Remove the job from the running queue
 				let runningJobIndex = this.runningJobs.indexOf(job);

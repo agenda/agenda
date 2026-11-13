@@ -1,5 +1,41 @@
 # @agendajs/redis-backend
 
+## 3.0.8
+
+### Patch Changes
+
+- 554c3ed: Cap the trailing debounce `nextRunAt` at the `maxWait` deadline. Each save rescheduled the job to `now + delay` without bounding it by `debounceStartedAt + maxWait`, so a save shortly before the deadline pushed execution past `maxWait`, breaking the documented guarantee that the job runs within `maxWait`.
+- 6fa9b56: Fix leading-strategy debounce never re-firing after its window elapsed (the debounce window was never reset once the job ran)
+- 2b31806: Fix data filter to use recursive value containment instead of a JSON-substring match, preventing false matches (and wrong-job deletion) for prefix-colliding values and reordered multi-key filters.
+- bc2835a: Fix RedisJobLogger.getLogs to apply the jobName filter when jobId is also supplied, matching the AND semantics of the Mongo/Postgres loggers.
+- d757511: Fix priority ordering for negative priorities in the Redis backend. The sorted-set score clamped every priority below `0` to the same fractional tiebreak, so jobs with equal `nextRunAt` and named priorities `normal`, `low`, and `lowest` were ordered arbitrarily instead of by priority descending. Negative priorities are now mapped into a distinct, monotonic tiebreak so higher priority always runs first, matching the Mongo and Postgres backends.
+- Updated dependencies [09fcbef]
+- Updated dependencies [a90c4ec]
+- Updated dependencies [57898fa]
+- Updated dependencies [ebf0f81]
+- Updated dependencies [17a68fa]
+- Updated dependencies [63de5c2]
+- Updated dependencies [3bc8ebc]
+- Updated dependencies [6d19660]
+- Updated dependencies [6e691fc]
+- Updated dependencies [fc7b7c1]
+  - agenda@6.2.7
+
+## 3.0.7
+
+### Patch Changes
+
+- b48ebef: Persist and load `startDate`, `endDate` and `skipDays` so date constraints on repeating jobs are honored (previously these fields were silently dropped — a repeating job with an `endDate` would keep running forever). The PostgreSQL backend adds the `start_date`, `end_date` and `skip_days` columns automatically on connect for existing installations.
+- Updated dependencies [3369032]
+- Updated dependencies [a072e7b]
+- Updated dependencies [d90be16]
+- Updated dependencies [42d17a3]
+- Updated dependencies [2b6c926]
+- Updated dependencies [08b1e22]
+- Updated dependencies [24e7591]
+- Updated dependencies [fd01a64]
+  - agenda@6.2.6
+
 ## 3.0.6
 
 ### Patch Changes

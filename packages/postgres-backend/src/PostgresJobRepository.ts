@@ -21,10 +21,46 @@ import type { PostgresBackendConfig, PostgresJobRow } from './types.js';
 import {
 	getCreateTableSQL,
 	getCreateIndexesSQL,
+	getMigrationSQL,
 	getUpdateTimestampTriggerSQL
 } from './schema.js';
 
 const log = debug('agenda:postgres:repository');
+
+/**
+ * Columns that may be referenced directly (i.e. not via a `data.` JSON path) in a
+ * `unique` constraint. SQL identifiers cannot be passed as bound parameters, so a
+ * caller-supplied key is validated against this allowlist before it is ever placed
+ * into a query string. This prevents SQL injection via the keys of the `unique`
+ * object (the values are always parameterized).
+ */
+const UNIQUE_QUERYABLE_COLUMNS = new Set<string>([
+	'id',
+	'name',
+	'priority',
+	'next_run_at',
+	'type',
+	'locked_at',
+	'last_finished_at',
+	'failed_at',
+	'fail_count',
+	'fail_reason',
+	'repeat_timezone',
+	'last_run_at',
+	'repeat_interval',
+	'data',
+	'repeat_at',
+	'disabled',
+	'progress',
+	'fork',
+	'last_modified_by',
+	'debounce_started_at',
+	'start_date',
+	'end_date',
+	'skip_days',
+	'created_at',
+	'updated_at'
+]);
 
 /**
  * PostgreSQL implementation of JobRepository
@@ -101,6 +137,12 @@ export class PostgresJobRepository implements JobRepository {
 		await client.query(getCreateTableSQL(this.tableName));
 		log('table created or already exists');
 
+		// Apply migrations for columns added after the initial schema
+		for (const sql of getMigrationSQL(this.tableName)) {
+			await client.query(sql);
+		}
+		log('migrations applied');
+
 		// Create indexes
 		for (const sql of getCreateIndexesSQL(this.tableName)) {
 			await client.query(sql);
@@ -157,7 +199,10 @@ export class PostgresJobRepository implements JobRepository {
 			progress: row.progress ?? undefined,
 			fork: row.fork ?? undefined,
 			lastModifiedBy: row.last_modified_by ?? undefined,
-			debounceStartedAt: row.debounce_started_at ?? undefined
+			debounceStartedAt: row.debounce_started_at ?? undefined,
+			startDate: row.start_date ?? undefined,
+			endDate: row.end_date ?? undefined,
+			skipDays: row.skip_days ?? undefined
 		};
 	}
 
@@ -633,7 +678,10 @@ export class PostgresJobRepository implements JobRepository {
 					 fail_reason = $12,
 					 fail_count = $13,
 					 failed_at = $14,
-					 last_modified_by = $15
+					 last_modified_by = $15,
+					 start_date = $16,
+					 end_date = $17,
+					 skip_days = $18
 				 WHERE id = $1 AND name = $2
 				 RETURNING *`,
 				[
@@ -651,7 +699,10 @@ export class PostgresJobRepository implements JobRepository {
 					props.failReason ?? null,
 					props.failCount ?? null,
 					props.failedAt || null,
-					options?.lastModifiedBy || null
+					options?.lastModifiedBy || null,
+					props.startDate || null,
+					props.endDate || null,
+					props.skipDays ? JSON.stringify(props.skipDays) : null
 				]
 			);
 
@@ -675,9 +726,11 @@ export class PostgresJobRepository implements JobRepository {
 			const result = await this.pool.query<PostgresJobRow>(
 				`INSERT INTO "${this.tableName}" (
 					name, priority, next_run_at, type, repeat_timezone,
-					repeat_interval, data, repeat_at, disabled, fork, last_modified_by
-				 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-				 ON CONFLICT ((name)) WHERE type = 'single'
+					repeat_interval, data, repeat_at, disabled, fork, last_modified_by,
+					start_date, end_date, skip_days,
+					fail_reason, fail_count, failed_at
+				 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+				 ON CONFLICT (name) WHERE type = 'single'
 				 DO UPDATE SET
 					priority = EXCLUDED.priority,
 					next_run_at = ${shouldProtectNextRunAt
@@ -689,7 +742,10 @@ export class PostgresJobRepository implements JobRepository {
 					repeat_at = EXCLUDED.repeat_at,
 					disabled = EXCLUDED.disabled,
 					fork = EXCLUDED.fork,
-					last_modified_by = EXCLUDED.last_modified_by
+					last_modified_by = EXCLUDED.last_modified_by,
+					start_date = EXCLUDED.start_date,
+					end_date = EXCLUDED.end_date,
+					skip_days = EXCLUDED.skip_days
 				 RETURNING *`,
 				[
 					props.name,
@@ -702,7 +758,13 @@ export class PostgresJobRepository implements JobRepository {
 					props.repeatAt || null,
 					props.disabled || false,
 					props.fork || false,
-					options?.lastModifiedBy || null
+					options?.lastModifiedBy || null,
+					props.startDate || null,
+					props.endDate || null,
+					props.skipDays ? JSON.stringify(props.skipDays) : null,
+					props.failReason ?? null,
+					props.failCount ?? null,
+					props.failedAt || null
 				]
 			);
 
@@ -723,14 +785,20 @@ export class PostgresJobRepository implements JobRepository {
 
 			for (const [key, value] of Object.entries(unique)) {
 				if (key.startsWith('data.')) {
-					// Handle data sub-paths like 'data.userId'
+					// Handle data sub-paths like 'data.userId'. The JSON path is a value,
+					// so it is bound as a parameter rather than interpolated into the SQL.
 					const dataPath = key.substring(5);
-					conditions.push(`data->>'${dataPath}' = $${paramIndex++}`);
-					params.push(String(value));
+					conditions.push(`data->>$${paramIndex++} = $${paramIndex++}`);
+					params.push(dataPath, String(value));
 				} else {
-					// Direct column (snake_case conversion)
+					// Direct column (snake_case conversion). The column name is an SQL
+					// identifier and cannot be parameterized, so it is validated against a
+					// fixed allowlist to prevent SQL injection via the unique key.
 					const columnName = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-					conditions.push(`${columnName} = $${paramIndex++}`);
+					if (!UNIQUE_QUERYABLE_COLUMNS.has(columnName)) {
+						throw new Error(`Invalid unique constraint field: "${key}"`);
+					}
+					conditions.push(`"${columnName}" = $${paramIndex++}`);
 					params.push(value);
 				}
 			}
@@ -761,10 +829,18 @@ export class PostgresJobRepository implements JobRepository {
 					const timeSinceStart = now.getTime() - existingDebounceStartedAt.getTime();
 
 					if (debounce.strategy === 'leading') {
-						// Leading: keep original nextRunAt, just update data
-						log('leading debounce: keeping original nextRunAt, updating data only');
-						nextRunAt = existingRow.next_run_at;
-						debounceStartedAt = existingDebounceStartedAt;
+						// Leading: while still within the debounce window, ignore the call
+						// (keep the original nextRunAt). Once the window has elapsed, start a
+						// fresh leading edge so the job fires again.
+						if (timeSinceStart >= debounce.delay) {
+							log('leading debounce: window elapsed, starting fresh leading edge');
+							nextRunAt = now;
+							debounceStartedAt = now;
+						} else {
+							log('leading debounce: within window, keeping original nextRunAt, updating data only');
+							nextRunAt = existingRow.next_run_at;
+							debounceStartedAt = existingDebounceStartedAt;
+						}
 					} else {
 						// Trailing (default): push nextRunAt forward
 						if (debounce.maxWait && timeSinceStart >= debounce.maxWait) {
@@ -772,31 +848,42 @@ export class PostgresJobRepository implements JobRepository {
 							nextRunAt = now;
 							debounceStartedAt = null; // Reset for next cycle
 						} else {
+							// Schedule for delay ms from now, but never past the maxWait deadline
+							// so the job still runs within maxWait if saves stop.
 							nextRunAt = new Date(now.getTime() + debounce.delay);
+							if (debounce.maxWait) {
+								const deadline = existingDebounceStartedAt.getTime() + debounce.maxWait;
+								if (nextRunAt.getTime() > deadline) {
+									nextRunAt = new Date(deadline);
+								}
+							}
 							debounceStartedAt = existingDebounceStartedAt;
 							log('trailing debounce: rescheduling to %s', nextRunAt.toISOString());
 						}
 					}
 				}
 
-				// Update existing record
+				// Update only the record found above. Other rows can match the unique
+				// query, such as completed jobs that are still in the table.
 				const updateResult = await this.pool.query<PostgresJobRow>(
 					`UPDATE "${this.tableName}"
-					 SET priority = $${paramIndex},
-						 next_run_at = $${paramIndex + 1},
-						 type = $${paramIndex + 2},
-						 repeat_timezone = $${paramIndex + 3},
-						 repeat_interval = $${paramIndex + 4},
-						 data = $${paramIndex + 5},
-						 repeat_at = $${paramIndex + 6},
-						 disabled = $${paramIndex + 7},
-						 fork = $${paramIndex + 8},
-						 last_modified_by = $${paramIndex + 9},
-						 debounce_started_at = $${paramIndex + 10}
-					 WHERE ${conditions.join(' AND ')}
+					 SET priority = $1,
+						 next_run_at = $2,
+						 type = $3,
+						 repeat_timezone = $4,
+						 repeat_interval = $5,
+						 data = $6,
+						 repeat_at = $7,
+						 disabled = $8,
+						 fork = $9,
+						 last_modified_by = $10,
+						 debounce_started_at = $11,
+						 start_date = $12,
+						 end_date = $13,
+						 skip_days = $14
+					 WHERE id = $15
 					 RETURNING *`,
 					[
-						...params,
 						props.priority,
 						nextRunAt,
 						props.type,
@@ -807,7 +894,11 @@ export class PostgresJobRepository implements JobRepository {
 						props.disabled || false,
 						props.fork || false,
 						options?.lastModifiedBy || null,
-						debounceStartedAt
+						debounceStartedAt,
+						props.startDate || null,
+						props.endDate || null,
+						props.skipDays ? JSON.stringify(props.skipDays) : null,
+						existingRow.id
 					]
 				);
 
@@ -823,16 +914,18 @@ export class PostgresJobRepository implements JobRepository {
 					// Leading: execute immediately (keep nextRunAt as-is)
 					log('leading debounce: new job, executing immediately');
 				} else {
-					// Trailing: schedule after delay
-					nextRunAt = new Date(now.getTime() + debounce.delay);
+					// Trailing: schedule after delay, but never past the maxWait deadline
+					nextRunAt = new Date(now.getTime() + (debounce.maxWait ? Math.min(debounce.delay, debounce.maxWait) : debounce.delay));
 					log('trailing debounce: new job, scheduling for %s', nextRunAt.toISOString());
 				}
 
 				const result = await this.pool.query<PostgresJobRow>(
 					`INSERT INTO "${this.tableName}" (
 						name, priority, next_run_at, type, repeat_timezone,
-						repeat_interval, data, repeat_at, disabled, fork, last_modified_by, debounce_started_at
-					 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+						repeat_interval, data, repeat_at, disabled, fork, last_modified_by, debounce_started_at,
+						start_date, end_date, skip_days,
+						fail_reason, fail_count, failed_at
+					 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
 					 RETURNING *`,
 					[
 						props.name,
@@ -846,7 +939,13 @@ export class PostgresJobRepository implements JobRepository {
 						props.disabled || false,
 						props.fork || false,
 						options?.lastModifiedBy || null,
-						debounceStartedAt
+						debounceStartedAt,
+						props.startDate || null,
+						props.endDate || null,
+						props.skipDays ? JSON.stringify(props.skipDays) : null,
+						props.failReason ?? null,
+						props.failCount ?? null,
+						props.failedAt || null
 					]
 				);
 
@@ -859,8 +958,10 @@ export class PostgresJobRepository implements JobRepository {
 		const result = await this.pool.query<PostgresJobRow>(
 			`INSERT INTO "${this.tableName}" (
 				name, priority, next_run_at, type, repeat_timezone,
-				repeat_interval, data, repeat_at, disabled, fork, last_modified_by
-			 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+				repeat_interval, data, repeat_at, disabled, fork, last_modified_by,
+				start_date, end_date, skip_days,
+				fail_reason, fail_count, failed_at
+			 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
 			 RETURNING *`,
 			[
 				props.name,
@@ -873,7 +974,13 @@ export class PostgresJobRepository implements JobRepository {
 				props.repeatAt || null,
 				props.disabled || false,
 				props.fork || false,
-				options?.lastModifiedBy || null
+				options?.lastModifiedBy || null,
+				props.startDate || null,
+				props.endDate || null,
+				props.skipDays ? JSON.stringify(props.skipDays) : null,
+				props.failReason ?? null,
+				props.failCount ?? null,
+				props.failedAt || null
 			]
 		);
 

@@ -238,6 +238,8 @@ export class Agenda extends EventEmitter {
 
 	private jobProcessor?: JobProcessor;
 
+	private startPromise?: Promise<void>;
+
 	readonly ready: Promise<void>;
 
 	isActiveJobProcessor(): boolean {
@@ -317,7 +319,7 @@ export class Agenda extends EventEmitter {
 		this.db = config.backend.repository;
 
 		// Notification channel priority: explicit config > backend's channel
-		this.notificationChannel = config.notificationChannel ?? config.backend.notificationChannel;
+		this.setNotificationChannel(config.notificationChannel ?? config.backend.notificationChannel);
 
 		// Ready promise resolves when backend is connected
 		this.ready = new Promise(resolve => {
@@ -472,8 +474,23 @@ export class Agenda extends EventEmitter {
 			);
 		}
 		log('Agenda.notifyVia([NotificationChannel])');
-		this.notificationChannel = channel;
+		this.setNotificationChannel(channel);
 		return this;
+	}
+
+	/**
+	 * Forward the channel's 'error' events (handler rejections, connection errors) to
+	 * agenda's own 'error' event. Without a listener on the channel, EventEmitter would
+	 * throw ERR_UNHANDLED_ERROR; agenda always has a (no-op) 'error' listener.
+	 */
+	private readonly forwardChannelError = (error: Error): void => {
+		this.emit('error', error);
+	};
+
+	private setNotificationChannel(channel: NotificationChannel | undefined): void {
+		this.notificationChannel?.off('error', this.forwardChannelError);
+		this.notificationChannel = channel;
+		this.notificationChannel?.on('error', this.forwardChannelError);
 	}
 
 	/**
@@ -1091,29 +1108,47 @@ export class Agenda extends EventEmitter {
 			'Agenda.start called, waiting for agenda to be initialized (db connection)',
 			this.attrs.processEvery
 		);
-		await this.ready;
+
 		if (this.jobProcessor) {
 			log('Agenda.start was already called, ignoring');
 			return;
 		}
 
-		// Connect notification channel if configured
-		if (this.notificationChannel) {
-			log('Agenda.start connecting notification channel');
-			await this.notificationChannel.connect();
-
-			// Subscribe to state notifications for cross-process event propagation
-			this.stateSubscriptionUnsubscribe = this.subscribeToStateNotifications();
+		// Guard against concurrent start() calls: the awaits below (ready, channel
+		// connect) yield to the event loop, so two callers could otherwise both pass
+		// the jobProcessor guard and create duplicate JobProcessors (leaked intervals,
+		// double channel connect). Cache the in-flight promise and reuse it.
+		if (this.startPromise) {
+			log('Agenda.start already in progress, awaiting existing start');
+			return this.startPromise;
 		}
 
-		this.jobProcessor = new JobProcessor(
-			this,
-			this.attrs.maxConcurrency,
-			this.attrs.lockLimit,
-			this.attrs.processEvery,
-			this.notificationChannel
-		);
+		this.startPromise = (async () => {
+			await this.ready;
 
+			// Connect notification channel if configured
+			if (this.notificationChannel) {
+				log('Agenda.start connecting notification channel');
+				await this.notificationChannel.connect();
+
+				// Subscribe to state notifications for cross-process event propagation
+				this.stateSubscriptionUnsubscribe = this.subscribeToStateNotifications();
+			}
+
+			this.jobProcessor = new JobProcessor(
+				this,
+				this.attrs.maxConcurrency,
+				this.attrs.lockLimit,
+				this.attrs.processEvery,
+				this.notificationChannel
+			);
+		})();
+
+		try {
+			await this.startPromise;
+		} finally {
+			this.startPromise = undefined;
+		}
 	}
 
 	/**
@@ -1123,6 +1158,12 @@ export class Agenda extends EventEmitter {
 	 *   false if connection was passed in by user).
 	 */
 	async stop(closeConnection?: boolean): Promise<void> {
+		if (this.startPromise) {
+			log('Agenda.stop called while start is in progress, waiting for start');
+			// start() reports its own failure to its caller; stop() must still tear down
+			await this.startPromise.catch(() => {});
+		}
+
 		if (!this.jobProcessor) {
 			log('Agenda.stop called, but agenda has never started!');
 			return;
@@ -1139,6 +1180,10 @@ export class Agenda extends EventEmitter {
 			log('about to unlock jobs with ids: %O', jobIds);
 			await this.db.unlockJobs(jobIds);
 		}
+
+		// A lock query that was already in flight can still lock a job after the processor
+		// stopped; the fill releases such a job itself, wait for that before returning.
+		await this.jobProcessor.waitForPendingQueueFills();
 
 		// Unsubscribe from state notifications
 		if (this.stateSubscriptionUnsubscribe) {
@@ -1193,6 +1238,11 @@ export class Agenda extends EventEmitter {
 	async drain(
 		options?: number | (DrainOptions & { closeConnection?: boolean })
 	): Promise<DrainResult> {
+		if (this.startPromise) {
+			log('Agenda.drain called while start is in progress, waiting for start');
+			await this.startPromise.catch(() => {});
+		}
+
 		if (!this.jobProcessor) {
 			log('Agenda.drain called, but agenda has never started!');
 			return { completed: 0, running: 0, timedOut: false, aborted: false };
@@ -1204,7 +1254,23 @@ export class Agenda extends EventEmitter {
 
 		log('Agenda.drain called, waiting for jobs to finish');
 
+		// Stop taking new work before waiting: no more fills, and jobs that were prefetched
+		// (locked) but never started are not started anymore. Release their locks right away
+		// so other workers can claim them while the running jobs finish. Releasing them only
+		// after the wait could clear a lock another worker took after ours expired, since
+		// unlockJobs() does not check the lock owner. Running jobs keep their locks.
+		const unstartedJobs = this.jobProcessor.stop();
+		const unstartedIds = unstartedJobs.map(job => job.attrs._id);
+		if (unstartedIds.length > 0) {
+			log('Agenda.drain unlocking %d jobs that never started', unstartedIds.length);
+			await this.db.unlockJobs(unstartedIds);
+		}
+
 		const result = await this.jobProcessor.drain(opts);
+
+		// A lock query that was already in flight can still lock a job after the processor
+		// stopped; the fill releases such a job itself, wait for that before disconnecting.
+		await this.jobProcessor.waitForPendingQueueFills();
 
 		// Unsubscribe from state notifications
 		if (this.stateSubscriptionUnsubscribe) {

@@ -6,7 +6,8 @@
     "composite": true
   },
   "references": [
-    { "path": "../agenda" }
+    { "path": "../agenda" },
+    { "path": "../mongo-backend" }
   ],
   "exclude": ["node_modules", "dist", "test"],
   "include": ["./src"]

@@ -273,6 +273,178 @@ describe('RedisBackend', () => {
 			const members = await redis.smembers(`${TEST_KEY_PREFIX}jobs:by_name:set-test`);
 			expect(members.length).toBe(1);
 		});
+
+		it('should preserve startDate, endDate and skipDays when loading jobs from the database', async () => {
+			const startDate = new Date('2026-01-01T00:00:00.000Z');
+			const endDate = new Date('2026-12-31T23:59:59.000Z');
+			const skipDays = [0, 6];
+
+			const saved = await backend.repository.saveJob({
+				name: 'date-constraint-test',
+				priority: 0,
+				nextRunAt: new Date(Date.now() - 1000),
+				type: 'normal',
+				repeatInterval: '1 day',
+				startDate,
+				endDate,
+				skipDays,
+				data: {}
+			});
+
+			expect(saved.startDate).toEqual(startDate);
+			expect(saved.endDate).toEqual(endDate);
+			expect(saved.skipDays).toEqual(skipDays);
+
+			// Read back through every load path — the constraints must survive
+			const byId = await backend.repository.getJobById(saved._id!.toString());
+			expect(byId?.startDate).toEqual(startDate);
+			expect(byId?.endDate).toEqual(endDate);
+			expect(byId?.skipDays).toEqual(skipDays);
+
+			const { jobs } = await backend.repository.queryJobs({ name: 'date-constraint-test' });
+			expect(jobs).toHaveLength(1);
+			expect(jobs[0].startDate).toEqual(startDate);
+			expect(jobs[0].endDate).toEqual(endDate);
+			expect(jobs[0].skipDays).toEqual(skipDays);
+
+			const now = new Date();
+			const next = await backend.repository.getNextJobToRun(
+				'date-constraint-test',
+				new Date(now.getTime() + 5000),
+				new Date(now.getTime() - 600000),
+				now,
+				undefined
+			);
+			expect(next?.startDate).toEqual(startDate);
+			expect(next?.endDate).toEqual(endDate);
+			expect(next?.skipDays).toEqual(skipDays);
+		});
+
+		it('should keep a single job unique when it is saved concurrently', async () => {
+			// e.g. several workers calling agenda.every('5 minutes', 'report') at startup
+			const singleJob = (i: number) => ({
+				name: 'single-concurrent',
+				priority: 0,
+				nextRunAt: new Date(Date.now() + 60000),
+				type: 'single' as const,
+				repeatInterval: '5 minutes',
+				data: { worker: i }
+			});
+			const others = await Promise.all(
+				[1, 2, 3, 4].map(async () => {
+					const other = new RedisBackend({
+						connectionString: getConnectionString(),
+						keyPrefix: TEST_KEY_PREFIX
+					});
+					await other.connect();
+					return other;
+				})
+			);
+
+			try {
+				const saved = await Promise.all(
+					[backend, ...others].map((b, i) => b.repository.saveJob(singleJob(i)))
+				);
+
+				const members = await redis.smembers(`${TEST_KEY_PREFIX}jobs:by_name:single-concurrent`);
+				expect(members).toHaveLength(1);
+				expect(await redis.zcard(`${TEST_KEY_PREFIX}jobs:by_next_run_at`)).toBe(1);
+				expect(await redis.get(`${TEST_KEY_PREFIX}jobs:single:single-concurrent`)).toBe(members[0]);
+				for (const job of saved) {
+					expect(job._id?.toString()).toBe(members[0]);
+				}
+			} finally {
+				await Promise.all(others.map(other => other.disconnect()));
+			}
+		});
+
+		it('should recreate a single job whose stored hash is gone', async () => {
+			const first = await backend.repository.saveJob({
+				name: 'single-recreate',
+				priority: 0,
+				nextRunAt: new Date(Date.now() + 60000),
+				type: 'single',
+				data: {}
+			});
+			// Pointer left behind without its job hash
+			await redis.del(`${TEST_KEY_PREFIX}job:${first._id}`);
+
+			const second = await backend.repository.saveJob({
+				name: 'single-recreate',
+				priority: 0,
+				nextRunAt: new Date(Date.now() + 60000),
+				type: 'single',
+				data: { again: true }
+			});
+
+			expect(second._id?.toString()).not.toBe(first._id?.toString());
+			expect(second.data).toEqual({ again: true });
+			expect(await redis.get(`${TEST_KEY_PREFIX}jobs:single:single-recreate`)).toBe(
+				second._id?.toString()
+			);
+		});
+	});
+
+	describe('data filter containment', () => {
+		const baseJob = (data: Record<string, unknown>) => ({
+			name: 'data-filter',
+			priority: 0,
+			nextRunAt: new Date(),
+			type: 'normal' as const,
+			data
+		});
+
+		it('matches Date values in the filter against their stored JSON form', async () => {
+			const when = new Date('2026-01-02T03:04:05.000Z');
+			await backend.repository.saveJob(baseJob({ when, other: 1 }));
+
+			const { jobs } = await backend.repository.queryJobs({ data: { when } });
+			expect(jobs).toHaveLength(1);
+
+			const removed = await backend.repository.removeJobs({ data: { when } });
+			expect(removed).toBe(1);
+		});
+
+		it('queryJobs must not match a numeric prefix collision', async () => {
+			await backend.repository.saveJob(baseJob({ x: 11 }));
+
+			const { jobs } = await backend.repository.queryJobs({ data: { x: 1 } });
+			expect(jobs).toHaveLength(0);
+
+			const exact = await backend.repository.queryJobs({ data: { x: 11 } });
+			expect(exact.jobs).toHaveLength(1);
+		});
+
+		it('queryJobs must not match a string prefix collision', async () => {
+			await backend.repository.saveJob(baseJob({ code: 'abcdef' }));
+
+			const { jobs } = await backend.repository.queryJobs({ data: { code: 'abc' } });
+			expect(jobs).toHaveLength(0);
+		});
+
+		it('queryJobs must match multi-key filters regardless of key order', async () => {
+			await backend.repository.saveJob(baseJob({ a: 1, b: 2 }));
+
+			const { jobs } = await backend.repository.queryJobs({ data: { b: 2, a: 1 } });
+			expect(jobs).toHaveLength(1);
+		});
+
+		it('removeJobs must not delete a job with a prefix-colliding value', async () => {
+			await backend.repository.saveJob(baseJob({ otherId: 11 }));
+
+			const removed = await backend.repository.removeJobs({ data: { otherId: 1 } });
+			expect(removed).toBe(0);
+
+			const { total } = await backend.repository.queryJobs({ data: { otherId: 11 } });
+			expect(total).toBe(1);
+		});
+
+		it('removeJobs must delete a job matched by a reordered multi-key filter', async () => {
+			await backend.repository.saveJob(baseJob({ a: 1, b: 2 }));
+
+			const removed = await backend.repository.removeJobs({ data: { b: 2, a: 1 } });
+			expect(removed).toBe(1);
+		});
 	});
 });
 
@@ -311,4 +483,40 @@ jobLoggerTestSuite({
 	cleanupLogger: async (logger) => {
 		await logger.clearLogs();
 	}
+});
+
+describe('RedisJobLogger getLogs filtering', () => {
+	let logger: RedisJobLogger;
+
+	beforeEach(async () => {
+		logger = new RedisJobLogger({ redis: sharedRedis, keyPrefix: TEST_LOG_PREFIX });
+		await logger.clearLogs();
+	});
+
+	afterEach(async () => {
+		await logger.clearLogs();
+	});
+
+	it('applies jobName as an AND filter when jobId is also supplied', async () => {
+		await logger.log({
+			timestamp: new Date(),
+			level: 'info',
+			event: 'start',
+			jobId: 'shared-id',
+			jobName: 'jobA',
+			message: 'a'
+		});
+		await logger.log({
+			timestamp: new Date(),
+			level: 'info',
+			event: 'start',
+			jobId: 'shared-id',
+			jobName: 'jobB',
+			message: 'b'
+		});
+
+		const { entries } = await logger.getLogs({ jobId: 'shared-id', jobName: 'jobA' });
+		expect(entries).toHaveLength(1);
+		expect(entries[0].jobName).toBe('jobA');
+	});
 });

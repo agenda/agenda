@@ -1,5 +1,6 @@
 import { Agenda } from 'agenda';
 import { MongoBackend } from '../../src/index.js';
+import { testMongoClientOptions } from './testMongoClientOptions.js';
 
 process.on('message', message => {
 	if (message === 'cancel') {
@@ -20,7 +21,8 @@ try {
 	const agenda = new Agenda({
 		backend: new MongoBackend({
 			address: process.env.DB_CONNECTION!,
-			collection: process.env.DB_COLLECTION || 'agendaJobs'
+			collection: process.env.DB_COLLECTION || 'agendaJobs',
+			options: testMongoClientOptions
 		}),
 		name: `subworker-${name}`,
 		forkedWorker: true
@@ -46,7 +48,7 @@ try {
 } catch (err) {
 	console.error('err', err);
 	if (process.send) {
-		process.send(JSON.stringify(err));
+		process.send(err instanceof Error ? err.message : JSON.stringify(err));
 	}
 	process.exit(1);
 }

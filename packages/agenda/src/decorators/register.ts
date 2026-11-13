@@ -149,13 +149,15 @@ function scheduleEveryJobsOnReady(agenda: Agenda, pendingJobs: PendingEveryJob[]
 		}
 	};
 
-	// If agenda is already started, schedule immediately
-	// Otherwise, wait for the 'ready' event
-	agenda.once('ready', () => {
-		scheduleJobs().catch(err => {
+	// agenda.ready resolves on the 'ready' event, but stays resolved afterwards,
+	// so this schedules immediately if agenda is already started and otherwise
+	// waits for readiness. Using once('ready') here would silently drop the
+	// schedule when registerJobs is called after agenda has already become ready.
+	agenda.ready
+		.then(() => scheduleJobs())
+		.catch(err => {
 			agenda.emit('error', err);
 		});
-	});
 }
 
 /**

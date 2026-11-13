@@ -21,7 +21,6 @@ export function isValidHumanInterval(value: unknown): value is string {
  * Internal method that computes the interval
  */
 export const computeFromInterval = (attrs: JobParameters<unknown>): Date | null => {
-	const previousNextRunAt = attrs.nextRunAt || new Date();
 	log('[%s:%s] computing next run via interval [%s]', attrs.name, attrs._id, attrs.repeatInterval);
 
 	const lastRun = dateForTimezone(attrs.lastRunAt || new Date(), attrs.repeatTimezone);
@@ -34,15 +33,31 @@ export const computeFromInterval = (attrs: JobParameters<unknown>): Date | null 
 	let nextRunAt: Date | null = null;
 
 	let error;
-	if (typeof attrs.repeatInterval === 'string') {
+
+	// A numeric repeatInterval (or a string that is purely numeric) is treated as
+	// milliseconds. The public API allows `agenda.every(5000, 'job')`, and some
+	// backends persist the interval as a string (e.g. "5000"), which is neither a
+	// valid cron expression nor a human interval and would otherwise throw.
+	const numericInterval =
+		typeof attrs.repeatInterval === 'number'
+			? attrs.repeatInterval
+			: typeof attrs.repeatInterval === 'string' &&
+				  attrs.repeatInterval.trim() !== '' &&
+				  Number.isFinite(Number(attrs.repeatInterval))
+				? Number(attrs.repeatInterval)
+				: undefined;
+
+	if (numericInterval !== undefined) {
+		nextRunAt = attrs.lastRunAt
+			? new Date(lastRun.valueOf() + numericInterval)
+			: new Date(lastRun.valueOf());
+	} else if (typeof attrs.repeatInterval === 'string') {
 		try {
 			let cronTime = CronExpressionParser.parse(attrs.repeatInterval, cronOptions);
 			let nextDate = cronTime.next().toDate();
-			if (
-				nextDate.valueOf() === lastRun.valueOf() ||
-				nextDate.valueOf() <= previousNextRunAt.valueOf()
-			) {
-				// Handle cronTime giving back the same date for the next run time
+			if (nextDate.valueOf() <= lastRun.valueOf()) {
+				// cron-parser returned the same (or earlier) instant as lastRun, so nudge past it.
+				// Comparing against the stored nextRunAt instead would skip a valid occurrence.
 				cronOptions.currentDate = new Date(lastRun.valueOf() + 1000);
 				cronTime = CronExpressionParser.parse(attrs.repeatInterval, cronOptions);
 				nextDate = cronTime.next().toDate();

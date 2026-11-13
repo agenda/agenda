@@ -1,5 +1,41 @@
 # @agendajs/postgres-backend
 
+## 3.0.7
+
+### Patch Changes
+
+- 554c3ed: Cap the trailing debounce `nextRunAt` at the `maxWait` deadline. Each save rescheduled the job to `now + delay` without bounding it by `debounceStartedAt + maxWait`, so a save shortly before the deadline pushed execution past `maxWait`, breaking the documented guarantee that the job runs within `maxWait`.
+- 6fa9b56: Fix leading-strategy debounce never re-firing after its window elapsed (the debounce window was never reset once the job ran)
+- f75e5f4: Use column inference `ON CONFLICT (name) WHERE type = 'single'` for the single-job upsert instead of the expression form `((name))`. Both match the partial unique index on PostgreSQL, but CockroachDB rejects the expression form with a syntax error (#1731).
+- 8249685: Persist `failReason`, `failCount`, and `failedAt` when a job is inserted with failure state. Previously these columns were only written on the UPDATE path, so a brand-new job saved with failure state lost it.
+- Updated dependencies [09fcbef]
+- Updated dependencies [a90c4ec]
+- Updated dependencies [57898fa]
+- Updated dependencies [ebf0f81]
+- Updated dependencies [17a68fa]
+- Updated dependencies [63de5c2]
+- Updated dependencies [3bc8ebc]
+- Updated dependencies [6d19660]
+- Updated dependencies [6e691fc]
+- Updated dependencies [fc7b7c1]
+  - agenda@6.2.7
+
+## 3.0.6
+
+### Patch Changes
+
+- b48ebef: Persist and load `startDate`, `endDate` and `skipDays` so date constraints on repeating jobs are honored (previously these fields were silently dropped — a repeating job with an `endDate` would keep running forever). The PostgreSQL backend adds the `start_date`, `end_date` and `skip_days` columns automatically on connect for existing installations.
+- 8e0692d: Prevent SQL injection through `unique()` constraint keys. JSON paths are now bound as query parameters and column names are validated against the table's columns, instead of being concatenated into the SQL.
+- Updated dependencies [3369032]
+- Updated dependencies [a072e7b]
+- Updated dependencies [d90be16]
+- Updated dependencies [42d17a3]
+- Updated dependencies [2b6c926]
+- Updated dependencies [08b1e22]
+- Updated dependencies [24e7591]
+- Updated dependencies [fd01a64]
+  - agenda@6.2.6
+
 ## 3.0.5
 
 ### Patch Changes
