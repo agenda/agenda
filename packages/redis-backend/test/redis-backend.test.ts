@@ -319,6 +319,70 @@ describe('RedisBackend', () => {
 			expect(next?.endDate).toEqual(endDate);
 			expect(next?.skipDays).toEqual(skipDays);
 		});
+
+		it('should keep a single job unique when it is saved concurrently', async () => {
+			// e.g. several workers calling agenda.every('5 minutes', 'report') at startup
+			const singleJob = (i: number) => ({
+				name: 'single-concurrent',
+				priority: 0,
+				nextRunAt: new Date(Date.now() + 60000),
+				type: 'single' as const,
+				repeatInterval: '5 minutes',
+				data: { worker: i }
+			});
+			const others = await Promise.all(
+				[1, 2, 3, 4].map(async () => {
+					const other = new RedisBackend({
+						connectionString: getConnectionString(),
+						keyPrefix: TEST_KEY_PREFIX
+					});
+					await other.connect();
+					return other;
+				})
+			);
+
+			try {
+				const saved = await Promise.all(
+					[backend, ...others].map((b, i) => b.repository.saveJob(singleJob(i)))
+				);
+
+				const members = await redis.smembers(`${TEST_KEY_PREFIX}jobs:by_name:single-concurrent`);
+				expect(members).toHaveLength(1);
+				expect(await redis.zcard(`${TEST_KEY_PREFIX}jobs:by_next_run_at`)).toBe(1);
+				expect(await redis.get(`${TEST_KEY_PREFIX}jobs:single:single-concurrent`)).toBe(members[0]);
+				for (const job of saved) {
+					expect(job._id?.toString()).toBe(members[0]);
+				}
+			} finally {
+				await Promise.all(others.map(other => other.disconnect()));
+			}
+		});
+
+		it('should recreate a single job whose stored hash is gone', async () => {
+			const first = await backend.repository.saveJob({
+				name: 'single-recreate',
+				priority: 0,
+				nextRunAt: new Date(Date.now() + 60000),
+				type: 'single',
+				data: {}
+			});
+			// Pointer left behind without its job hash
+			await redis.del(`${TEST_KEY_PREFIX}job:${first._id}`);
+
+			const second = await backend.repository.saveJob({
+				name: 'single-recreate',
+				priority: 0,
+				nextRunAt: new Date(Date.now() + 60000),
+				type: 'single',
+				data: { again: true }
+			});
+
+			expect(second._id?.toString()).not.toBe(first._id?.toString());
+			expect(second.data).toEqual({ again: true });
+			expect(await redis.get(`${TEST_KEY_PREFIX}jobs:single:single-recreate`)).toBe(
+				second._id?.toString()
+			);
+		});
 	});
 
 	describe('data filter containment', () => {
