@@ -265,4 +265,40 @@ describe('drain() releases locks of jobs that never started', () => {
 		expect(repo.lockedCount('busy')).toBe(1);
 		releaseRunning();
 	}, 20000);
+
+	it('releases a queued job while draining and does not start it when the running job finishes', async () => {
+		const backend = new InMemoryBackend();
+		const repo = backend.repository;
+		const agenda = new Agenda({ backend, processEvery: 50 });
+		agenda.on('error', () => {});
+		let started = 0;
+		let releaseRunning: () => void = () => {};
+		agenda.define(
+			'busy',
+			() => {
+				started++;
+				return new Promise<void>(resolve => {
+					releaseRunning = resolve;
+				});
+			},
+			{ concurrency: 1 }
+		);
+
+		await agenda.start();
+		await Promise.all([agenda.now('busy'), agenda.now('busy')]);
+		await waitFor(() => repo.lockedCount('busy') === 2 && started === 1);
+		expect(started).toBe(1);
+
+		const draining = agenda.drain();
+		// the queued job is released while the running one is still busy
+		await waitFor(() => repo.lockedCount('busy') === 1);
+		expect(repo.lockedCount('busy')).toBe(1);
+
+		releaseRunning();
+		const result = await draining;
+
+		expect(result).toEqual({ completed: 1, running: 0, timedOut: false, aborted: false });
+		expect(started).toBe(1);
+		expect(repo.lockedCount('busy')).toBe(0);
+	}, 20000);
 });
