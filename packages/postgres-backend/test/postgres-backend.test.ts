@@ -273,8 +273,9 @@ describe('PostgresBackend', () => {
 				backend.repository.getJobById(first._id!),
 				backend.repository.getJobById(second._id!)
 			]);
-			const updated = jobs.filter(job => job!.data.note === 'updated');
-			const untouched = jobs.filter(job => job!.data.note !== 'updated');
+			const noteOf = (job: (typeof jobs)[number]) => (job!.data as { note: string }).note;
+			const updated = jobs.filter(job => noteOf(job) === 'updated');
+			const untouched = jobs.filter(job => noteOf(job) !== 'updated');
 
 			expect(updated).toHaveLength(1);
 			expect(updated[0]!._id).toBe(saved._id);
@@ -301,7 +302,7 @@ describe('PostgresBackend', () => {
 			);
 
 			const fetched = await backend.repository.getJobById(other._id!);
-			expect(fetched!.data.note).toBe('other');
+			expect((fetched!.data as { note: string }).note).toBe('other');
 			expect(fetched!.nextRunAt?.getTime()).toBe(originalRunAt.getTime());
 		});
 	});
