@@ -238,6 +238,74 @@ describe('PostgresBackend', () => {
 		});
 	});
 
+	describe('saveJob with a unique query', () => {
+		const saveNormalJob = (accountId: string, note: string, nextRunAt: Date) =>
+			backend.repository.saveJob(
+				{
+					name: 'unique-update',
+					priority: 0,
+					nextRunAt,
+					type: 'normal',
+					data: { accountId, note }
+				},
+				undefined
+			);
+
+		it('updates only one row when several rows match', async () => {
+			const originalRunAt = new Date('2020-01-01T00:00:00.000Z');
+			const first = await saveNormalJob('a', 'first', originalRunAt);
+			const second = await saveNormalJob('a', 'second', originalRunAt);
+
+			const newRunAt = new Date('2030-01-01T00:00:00.000Z');
+			const saved = await backend.repository.saveJob(
+				{
+					name: 'unique-update',
+					priority: 0,
+					nextRunAt: newRunAt,
+					type: 'normal',
+					data: { accountId: 'a', note: 'updated' },
+					unique: { 'data.accountId': 'a' }
+				},
+				undefined
+			);
+
+			const jobs = await Promise.all([
+				backend.repository.getJobById(first._id!),
+				backend.repository.getJobById(second._id!)
+			]);
+			const updated = jobs.filter(job => job!.data.note === 'updated');
+			const untouched = jobs.filter(job => job!.data.note !== 'updated');
+
+			expect(updated).toHaveLength(1);
+			expect(updated[0]!._id).toBe(saved._id);
+			expect(updated[0]!.nextRunAt?.getTime()).toBe(newRunAt.getTime());
+			expect(untouched).toHaveLength(1);
+			expect(untouched[0]!.nextRunAt?.getTime()).toBe(originalRunAt.getTime());
+		});
+
+		it('does not update a row with a different unique value', async () => {
+			const originalRunAt = new Date('2020-01-01T00:00:00.000Z');
+			const other = await saveNormalJob('b', 'other', originalRunAt);
+			await saveNormalJob('a', 'first', originalRunAt);
+
+			await backend.repository.saveJob(
+				{
+					name: 'unique-update',
+					priority: 0,
+					nextRunAt: new Date('2030-01-01T00:00:00.000Z'),
+					type: 'normal',
+					data: { accountId: 'a', note: 'updated' },
+					unique: { 'data.accountId': 'a' }
+				},
+				undefined
+			);
+
+			const fetched = await backend.repository.getJobById(other._id!);
+			expect(fetched!.data.note).toBe('other');
+			expect(fetched!.nextRunAt?.getTime()).toBe(originalRunAt.getTime());
+		});
+	});
+
 	describe('PostgreSQL-specific features', () => {
 		it('should support JSONB queries for job data', async () => {
 			await backend.repository.saveJob({
