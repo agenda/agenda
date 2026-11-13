@@ -1,3 +1,4 @@
+import { pathToFileURL } from 'node:url';
 import { Agenda } from 'agenda';
 import { PostgresBackend } from '../../src/index.js';
 
@@ -34,7 +35,9 @@ try {
 
 	// load job definition
 	if (agendaDefinition) {
-		const loadDefinition = await import(agendaDefinition);
+		// On Windows an absolute path like C:\foo is not a valid ESM specifier;
+		// dynamic import requires a file:// URL (ERR_UNSUPPORTED_ESM_URL_SCHEME).
+		const loadDefinition = await import(pathToFileURL(agendaDefinition).href);
 		(loadDefinition.default || loadDefinition)(agenda, true);
 	}
 
