@@ -2121,7 +2121,10 @@ process.on('message', message => {
 	});
   */
 	if (agendaDefinition) {
-		const loadDefinition = await import(agendaDefinition);
+		// On Windows an absolute path like C:\foo is not a valid ESM specifier;
+		// dynamic import requires a file:// URL (ERR_UNSUPPORTED_ESM_URL_SCHEME).
+		const { pathToFileURL } = await import('node:url');
+		const loadDefinition = await import(pathToFileURL(agendaDefinition).href);
 		(loadDefinition.default || loadDefinition)(agenda, true);
 	}
 
