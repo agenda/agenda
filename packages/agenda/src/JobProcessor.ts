@@ -605,7 +605,15 @@ export class JobProcessor {
 						// locked via the expired-lock recovery path while its nextRunAt
 						// is still in the future gets re-locked on every scan and never
 						// reaches its run time.
-						this.agenda.db.unlockJob(job.attrs);
+						this.agenda.db.unlockJob(job.attrs).catch(error => {
+							log.extend('runOrRetry')(
+								'[%s:%s] failed to release lock on a job that is too far away',
+								job.attrs.name,
+								job.attrs._id,
+								error
+							);
+							this.agenda.emit('error', error instanceof Error ? error : new Error(String(error)));
+						});
 					} else {
 						log.extend('jobProcessing')(
 							'[%s:%s] nextRunAt is in the future, calling setTimeout(%d)',
