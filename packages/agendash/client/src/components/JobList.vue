@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import type { FrontendJob } from '../types';
+import type { FrontendJob, JobSortField, SortDirection } from '../types';
 import { formatRelative, formatTitle } from '../utils/date';
 
 const props = defineProps<{
@@ -10,6 +10,8 @@ const props = defineProps<{
 	totalPages: number;
 	loading: boolean;
 	filterDisplay?: string;
+	sortBy: JobSortField;
+	sortDir: SortDirection;
 }>();
 
 const emit = defineEmits<{
@@ -26,11 +28,10 @@ const emit = defineEmits<{
 	'confirm-resume-multi': [jobIds: string[]];
 	'page-next': [];
 	'page-prev': [];
+	sort: [field: JobSortField];
 }>();
 
 const selectedIds = ref<string[]>([]);
-const currentSort = ref<'name' | 'lastRunAt' | 'nextRunAt' | 'lastFinishedAt'>('name');
-const currentSortDir = ref<'asc' | 'desc'>('asc');
 
 // Reset selection when jobs change
 watch(
@@ -40,39 +41,17 @@ watch(
 	}
 );
 
+// The server returns the page already sorted across all jobs (see sortBy/sortDir)
 const sortedJobs = computed(() => {
-	const sorted = [...props.jobs].sort((a, b) => {
-		let displayA: string | number;
-		let displayB: string | number;
-
-		if (currentSort.value === 'name') {
-			displayA = (a.job.name || '').toLowerCase();
-			displayB = (b.job.name || '').toLowerCase();
-		} else {
-			displayA = a.job[currentSort.value] ? new Date(a.job[currentSort.value]!).getTime() : 0;
-			displayB = b.job[currentSort.value] ? new Date(b.job[currentSort.value]!).getTime() : 0;
-		}
-
-		const modifier = currentSortDir.value === 'desc' ? -1 : 1;
-		if (displayA < displayB) return -1 * modifier;
-		if (displayA > displayB) return 1 * modifier;
-		return 0;
-	});
-
 	// Show recurring jobs first
 	return [
-		...sorted.filter((job) => job.repeating),
-		...sorted.filter((job) => !job.repeating)
+		...props.jobs.filter((job) => job.repeating),
+		...props.jobs.filter((job) => !job.repeating)
 	];
 });
 
-function sort(column: typeof currentSort.value) {
-	if (column === currentSort.value) {
-		currentSortDir.value = currentSortDir.value === 'asc' ? 'desc' : 'asc';
-	} else {
-		currentSort.value = column;
-		currentSortDir.value = 'asc';
-	}
+function sort(column: JobSortField) {
+	emit('sort', column);
 }
 
 function toggleSelection(job: FrontendJob) {
@@ -125,8 +104,8 @@ function sendResume() {
 }
 
 function getSortIcon(column: string): string {
-	if (currentSort.value !== column) return '';
-	return currentSortDir.value === 'asc' ? '\u25B2' : '\u25BC';
+	if (props.sortBy !== column) return '';
+	return props.sortDir === 'asc' ? '\u25B2' : '\u25BC';
 }
 </script>
 
@@ -188,23 +167,23 @@ function getSortIcon(column: string): string {
 					<th scope="col">Status</th>
 					<th scope="col" @click="sort('name')">
 						Name
-						<span v-if="currentSort === 'name'" class="sort-icon">{{ getSortIcon('name') }}</span>
+						<span v-if="sortBy === 'name'" class="sort-icon">{{ getSortIcon('name') }}</span>
 					</th>
 					<th scope="col" @click="sort('lastRunAt')">
 						Last run started
-						<span v-if="currentSort === 'lastRunAt'" class="sort-icon">{{
+						<span v-if="sortBy === 'lastRunAt'" class="sort-icon">{{
 							getSortIcon('lastRunAt')
 						}}</span>
 					</th>
 					<th scope="col" @click="sort('nextRunAt')">
 						Next run starts
-						<span v-if="currentSort === 'nextRunAt'" class="sort-icon">{{
+						<span v-if="sortBy === 'nextRunAt'" class="sort-icon">{{
 							getSortIcon('nextRunAt')
 						}}</span>
 					</th>
 					<th scope="col" @click="sort('lastFinishedAt')">
 						Last finished
-						<span v-if="currentSort === 'lastFinishedAt'" class="sort-icon">{{
+						<span v-if="sortBy === 'lastFinishedAt'" class="sort-icon">{{
 							getSortIcon('lastFinishedAt')
 						}}</span>
 					</th>

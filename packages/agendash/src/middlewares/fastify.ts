@@ -16,6 +16,8 @@ interface ApiQuerystring {
 	isObjectId?: string;
 	skip?: string;
 	limit?: string;
+	sortBy?: string;
+	sortDir?: string;
 }
 
 /**
@@ -54,7 +56,7 @@ export function createFastifyPlugin(agenda: Agenda): FastifyPluginCallback {
 			'/api',
 			async (request: FastifyRequest<{ Querystring: ApiQuerystring }>, reply: FastifyReply) => {
 				try {
-					const { job, state, q, property, isObjectId, skip, limit } = request.query;
+					const { job, state, q, property, isObjectId, skip, limit, sortBy, sortDir } = request.query;
 					const params: ApiQueryParams = {
 						name: job,
 						state,
@@ -62,7 +64,9 @@ export function createFastifyPlugin(agenda: Agenda): FastifyPluginCallback {
 						property,
 						isObjectId,
 						skip: skip ? parseInt(skip, 10) : 0,
-						limit: limit ? parseInt(limit, 10) : 50
+						limit: limit ? parseInt(limit, 10) : 50,
+						sortBy,
+						sortDir
 					};
 					const result = await controller.getJobs(params);
 					return reply.send(result);

@@ -20,6 +20,8 @@ interface ApiQuery {
 	isObjectId?: string;
 	skip?: string;
 	limit?: string;
+	sortBy?: string;
+	sortDir?: string;
 }
 
 /**
@@ -89,7 +91,9 @@ export function createHapiPlugin(agenda: Agenda): Plugin<AgendashHapiOptions> {
 							property: query.property,
 							isObjectId: query.isObjectId,
 							skip: query.skip ? parseInt(query.skip, 10) : 0,
-							limit: query.limit ? parseInt(query.limit, 10) : 50
+							limit: query.limit ? parseInt(query.limit, 10) : 50,
+							sortBy: query.sortBy,
+							sortDir: query.sortDir
 						};
 						return await controller.getJobs(params);
 					} catch (error) {

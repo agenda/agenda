@@ -58,7 +58,9 @@ export function createExpressMiddleware(agenda: Agenda, options: ExpressMiddlewa
 				property: query.property,
 				isObjectId: query.isObjectId,
 				skip: query.skip ? parseInt(query.skip, 10) : 0,
-				limit: query.limit ? parseInt(query.limit, 10) : 50
+				limit: query.limit ? parseInt(query.limit, 10) : 50,
+				sortBy: query.sortBy,
+				sortDir: query.sortDir
 			};
 			const result = await controller.getJobs(params);
 			res.json(result);

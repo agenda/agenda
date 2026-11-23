@@ -22,6 +22,8 @@ const {
 	pageSize,
 	currentFilters,
 	currentFilterDisplay,
+	sortBy,
+	sortDir,
 	realTimeConnected,
 	fetchJobs,
 	requeueJobs,
@@ -33,6 +35,7 @@ const {
 	nextPage,
 	prevPage,
 	search,
+	setSort,
 	startRealTimeUpdates,
 	stopRealTimeUpdates
 } = useJobs();
@@ -438,6 +441,8 @@ onUnmounted(() => {
 						:total-pages="totalPages"
 						:loading="showLoading"
 						:filter-display="currentFilterDisplay"
+						:sort-by="sortBy"
+						:sort-dir="sortDir"
 						@show-job-detail="handleShowJobDetail"
 						@confirm-delete="handleConfirmDelete"
 						@confirm-requeue="handleConfirmRequeue"
@@ -451,6 +456,7 @@ onUnmounted(() => {
 						@confirm-resume-multi="handleConfirmResumeMulti"
 						@page-next="nextPage"
 						@page-prev="prevPage"
+						@sort="setSort"
 					/>
 				</div>
 			</main>

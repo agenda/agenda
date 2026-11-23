@@ -9,7 +9,16 @@ export interface ApiQueryParams {
 	isObjectId?: string;
 	skip?: number;
 	limit?: number;
+	sortBy?: JobSortField;
+	sortDir?: SortDirection;
 }
+
+/**
+ * Job list columns that the server can sort by
+ */
+export type JobSortField = 'name' | 'lastRunAt' | 'nextRunAt' | 'lastFinishedAt';
+
+export type SortDirection = 'asc' | 'desc';
 
 /**
  * Frontend job data structure (nested under 'job' key)

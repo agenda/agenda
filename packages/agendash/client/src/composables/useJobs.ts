@@ -1,5 +1,12 @@
 import { ref, computed } from 'vue';
-import type { FrontendJob, FrontendOverview, SearchParams, JobStateNotification } from '../types';
+import type {
+	FrontendJob,
+	FrontendOverview,
+	SearchParams,
+	JobStateNotification,
+	JobSortField,
+	SortDirection
+} from '../types';
 import * as api from '../api/client';
 import { useToast } from './useToast';
 
@@ -12,6 +19,9 @@ const total = ref(0);
 const currentPage = ref(1);
 const pageSize = ref(50);
 const currentFilters = ref<Partial<SearchParams>>({});
+// Sorting is done by the server so it applies to all jobs, not only the current page
+const sortBy = ref<JobSortField>('name');
+const sortDir = ref<SortDirection>('asc');
 const realTimeConnected = ref(false);
 
 let realTimeUnsubscribe: (() => void) | null = null;
@@ -66,7 +76,9 @@ export function useJobs() {
 				isObjectId: mergedParams.isObjectId ? 'true' : undefined,
 				state: mergedParams.state,
 				skip: mergedParams.skip,
-				limit: mergedParams.limit || pageSize.value
+				limit: mergedParams.limit || pageSize.value,
+				sortBy: sortBy.value,
+				sortDir: sortDir.value
 			});
 
 			jobs.value = response.jobs;
@@ -195,6 +207,21 @@ export function useJobs() {
 	}
 
 	/**
+	 * Sort the job list by a column. Clicking the active column toggles the direction.
+	 * Starts again from the first page, since the server sorts across all jobs.
+	 */
+	function setSort(field: JobSortField) {
+		if (field === sortBy.value) {
+			sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc';
+		} else {
+			sortBy.value = field;
+			sortDir.value = 'asc';
+		}
+		currentPage.value = 1;
+		fetchJobs({ ...currentFilters.value, skip: 0 });
+	}
+
+	/**
 	 * Handle incoming real-time job state notification.
 	 * Updates job state in-place for progress/start, refetches for completion events.
 	 */
@@ -285,6 +312,8 @@ export function useJobs() {
 		pageSize,
 		currentFilters,
 		currentFilterDisplay,
+		sortBy,
+		sortDir,
 		realTimeConnected,
 		fetchJobs,
 		requeueJobs,
@@ -298,6 +327,7 @@ export function useJobs() {
 		prevPage,
 		setPageSize,
 		search,
+		setSort,
 		startRealTimeUpdates,
 		stopRealTimeUpdates
 	};
