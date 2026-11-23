@@ -56,6 +56,41 @@ describe('Express Middleware', () => {
 			expect(res.body.jobs[0].job.name).toBe('test-job');
 		});
 
+		it('should sort all jobs on the server by the requested column', async () => {
+			const now = Date.now();
+			const docs = [];
+			for (let i = 0; i < 6; i++) {
+				const lastRunAt = new Date(now - 5 * 24 * 60 * 60 * 1000 + i * 1000);
+				docs.push({
+					name: 'test-job',
+					type: 'normal',
+					priority: 0,
+					data: { weekly: i },
+					lastRunAt,
+					lastFinishedAt: lastRunAt,
+					nextRunAt: new Date(lastRunAt.getTime() + 7 * 24 * 60 * 60 * 1000)
+				});
+			}
+			docs.push({
+				name: 'test-job',
+				type: 'normal',
+				priority: 0,
+				data: { recent: true },
+				lastRunAt: new Date(now - 30 * 1000),
+				lastFinishedAt: new Date(now - 29 * 1000),
+				nextRunAt: new Date(now + 30 * 1000)
+			});
+			await mongo.db.collection('agendaJobs').insertMany(docs);
+
+			const res = await request(app)
+				.get('/dash/api')
+				.query({ limit: '5', sortBy: 'lastRunAt', sortDir: 'desc' })
+				.expect(200);
+
+			expect(res.body.jobs).toHaveLength(5);
+			expect(res.body.jobs[0].job.data).toEqual({ recent: true });
+		});
+
 		it('should support pagination', async () => {
 			for (let i = 0; i < 10; i++) {
 				await agenda.now('test-job', { id: i });

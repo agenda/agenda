@@ -85,7 +85,9 @@ export async function createKoaMiddlewareAsync(agenda: Agenda): Promise<Middlewa
 				property: query.property,
 				isObjectId: query.isObjectId,
 				skip: query.skip ? parseInt(query.skip, 10) : 0,
-				limit: query.limit ? parseInt(query.limit, 10) : 50
+				limit: query.limit ? parseInt(query.limit, 10) : 50,
+				sortBy: query.sortBy,
+				sortDir: query.sortDir
 			};
 			ctx.body = await controller.getJobs(params);
 		} catch (error) {

@@ -18,6 +18,10 @@ export interface ApiQueryParams {
 	skip?: number;
 	/** Maximum number of jobs to return */
 	limit?: number;
+	/** Field to sort by: name, nextRunAt, lastRunAt or lastFinishedAt. Defaults to nextRunAt desc. */
+	sortBy?: string;
+	/** Sort direction: 'asc' or 'desc' (anything else is treated as 'asc') */
+	sortDir?: string;
 }
 
 /**

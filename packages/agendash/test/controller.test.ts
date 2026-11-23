@@ -91,6 +91,94 @@ describe('AgendashController', () => {
 			expect(page2.jobs).toHaveLength(5);
 			expect(page1.totalPages).toBe(2);
 		});
+
+		describe('sorting', () => {
+			const DAY = 24 * 60 * 60 * 1000;
+
+			// Reproduces #1802: many weekly jobs that last ran ~5 days ago and are due in ~2 days,
+			// plus one frequently running job that just ran and is due in a minute.
+			// lastRunAt/lastFinishedAt are written by the job processor, not by job.save(),
+			// so the documents are inserted the way they look after the jobs have run.
+			async function seedWeeklyJobsAndOneRecentJob(weeklyCount: number) {
+				const now = Date.now();
+				const runJob = (data: Record<string, unknown>, lastRunAt: Date, nextRunAt: Date) => ({
+					name: 'test-job',
+					type: 'normal',
+					priority: 0,
+					data,
+					lastRunAt,
+					lastFinishedAt: new Date(lastRunAt.getTime() + 500),
+					nextRunAt,
+					lockedAt: null,
+					disabled: false
+				});
+				const docs = [];
+				for (let i = 0; i < weeklyCount; i++) {
+					const lastRunAt = new Date(now - 5 * DAY + i * 1000);
+					docs.push(runJob({ weekly: i }, lastRunAt, new Date(lastRunAt.getTime() + 7 * DAY)));
+				}
+				docs.push(runJob({ recent: true }, new Date(now - 30 * 1000), new Date(now + 30 * 1000)));
+				await mongo.db.collection('agendaJobs').insertMany(docs);
+			}
+
+			it('should return the most recently run job first when sorting by lastRunAt desc, even beyond the first page', async () => {
+				await seedWeeklyJobsAndOneRecentJob(55);
+
+				const result = await controller.getJobs({ limit: 50, sortBy: 'lastRunAt', sortDir: 'desc' });
+
+				expect(result.jobs).toHaveLength(50);
+				expect(result.jobs[0].job.data).toEqual({ recent: true });
+			});
+
+			it('should sort across all jobs by lastFinishedAt asc', async () => {
+				await seedWeeklyJobsAndOneRecentJob(55);
+
+				const result = await controller.getJobs({ limit: 50, sortBy: 'lastFinishedAt', sortDir: 'asc' });
+
+				expect(result.jobs[0].job.data).toEqual({ weekly: 0 });
+				expect(result.jobs.map((j) => j.job.data)).not.toContainEqual({ recent: true });
+			});
+
+			it('should sort by name across all pages', async () => {
+				agenda.define('a-job', async () => {});
+				agenda.define('z-job', async () => {});
+				for (let i = 0; i < 6; i++) {
+					await agenda.schedule(new Date(Date.now() + DAY), 'a-job', { i });
+				}
+				await agenda.schedule(new Date(Date.now() + 365 * DAY), 'z-job', {});
+
+				const asc = await controller.getJobs({ limit: 5, sortBy: 'name', sortDir: 'asc' });
+				const desc = await controller.getJobs({ limit: 5, sortBy: 'name', sortDir: 'desc' });
+
+				expect(asc.jobs.every((j) => j.job.name === 'a-job')).toBe(true);
+				expect(desc.jobs[0].job.name).toBe('z-job');
+			});
+
+			it('should keep the default nextRunAt desc order when no sort is given', async () => {
+				await seedWeeklyJobsAndOneRecentJob(55);
+
+				const result = await controller.getJobs({ limit: 50 });
+
+				expect(result.jobs[0].job.data).toEqual({ weekly: 54 });
+				expect(result.jobs.map((j) => j.job.data)).not.toContainEqual({ recent: true });
+			});
+
+			it('should ignore an unsupported sort field and fall back to the default order', async () => {
+				await seedWeeklyJobsAndOneRecentJob(55);
+
+				const result = await controller.getJobs({ limit: 50, sortBy: '$where', sortDir: 'desc' });
+
+				expect(result.jobs[0].job.data).toEqual({ weekly: 54 });
+			});
+
+			it('should treat an unsupported sort direction as ascending', async () => {
+				await seedWeeklyJobsAndOneRecentJob(55);
+
+				const result = await controller.getJobs({ limit: 50, sortBy: 'lastRunAt', sortDir: 'sideways' });
+
+				expect(result.jobs[0].job.data).toEqual({ weekly: 0 });
+			});
+		});
 	});
 
 	describe('createJob', () => {

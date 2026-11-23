@@ -1,4 +1,4 @@
-import type { Agenda, JobState, JobWithState, JobsOverview, AgendaStatus, StateNotificationHandler, JobLogQuery, LogLevel, JobLogEvent } from 'agenda';
+import type { Agenda, JobState, JobWithState, JobsOverview, JobsSort, AgendaStatus, StateNotificationHandler, JobLogQuery, LogLevel, JobLogEvent } from 'agenda';
 import type {
 	AgendashController as IAgendashController,
 	ApiQueryParams,
@@ -15,6 +15,9 @@ import type {
 	LogsQueryParams,
 	LogsResponse
 } from './types.js';
+
+/** Job list columns that can be sorted on the server */
+const SORTABLE_FIELDS: ReadonlySet<string> = new Set<keyof JobsSort>(['name', 'nextRunAt', 'lastRunAt', 'lastFinishedAt']);
 
 /**
  * Agendash Controller - Core logic for dashboard operations
@@ -99,10 +102,21 @@ export class AgendashController implements IAgendashController {
 	}
 
 	/**
+	 * Build the database sort from the requested column, so sorting applies to all jobs
+	 * and not only to the page that is returned. Unknown fields fall back to nextRunAt desc.
+	 */
+	private toJobsSort(sortBy?: string, sortDir?: string): JobsSort {
+		if (sortBy && SORTABLE_FIELDS.has(sortBy)) {
+			return { [sortBy]: sortDir === 'desc' ? 'desc' : 'asc' } as JobsSort;
+		}
+		return { nextRunAt: 'desc' };
+	}
+
+	/**
 	 * Get jobs with overview and filtering
 	 */
 	async getJobs(params: ApiQueryParams): Promise<ApiResponse> {
-		const { name, state, search, skip = 0, limit = 50 } = params;
+		const { name, state, search, skip = 0, limit = 50, sortBy, sortDir } = params;
 
 		const [overview, result] = await Promise.all([
 			this.agenda.getJobsOverview(),
@@ -112,7 +126,7 @@ export class AgendashController implements IAgendashController {
 				search: search || undefined,
 				skip,
 				limit,
-				sort: { nextRunAt: 'desc' }
+				sort: this.toJobsSort(sortBy, sortDir)
 			})
 		]);
 

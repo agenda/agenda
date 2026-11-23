@@ -42,6 +42,8 @@ export async function getJobs(params: ApiQueryParams = {}): Promise<ApiResponse>
 	if (params.isObjectId === 'true') searchParams.set('isObjectId', 'true');
 	if (params.state) searchParams.set('state', params.state);
 	if (params.search) searchParams.set('q', params.search);
+	if (params.sortBy) searchParams.set('sortBy', params.sortBy);
+	if (params.sortDir) searchParams.set('sortDir', params.sortDir);
 
 	const url = `${BASE_URL}?${searchParams.toString()}`;
 	return fetchJson<ApiResponse>(url);
