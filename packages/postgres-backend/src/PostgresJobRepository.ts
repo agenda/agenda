@@ -663,47 +663,50 @@ export class PostgresJobRepository implements JobRepository {
 		// If the job already has an ID, update it
 		if (_id) {
 			log('job already has _id, updating');
+			// Columns to SET, in parameter order ($2 onwards; $1 is the id in
+			// the WHERE clause, and $2 doubles as the name in the WHERE clause).
+			// The fail columns are processor-managed: Job.save() strips them
+			// via toJson(true), so they must only be overwritten when the
+			// caller actually provided them. Writing them unconditionally
+			// with `?? null` wiped failure state the processor had recorded
+			// on every save() - the postgres sibling of mongo #1811, where
+			// the fix was to only $set the keys the caller passed in (the
+			// redis backend likewise only writes fail fields when explicitly
+			// set). A caller that passes an explicit null still clears them.
+			const setColumns: [string, unknown][] = [
+				['name', props.name],
+				['priority', props.priority],
+				['next_run_at', props.nextRunAt || null],
+				['type', props.type],
+				['repeat_timezone', props.repeatTimezone || null],
+				['repeat_interval', props.repeatInterval || null],
+				['data', JSON.stringify(props.data)],
+				['repeat_at', props.repeatAt || null],
+				['disabled', props.disabled || false],
+				['fork', props.fork || false],
+				['last_modified_by', options?.lastModifiedBy || null],
+				['start_date', props.startDate || null],
+				['end_date', props.endDate || null],
+				['skip_days', props.skipDays ? JSON.stringify(props.skipDays) : null]
+			];
+			if ('failReason' in props) {
+				setColumns.push(['fail_reason', props.failReason ?? null]);
+			}
+			if ('failCount' in props) {
+				setColumns.push(['fail_count', props.failCount ?? null]);
+			}
+			if ('failedAt' in props) {
+				setColumns.push(['failed_at', props.failedAt || null]);
+			}
+			const setSql = setColumns
+				.map(([column], index) => `${column} = $${index + 2}`)
+				.join(',\n\t\t\t\t\t ');
 			const result = await this.pool.query<PostgresJobRow>(
 				`UPDATE "${this.tableName}"
-				 SET name = $2,
-					 priority = $3,
-					 next_run_at = $4,
-					 type = $5,
-					 repeat_timezone = $6,
-					 repeat_interval = $7,
-					 data = $8,
-					 repeat_at = $9,
-					 disabled = $10,
-					 fork = $11,
-					 fail_reason = $12,
-					 fail_count = $13,
-					 failed_at = $14,
-					 last_modified_by = $15,
-					 start_date = $16,
-					 end_date = $17,
-					 skip_days = $18
+				 SET ${setSql}
 				 WHERE id = $1 AND name = $2
 				 RETURNING *`,
-				[
-					_id.toString(),
-					props.name,
-					props.priority,
-					props.nextRunAt || null,
-					props.type,
-					props.repeatTimezone || null,
-					props.repeatInterval || null,
-					JSON.stringify(props.data),
-					props.repeatAt || null,
-					props.disabled || false,
-					props.fork || false,
-					props.failReason ?? null,
-					props.failCount ?? null,
-					props.failedAt || null,
-					options?.lastModifiedBy || null,
-					props.startDate || null,
-					props.endDate || null,
-					props.skipDays ? JSON.stringify(props.skipDays) : null
-				]
+				[_id.toString(), ...setColumns.map(([, value]) => value)]
 			);
 
 			if (result.rows.length === 0) {
