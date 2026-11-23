@@ -209,3 +209,40 @@ describe('JobProcessor stale lock on a future-dated job', () => {
 		expect(ranAt - (start + dueIn)).toBeLessThan(1000);
 	}, 20000);
 });
+
+describe('JobProcessor failing to release a future-dated job', () => {
+	it('emits an error event when unlockJob rejects instead of leaving an unhandled rejection', async () => {
+		class FailingUnlockRepository extends InMemoryRepository {
+			async unlockJob(): Promise<void> {
+				throw new Error('db hiccup in unlockJob');
+			}
+		}
+		class FailingUnlockBackend extends InMemoryBackend {
+			readonly repository = new FailingUnlockRepository();
+		}
+
+		const backend = new FailingUnlockBackend();
+		const agenda = new Agenda({ backend, processEvery: 100 });
+		const errors: Error[] = [];
+		agenda.on('error', err => errors.push(err));
+
+		agenda.define('recurring', async () => {}, { lockLifetime: 10000 });
+		await agenda.start();
+
+		// Stale lock with a nextRunAt further out than processEvery: the processor
+		// picks it up and hands the lock back, which is the call that fails here.
+		backend.repository.seed({
+			_id: '901',
+			name: 'recurring',
+			priority: 0,
+			type: 'normal',
+			nextRunAt: new Date(Date.now() + 800),
+			lockedAt: new Date(Date.now() - 100000)
+		} as never);
+
+		await delay(1000);
+		await agenda.stop();
+
+		expect(errors.map(e => e.message)).toContain('db hiccup in unlockJob');
+	}, 20000);
+});
