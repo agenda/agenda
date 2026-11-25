@@ -684,6 +684,33 @@ describe('MongoBackend', () => {
 			await db.collection(testCollection).drop();
 		});
 
+		it('should create the index when sort contains a custom key', async () => {
+			const testCollection = TEST_COLLECTION + '_custom_sort_index';
+			const backendCustomSort = new MongoBackend({
+				mongo: db,
+				collection: testCollection,
+				ensureIndex: true,
+				sort: { nextRunAt: 'asc', priority: 'desc', 'data.rank': 'desc' }
+			});
+			await backendCustomSort.connect();
+
+			const indexes = await db.collection(testCollection).indexes();
+			const index = indexes.find(i => i.name === 'findAndLockNextJobIndex');
+			expect(index).toBeDefined();
+			// Key order matters: equality (name) -> sort fields -> range fields
+			expect(Object.entries(index!.key)).toEqual([
+				['name', 1],
+				['nextRunAt', 1],
+				['priority', -1],
+				['data.rank', -1],
+				['lockedAt', 1],
+				['disabled', 1]
+			]);
+
+			await backendCustomSort.disconnect();
+			await db.collection(testCollection).drop();
+		});
+
 		it('should not throw when creating two backends with ensureIndex true', async () => {
 			const testCollection = TEST_COLLECTION + '_dual_index';
 

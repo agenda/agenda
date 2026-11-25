@@ -103,6 +103,19 @@ function flattenDataFilter(data: Record<string, unknown>, prefix = 'data'): Reco
 	return result;
 }
 
+/**
+ * Convert Agenda sort directions ('asc' / 'desc') to MongoDB index directions (1 / -1).
+ * createIndex() treats string values as index types (e.g. 'text', '2dsphere'),
+ * so passing 'asc' / 'desc' straight through fails with "Unknown index plugin".
+ */
+function mapSortOptions(sort: MongoJobRepositoryConfig['sort']): Record<string, 1 | -1> {
+	const result: Record<string, 1 | -1> = {};
+	for (const [key, direction] of Object.entries(sort ?? {})) {
+		result[key] = direction === 'desc' ? -1 : 1;
+	}
+	return result;
+}
+
 function computeJobObj<DATA = unknown>(job: WithId<MongoJobDocument>): JobParameters<DATA> & { _id: JobId } {
 	return {
 		_id: toJobId(job._id!.toHexString()),
@@ -662,7 +675,7 @@ export class MongoJobRepository implements JobRepository {
 				const result = await this.collection.createIndex(
 					{
 						name: 1,
-						...this.connectOptions.sort,
+						...mapSortOptions(this.connectOptions.sort),
 						priority: -1,
 						lockedAt: 1,
 						nextRunAt: 1,
